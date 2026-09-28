@@ -102,7 +102,7 @@ Least privilege là mặc định. Role không thay thế ownership check: Custo
 
 ### FR-08 Suspicious transaction flags
 
-- Áp dụng rule-based checks lên transfer đã được tiếp nhận theo định nghĩa rõ: ví dụ vượt ngưỡng amount (large transfer > $5000), tần suất cao trong cửa sổ thời gian (> 5 transfer / 10 phút).
+- Áp dụng rule-based checks lên transfer đã được tiếp nhận theo định nghĩa rõ: ví dụ vượt ngưỡng amount (large transfer > 5,000,000 VNĐ), tần suất cao trong cửa sổ thời gian (> 5 transfer / 10 phút).
 - Rule configuration, thresholds and windows are environment-configurable; document effective non-secret values. Store rule ID/version with each flag.
 - Flag stores transfer reference, rule ID/version, reason and detection time. Operator/Auditor/Admin can list flags. Review workflow and `REVIEWED` status are post-MVP options.
 - Flagging không tự ý đổi transfer outcome trong MVP (chỉ đóng vai trò cảnh báo kiểm toán).
@@ -278,7 +278,7 @@ Each phase must leave a runnable, testable increment. FE and BE can work in para
 
 ## 9. Assumptions requiring measurement or later decision
 
-- **Money model:** simulated USD only, decimal scale 2; transfer maximum `10,000.00`, seed maximum `100,000.00`. Configure limits server-side; see [MVP Decision Record](./mvp-decision-record.md).
+- **Money model:** simulated VND only, scale 0 (số nguyên); mức chuyển khoản tối thiểu `2,000` VNĐ, tối đa `10,000,000` VNĐ; seed balance tối đa `100,000,000` VNĐ (tối thiểu > 0). Configure limits server-side; see [MVP Decision Record](./mvp-decision-record.md).
 - **Recipient discovery:** authenticated recipient resolution by account number with masked confirmation and rate limit.
 - **Demo identities:** local `demo` profile seeds Operator/Auditor and two approved Customers/accounts; seed operation must be idempotent and use uncommitted local secrets.
 - **Frontend remote state:** TanStack Query baseline; Zustand owns UI and session presentation state, not authoritative server data.

@@ -36,9 +36,9 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 - Use decimal arithmetic (`BigDecimal` in Java and fixed-precision `NUMERIC`/`DECIMAL` in PostgreSQL).
 - Never use `float`/`double` for money.
-- Specify scale and rounding policy before implementation. MVP baseline is simulated USD with scale 2 and exact decimal arithmetic; JSON APIs serialize amounts as decimal strings. Transfer maximum is `10,000.00`; Operator seed maximum is `100,000.00`.
-- Reject amount <= 0, excessive scale, unsupported currency and overflow before mutation.
-- MVP supports simulated `USD` only. Adding currencies requires currency-specific minor-unit rules and an OpenAPI contract update.
+- Specify scale and rounding policy before implementation. MVP baseline is simulated VND with scale 0 (exact integer/decimal arithmetic); JSON APIs serialize amounts as decimal/integer strings (e.g. `"2000"`, `"50000"`, `"10000000"`). Transfer amount minimum is `2,000` VNĐ, transfer maximum is `10,000,000` VNĐ; Operator seed maximum is `100,000,000` VNĐ (minimum > 0).
+- Reject amount < 2,000 VNĐ for transfers, amount <= 0 for seed, amounts exceeding respective maximums, excessive scale, unsupported currency and overflow before mutation.
+- MVP supports simulated `VND` only. Adding currencies requires currency-specific minor-unit rules and an OpenAPI contract update.
 
 ### Atomicity and concurrency
 
@@ -111,7 +111,7 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 ### Rule-based suspicious transaction detection
 
-- MVP uses two deterministic rules: transfer above `RISK_LARGE_TRANSFER_THRESHOLD` (baseline `5000.00` USD) or account exceeds `RISK_TRANSFER_COUNT_THRESHOLD` (baseline 5) transfers within `RISK_TRANSFER_COUNT_WINDOW_MINUTES` (baseline 10 minutes).
+- MVP uses two deterministic rules: transfer above `RISK_LARGE_TRANSFER_THRESHOLD` (baseline `5000000` VNĐ) or account exceeds `RISK_TRANSFER_COUNT_THRESHOLD` (baseline 5) transfers within `RISK_TRANSFER_COUNT_WINDOW_MINUTES` (baseline 10 minutes).
 - Evaluate after successful transfer commit. Flags never block or roll back transfer.
 - Store rule ID/version, transfer ID, detection time and reason. Use a fixed clock in tests.
 - Thresholds and windows are environment-configurable; document effective non-secret values.
@@ -229,14 +229,14 @@ Record:
 To achieve a 9.5+ grade during project defense, the team must execute and explain the following live/recorded engineering demonstrations:
 
 ### 1. Concurrent Transfer & Overdraft Prevention
-- **Scenario:** Two concurrent transfer requests of $600 each are fired against an account with only $1,000 available balance.
+- **Scenario:** Two concurrent transfer requests of 600,000 VNĐ each are fired against an account with only 1,000,000 VNĐ available balance.
 - **Demonstration:** Execute automated k6/JMeter script firing simultaneous requests.
-- **Expected Outcome:** Exactly one transaction commits ($600 debited); the second request fails with `409 INSUFFICIENT_FUNDS`. Balance remains exactly $400.00. No negative balance, no lost update.
+- **Expected Outcome:** Exactly one transaction commits (600,000 VNĐ debited); the second request fails with `409 INSUFFICIENT_FUNDS`. Balance remains exactly 400,000 VNĐ. No negative balance, no lost update.
 
 ### 2. Duplicate Request Protection (Idempotency)
-- **Scenario:** Customer submits a transfer of $100 with `Idempotency-Key: K1`.
+- **Scenario:** Customer submits a transfer of 100,000 VNĐ with `Idempotency-Key: K1`.
 - **Demonstration:** Client replays the identical request with `Idempotency-Key: K1`.
-- **Expected Outcome:** Server returns `200 OK` with header `Idempotency-Replayed: true` and identical transfer details. Source balance is debited only once ($100, not $200). A subsequent request reusing `K1` with an altered amount ($150) returns `409 IDEMPOTENCY_KEY_REUSED`.
+- **Expected Outcome:** Server returns `200 OK` with header `Idempotency-Replayed: true` and identical transfer details. Source balance is debited only once (100,000 VNĐ, not 200,000 VNĐ). A subsequent request reusing `K1` with an altered amount (150,000 VNĐ) returns `409 IDEMPOTENCY_KEY_REUSED`.
 
 ### 3. Failure & Recovery Scenarios (Mandatory from Slide 11)
 

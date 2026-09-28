@@ -23,8 +23,8 @@
   - Concurrency: Giả định 50 người dùng đồng thời (Concurrent Simulated Users) tại thời điểm cao điểm lớp học.
   - Throughput: Tải ổn định 20 RPS (Requests Per Second) trong 10 phút; Peak Burst lên đến 50 RPS.
 * **Đặc tính tài chính:**
-  - Quy mô tiền tệ: Giả định đơn vị USD, độ chính xác thập phân 2 chữ số (Decimal Scale 2).
-  - Giới hạn chuyển tiền: Tối đa $10,000.00 / giao dịch chuyển khoản; tối đa $100,000.00 cho lệnh seed balance.
+  - Quy mô tiền tệ: Giả định đơn vị VNĐ (mã tiền tệ: `VND`), độ chính xác số nguyên (Scale 0).
+  - Giới hạn chuyển tiền: Tối thiểu 2,000 VNĐ / giao dịch chuyển khoản; tối đa 10,000,000 VNĐ / giao dịch chuyển khoản; tối đa 100,000,000 VNĐ cho lệnh seed balance (tối thiểu > 0).
 
 ---
 
@@ -53,7 +53,7 @@ Hệ thống đặt ra các chỉ số Service Level Objective (SLO) có thể �
 * **Lý do chọn PostgreSQL:**
   - Tuân thủ tiêu chuẩn ACID nghiêm ngặt với cơ chế Multi-Version Concurrency Control (MVCC).
   - Hỗ trợ câu lệnh khóa dòng `SELECT ... FOR UPDATE` xác định và các ràng buộc toàn vẹn mạnh (`CHECK balance >= 0`, `UNIQUE(idempotency_key)`).
-  - PostgreSQL `NUMERIC(19,2)` and Java `BigDecimal` preserve USD scale 2.
+  - PostgreSQL `NUMERIC(19,0)` (hoặc `NUMERIC(19,2)`) và Java `BigDecimal` bảo toàn độ chính xác tiền tệ VNĐ (scale 0).
 * **Mô hình dữ liệu:**
   - Bảng `accounts`: Lưu trạng thái hiện tại (Projection) để truy vấn tức thì.
   - Bảng `transfers`: Lưu lịch sử giao dịch bất biến (Immutable Financial Record).
@@ -143,7 +143,7 @@ Hệ thống được thiết kế theo tư duy FinOps tối ưu chi phí rõ r�
 ## 12. If AI / Data feature is used: quality, safety and cost? (Tính năng AI / Dữ liệu)
 
 * **MVP:** Rule-based detection runs after transfer commit. Flags are read-only in MVP; review endpoint and notes are post-MVP options. Rules do not block transfers.
-  - Rule 1: Giao dịch vượt ngưỡng cấu hình lớn (`amount > $5,000.00`).
+  - Rule 1: Giao dịch vượt ngưỡng cấu hình lớn (`amount > 5,000,000 VNĐ`).
   - Rule 2: Tần suất giao dịch bất thường trong thời gian ngắn (`> 5 transactions / 10 phút`).
 * **Đảm bảo chất lượng & An toàn (Quality & Safety):**
   - Đánh giá cờ sau khi giao dịch chuyển tiền đã commit thành công (`Post-commit Evaluation`). Cờ nghi vấn **không bao giờ chặn hoặc rollback tiền của người dùng** trong MVP, tránh gây gián đoạn thanh toán ngoài ý muốn (False Positive impact).

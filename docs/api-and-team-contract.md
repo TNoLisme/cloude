@@ -64,8 +64,8 @@ Prism generates schema-shaped example responses, but does not implement business
 - Prefix: `/api/v1`.
 - IDs: UUID strings.
 - Timestamp: RFC 3339 UTC ending in `Z`.
-- Money: decimal string, e.g. `"125.40"`; never JSON float. MVP uses simulated USD only, scale 2. Transfer amount maximum `10,000.00`; seed balance maximum `100,000.00`. Values are configurable only by backend environment, not client request.
-- `currency` must be `USD` in MVP and match account currency. Contract versioning is required before adding another currency/scale.
+- Money: decimal string, ví dụ `"50000"` hoặc `"2000"`; never JSON float. MVP uses simulated VND only, scale 0. Transfer amount minimum `2,000` VNĐ, maximum `10,000,000` VNĐ; seed balance maximum `100,000,000` VNĐ (minimum > 0). Values are configurable only by backend environment, not client request.
+- `currency` must be `VND` in MVP and match account currency. Contract versioning is required before adding another currency/scale.
 - Enum values: uppercase snake case.
 - Unknown response fields: FE must ignore. BE may add optional response fields without breaking clients.
 - Request schema: BE rejects unknown or invalid required fields with `400 VALIDATION_ERROR`; OpenAPI `additionalProperties: false` for mutation request objects.
@@ -244,8 +244,8 @@ Response `200`:
     "accountNumberMasked": "••••4821",
     "accountType": "CHECKING",
     "status": "ACTIVE",
-    "balance": "0.00",
-    "currency": "USD"
+    "balance": "0",
+    "currency": "VND"
   },
   "decidedAt": "2026-09-28T10:15:00Z"
 }
@@ -279,8 +279,8 @@ Response `200`:
       "accountNumberMasked": "••••4821",
       "accountType": "CHECKING",
       "status": "ACTIVE",
-      "balance": "1000.00",
-      "currency": "USD",
+      "balance": "5000000",
+      "currency": "VND",
       "openedAt": "2026-09-28T10:15:00Z"
     }
   ],
@@ -306,8 +306,8 @@ Request:
 
 ```json
 {
-  "amount": "1000.00",
-  "currency": "USD",
+  "amount": "10000000",
+  "currency": "VND",
   "reference": "DEMO-OPENING-BALANCE"
 }
 ```
@@ -318,9 +318,9 @@ Response `201`:
 {
   "seedTransactionId": "cc168d4a-12cd-4f0f-8c63-55b90ad1e310",
   "accountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
-  "amount": "1000.00",
-  "currency": "USD",
-  "balanceAfter": "1000.00",
+  "amount": "10000000",
+  "currency": "VND",
+  "balanceAfter": "10000000",
   "createdAt": "2026-09-28T10:20:00Z"
 }
 ```
@@ -350,7 +350,7 @@ Response `200`:
   "accountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
   "accountNumberMasked": "••••3004",
   "recipientDisplayName": "Bob Counterparty",
-  "currency": "USD"
+  "currency": "VND"
 }
 ```
 
@@ -375,8 +375,8 @@ Request:
 {
   "sourceAccountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
   "destinationAccountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
-  "amount": "25.00",
-  "currency": "USD",
+  "amount": "50000",
+  "currency": "VND",
   "memo": "Shared lunch"
 }
 ```
@@ -389,8 +389,8 @@ Response `201` for first committed transfer:
   "status": "COMPLETED",
   "sourceAccountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
   "destinationAccountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
-  "amount": "25.00",
-  "currency": "USD",
+  "amount": "50000",
+  "currency": "VND",
   "memo": "Shared lunch",
   "createdAt": "2026-09-28T10:30:00Z",
   "completedAt": "2026-09-28T10:30:00Z"
@@ -440,8 +440,8 @@ Response `200`:
       "status": "COMPLETED",
       "counterpartyAccountMasked": "••••7710",
       "counterpartyDisplayName": "Bob Counterparty",
-      "amount": "25.00",
-      "currency": "USD",
+      "amount": "50000",
+      "currency": "VND",
       "memo": "Shared lunch",
       "createdAt": "2026-09-28T10:30:00Z"
     }
