@@ -1,0 +1,553 @@
+openapi: 3.1.0
+info:
+  title: Digital Banking Simulator API
+  version: 1.1.0
+  description: Educational simulator only. No real financial transactions.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local backend via proxy
+  - url: /api/v1
+    description: Same-origin deployment
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      operationId: registerCustomer
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201': { description: Customer created with PENDING status, content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationResponse' } } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated; refresh token is HttpOnly cookie
+          headers:
+            Set-Cookie: { schema: { type: string }, description: HttpOnly refresh_token cookie }
+          content: { application/json: { schema: { $ref: '#/components/schemas/LoginResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+  /auth/csrf:
+    get:
+      operationId: getCsrfToken
+      tags: [Auth]
+      security: []
+      responses:
+        '200': { description: CSRF token, content: { application/json: { schema: { $ref: '#/components/schemas/CsrfTokenResponse' } } } }
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [Auth]
+      security: []
+      description: Requires refresh cookie, credentials include, and X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
+      responses:
+        '200':
+          description: Access and refresh tokens rotated
+          headers: { Set-Cookie: { schema: { type: string } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/AccessTokenResponse' } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
+      responses:
+        '204': { description: Refresh session revoked and cookie cleared }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+  /customers/me:
+    get:
+      operationId: getCurrentCustomer
+      tags: [Customer]
+      responses:
+        '200': { description: Own profile, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerProfile' } } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+  /operator/onboarding:
+    get:
+      operationId: listOnboardingApplications
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/OnboardingStatus' } }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: Application page, content: { application/json: { schema: { $ref: '#/components/schemas/OnboardingPage' } } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+  /operator/onboarding/{customerId}:
+    get:
+      operationId: getOnboardingApplication
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
+      responses:
+        '200': { description: Application details, content: { application/json: { schema: { $ref: '#/components/schemas/OnboardingDetail' } } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+  /operator/onboarding/{customerId}/approve:
+    post:
+      operationId: approveOnboarding
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ApproveRequest' } } }
+      responses:
+        '200': { description: Approved and exactly one account created, content: { application/json: { schema: { $ref: '#/components/schemas/ApproveResponse' } } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+  /operator/onboarding/{customerId}/reject:
+    post:
+      operationId: rejectOnboarding
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RejectRequest' } } }
+      responses:
+        '200': { description: Application rejected, content: { application/json: { schema: { $ref: '#/components/schemas/RejectResponse' } } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+  /accounts:
+    get:
+      operationId: listMyAccounts
+      tags: [Accounts]
+      responses:
+        '200': { description: Customer-owned accounts, content: { application/json: { schema: { $ref: '#/components/schemas/AccountPage' } } }}
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+  /accounts/{accountId}:
+    get:
+      operationId: getAccount
+      tags: [Accounts]
+      parameters: [{ $ref: '#/components/parameters/AccountId' }]
+      responses:
+        '200': { description: Account details, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } }}
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+  /operator/accounts/{accountId}/seed-balance:
+    post:
+      operationId: seedAccountBalance
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      parameters:
+        - { $ref: '#/components/parameters/AccountId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SeedBalanceRequest' } } }
+      responses:
+        '201': { description: Seed funds applied, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/SeedBalanceResponse' } } }}
+        '200': { description: Original seed result replayed, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/SeedBalanceResponse' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+  /recipients/resolve:
+    post:
+      operationId: resolveRecipient
+      tags: [Transfers]
+      description: Rate limited. Return same not-available error for nonexistent or ineligible account numbers.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ResolveRecipientRequest' } } }
+      responses:
+        '200': { description: Safe recipient confirmation, content: { application/json: { schema: { $ref: '#/components/schemas/RecipientConfirmation' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+  /transfers:
+    post:
+      operationId: createTransfer
+      tags: [Transfers]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateTransferRequest' } } }
+      responses:
+        '201': { description: Transfer committed, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
+        '200': { description: Committed transfer replayed, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+        '503': { $ref: '#/components/responses/ProblemResponse' }
+    get:
+      operationId: listTransfers
+      tags: [Transfers]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { name: status, in: query, schema: { type: string, enum: [COMPLETED] } }
+        - { name: from, in: query, schema: { $ref: '#/components/schemas/Instant' } }
+        - { name: to, in: query, schema: { $ref: '#/components/schemas/Instant' } }
+      responses:
+        '200': { description: Transfer history page, content: { application/json: { schema: { $ref: '#/components/schemas/TransferPage' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+  /transfers/{transferId}:
+    get:
+      operationId: getTransfer
+      tags: [Transfers]
+      parameters: [{ $ref: '#/components/parameters/TransferId' }]
+      responses:
+        '200': { description: Transfer details, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+  /audit-events:
+    get:
+      operationId: listAuditEvents
+      tags: [Audit]
+      x-required-roles: [AUDITOR, ADMIN]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { name: eventType, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: actorId, in: query, schema: { $ref: '#/components/schemas/Uuid' } }
+        - { name: from, in: query, schema: { $ref: '#/components/schemas/Instant' } }
+        - { name: to, in: query, schema: { $ref: '#/components/schemas/Instant' } }
+      responses:
+        '200': { description: Audit event page, content: { application/json: { schema: { $ref: '#/components/schemas/AuditPage' } } }}
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+  /risk-flags:
+    get:
+      operationId: listRiskFlags
+      tags: [Risk]
+      x-required-roles: [OPERATOR, AUDITOR, ADMIN]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { name: status, in: query, schema: { type: string, enum: [OPEN], default: OPEN } }
+        - { name: ruleId, in: query, schema: { type: string, maxLength: 80 } }
+      responses:
+        '200': { description: Rule flags page, content: { application/json: { schema: { $ref: '#/components/schemas/RiskFlagPage' } } }}
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+  /health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      security: []
+      responses:
+        '200': { description: Ready, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } }}
+        '503': { description: Not ready }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    CustomerId: { name: customerId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    AccountId: { name: accountId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    TransferId: { name: transferId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    FlagId: { name: flagId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    Cursor: { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[ -~]+$' } }
+    CsrfToken: { name: X-CSRF-Token, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 256 } }
+  responses:
+    ProblemResponse:
+      description: RFC 9457-compatible error
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Uuid: { type: string, format: uuid }
+    Instant: { type: string, format: date-time, description: RFC 3339 UTC timestamp emitted with Z suffix }
+    MoneyAmount: { type: string, pattern: '^(0|[1-9][0-9]{0,12})(\\.[0-9]{1,2})?$', examples: ['25.00'], description: Simulated USD, decimal scale 2 }
+    Currency: { type: string, enum: [USD] }
+    OnboardingStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+    AccountStatus: { type: string, enum: [ACTIVE, BLOCKED, CLOSED] }
+    Role: { type: string, enum: [CUSTOMER, OPERATOR, AUDITOR, ADMIN] }
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, fullName]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
+        fullName: { type: string, minLength: 1, maxLength: 120 }
+        phone: { type: string, maxLength: 32 }
+        address: { type: string, maxLength: 300 }
+    RegistrationResponse:
+      type: object
+      required: [customerId, email, fullName, onboardingStatus, createdAt]
+      properties:
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+    UserSummary:
+      type: object
+      required: [userId, displayName, roles]
+      properties:
+        userId: { $ref: '#/components/schemas/Uuid' }
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        displayName: { type: string }
+        roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
+        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+    AccessTokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer, minimum: 1 }
+    LoginResponse:
+      allOf:
+        - { $ref: '#/components/schemas/AccessTokenResponse' }
+        - type: object
+          required: [user]
+          properties: { user: { $ref: '#/components/schemas/UserSummary' } }
+    CsrfTokenResponse:
+      type: object
+      required: [csrfToken]
+      properties: { csrfToken: { type: string, minLength: 16, maxLength: 256 } }
+    CustomerProfile:
+      type: object
+      required: [customerId, fullName, email, onboardingStatus, createdAt]
+      properties:
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        decisionAt: { $ref: '#/components/schemas/Instant' }
+        decisionReason: { type: string }
+    OnboardingSummary:
+      type: object
+      required: [customerId, fullName, email, onboardingStatus, submittedAt]
+      properties:
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        submittedAt: { $ref: '#/components/schemas/Instant' }
+    OnboardingDetail:
+      allOf:
+        - { $ref: '#/components/schemas/OnboardingSummary' }
+        - type: object
+          properties:
+            phone: { type: string, maxLength: 32 }
+            address: { type: string, maxLength: 300 }
+    OnboardingPage:
+      allOf:
+        - { $ref: '#/components/schemas/PageBase' }
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/OnboardingSummary' } } }
+    ApproveRequest:
+      type: object
+      additionalProperties: false
+      properties: { decisionNote: { type: string, maxLength: 500 } }
+    RejectRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties: { reason: { type: string, minLength: 1, maxLength: 500 } }
+    Account:
+      type: object
+      required: [accountId, accountNumberMasked, accountType, status, balance, currency, openedAt]
+      properties:
+        accountId: { $ref: '#/components/schemas/Uuid' }
+        accountNumberMasked: { type: string }
+        accountType: { type: string, enum: [CHECKING] }
+        status: { $ref: '#/components/schemas/AccountStatus' }
+        balance: { $ref: '#/components/schemas/MoneyAmount' }
+        currency: { $ref: '#/components/schemas/Currency' }
+        openedAt: { $ref: '#/components/schemas/Instant' }
+    AccountPage:
+      allOf:
+        - { $ref: '#/components/schemas/PageBase' }
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/Account' } } }
+    ApproveResponse:
+      type: object
+      required: [customerId, onboardingStatus, account, decidedAt]
+      properties:
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        onboardingStatus: { type: string, enum: [APPROVED] }
+        account: { $ref: '#/components/schemas/Account' }
+        decidedAt: { $ref: '#/components/schemas/Instant' }
+    RejectResponse:
+      type: object
+      required: [customerId, onboardingStatus, decidedAt]
+      properties:
+        customerId: { $ref: '#/components/schemas/Uuid' }
+        onboardingStatus: { type: string, enum: [REJECTED] }
+        reason: { type: string }
+        decidedAt: { $ref: '#/components/schemas/Instant' }
+    ResolveRecipientRequest:
+      type: object
+      additionalProperties: false
+      required: [accountNumber]
+      properties: { accountNumber: { type: string, minLength: 8, maxLength: 34, pattern: '^[0-9]+$' } }
+    RecipientConfirmation:
+      type: object
+      required: [accountId, accountNumberMasked, recipientDisplayName, currency]
+      properties:
+        accountId: { $ref: '#/components/schemas/Uuid' }
+        accountNumberMasked: { type: string }
+        recipientDisplayName: { type: string, maxLength: 120 }
+        currency: { $ref: '#/components/schemas/Currency' }
+    SeedBalanceRequest:
+      type: object
+      additionalProperties: false
+      required: [amount, currency, reference]
+      properties:
+        amount: { type: string, pattern: '^(?:0\.(?:0[1-9]|[1-9][0-9]?)|[1-9][0-9]{0,4}(?:\.[0-9]{1,2})?|100000(?:\.00)?)$', description: Greater than zero and at most 100000.00 }
+        currency: { $ref: '#/components/schemas/Currency' }
+        reference: { type: string, minLength: 1, maxLength: 100 }
+    SeedBalanceResponse:
+      type: object
+      required: [seedTransactionId, accountId, amount, currency, balanceAfter, createdAt]
+      properties:
+        seedTransactionId: { $ref: '#/components/schemas/Uuid' }
+        accountId: { $ref: '#/components/schemas/Uuid' }
+        amount: { $ref: '#/components/schemas/MoneyAmount' }
+        currency: { $ref: '#/components/schemas/Currency' }
+        balanceAfter: { $ref: '#/components/schemas/MoneyAmount' }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+    CreateTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [sourceAccountId, destinationAccountId, amount, currency]
+      properties:
+        sourceAccountId: { $ref: '#/components/schemas/Uuid' }
+        destinationAccountId: { $ref: '#/components/schemas/Uuid' }
+        amount: { type: string, pattern: '^(?:0\.(?:0[1-9]|[1-9][0-9]?)|[1-9][0-9]{0,3}(?:\.[0-9]{1,2})?|10000(?:\.00)?)$', description: Greater than zero and at most 10000.00 }
+        currency: { $ref: '#/components/schemas/Currency' }
+        memo: { type: string, maxLength: 140 }
+    Transfer:
+      type: object
+      required: [transferId, status, sourceAccountId, destinationAccountId, amount, currency, createdAt, completedAt]
+      properties:
+        transferId: { $ref: '#/components/schemas/Uuid' }
+        status: { type: string, enum: [COMPLETED] }
+        sourceAccountId: { $ref: '#/components/schemas/Uuid' }
+        destinationAccountId: { $ref: '#/components/schemas/Uuid' }
+        amount: { $ref: '#/components/schemas/MoneyAmount' }
+        currency: { $ref: '#/components/schemas/Currency' }
+        memo: { type: string, maxLength: 140 }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        completedAt: { $ref: '#/components/schemas/Instant' }
+    TransferListItem:
+      type: object
+      required: [transferId, direction, status, counterpartyAccountMasked, counterpartyDisplayName, amount, currency, createdAt]
+      properties:
+        transferId: { $ref: '#/components/schemas/Uuid' }
+        direction: { type: string, enum: [INCOMING, OUTGOING] }
+        status: { type: string, enum: [COMPLETED] }
+        counterpartyAccountMasked: { type: string }
+        counterpartyDisplayName: { type: string, maxLength: 120, description: Limited display name; must not include contact details }
+        amount: { $ref: '#/components/schemas/MoneyAmount' }
+        currency: { $ref: '#/components/schemas/Currency' }
+        memo: { type: string, maxLength: 140 }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        completedAt: { $ref: '#/components/schemas/Instant' }
+    TransferPage:
+      allOf:
+        - { $ref: '#/components/schemas/PageBase' }
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/TransferListItem' } } }
+    AuditEvent:
+      type: object
+      required: [eventId, eventType, targetType, targetId, outcome, occurredAt, correlationId, summary]
+      properties:
+        eventId: { $ref: '#/components/schemas/Uuid' }
+        eventType: { type: string }
+        actorId: { $ref: '#/components/schemas/Uuid' }
+        targetType: { type: string }
+        targetId: { $ref: '#/components/schemas/Uuid' }
+        outcome: { type: string, enum: [SUCCESS, FAILURE] }
+        occurredAt: { $ref: '#/components/schemas/Instant' }
+        correlationId: { $ref: '#/components/schemas/Uuid' }
+        summary: { type: string, maxLength: 500 }
+    AuditPage:
+      allOf:
+        - { $ref: '#/components/schemas/PageBase' }
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } } }
+    RiskFlag:
+      type: object
+      required: [flagId, transferId, ruleId, ruleVersion, reason, detectedAt]
+      properties:
+        flagId: { $ref: '#/components/schemas/Uuid' }
+        transferId: { $ref: '#/components/schemas/Uuid' }
+        ruleId: { type: string }
+        ruleVersion: { type: string }
+        reason: { type: string, maxLength: 500 }
+        detectedAt: { $ref: '#/components/schemas/Instant' }
+    RiskFlagPage:
+      allOf:
+        - { $ref: '#/components/schemas/PageBase' }
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/RiskFlag' } } }
+    PageBase:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: {} }
+        nextCursor: { type: [string, 'null'] }
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string }
+        code: { type: string }
+        message: { type: string }
+    Problem:
+      type: object
+      required: [type, title, status, detail, instance, code, correlationId]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+        code: { type: string }
+        correlationId: { $ref: '#/components/schemas/Uuid' }
+        fieldErrors: { type: array, items: { $ref: '#/components/schemas/FieldError' } }
+    Health:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status: { type: string, enum: [UP] }
+        timestamp: { $ref: '#/components/schemas/Instant' }
