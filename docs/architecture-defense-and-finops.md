@@ -52,7 +52,7 @@ Hệ thống đặt ra các chỉ số Service Level Objective (SLO) có thể �
 * **Lý do chọn PostgreSQL:**
   - Tuân thủ tiêu chuẩn ACID nghiêm ngặt với cơ chế Multi-Version Concurrency Control (MVCC).
   - Hỗ trợ câu lệnh khóa dòng `SELECT ... FOR UPDATE` xác định và các ràng buộc toàn vẹn mạnh (`CHECK balance >= 0`, `UNIQUE(idempotency_key)`).
-  - PostgreSQL `NUMERIC(19,0)` (hoặc `NUMERIC(19,2)`) và Java `BigDecimal` bảo toàn độ chính xác tiền tệ VNĐ (scale 0).
+  - PostgreSQL `NUMERIC(19,0)` and Java `BigDecimal` preserve exact integer VND amounts (scale 0).
 * **Mô hình dữ liệu:**
   - Bảng `accounts`: Lưu trạng thái hiện tại (Projection) để truy vấn tức thì.
   - Bảng `transfers`: Lưu lịch sử giao dịch bất biến (Immutable Financial Record).

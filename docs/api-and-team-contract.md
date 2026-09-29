@@ -62,7 +62,7 @@ Contract-first development is mandatory:
 - Prefix: `/api/v1`.
 - IDs: UUID strings.
 - Timestamp: RFC 3339 UTC ending in `Z`.
-- Money: decimal string, ví dụ `"50000"` hoặc `"2000"`; never JSON float. MVP uses simulated VND only, scale 0. Transfer amount minimum `2,000` VNĐ, maximum `10,000,000` VNĐ; seed balance maximum `100,000,000` VNĐ (minimum > 0). Values are configurable only by backend environment, not client request.
+- Money: integer string, e.g. `"50000"` or `"2000"`; never JSON float or decimal fraction. MVP uses simulated VND only, scale 0. Transfer amount minimum `2,000` VNĐ, maximum `10,000,000` VNĐ; seed balance maximum `100,000,000` VNĐ (minimum > 0). Values are configurable only by backend environment, not client request.
 - `currency` must be `VND` in MVP and match account currency. Contract versioning is required before adding another currency/scale.
 - Primary Identifiers: `phone` (10 chữ số định dạng Việt Nam, duy nhất) và `email` (duy nhất). Cả hai đều bắt buộc khi tạo tài khoản.
 - Login credential: Đăng nhập bằng `phone` + `password`.

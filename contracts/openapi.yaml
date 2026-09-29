@@ -526,7 +526,7 @@ components:
     Instant: { type: string, format: date-time, description: RFC 3339 UTC timestamp emitted with Z suffix }
     PhoneNumber: { type: string, pattern: '^0[3-9][0-9]{8}$', examples: ['0912345678'], description: Unique 10-digit Vietnam phone number }
     EmailAddress: { type: string, format: email, maxLength: 254, description: Unique email address }
-    MoneyAmount: { type: string, pattern: '^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,2})?$', examples: ['50000'], description: Simulated VND, integer or decimal scale 0/2 }
+    MoneyAmount: { type: string, pattern: '^(0|[1-9][0-9]{0,14})$', examples: ['50000'], description: Simulated VND, integer only (scale 0) }
     Currency: { type: string, enum: [VND] }
     AccountStatus: { type: string, enum: [ACTIVE, BLOCKED, CLOSED] }
     Role: { type: string, enum: [CUSTOMER, OPERATOR, AUDITOR, ADMIN] }
@@ -757,7 +757,7 @@ components:
       additionalProperties: false
       required: [amount, currency, reference]
       properties:
-        amount: { type: string, pattern: '^(?:[1-9][0-9]{0,7}|100000000)(?:\\.[0-9]{1,2})?$', description: Greater than zero and at most 100000000 VNĐ }
+        amount: { type: string, pattern: '^(?:[1-9][0-9]{0,7}|100000000)$', description: Greater than zero and at most 100000000 VNĐ; integer only (scale 0) }
         currency: { $ref: '#/components/schemas/Currency' }
         reference: { type: string, minLength: 1, maxLength: 100 }
 
@@ -779,7 +779,7 @@ components:
       properties:
         sourceAccountId: { $ref: '#/components/schemas/Uuid' }
         destinationAccountId: { $ref: '#/components/schemas/Uuid' }
-        amount: { type: string, pattern: '^(?:[2-9][0-9]{3}|[1-9][0-9]{4,6}|10000000)(?:\\.[0-9]{1,2})?$', description: At least 2000 VNĐ and at most 10000000 VNĐ }
+        amount: { type: string, pattern: '^(?:[2-9][0-9]{3}|[1-9][0-9]{4,6}|10000000)$', description: At least 2000 VNĐ and at most 10000000 VNĐ; integer only (scale 0) }
         currency: { $ref: '#/components/schemas/Currency' }
         pin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true, description: 6-digit transaction PIN }
         memo: { type: string, maxLength: 140 }

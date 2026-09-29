@@ -36,7 +36,7 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 - Use decimal arithmetic (`BigDecimal` in Java and fixed-precision `NUMERIC`/`DECIMAL` in PostgreSQL).
 - Never use `float`/`double` for money.
-- Specify scale and rounding policy before implementation. MVP baseline is simulated VND with scale 0 (exact integer/decimal arithmetic); JSON APIs serialize amounts as decimal/integer strings (e.g. `"2000"`, `"50000"`, `"10000000"`). Transfer amount minimum is `2,000` VNĐ, transfer maximum is `10,000,000` VNĐ; Operator seed maximum is `100,000,000` VNĐ (minimum > 0).
+- MVP uses simulated VND with scale 0 (integer amounts); JSON APIs serialize amounts as integer strings (e.g. `"2000"`, `"50000"`, `"10000000"`). Transfer amount minimum is `2,000` VNĐ, transfer maximum is `10,000,000` VNĐ; Operator seed maximum is `100,000,000` VNĐ (minimum > 0).
 - Reject amount < 2,000 VNĐ for transfers, amount <= 0 for seed, amounts exceeding respective maximums, excessive scale, unsupported currency and overflow before mutation.
 - MVP supports simulated `VND` only. Adding currencies requires currency-specific minor-unit rules and an OpenAPI contract update.
 
