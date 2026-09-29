@@ -4,7 +4,7 @@
 
 Bộ tài liệu đặc tả MVP cho đề tài **Digital Banking Simulator** môn Cloud Application Development.
 
-MVP tập trung một vertical slice hoàn chỉnh: khách hàng đăng ký, Operator duyệt và mở tài khoản, cấp số dư demo, khách hàng chuyển tiền nội bộ, hệ thống bảo vệ consistency, chống request trùng, ghi audit và gắn cờ giao dịch đáng ngờ.
+MVP tập trung một vertical slice hoàn chỉnh: khách hàng tự đăng ký bằng SĐT + OTP (hoặc Operator mở hộ tại quầy), đăng nhập bằng SĐT, thiết lập PIN, khôi phục mật khẩu qua OTP SMS/Email, cấp số dư demo, khách hàng chuyển tiền nội bộ, hệ thống bảo vệ consistency, chống request trùng, ghi audit và gắn cờ giao dịch đáng ngờ.
 
 ## Tài liệu
 
@@ -24,10 +24,13 @@ MVP tập trung một vertical slice hoàn chỉnh: khách hàng đăng ký, Ope
 - Frontend: React + TypeScript + Vite.
 - Frontend state: Zustand cho client/UI state; server data vẫn đi qua API layer và query/cache strategy.
 - FE và BE phát triển độc lập qua OpenAPI contract.
-- Onboarding: Customer đăng ký; Operator duyệt hoặc từ chối; khi duyệt, hệ thống mở một tài khoản mặc định.
+- Onboarding: Customer tự đăng ký (SĐT + email + OTP SMS) hoặc Operator tạo hộ tại quầy (OTP về SĐT khách); hệ thống mở ngay một tài khoản mặc định `ACTIVE`. Không còn bước duyệt hồ sơ.
+- Định danh: `phone` (đăng nhập) và `email` đều bắt buộc và UNIQUE. Khôi phục mật khẩu qua OTP, chọn kênh SMS hoặc Email; thành công thì thu hồi mọi phiên đăng nhập.
+- Xác thực giao dịch: PIN 6 số cho mọi transfer; thêm OTP SMS khi số tiền > 5,000,000 VNĐ. Trạng thái giao dịch: `AWAITING_OTP`, `COMPLETED`, `EXPIRED`, `FAILED`.
+- Quản lý tài khoản: Operator tra cứu chính xác khách theo SĐT/email, khóa/mở tài khoản (`ACTIVE ⇄ BLOCKED`).
 - Money scope: internal transfer và seed balance do Operator cấp. Không có external payment, cash deposit, cash withdrawal hay real banking integration.
 - Cloud provider: chưa khóa. Thiết kế phải portable giữa managed PostgreSQL, container runtime, object/log/monitoring services của provider.
-- Kafka, Outbox, Saga, read replica, operator account search và risk review workflow là post-MVP options. Không nằm trong MVP acceptance gate.
+- Kafka, Outbox, Saga, read replica, broad operator account search và risk review workflow là post-MVP options. Không nằm trong MVP acceptance gate.
 
 ## Trạng thái
 

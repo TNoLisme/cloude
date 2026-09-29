@@ -14,7 +14,7 @@ Define measurable quality gates and required demonstrations for Digital Banking 
 | Consistency | Prevent partial transfer and overdraft. | Every committed transfer has matching debit/credit; any rejected/rolled-back transfer changes neither balance. |
 | Idempotency | Retry-safe transfer. | Same key+payload produces one logical transfer under sequential and concurrent retries; key reuse with different payload is rejected. |
 | Security | Authenticate, authorize and protect sensitive data. | Automated negative tests cover role failure, IDOR/ownership failure, invalid state and credential non-disclosure. HTTPS enabled at deployed ingress. |
-| Auditability | Record critical actions. | Every onboarding decision, seed balance and transfer has actor/action/time/outcome/correlation reference; no password/token/secret stored in audit payload. |
+| Auditability | Record critical actions. | Every customer/account creation, seed balance, transfer, PIN change and password recovery has actor/action/time/outcome/correlation reference; no password/token/secret stored in audit payload. |
 | Recovery | Demonstrate failure and recovery. | Kill/restart application during request test; inspect persisted state and retry using idempotency key. Report whether request committed or rolled back; never infer outcome from client timeout alone. |
 | Observability | Correlate requests and measure behavior. | Structured logs include correlation ID; dashboard/report shows request count, latency, error rate, DB connection/pool health and transfer outcome counts. |
 | Cost | Estimate deployment cost. | Planning estimate: approximately $45-$50/month for listed AWS resources, excluding unpriced networking, backups, image registry, domain and overage costs. See assumptions below. |
@@ -46,6 +46,7 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 - Lock involved accounts in deterministic ascending ID order to avoid opposite-direction transfer deadlocks.
 - Validate available balance after acquiring lock.
 - Add database constraints for non-negative balances where compatible with account states, unique idempotency scope/key, unique default account per customer, and valid status/value constraints.
+- Identity constraints on `customers` (and login identity table if separate): `phone VARCHAR(10) NOT NULL UNIQUE` with check `phone ~ '^0[3-9][0-9]{8}$'`, `email VARCHAR(254) NOT NULL UNIQUE` stored normalized (trim + lowercase; or unique index on `lower(email)`). Map unique-violation on `phone`/`email` to `409 PHONE_ALREADY_REGISTERED` / `409 EMAIL_ALREADY_REGISTERED`; never rely only on a pre-insert existence check (race condition).
 - Do not make network calls to a broker, email provider or another service while holding account-row locks or inside the money DB transaction. MVP does not implement a message broker.
 - Integration test concurrency against PostgreSQL-compatible behavior. H2-only tests do not prove PostgreSQL lock semantics.
 
@@ -78,6 +79,16 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 - Operator/Auditor/Admin endpoints are protected by explicit role checks, not hidden UI routes.
 - Keep admin privilege narrow; role changes and privileged actions are audited.
 - Protect registration/login from brute force with configurable rate limits and generic authentication errors where needed.
+- Login identifier is `phone`; wrong phone or wrong password returns the same `401 CREDENTIALS_INVALID`.
+
+### OTP, PIN and account recovery
+
+- OTP: 6 random digits from a CSPRNG, TTL `120` seconds, single use, stored only as hash, bound to `identifier + channel + purpose` (`REGISTRATION`, `OPERATOR_CREATE_CUSTOMER`, `RECOVERY`, `PIN_RESET`, `TRANSFER_STEP_UP`). Max 5 verify attempts, then invalidate. Resend/initiate rate-limited per identifier and per IP.
+- OTP delivery goes through an `OtpSender` port (SMS / Email adapters). MVP uses a simulated adapter; OTP values never appear in application logs, traces, audit or API responses in shared/cloud environments.
+- Recovery anti-enumeration: `/auth/recover/initiate` returns identical status, body and timing for registered and unregistered identifiers (OTP dispatched asynchronously only on match); `/auth/recover/confirm` with unregistered identifier returns `400 OTP_INVALID`, same as wrong OTP. No `404` on recovery endpoints.
+- Accepted risk: registration returns `409 PHONE_ALREADY_REGISTERED` / `EMAIL_ALREADY_REGISTERED`, enabling slow existence checks. Mitigated by strict rate limit on `/auth/register/send-otp` (per phone + per IP) and OTP gate before `/auth/register`. Documented as accepted risk for MVP.
+- Recovery channel: `SMS` only to registered phone, `EMAIL` only to registered email. Successful recovery hashes the new password and **revokes all refresh tokens of the user in the same DB transaction** (force logout on every device).
+- Transaction PIN: 6 digits, stored with adaptive hash separate from password, never returned or logged. 5 consecutive failures lock PIN for 15 minutes (`403 PIN_LOCKED`). Operators cannot view or set a customer PIN.
 
 ### Transport, secrets and data
 
@@ -94,11 +105,13 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 | Category | Threat Scenario | Architectural Mitigation | Verification / Test |
 |---|---|---|---|
 | **S**poofing | Attacker forges JWT or actor identity in request header/body | JWT validated per request via cryptographic signature; actor/role extracted strictly from verified claims, never from client body. | Negative auth test with expired, tampered, or forged signature returns `401`. |
+| **S**poofing | Attacker takes over account via password recovery or brute-forces OTP/PIN | OTP 6 digits, TTL 120s, single use, max 5 attempts, rate limit; recovery revokes all refresh tokens; PIN lock after 5 failures. | Expired/reused OTP returns `400 OTP_INVALID`; old refresh token after recovery returns `401`; 6th wrong PIN returns `403 PIN_LOCKED`. |
 | **T**ampering | Attacker tampers transfer parameters or reuses idempotency key with altered payload | Cryptographic SHA-256 payload hash stored with Idempotency Key; DB transactional checks; HTTPS in transit. | Replay test with altered payload returns `409 IDEMPOTENCY_KEY_REUSED`; balances untouched. |
-| **R**epudiation | User denies initiating transfer or Operator denies approval action | Append-only audit trail records `actorId`, `targetId`, `timestamp`, `outcome` and `correlationId`. | Audit query confirms transfer and approval records with matching correlation references. |
+| **R**epudiation | User denies initiating transfer or Operator denies creating a customer at counter | Append-only audit trail records `actorId`, `targetId`, `timestamp`, `outcome` and `correlationId`; transfer requires PIN (+ OTP above threshold). | Audit query confirms transfer and counter-creation records with matching correlation references. |
 | **I**nformation Disclosure | IDOR to view other accounts, or sensitive secrets leaked into log streams | Object-level ownership validation (returns concealed `404`); account masking (`••••4821`); sensitive fields stripped from logs/traces. | IDOR test asserts Customer A cannot query Customer B account; log scanner verifies zero token/secret leaks. |
-| **D**enial of Service | Brute force login, account enumeration, or DB connection pool exhaustion | Rate limiting on `/auth/login` and `/recipients/resolve`; bounded connection pool with HikariCP; deterministic row lock timeouts. | Burst traffic test triggers `429 RATE_LIMITED`; lock contention resolves within bounded timeout. |
-| **E**levation of Privilege | Customer invokes Operator onboarding/seed endpoints | RBAC for `CUSTOMER`, `OPERATOR`, `AUDITOR`, `ADMIN` enforced by backend. | Customer and Auditor receive `403 FORBIDDEN` on Operator endpoints. |
+| **I**nformation Disclosure | Account enumeration via password recovery or operator lookup | Recovery always generic `200` / `400 OTP_INVALID`, async OTP dispatch; operator lookup requires exactly one exact filter, audited and rate limited; registration `409` documented as accepted risk. | Test compares recovery response status/body and p95 latency for registered vs unregistered identifier; unfiltered lookup returns `400`. |
+| **D**enial of Service | Brute force login, account enumeration, OTP/SMS flooding, or DB connection pool exhaustion | Rate limiting on `/auth/login`, `/auth/register/send-otp`, `/auth/recover/initiate`, `/operator/customers/send-otp` and `/recipients/resolve`; bounded connection pool with HikariCP; deterministic row lock timeouts. | Burst traffic test triggers `429 RATE_LIMITED`; lock contention resolves within bounded timeout. |
+| **E**levation of Privilege | Customer invokes Operator counter-creation/seed endpoints | RBAC for `CUSTOMER`, `OPERATOR`, `AUDITOR`, `ADMIN` enforced by backend. | Customer and Auditor receive `403 FORBIDDEN` on Operator endpoints. |
 
 ## 5. Audit and suspicious activity
 
@@ -121,7 +134,10 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 ### Backend
 
-- Unit tests: state transitions, amount validation, idempotency policy, risk rules, error mapping; mock external dependencies.
+- Unit tests: state transitions, amount validation, idempotency policy, risk rules, OTP TTL/attempt/single-use policy, PIN lockout, error mapping; mock external dependencies and use fixed clock.
+- Integration tests: concurrent registrations with same phone or email produce exactly one Customer; recovery via SMS and via Email both revoke previous refresh tokens.
+- Step-up transfer tests: concurrent double `confirm-otp` yields exactly one debit; confirm after expiry returns `409 TRANSFER_EXPIRED`; balance reduced by another transfer between PIN and OTP makes confirm `FAILED` with balances unchanged; replay `POST /transfers` while `AWAITING_OTP` sends no new OTP.
+- Account status tests: block during in-flight transfer serializes on row lock; transfer from/to `BLOCKED` account returns `409 ACCOUNT_NOT_ELIGIBLE`; repeated block is idempotent.
 - Repository/integration tests: PostgreSQL-specific migrations, constraints, transaction rollback and row locking using disposable isolated database/container.
 - API tests: authentication, roles, ownership, OpenAPI response shape and error contract.
 - Concurrency tests: parallel transfers, duplicate idempotency keys and opposite-direction locks.
@@ -130,9 +146,9 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 ### Frontend
 
 - Typecheck and production build.
-- Component/feature tests for registration, pending/approved/rejected states, transfer validation, loading/error/success, and role-gated navigation.
+- Component/feature tests for registration (phone OTP step, duplicate phone/email errors), login by phone, mandatory PIN setup redirect, recovery channel selection (SMS/Email), transfer PIN + step-up OTP modal, loading/error/success, and role-gated navigation.
 - API mock tests validate expected request headers, idempotency key behavior and cache invalidation/refetch after transfer.
-- E2E smoke test covers register → Operator approve → seed balance → transfer → history/status.
+- E2E smoke test covers register (phone OTP) → login by phone → PIN setup → Operator seed balance → transfer (PIN; > 5M with OTP) → history/status, plus forgot password → OTP → new password → login.
 
 ### Contract and CI
 
@@ -218,7 +234,7 @@ Record:
 
 - Date, commit/version, provider/region or local hardware, backend instance size, PostgreSQL tier/configuration.
 - Test tool/version, test script, dataset size and data reset/isolation method.
-- Workload: concurrent users, request mix, transfer amount/ratio, duration, ramp-up, target RPS and peak factor.
+- Workload: concurrent users, request mix, transfer amount/ratio, duration, ramp-up, target RPS and peak factor. Main load profile uses transfer amounts ≤ `5,000,000` VNĐ (PIN only, no OTP step); if step-up is included, report it as a separate scenario using the simulated OTP adapter.
 - Results: achieved RPS, p50/p95/p99 latency, error rate by class, CPU/memory, DB connections, lock wait/deadlock count.
 - Correctness: balance invariant, committed transfer count, duplicate protection and reconciliation result.
 - Cost estimate and assumptions for cloud deployment.
@@ -247,9 +263,14 @@ To achieve a 9.5+ grade during project defense, the team must execute and explai
 ### 4. Security & Audit Trail Review
 - **Demonstration:**
   - Authenticate as Customer A, attempt to query Customer B's account ID -> Returns `404` (Concealed IDOR).
-  - Authenticate as Customer, attempt to call `POST /operator/onboarding/{id}/approve` -> Returns `403 FORBIDDEN`.
-  - Log inspection verifies zero password/token leaks in logs.
-  - Auditor logs in and queries `GET /api/v1/audit-events`, demonstrating full traceability of previous transfer and approval actions.
+  - Authenticate as Customer, attempt to call `POST /operator/customers` -> Returns `403 FORBIDDEN`.
+  - Register a second customer with an existing phone or email -> Returns `409 PHONE_ALREADY_REGISTERED` / `409 EMAIL_ALREADY_REGISTERED`.
+  - Recovery initiate with registered vs unregistered phone -> identical `200` body (anti-enumeration).
+  - Operator blocks Customer B account -> transfer A→B returns `409 ACCOUNT_NOT_ELIGIBLE`; audit shows block reason.
+  - Transfer 6,000,000 VNĐ -> `AWAITING_OTP`; `GET /transfers/{id}` shows status; confirm twice -> one debit only.
+  - Recover password via Email channel on device A while logged in on device B -> device B refresh returns `401 SESSION_EXPIRED`.
+  - Log inspection verifies zero password/PIN/OTP/token leaks in logs.
+  - Auditor logs in and queries `GET /api/v1/audit-events`, demonstrating full traceability of previous transfer, counter creation and recovery actions.
 
 ### 5. Load Test with Latency & Error Metrics
 - **Demonstration:** Run 10-minute steady-state 20 RPS test using k6/Locust. Show measured p50/p95/p99 latency, error classes and DB pool utilization. Compare results with proposed MVP p95 target of 500 ms; do not claim zero 5xx before test.

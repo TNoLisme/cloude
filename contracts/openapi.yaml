@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Digital Banking Simulator API
-  version: 1.1.0
+  version: 2.0.0
   description: Educational simulator only. No real financial transactions.
 servers:
   - url: http://localhost:8080/api/v1
@@ -11,26 +11,50 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /auth/register/send-otp:
+    post:
+      operationId: sendRegistrationOtp
+      tags: [Auth]
+      security: []
+      description: Send 6-digit registration OTP to phone number before submitting registration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendOtpRequest' }
+      responses:
+        '200':
+          description: OTP dispatched successfully
+          content: { application/json: { schema: { $ref: '#/components/schemas/SendOtpResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/register:
     post:
       operationId: registerCustomer
       tags: [Auth]
       security: []
+      description: Self-service registration with verified phone OTP. Creates Customer and active default checking account immediately.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
-        '201': { description: Customer created with PENDING status, content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationResponse' } } } }
+        '201':
+          description: Customer and account created successfully
+          content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationResponse' } } }
         '400': { $ref: '#/components/responses/ProblemResponse' }
         '409': { $ref: '#/components/responses/ProblemResponse' }
         '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/login:
     post:
       operationId: login
       tags: [Auth]
       security: []
+      description: Authenticate with registered phone number and password. Returns access token, HttpOnly refresh cookie, and isPinSet flag.
       requestBody:
         required: true
         content:
@@ -45,6 +69,7 @@ paths:
         '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/csrf:
     get:
       operationId: getCsrfToken
@@ -52,6 +77,7 @@ paths:
       security: []
       responses:
         '200': { description: CSRF token, content: { application/json: { schema: { $ref: '#/components/schemas/CsrfTokenResponse' } } } }
+
   /auth/refresh:
     post:
       operationId: refreshSession
@@ -66,6 +92,7 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/AccessTokenResponse' } } }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/logout:
     post:
       operationId: logout
@@ -75,67 +102,174 @@ paths:
         '204': { description: Refresh session revoked and cookie cleared }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
+
+  /auth/recover/initiate:
+    post:
+      operationId: initiateAccountRecovery
+      tags: [Auth]
+      security: []
+      description: >-
+        Request recovery OTP via chosen channel (SMS to registered phone or EMAIL to registered email).
+        Anti-enumeration: always returns the same 200 body whether or not the identifier is registered;
+        OTP is dispatched asynchronously only when a matching account exists, so response time does not reveal existence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecoverInitiateRequest' }
+      responses:
+        '200':
+          description: Generic response, identical for registered and unregistered identifiers
+          content: { application/json: { schema: { $ref: '#/components/schemas/RecoverInitiateResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
+  /auth/recover/confirm:
+    post:
+      operationId: confirmAccountRecovery
+      tags: [Auth]
+      security: []
+      description: >-
+        Validate single-use 6-digit OTP (TTL 120s) from chosen channel and set new password. Revokes all refresh tokens of the user (force logout on every device).
+        Anti-enumeration: an unregistered identifier returns 400 OTP_INVALID, identical to a wrong OTP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecoverConfirmRequest' }
+      responses:
+        '200':
+          description: Password reset successfully and active sessions revoked
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /customers/me:
     get:
       operationId: getCurrentCustomer
       tags: [Customer]
+      description: Get caller profile including phone, email, and isPinSet flag.
       responses:
         '200': { description: Own profile, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerProfile' } } } }
         '401': { $ref: '#/components/responses/ProblemResponse' }
-  /operator/onboarding:
-    get:
-      operationId: listOnboardingApplications
+
+  /customers/me/pin/setup:
+    post:
+      operationId: setupPin
+      tags: [Customer]
+      description: Mandatory first-login transaction PIN configuration (6 digits). Required before any transfer can be initiated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetupPinRequest' }
+      responses:
+        '200': { description: Transaction PIN configured successfully }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+
+  /customers/me/pin/change:
+    post:
+      operationId: changePin
+      tags: [Customer]
+      description: Change transaction PIN by providing valid current PIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePinRequest' }
+      responses:
+        '200': { description: Transaction PIN changed successfully }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+
+  /customers/me/pin/forgot/initiate:
+    post:
+      operationId: initiateForgotPin
+      tags: [Customer]
+      description: Send reset OTP to customer registered phone number to reset forgotten PIN.
+      responses:
+        '200':
+          description: Reset OTP sent to registered phone number
+          content: { application/json: { schema: { $ref: '#/components/schemas/SendOtpResponse' } } }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
+  /customers/me/pin/forgot/confirm:
+    post:
+      operationId: confirmForgotPin
+      tags: [Customer]
+      description: Validate phone OTP and set new transaction PIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotPinConfirmRequest' }
+      responses:
+        '200': { description: Transaction PIN reset successfully }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+
+  /operator/customers/send-otp:
+    post:
+      operationId: operatorSendCustomerOtp
       tags: [Operator]
       x-required-roles: [OPERATOR, ADMIN]
+      description: Operator initiates customer creation at counter by triggering OTP to customer present phone number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperatorSendOtpRequest' }
+      responses:
+        '200':
+          description: OTP sent to customer phone at counter
+          content: { application/json: { schema: { $ref: '#/components/schemas/SendOtpResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
+  /operator/customers:
+    post:
+      operationId: operatorCreateCustomer
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      description: Operator provisions customer and active account at counter with verified OTP and initial password. Customer must configure PIN on first login.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperatorCreateCustomerRequest' }
+      responses:
+        '201':
+          description: Customer and account created at counter
+          content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+    get:
+      operationId: operatorLookupCustomer
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      description: >-
+        Exact-match customer lookup at counter. Exactly one of phone or email is required; unfiltered listing,
+        partial match and wildcard are rejected with 400 VALIDATION_ERROR. Every lookup is audited and rate limited.
       parameters:
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/OnboardingStatus' } }
-        - { $ref: '#/components/parameters/Limit' }
-        - { $ref: '#/components/parameters/Cursor' }
+        - { name: phone, in: query, schema: { $ref: '#/components/schemas/PhoneNumber' } }
+        - { name: email, in: query, schema: { $ref: '#/components/schemas/EmailAddress' } }
       responses:
-        '200': { description: Application page, content: { application/json: { schema: { $ref: '#/components/schemas/OnboardingPage' } } } }
-        '401': { $ref: '#/components/responses/ProblemResponse' }
-        '403': { $ref: '#/components/responses/ProblemResponse' }
-  /operator/onboarding/{customerId}:
-    get:
-      operationId: getOnboardingApplication
-      tags: [Operator]
-      x-required-roles: [OPERATOR, ADMIN]
-      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
-      responses:
-        '200': { description: Application details, content: { application/json: { schema: { $ref: '#/components/schemas/OnboardingDetail' } } } }
+        '200': { description: Matching customer with accounts, content: { application/json: { schema: { $ref: '#/components/schemas/OperatorCustomerView' } } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
         '404': { $ref: '#/components/responses/ProblemResponse' }
-  /operator/onboarding/{customerId}/approve:
-    post:
-      operationId: approveOnboarding
-      tags: [Operator]
-      x-required-roles: [OPERATOR, ADMIN]
-      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/ApproveRequest' } } }
-      responses:
-        '200': { description: Approved and exactly one account created, content: { application/json: { schema: { $ref: '#/components/schemas/ApproveResponse' } } } }
-        '401': { $ref: '#/components/responses/ProblemResponse' }
-        '403': { $ref: '#/components/responses/ProblemResponse' }
-        '404': { $ref: '#/components/responses/ProblemResponse' }
-        '409': { $ref: '#/components/responses/ProblemResponse' }
-  /operator/onboarding/{customerId}/reject:
-    post:
-      operationId: rejectOnboarding
-      tags: [Operator]
-      x-required-roles: [OPERATOR, ADMIN]
-      parameters: [{ $ref: '#/components/parameters/CustomerId' }]
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/RejectRequest' } } }
-      responses:
-        '200': { description: Application rejected, content: { application/json: { schema: { $ref: '#/components/schemas/RejectResponse' } } } }
-        '401': { $ref: '#/components/responses/ProblemResponse' }
-        '403': { $ref: '#/components/responses/ProblemResponse' }
-        '404': { $ref: '#/components/responses/ProblemResponse' }
-        '409': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /accounts:
     get:
       operationId: listMyAccounts
@@ -143,6 +277,7 @@ paths:
       responses:
         '200': { description: Customer-owned accounts, content: { application/json: { schema: { $ref: '#/components/schemas/AccountPage' } } }}
         '401': { $ref: '#/components/responses/ProblemResponse' }
+
   /accounts/{accountId}:
     get:
       operationId: getAccount
@@ -153,6 +288,7 @@ paths:
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
         '404': { $ref: '#/components/responses/ProblemResponse' }
+
   /operator/accounts/{accountId}/seed-balance:
     post:
       operationId: seedAccountBalance
@@ -172,11 +308,53 @@ paths:
         '403': { $ref: '#/components/responses/ProblemResponse' }
         '404': { $ref: '#/components/responses/ProblemResponse' }
         '409': { $ref: '#/components/responses/ProblemResponse' }
+
+  /operator/accounts/{accountId}/block:
+    post:
+      operationId: blockAccount
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      description: >-
+        Set account status ACTIVE -> BLOCKED. Blocked accounts cannot send or receive transfers or seed funds;
+        pending AWAITING_OTP transfers involving it fail at confirm. Blocking an already BLOCKED account returns 200
+        with current state and no new mutation. CLOSED account returns 409 ACCOUNT_NOT_ELIGIBLE. Audited with reason.
+      parameters: [{ $ref: '#/components/parameters/AccountId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AccountStatusChangeRequest' } } }
+      responses:
+        '200': { description: Account is BLOCKED, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+
+  /operator/accounts/{accountId}/unblock:
+    post:
+      operationId: unblockAccount
+      tags: [Operator]
+      x-required-roles: [OPERATOR, ADMIN]
+      description: >-
+        Set account status BLOCKED -> ACTIVE. Unblocking an already ACTIVE account returns 200 with current state
+        and no new mutation. CLOSED account returns 409 ACCOUNT_NOT_ELIGIBLE. Audited with reason.
+      parameters: [{ $ref: '#/components/parameters/AccountId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AccountStatusChangeRequest' } } }
+      responses:
+        '200': { description: Account is ACTIVE, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '403': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+
   /recipients/resolve:
     post:
       operationId: resolveRecipient
       tags: [Transfers]
-      description: Rate limited. Return same not-available error for nonexistent or ineligible account numbers.
+      description: Rate limited. Return same not-available code for nonexistent or ineligible accounts.
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ResolveRecipientRequest' } } }
@@ -186,17 +364,34 @@ paths:
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '404': { $ref: '#/components/responses/ProblemResponse' }
         '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /transfers:
     post:
       operationId: createTransfer
       tags: [Transfers]
+      description: >-
+        Initiate internal transfer. Requires valid 6-digit transaction PIN. If amount <= 5,000,000 VND, commits immediately (201).
+        If amount > 5,000,000 VND, creates transfer in AWAITING_OTP (no balance change, no funds reserved), sends phone OTP and
+        returns challenge (200). Replay with same key + same payload returns the current state of the same logical transfer with
+        Idempotency-Replayed true: the original challenge (remaining expiresInSeconds, no new OTP) while AWAITING_OTP, otherwise the Transfer.
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/CreateTransferRequest' } } }
       responses:
-        '201': { description: Transfer committed, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
-        '200': { description: Committed transfer replayed, headers: { Idempotency-Replayed: { schema: { type: boolean } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
+        '201':
+          description: Transfer committed (for amount <= 5,000,000 VND)
+          headers: { Idempotency-Replayed: { schema: { type: boolean } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }
+        '200':
+          description: Either challenge required (for amount > 5,000,000 VND) or idempotent replay of committed transfer
+          headers: { Idempotency-Replayed: { schema: { type: boolean } } }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/TransferChallengeResponse' }
+                  - { $ref: '#/components/schemas/Transfer' }
         '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
@@ -210,23 +405,59 @@ paths:
       parameters:
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Cursor' }
-        - { name: status, in: query, schema: { type: string, enum: [COMPLETED] } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/TransferStatus' } }
         - { name: from, in: query, schema: { $ref: '#/components/schemas/Instant' } }
         - { name: to, in: query, schema: { $ref: '#/components/schemas/Instant' } }
       responses:
         '200': { description: Transfer history page, content: { application/json: { schema: { $ref: '#/components/schemas/TransferPage' } } }}
         '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
+
   /transfers/{transferId}:
     get:
       operationId: getTransfer
       tags: [Transfers]
+      description: >-
+        Read current transfer status (AWAITING_OTP, COMPLETED, EXPIRED, FAILED). Source owner sees every status;
+        destination owner sees the transfer only once COMPLETED (otherwise 404 TRANSFER_NOT_FOUND).
+        FE uses it to reconcile after timeout and to poll a pending step-up transfer.
       parameters: [{ $ref: '#/components/parameters/TransferId' }]
       responses:
         '200': { description: Transfer details, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }}
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
         '404': { $ref: '#/components/responses/ProblemResponse' }
+
+  /transfers/{transferId}/confirm-otp:
+    post:
+      operationId: confirmTransferOtp
+      tags: [Transfers]
+      description: >-
+        Complete step-up transfer exceeding 5,000,000 VND by validating SMS OTP. Only the source-account owner may call it.
+        Under account row locks the server re-validates account status, currency and available balance, then commits debit,
+        credit, audit and status COMPLETED atomically. Idempotent by transferId (no Idempotency-Key header): calling again
+        after COMPLETED returns 200 with the same Transfer and Idempotency-Replayed true, without a second mutation.
+        Wrong OTP returns 400 OTP_INVALID; the 5th wrong OTP sets status FAILED. After 120s status becomes EXPIRED.
+      parameters: [{ $ref: '#/components/parameters/TransferId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmTransferOtpRequest' }
+      responses:
+        '201':
+          description: Transfer committed after valid OTP verification
+          headers: { Idempotency-Replayed: { schema: { type: boolean } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }
+        '200':
+          description: Already COMPLETED; original result replayed
+          headers: { Idempotency-Replayed: { schema: { type: boolean } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '401': { $ref: '#/components/responses/ProblemResponse' }
+        '404': { $ref: '#/components/responses/ProblemResponse' }
+        '409': { $ref: '#/components/responses/ProblemResponse' }
+
   /audit-events:
     get:
       operationId: listAuditEvents
@@ -241,9 +472,11 @@ paths:
         - { name: to, in: query, schema: { $ref: '#/components/schemas/Instant' } }
       responses:
         '200': { description: Audit event page, content: { application/json: { schema: { $ref: '#/components/schemas/AuditPage' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
-  /risk-flags:
+
+  /operator/risk-flags:
     get:
       operationId: listRiskFlags
       tags: [Risk]
@@ -251,32 +484,39 @@ paths:
       parameters:
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Cursor' }
-        - { name: status, in: query, schema: { type: string, enum: [OPEN], default: OPEN } }
         - { name: ruleId, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: transferId, in: query, schema: { $ref: '#/components/schemas/Uuid' } }
+        - { name: from, in: query, schema: { $ref: '#/components/schemas/Instant' } }
+        - { name: to, in: query, schema: { $ref: '#/components/schemas/Instant' } }
       responses:
-        '200': { description: Rule flags page, content: { application/json: { schema: { $ref: '#/components/schemas/RiskFlagPage' } } }}
+        '200': { description: Risk flag list, content: { application/json: { schema: { $ref: '#/components/schemas/RiskFlagPage' } } }}
+        '400': { $ref: '#/components/responses/ProblemResponse' }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
+
   /health:
     get:
       operationId: getHealth
-      tags: [Health]
+      tags: [System]
       security: []
       responses:
-        '200': { description: Ready, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } }}
-        '503': { description: Not ready }
+        '200': { description: System healthy, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } }}
+        '503': { description: System unhealthy, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } }}
+
 components:
   securitySchemes:
-    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
-    CustomerId: { name: customerId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    AccountId: { name: accountId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    TransferId: { name: transferId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    FlagId: { name: flagId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
-    Cursor: { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
-    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[ -~]+$' } }
     CsrfToken: { name: X-CSRF-Token, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 256 } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 128 } }
+    AccountId: { name: accountId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    CustomerId: { name: customerId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    TransferId: { name: transferId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    Cursor: { name: cursor, in: query, schema: { type: string, maxLength: 256 } }
   responses:
     ProblemResponse:
       description: RFC 9457-compatible error
@@ -284,46 +524,92 @@ components:
   schemas:
     Uuid: { type: string, format: uuid }
     Instant: { type: string, format: date-time, description: RFC 3339 UTC timestamp emitted with Z suffix }
+    PhoneNumber: { type: string, pattern: '^0[3-9][0-9]{8}$', examples: ['0912345678'], description: Unique 10-digit Vietnam phone number }
+    EmailAddress: { type: string, format: email, maxLength: 254, description: Unique email address }
     MoneyAmount: { type: string, pattern: '^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,2})?$', examples: ['50000'], description: Simulated VND, integer or decimal scale 0/2 }
     Currency: { type: string, enum: [VND] }
-    OnboardingStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
     AccountStatus: { type: string, enum: [ACTIVE, BLOCKED, CLOSED] }
     Role: { type: string, enum: [CUSTOMER, OPERATOR, AUDITOR, ADMIN] }
+    RecoveryChannel: { type: string, enum: [SMS, EMAIL] }
+
+    SendOtpRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, purpose]
+      properties:
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        purpose: { type: string, enum: [REGISTRATION, OPERATOR_CREATE_CUSTOMER] }
+
+    SendOtpResponse:
+      type: object
+      required: [phone, expiresInSeconds, message]
+      properties:
+        phone: { type: string }
+        expiresInSeconds: { type: integer, example: 120 }
+        message: { type: string, example: "OTP sent successfully" }
+
     RegisterRequest:
       type: object
       additionalProperties: false
-      required: [email, password, fullName]
+      required: [phone, email, password, fullName, otp]
       properties:
-        email: { type: string, format: email, maxLength: 254 }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
         password: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
         fullName: { type: string, minLength: 1, maxLength: 120 }
-        phone: { type: string, maxLength: 32 }
+        otp: { type: string, pattern: '^[0-9]{6}$', description: 6-digit OTP verified via SMS }
         address: { type: string, maxLength: 300 }
+
     RegistrationResponse:
       type: object
-      required: [customerId, email, fullName, onboardingStatus, createdAt]
+      required: [customerId, phone, email, fullName, account, createdAt]
       properties:
         customerId: { $ref: '#/components/schemas/Uuid' }
-        email: { type: string, format: email }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
         fullName: { type: string }
-        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        account: { $ref: '#/components/schemas/Account' }
         createdAt: { $ref: '#/components/schemas/Instant' }
+
+    OperatorSendOtpRequest:
+      type: object
+      additionalProperties: false
+      required: [phone]
+      properties:
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+
+    OperatorCreateCustomerRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, email, fullName, initialPassword, otp]
+      properties:
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
+        fullName: { type: string, minLength: 1, maxLength: 120 }
+        initialPassword: { type: string, minLength: 12, maxLength: 128, writeOnly: true, description: Initial password assigned by operator }
+        otp: { type: string, pattern: '^[0-9]{6}$', description: 6-digit OTP confirmed by customer at counter }
+        address: { type: string, maxLength: 300 }
+
     LoginRequest:
       type: object
       additionalProperties: false
-      required: [email, password]
+      required: [phone, password]
       properties:
-        email: { type: string, format: email }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
         password: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+
     UserSummary:
       type: object
-      required: [userId, displayName, roles]
+      required: [userId, customerId, displayName, phone, email, roles, isPinSet]
       properties:
         userId: { $ref: '#/components/schemas/Uuid' }
         customerId: { $ref: '#/components/schemas/Uuid' }
         displayName: { type: string }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
         roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
-        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        isPinSet: { type: boolean, description: Indicates if transaction PIN is already configured }
+
     AccessTokenResponse:
       type: object
       required: [accessToken, tokenType, expiresIn]
@@ -331,57 +617,89 @@ components:
         accessToken: { type: string }
         tokenType: { type: string, enum: [Bearer] }
         expiresIn: { type: integer, minimum: 1 }
+
     LoginResponse:
       allOf:
         - { $ref: '#/components/schemas/AccessTokenResponse' }
         - type: object
           required: [user]
           properties: { user: { $ref: '#/components/schemas/UserSummary' } }
+
     CsrfTokenResponse:
       type: object
       required: [csrfToken]
       properties: { csrfToken: { type: string, minLength: 16, maxLength: 256 } }
+
     CustomerProfile:
       type: object
-      required: [customerId, fullName, email, onboardingStatus, createdAt]
+      required: [customerId, fullName, phone, email, isPinSet, createdAt]
       properties:
         customerId: { $ref: '#/components/schemas/Uuid' }
         fullName: { type: string }
-        email: { type: string, format: email }
-        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
+        isPinSet: { type: boolean }
         createdAt: { $ref: '#/components/schemas/Instant' }
-        decisionAt: { $ref: '#/components/schemas/Instant' }
-        decisionReason: { type: string }
-    OnboardingSummary:
+
+    RecoverInitiateRequest:
       type: object
-      required: [customerId, fullName, email, onboardingStatus, submittedAt]
+      additionalProperties: false
+      required: [identifier, channel]
       properties:
-        customerId: { $ref: '#/components/schemas/Uuid' }
-        fullName: { type: string }
-        email: { type: string, format: email }
-        onboardingStatus: { $ref: '#/components/schemas/OnboardingStatus' }
-        submittedAt: { $ref: '#/components/schemas/Instant' }
-    OnboardingDetail:
-      allOf:
-        - { $ref: '#/components/schemas/OnboardingSummary' }
-        - type: object
-          properties:
-            phone: { type: string, maxLength: 32 }
-            address: { type: string, maxLength: 300 }
-    OnboardingPage:
-      allOf:
-        - { $ref: '#/components/schemas/PageBase' }
-        - type: object
-          properties: { items: { type: array, items: { $ref: '#/components/schemas/OnboardingSummary' } } }
-    ApproveRequest:
+        identifier: { type: string, description: Registered phone number or email address }
+        channel: { $ref: '#/components/schemas/RecoveryChannel' }
+
+    RecoverInitiateResponse:
+      type: object
+      required: [identifier, channel, expiresInSeconds, message]
+      properties:
+        identifier: { type: string }
+        channel: { $ref: '#/components/schemas/RecoveryChannel' }
+        expiresInSeconds: { type: integer, example: 120 }
+        message: { type: string, example: "If the information is registered, an OTP has been sent to the selected channel." }
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, example: "Password reset successfully and active sessions revoked" }
+
+    RecoverConfirmRequest:
       type: object
       additionalProperties: false
-      properties: { decisionNote: { type: string, maxLength: 500 } }
-    RejectRequest:
+      required: [identifier, channel, otp, newPassword]
+      properties:
+        identifier: { type: string }
+        channel: { $ref: '#/components/schemas/RecoveryChannel' }
+        otp: { type: string, pattern: '^[0-9]{6}$' }
+        newPassword: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
+
+    SetupPinRequest:
       type: object
       additionalProperties: false
-      required: [reason]
-      properties: { reason: { type: string, minLength: 1, maxLength: 500 } }
+      required: [pin, confirmPin]
+      properties:
+        pin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true, description: 6-digit transaction PIN }
+        confirmPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+
+    ChangePinRequest:
+      type: object
+      additionalProperties: false
+      required: [currentPin, newPin, confirmNewPin]
+      properties:
+        currentPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+        newPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+        confirmNewPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+
+    ForgotPinConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [otp, newPin, confirmNewPin]
+      properties:
+        otp: { type: string, pattern: '^[0-9]{6}$', description: 6-digit OTP sent to registered phone }
+        newPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+        confirmNewPin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+
     Account:
       type: object
       required: [accountId, accountNumberMasked, accountType, status, balance, currency, openedAt]
@@ -393,32 +711,38 @@ components:
         balance: { $ref: '#/components/schemas/MoneyAmount' }
         currency: { $ref: '#/components/schemas/Currency' }
         openedAt: { $ref: '#/components/schemas/Instant' }
+
     AccountPage:
       allOf:
         - { $ref: '#/components/schemas/PageBase' }
         - type: object
           properties: { items: { type: array, items: { $ref: '#/components/schemas/Account' } } }
-    ApproveResponse:
+
+    AccountStatusChangeRequest:
       type: object
-      required: [customerId, onboardingStatus, account, decidedAt]
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+
+    OperatorCustomerView:
+      type: object
+      required: [customerId, fullName, phone, email, isPinSet, createdAt, accounts]
       properties:
         customerId: { $ref: '#/components/schemas/Uuid' }
-        onboardingStatus: { type: string, enum: [APPROVED] }
-        account: { $ref: '#/components/schemas/Account' }
-        decidedAt: { $ref: '#/components/schemas/Instant' }
-    RejectResponse:
-      type: object
-      required: [customerId, onboardingStatus, decidedAt]
-      properties:
-        customerId: { $ref: '#/components/schemas/Uuid' }
-        onboardingStatus: { type: string, enum: [REJECTED] }
-        reason: { type: string }
-        decidedAt: { $ref: '#/components/schemas/Instant' }
+        fullName: { type: string }
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        email: { $ref: '#/components/schemas/EmailAddress' }
+        isPinSet: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        accounts: { type: array, items: { $ref: '#/components/schemas/Account' } }
+
     ResolveRecipientRequest:
       type: object
       additionalProperties: false
       required: [accountNumber]
       properties: { accountNumber: { type: string, minLength: 8, maxLength: 34, pattern: '^[0-9]+$' } }
+
     RecipientConfirmation:
       type: object
       required: [accountId, accountNumberMasked, recipientDisplayName, currency]
@@ -427,14 +751,16 @@ components:
         accountNumberMasked: { type: string }
         recipientDisplayName: { type: string, maxLength: 120 }
         currency: { $ref: '#/components/schemas/Currency' }
+
     SeedBalanceRequest:
       type: object
       additionalProperties: false
       required: [amount, currency, reference]
       properties:
-        amount: { type: string, pattern: '^(?:[1-9][0-9]{0,7}|100000000)(?:\.[0-9]{1,2})?$', description: Greater than zero and at most 100000000 VNĐ }
+        amount: { type: string, pattern: '^(?:[1-9][0-9]{0,7}|100000000)(?:\\.[0-9]{1,2})?$', description: Greater than zero and at most 100000000 VNĐ }
         currency: { $ref: '#/components/schemas/Currency' }
         reference: { type: string, minLength: 1, maxLength: 100 }
+
     SeedBalanceResponse:
       type: object
       required: [seedTransactionId, accountId, amount, currency, balanceAfter, createdAt]
@@ -445,36 +771,66 @@ components:
         currency: { $ref: '#/components/schemas/Currency' }
         balanceAfter: { $ref: '#/components/schemas/MoneyAmount' }
         createdAt: { $ref: '#/components/schemas/Instant' }
+
     CreateTransferRequest:
       type: object
       additionalProperties: false
-      required: [sourceAccountId, destinationAccountId, amount, currency]
+      required: [sourceAccountId, destinationAccountId, amount, currency, pin]
       properties:
         sourceAccountId: { $ref: '#/components/schemas/Uuid' }
         destinationAccountId: { $ref: '#/components/schemas/Uuid' }
-        amount: { type: string, pattern: '^(?:[2-9][0-9]{3}|[1-9][0-9]{4,6}|10000000)(?:\.[0-9]{1,2})?$', description: At least 2000 VNĐ and at most 10000000 VNĐ }
+        amount: { type: string, pattern: '^(?:[2-9][0-9]{3}|[1-9][0-9]{4,6}|10000000)(?:\\.[0-9]{1,2})?$', description: At least 2000 VNĐ and at most 10000000 VNĐ }
         currency: { $ref: '#/components/schemas/Currency' }
+        pin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true, description: 6-digit transaction PIN }
         memo: { type: string, maxLength: 140 }
-    Transfer:
+
+    TransferChallengeResponse:
       type: object
-      required: [transferId, status, sourceAccountId, destinationAccountId, amount, currency, createdAt, completedAt]
+      required: [transferId, status, message, expiresInSeconds]
       properties:
         transferId: { $ref: '#/components/schemas/Uuid' }
-        status: { type: string, enum: [COMPLETED] }
+        status: { type: string, enum: [AWAITING_OTP] }
+        expiresAt: { $ref: '#/components/schemas/Instant' }
+        message: { type: string, example: "Transfer exceeds 5,000,000 VND. OTP sent to registered phone number." }
+        expiresInSeconds: { type: integer, example: 120 }
+
+    ConfirmTransferOtpRequest:
+      type: object
+      additionalProperties: false
+      required: [otp]
+      properties:
+        otp: { type: string, pattern: '^[0-9]{6}$', description: 6-digit OTP sent to registered phone number }
+
+    TransferStatus:
+      type: string
+      enum: [AWAITING_OTP, COMPLETED, EXPIRED, FAILED]
+      description: >-
+        AWAITING_OTP -> COMPLETED (valid OTP) | EXPIRED (120s elapsed) | FAILED (5 wrong OTP, or re-validation failed at confirm).
+        Transfers <= 5,000,000 VND are created directly as COMPLETED. Only COMPLETED changes balances. Terminal states never change.
+
+    Transfer:
+      type: object
+      required: [transferId, status, sourceAccountId, destinationAccountId, amount, currency, createdAt]
+      properties:
+        transferId: { $ref: '#/components/schemas/Uuid' }
+        status: { $ref: '#/components/schemas/TransferStatus' }
+        failureCode: { type: string, description: 'Present only when FAILED, e.g. OTP_ATTEMPTS_EXCEEDED, INSUFFICIENT_FUNDS, ACCOUNT_NOT_ELIGIBLE' }
+        expiresAt: { $ref: '#/components/schemas/Instant', description: Present while AWAITING_OTP }
         sourceAccountId: { $ref: '#/components/schemas/Uuid' }
         destinationAccountId: { $ref: '#/components/schemas/Uuid' }
         amount: { $ref: '#/components/schemas/MoneyAmount' }
         currency: { $ref: '#/components/schemas/Currency' }
         memo: { type: string, maxLength: 140 }
         createdAt: { $ref: '#/components/schemas/Instant' }
-        completedAt: { $ref: '#/components/schemas/Instant' }
+        completedAt: { $ref: '#/components/schemas/Instant', description: Present only when COMPLETED }
+
     TransferListItem:
       type: object
       required: [transferId, direction, status, counterpartyAccountMasked, counterpartyDisplayName, amount, currency, createdAt]
       properties:
         transferId: { $ref: '#/components/schemas/Uuid' }
         direction: { type: string, enum: [INCOMING, OUTGOING] }
-        status: { type: string, enum: [COMPLETED] }
+        status: { $ref: '#/components/schemas/TransferStatus' }
         counterpartyAccountMasked: { type: string }
         counterpartyDisplayName: { type: string, maxLength: 120, description: Limited display name; must not include contact details }
         amount: { $ref: '#/components/schemas/MoneyAmount' }
@@ -482,11 +838,13 @@ components:
         memo: { type: string, maxLength: 140 }
         createdAt: { $ref: '#/components/schemas/Instant' }
         completedAt: { $ref: '#/components/schemas/Instant' }
+
     TransferPage:
       allOf:
         - { $ref: '#/components/schemas/PageBase' }
         - type: object
           properties: { items: { type: array, items: { $ref: '#/components/schemas/TransferListItem' } } }
+
     AuditEvent:
       type: object
       required: [eventId, eventType, targetType, targetId, outcome, occurredAt, correlationId, summary]
@@ -500,11 +858,13 @@ components:
         occurredAt: { $ref: '#/components/schemas/Instant' }
         correlationId: { $ref: '#/components/schemas/Uuid' }
         summary: { type: string, maxLength: 500 }
+
     AuditPage:
       allOf:
         - { $ref: '#/components/schemas/PageBase' }
         - type: object
           properties: { items: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } } }
+
     RiskFlag:
       type: object
       required: [flagId, transferId, ruleId, ruleVersion, reason, detectedAt]
@@ -515,17 +875,20 @@ components:
         ruleVersion: { type: string }
         reason: { type: string, maxLength: 500 }
         detectedAt: { $ref: '#/components/schemas/Instant' }
+
     RiskFlagPage:
       allOf:
         - { $ref: '#/components/schemas/PageBase' }
         - type: object
           properties: { items: { type: array, items: { $ref: '#/components/schemas/RiskFlag' } } }
+
     PageBase:
       type: object
       required: [items, nextCursor]
       properties:
         items: { type: array, items: {} }
         nextCursor: { type: [string, 'null'] }
+
     FieldError:
       type: object
       required: [field, code, message]
@@ -533,6 +896,7 @@ components:
         field: { type: string }
         code: { type: string }
         message: { type: string }
+
     Problem:
       type: object
       required: [type, title, status, detail, instance, code, correlationId]
@@ -545,9 +909,10 @@ components:
         code: { type: string }
         correlationId: { $ref: '#/components/schemas/Uuid' }
         fieldErrors: { type: array, items: { $ref: '#/components/schemas/FieldError' } }
+
     Health:
       type: object
       required: [status, timestamp]
       properties:
-        status: { type: string, enum: [UP] }
+        status: { type: string, enum: [UP, DOWN] }
         timestamp: { $ref: '#/components/schemas/Instant' }

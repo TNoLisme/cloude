@@ -8,11 +8,10 @@
 
 * **Vấn đề cốt lõi:** Các hệ thống tài chính/ngân hàng đòi hỏi tính nhất quán tuyệt đối (Strong Transactional Consistency), khả năng chống trùng lặp request (Idempotency), bảo mật phân quyền nghiêm ngặt và khả năng kiểm toán bất biến (Audit Trail).
 * **Phạm vi giải quyết (Vertical Slice):** Hệ thống mô phỏng một vòng đời tài chính hoàn chỉnh:
-  1. Khách hàng đăng ký tài khoản (trạng thái `PENDING`).
-  2. Nhân viên ngân hàng (Operator) review hồ sơ simulator, tự động tạo tài khoản mặc định.
-  3. Operator cấp số dư mở tài khoản ban đầu (Demo Seed Balance).
-  4. Khách hàng thực hiện chuyển tiền nội bộ thời gian thực với cơ chế bảo vệ giao dịch, chống overdraft và chống replay.
-  5. Hệ thống tự động ghi vết kiểm toán (Audit Trail) và đánh giá rủi ro giao dịch bất thường (Suspicious Transaction Rules).
+  1. Khách hàng tự đăng ký bằng SĐT + email (xác thực OTP SMS), hoặc nhân viên ngân hàng (Operator) mở hộ tại quầy; hệ thống tạo ngay tài khoản mặc định `ACTIVE`. Đăng nhập bằng SĐT, bắt buộc thiết lập PIN lần đầu; quên mật khẩu khôi phục qua OTP SMS hoặc Email.
+  2. Operator cấp số dư mở tài khoản ban đầu (Demo Seed Balance).
+  3. Khách hàng thực hiện chuyển tiền nội bộ thời gian thực, xác thực bằng PIN (giao dịch > 5,000,000 VNĐ cần thêm OTP SMS), với cơ chế bảo vệ giao dịch, chống overdraft và chống replay.
+  4. Hệ thống tự động ghi vết kiểm toán (Audit Trail) và đánh giá rủi ro giao dịch bất thường (Suspicious Transaction Rules).
 
 ---
 

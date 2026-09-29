@@ -48,16 +48,14 @@ Create one typed client in `frontend/src/api/`:
 
 ## 2. Contract-first workflow
 
-1. Agree path, schema, role, state transition and error behavior before parallel work.
-2. Change `contracts/openapi.yaml` first. Review breaking changes with FE and BE owners.
-3. Validate OpenAPI and generate/check TypeScript client/types in CI.
-4. FE develops screens using mocks from this contract, including pending/loading/error/empty cases.
-Prism generates schema-shaped example responses, but does not implement business behavior such as ownership, idempotency, concurrency or state transitions. Use MSW fixtures for deterministic success, business-error and loading scenarios. Keep fixtures valid against OpenAPI.
-5. BE implements controller/use case and contract tests against same schemas/status codes.
-6. FE switches mock to API and runs integration/E2E flow.
-7. Merge only when contract validation, FE build/typecheck, BE contract tests and targeted end-to-end flow pass.
+Contract-first development is mandatory:
 
-`contracts/openapi.yaml` is intended to be committed with the repo. This docs-only change describes its required location and contract but does not create repo implementation files.
+1. `contracts/openapi.yaml` defines exact paths, schemas, required fields, headers and status codes.
+2. FE generates types, client functions and MSW mock fixtures from `contracts/openapi.yaml`.
+3. BE generates server stubs/validation models or implements strict schema tests against the same OpenAPI file.
+4. Contract diffs must be approved before implementation PRs are merged.
+
+`contracts/openapi.yaml` is committed with the repo.
 
 ## 3. API-wide conventions
 
@@ -66,6 +64,13 @@ Prism generates schema-shaped example responses, but does not implement business
 - Timestamp: RFC 3339 UTC ending in `Z`.
 - Money: decimal string, ví dụ `"50000"` hoặc `"2000"`; never JSON float. MVP uses simulated VND only, scale 0. Transfer amount minimum `2,000` VNĐ, maximum `10,000,000` VNĐ; seed balance maximum `100,000,000` VNĐ (minimum > 0). Values are configurable only by backend environment, not client request.
 - `currency` must be `VND` in MVP and match account currency. Contract versioning is required before adding another currency/scale.
+- Primary Identifiers: `phone` (10 chữ số định dạng Việt Nam, duy nhất) và `email` (duy nhất). Cả hai đều bắt buộc khi tạo tài khoản.
+- Login credential: Đăng nhập bằng `phone` + `password`.
+- Transaction PIN: Mã PIN giao dịch 6 chữ số, bắt buộc thiết lập ở lần đầu đăng nhập (`isPinSet: false`) trước khi thực hiện chuyển tiền.
+- Transfer Authentication:
+  - Giao dịch $\le$ `5,000,000` VNĐ: Xác thực bằng Mã PIN.
+  - Giao dịch $>$ `5,000,000` VNĐ: Xác thực bằng cả 2 yếu tố: Mã PIN và Mã OTP SMS gửi về SĐT đã đăng ký.
+- Account Recovery: Khôi phục mật khẩu tự phục vụ qua mã OTP gửi tới 1 trong 2 kênh tùy chọn (`SMS` hoặc `EMAIL`).
 - Enum values: uppercase snake case.
 - Unknown response fields: FE must ignore. BE may add optional response fields without breaking clients.
 - Request schema: BE rejects unknown or invalid required fields with `400 VALIDATION_ERROR`; OpenAPI `additionalProperties: false` for mutation request objects.
@@ -78,89 +83,127 @@ Prism generates schema-shaped example responses, but does not implement business
 
 | API group | Anonymous | Customer | Operator | Auditor | Admin |
 |---|---:|---:|---:|---:|---:|
-| Register/login | Yes | Yes | Yes | Yes | Yes |
-| `/customers/me`, own accounts/transfers | No | Own data | No | No | No by default |
-| Operator onboarding queue/decision | No | No | Yes | No | Yes |
+| Register/login/recover | Yes | Yes | Yes | Yes | Yes |
+| `/customers/me`, PIN setup/change, own accounts/transfers | No | Own data | No | No | No by default |
+| Operator counter customer creation, exact customer lookup | No | No | Yes | No | Yes |
+| Operator account block/unblock | No | No | Yes | No | Yes |
 | Operator seed balance | No | No | Yes | No | Yes |
 | Audit query | No | No | No | Yes | Yes |
 | Risk-flag query | No | No | Yes | Yes | Yes |
 | Health | Deployment-configured | Deployment-configured | Deployment-configured | Deployment-configured | Deployment-configured |
 
-Roles are not interchangeable. BE checks resource ownership for every Customer request. Admin does not bypass money invariants. Hiding a resource from unauthorized actors may return `404` instead of `403`, but behavior must be consistent per resource type and must not leak existence.
+Roles are not interchangeable. BE checks resource ownership for every Customer request. Admin does not bypass money invariants.
 
 ## 5. Endpoint catalog
 
-OpenAPI file defines exact JSON schemas and status responses. This table distinguishes MVP endpoints from post-MVP options.
-
 | Method and path | Access | Purpose / success |
 |---|---|---|
-| `POST /auth/register` | Anonymous | Create account credentials and `PENDING` customer profile; `201`. No bank account created. |
-| `POST /auth/login` | Anonymous | Verify credentials; return `accessToken`, expiry and actor summary; `200`. |
-| `POST /auth/refresh` | Refresh token | Rotate refresh token and return new access token; `200`. |
-| `POST /auth/logout` | Authenticated | Revoke current refresh session; `204`. |
+| `POST /auth/register/send-otp` | Anonymous | Dispatch 6-digit registration OTP to phone number; `200`. |
+| `POST /auth/register` | Anonymous | Register with phone OTP; creates active customer & default checking account immediately; `201`. |
+| `POST /auth/login` | Anonymous | Login with phone + password; returns tokens, user info & `isPinSet` flag; `200`. |
+| `POST /auth/refresh` | Refresh token | Rotate refresh token cookie and return new access token; `200`. |
+| `POST /auth/logout` | Authenticated | Revoke refresh session and clear cookie; `204`. |
 | `GET /auth/csrf` | Anonymous/session | Issue CSRF token for cookie-authenticated refresh/logout; `200`. |
-| `POST /recipients/resolve` | Customer | Resolve full account number into masked recipient confirmation; `200`. |
-| `GET /customers/me` | Customer | Return own customer profile/onboarding state; `200`. |
-| `GET /operator/onboarding` | Operator/Admin | List applications, default `PENDING`; `200`. |
-| `GET /operator/onboarding/{customerId}` | Operator/Admin | Read application details; `200`. |
-| `POST /operator/onboarding/{customerId}/approve` | Operator/Admin | Approve and create exactly one default account atomically; `200`. |
-| `POST /operator/onboarding/{customerId}/reject` | Operator/Admin | Reject pending application with reason; `200`. |
+| `POST /auth/recover/initiate` | Anonymous | Request password recovery OTP via chosen channel (`SMS` or `EMAIL`); always generic `200` (anti-enumeration). |
+| `POST /auth/recover/confirm` | Anonymous | Verify OTP and set new password; revokes all existing sessions; `200`. Unknown identifier = `400 OTP_INVALID`. |
+| `GET /customers/me` | Customer | Return own profile including phone, email, and `isPinSet`; `200`. |
+| `POST /customers/me/pin/setup` | Customer | Mandatory first-login PIN configuration (6 digits); `200`. |
+| `POST /customers/me/pin/change` | Customer | Change PIN by providing valid current PIN; `200`. |
+| `POST /customers/me/pin/forgot/initiate` | Customer | Send reset OTP to registered phone number for forgotten PIN; `200`. |
+| `POST /customers/me/pin/forgot/confirm` | Customer | Verify phone OTP and set new PIN; `200`. |
+| `POST /operator/customers/send-otp` | Operator/Admin | Send verification OTP to customer present phone at counter; `200`. |
+| `POST /operator/customers` | Operator/Admin | Provision customer and active account at counter with verified OTP and initial password; `201`. |
+| `GET /operator/customers?phone=` or `?email=` | Operator/Admin | Exact-match lookup (exactly one filter, no listing); returns customer + accounts; audited; `200`. |
+| `POST /operator/accounts/{accountId}/block` | Operator/Admin | `ACTIVE` → `BLOCKED` with reason; idempotent; audited; `200`. |
+| `POST /operator/accounts/{accountId}/unblock` | Operator/Admin | `BLOCKED` → `ACTIVE` with reason; idempotent; audited; `200`. |
 | `GET /accounts` | Customer | List own accounts/balances; `200`. |
-| `GET /accounts/{accountId}` | Owner, Operator/Admin by policy | Read account; `200`. |
+| `GET /accounts/{accountId}` | Owner, Operator/Admin by policy | Read account details; `200`. |
 | `POST /operator/accounts/{accountId}/seed-balance` | Operator/Admin | Credit demo opening funds exactly once per request key; `201`. |
-| `POST /transfers` | Customer | Create/replay internal transfer; `201` new, `200` replay. Requires `Idempotency-Key`. |
-| `GET /transfers` | Customer | List transfers where caller owns source or destination account; `200`. |
-| `GET /transfers/{transferId}` | Participant; Operator/Auditor/Admin by policy | Read transfer state/details; `200`. |
+| `POST /recipients/resolve` | Customer | Resolve full account number into masked recipient confirmation; `200`. |
+| `POST /transfers` | Customer | Initiate transfer with PIN. If <= 5M, commits immediately (`201`). If > 5M, triggers phone OTP and challenge (`200 AWAITING_OTP`). |
+| `POST /transfers/{transferId}/confirm-otp` | Customer (source owner) | Complete step-up transfer (> 5M) with phone OTP; `201` new, `200` replay. |
+| `GET /transfers` | Customer | List transfers where caller owns source or destination account; filter by `status`; `200`. |
+| `GET /transfers/{transferId}` | Participant; Operator/Auditor/Admin by policy | Read transfer details and current status (`AWAITING_OTP`, `COMPLETED`, `EXPIRED`, `FAILED`); `200`. |
 | `GET /audit-events` | Auditor/Admin | Search allowed audit events; `200`. |
-| `GET /risk-flags` | Operator/Auditor/Admin | List read-only suspicious flags; MVP flags remain `OPEN`. |
-| `GET /health` | Platform | Liveness/readiness, deployment exposure controlled; `200` or `503`. |
-
-No Customer deposit/withdrawal API. No public endpoint directly sets balance outside seed-balance and transfer use cases.
+| `GET /operator/risk-flags` | Operator/Auditor/Admin | List read-only suspicious flags; `200`. |
+| `GET /health` | Platform | Liveness/readiness; `200` or `503`. |
 
 ## 6. Endpoint details and FE call behavior
 
-### 6.1 Register
+### 6.1 Self-service Registration via Phone OTP
 
+#### Step 1: Send registration OTP
+`POST /api/v1/auth/register/send-otp`
+
+Request:
+```json
+{
+  "phone": "0912345678",
+  "purpose": "REGISTRATION"
+}
+```
+
+Response `200`:
+```json
+{
+  "phone": "0912345678",
+  "expiresInSeconds": 120,
+  "message": "OTP sent successfully"
+}
+```
+
+#### Step 2: Submit registration with OTP
 `POST /api/v1/auth/register`
 
 Request:
-
 ```json
 {
+  "phone": "0912345678",
   "email": "alex@example.test",
   "password": "Example-only-password",
   "fullName": "Alex Example",
-  "phone": "+84901234567",
+  "otp": "849201",
   "address": "123 Cau Giay, Hanoi"
 }
 ```
 
 Response `201`:
-
 ```json
 {
   "customerId": "9bd332f8-a718-4ab9-9fde-21b1ff1fa781",
+  "phone": "0912345678",
   "email": "alex@example.test",
   "fullName": "Alex Example",
-  "onboardingStatus": "PENDING",
+  "account": {
+    "accountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
+    "accountNumberMasked": "••••4821",
+    "accountType": "CHECKING",
+    "status": "ACTIVE",
+    "balance": "0",
+    "currency": "VND",
+    "openedAt": "2026-09-28T10:00:00Z"
+  },
   "createdAt": "2026-09-28T10:00:00Z"
 }
 ```
 
-FE behavior: on success show pending-review state; do not show account/balance creation. Duplicate email returns `409 EMAIL_ALREADY_REGISTERED`. Validation returns field errors. Registration does not log user in unless contract is explicitly changed.
+FE behavior: Account is active immediately. Direct user to Login screen. Duplicate phone returns `409 PHONE_ALREADY_REGISTERED`; duplicate email returns `409 EMAIL_ALREADY_REGISTERED`; invalid/expired OTP returns `400 OTP_INVALID`.
+
+**Accepted risk (registration enumeration):** `send-otp` and `register` intentionally return `409 PHONE_ALREADY_REGISTERED` / `EMAIL_ALREADY_REGISTERED` for clear registration UX, which allows checking whether a phone/email is registered. Mitigation: strict rate limit per phone and per IP on `send-otp`, and `register` is only reachable after a valid phone OTP. Recovery endpoints do **not** share this behavior. Post-MVP option: `send-otp` always `200` and send "already registered" SMS instead of OTP.
 
 ### 6.2 Login and session refresh
 
 `POST /api/v1/auth/login`
 
 Request:
-
 ```json
-{ "email": "alex@example.test", "password": "Example-only-password" }
+{
+  "phone": "0912345678",
+  "password": "Example-only-password"
+}
 ```
 
 Response `200`:
-
 ```json
 {
   "accessToken": "<opaque-example-jwt>",
@@ -170,107 +213,186 @@ Response `200`:
     "userId": "ad1f67a1-6a9f-4c11-a3c4-bc01f6ac4350",
     "customerId": "9bd332f8-a718-4ab9-9fde-21b1ff1fa781",
     "displayName": "Alex Example",
+    "phone": "0912345678",
+    "email": "alex@example.test",
     "roles": ["CUSTOMER"],
-    "onboardingStatus": "PENDING"
+    "isPinSet": false
   }
 }
 ```
 
-`refresh_token` cookie uses `HttpOnly`, `Secure` on HTTPS, `SameSite=Lax`. Access token stays in memory only.
+FE behavior:
+1. Store access token in memory.
+2. If `user.isPinSet === false`, immediately route customer to **Mandatory PIN Setup** screen before enabling transfer functions.
+3. If `user.isPinSet === true`, route to customer dashboard.
 
-`POST /api/v1/auth/refresh`: no JSON body; sends refresh cookie; response has new `accessToken`, `tokenType`, `expiresIn`. Server rotates cookie. Invalid/expired/revoked refresh session returns `401 SESSION_EXPIRED` and clears cookie.
+`POST /api/v1/auth/refresh`: sends refresh cookie; returns new `accessToken`, `tokenType`, `expiresIn`.
+`POST /api/v1/auth/logout`: sends refresh cookie and bearer token; revokes session; `204`.
 
-`POST /api/v1/auth/logout`: sends refresh cookie and bearer token; revokes current session, clears cookie; `204`.
+### 6.3 Account Recovery (Forgot Password via SMS or Email OTP)
 
-FE behavior: hold access token in memory only; do not persist token in `localStorage`/`sessionStorage`. On initial app load, attempt refresh once; if it returns `401`, show login. A single concurrent refresh mechanism may be used by API client. Retry original request only once after successful refresh, and only when request body can be safely replayed. Transfer retry always preserves idempotency key.
+#### Step 1: Request recovery OTP
+`POST /api/v1/auth/recover/initiate`
 
-### 6.3 Current customer
-
-`GET /api/v1/customers/me`
-
-Response `200`: `customerId`, `fullName`, `email`, `onboardingStatus`, `createdAt`, optional `decisionAt`, optional `decisionReason`. No password/auth internals.
-
-FE behavior: `PENDING` shows waiting state, `REJECTED` shows safe reason if policy allows, `APPROVED` enables account features. BE still enforces all endpoint access; FE route guards are not security controls.
-
-### 6.4 Operator onboarding queue and detail
-
-`GET /api/v1/operator/onboarding?status=PENDING&limit=20&cursor=<opaque>`
-
-Query:
-
-- `status`: `PENDING|APPROVED|REJECTED`; default `PENDING`.
-- `limit`: integer `1..100`; default `20`.
-- `cursor`: opaque, optional.
-
-Response `200`:
-
+Request:
 ```json
 {
-  "items": [
-    {
-      "customerId": "9bd332f8-a718-4ab9-9fde-21b1ff1fa781",
-      "fullName": "Alex Example",
-      "email": "alex@example.test",
-      "onboardingStatus": "PENDING",
-      "submittedAt": "2026-09-28T10:00:00Z"
-    }
-  ],
-  "nextCursor": null
+  "identifier": "0912345678",
+  "channel": "SMS"
+}
+```
+*(Hoặc `identifier`: `"alex@example.test"`, `channel`: `"EMAIL"`)*
+
+Response `200`:
+```json
+{
+  "identifier": "0912345678",
+  "channel": "SMS",
+  "expiresInSeconds": 120,
+  "message": "If the information is registered, an OTP has been sent to the selected channel."
 }
 ```
 
-`GET /api/v1/operator/onboarding/{customerId}` returns queue item plus fields required for simulator review. Do not include credentials or sensitive fields not required for review.
+Anti-enumeration: response status, body and timing are **identical** whether or not the identifier is registered. BE looks up the account, then dispatches the OTP asynchronously (after the response / after commit) only when a match exists; no match → no OTP, same response. Rate limit (`429`) applies equally to both cases.
 
-FE behavior: show loading, empty queue, page error and data states. After approve/reject, remove/update row locally only after successful response, or refetch queue.
-
-### 6.5 Approve/reject onboarding
-
-Approve: `POST /api/v1/operator/onboarding/{customerId}/approve`
+#### Step 2: Confirm recovery with OTP and new password
+`POST /api/v1/auth/recover/confirm`
 
 Request:
-
 ```json
-{ "decisionNote": "Simulator review completed" }
+{
+  "identifier": "0912345678",
+  "channel": "SMS",
+  "otp": "849201",
+  "newPassword": "NewSecurePassword123!"
+}
 ```
 
 Response `200`:
+```json
+{
+  "message": "Password reset successfully and active sessions revoked"
+}
+```
 
+Recovery rules:
+- `channel = SMS` requires `identifier` to be the registered phone; `channel = EMAIL` requires the registered email. Mismatched identifier/channel returns `400 VALIDATION_ERROR`.
+- OTP: 6 digits, TTL `120` seconds, single use, bound to `identifier + channel + purpose=RECOVERY`. A new initiate invalidates the previous recovery OTP. 5 wrong attempts invalidate the OTP; initiate is rate-limited (`429 RATE_LIMITED`).
+- On success, BE hashes and stores the new password and **revokes all refresh tokens of the user** (force logout on every device). Existing access tokens expire naturally within their short TTL.
+- Errors: `400 OTP_INVALID` (wrong/expired/used OTP **or unregistered identifier** — indistinguishable by design), `400 VALIDATION_ERROR` (format, identifier/channel mismatch, password policy — syntax only, never reveals existence), `429 RATE_LIMITED`. Recovery endpoints never return `404`.
+- Audit records every initiate, including unmatched identifiers (internal outcome `NO_MATCH`, never exposed in API) to detect enumeration attempts.
+
+FE behavior: "Quên mật khẩu" screen → choose channel (SMS/Email) → enter registered phone or email → enter OTP → enter new password twice (the confirm field is FE-only validation, not sent to BE) → on `200` clear any in-memory session and route to Login.
+
+### 6.4 Mandatory First-Login PIN Setup & PIN Management
+
+#### First-login Setup PIN
+`POST /api/v1/customers/me/pin/setup`
+
+Request:
+```json
+{
+  "pin": "123456",
+  "confirmPin": "123456"
+}
+```
+Response `200`: Transaction PIN configured. Updates `isPinSet` to `true`.
+
+#### Change PIN (when current PIN is known)
+`POST /api/v1/customers/me/pin/change`
+
+Request:
+```json
+{
+  "currentPin": "123456",
+  "newPin": "654321",
+  "confirmNewPin": "654321"
+}
+```
+Response `200`: PIN changed successfully. Wrong current PIN returns `400 PIN_INVALID`. 5 consecutive failed attempts lock PIN temporarily for 15 minutes.
+
+#### Forgot PIN
+- `POST /api/v1/customers/me/pin/forgot/initiate`: Sends 6-digit OTP to registered phone number.
+- `POST /api/v1/customers/me/pin/forgot/confirm`:
+Request:
+```json
+{
+  "otp": "849201",
+  "newPin": "654321",
+  "confirmNewPin": "654321"
+}
+```
+Response `200`: PIN reset successfully.
+
+### 6.5 Operator Counter Customer Creation
+
+#### Step 1: Send OTP to customer phone at counter
+`POST /api/v1/operator/customers/send-otp`
+
+Request:
+```json
+{
+  "phone": "0987654321"
+}
+```
+Response `200`: OTP dispatched to customer phone.
+
+#### Step 2: Provision customer & account with verified OTP
+`POST /api/v1/operator/customers`
+
+Request:
+```json
+{
+  "phone": "0987654321",
+  "email": "counter.customer@example.test",
+  "fullName": "Counter Customer",
+  "initialPassword": "InitialPassword123!",
+  "otp": "123456",
+  "address": "456 Ba Trieu, Hanoi"
+}
+```
+
+Response `201`: Returns customer ID and active account details. Customer logs in using phone + initial password, and must configure transaction PIN on first login.
+
+Counter rules: `phone` and `email` are both required and UNIQUE across customers — the counter screen must collect the customer's email in addition to phone. Duplicate phone returns `409 PHONE_ALREADY_REGISTERED`; duplicate email returns `409 EMAIL_ALREADY_REGISTERED`; wrong/expired OTP returns `400 OTP_INVALID`. The action is audited with the Operator as actor.
+
+#### Exact customer lookup at counter
+`GET /api/v1/operator/customers?phone=0987654321` (or `?email=counter.customer@example.test`)
+
+- Exactly one of `phone` / `email` is required. No filter, both filters, partial match or wildcard → `400 VALIDATION_ERROR`. There is no customer listing endpoint.
+- Not found → `404 CUSTOMER_NOT_FOUND` (acceptable: caller is an authenticated, audited Operator; not an anonymous endpoint).
+- Every lookup writes an audit event (`CUSTOMER_LOOKUP`, actor = Operator, filter type only, not the raw value). Rate limited per Operator.
+
+Response `200`:
 ```json
 {
   "customerId": "9bd332f8-a718-4ab9-9fde-21b1ff1fa781",
-  "onboardingStatus": "APPROVED",
-  "account": {
-    "accountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
-    "accountNumberMasked": "••••4821",
-    "accountType": "CHECKING",
-    "status": "ACTIVE",
-    "balance": "0",
-    "currency": "VND"
-  },
-  "decidedAt": "2026-09-28T10:15:00Z"
+  "fullName": "Counter Customer",
+  "phone": "0987654321",
+  "email": "counter.customer@example.test",
+  "isPinSet": true,
+  "createdAt": "2026-09-28T10:00:00Z",
+  "accounts": [
+    {
+      "accountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
+      "accountNumberMasked": "••••4821",
+      "accountType": "CHECKING",
+      "status": "ACTIVE",
+      "balance": "5000000",
+      "currency": "VND",
+      "openedAt": "2026-09-28T10:00:00Z"
+    }
+  ]
 }
 ```
 
-Reject: `POST /api/v1/operator/onboarding/{customerId}/reject`
-
-Request:
-
-```json
-{ "reason": "Required simulator profile details are incomplete" }
-```
-
-Response `200` contains customer ID, `REJECTED`, decision timestamp and safe reason.
-
-Common errors: `404 CUSTOMER_NOT_FOUND`; `409 ONBOARDING_ALREADY_DECIDED`; `403 FORBIDDEN`.
-
-Retry behavior: same decision repeated after successful commit returns current decision/result without duplicate account. Opposite decision after terminal state returns `409 ONBOARDING_ALREADY_DECIDED`. Approve and account creation are atomic.
+FE behavior: Operator uses returned `accountId` for seed balance and block/unblock.
 
 ### 6.6 Accounts and balances
 
 `GET /api/v1/accounts`
 
 Response `200`:
-
 ```json
 {
   "items": [
@@ -288,22 +410,34 @@ Response `200`:
 }
 ```
 
-`GET /api/v1/accounts/{accountId}` returns same account shape plus owner display data only if authorized. Customer may only query own account. Unknown and unauthorized account response follows consistent concealment policy.
+`GET /api/v1/accounts/{accountId}` returns the same account shape. Customer may only query own account; unknown and unauthorized accounts both return `404 ACCOUNT_NOT_FOUND` (concealment).
 
-### Post-MVP account search option
+FE behavior: account list is server state. Refetch after seed/transfer/block events; never persist balance as authoritative state in Zustand.
 
-A future `GET /api/v1/operator/accounts?customerId=<uuid>&accountNumber=<string>` may support operational lookup. It is not part of MVP endpoint catalog or implementation. If approved later, require at least one exact filter, reject unfiltered listing, return masked account numbers and audit access.
+#### Operator block / unblock account
+`POST /api/v1/operator/accounts/{accountId}/block` and `POST /api/v1/operator/accounts/{accountId}/unblock`
 
-FE behavior: account list is server state. Refetch after seed/transfer events; never persist balance as authoritative state in Zustand. MVP Operator flow uses account ID from approval response; operational account search is post-MVP.
+Request:
+```json
+{ "reason": "Customer reported lost phone at counter" }
+```
+
+Response `200`: updated `Account` (`status: "BLOCKED"` or `"ACTIVE"`).
+
+Rules:
+- State machine: `ACTIVE ⇄ BLOCKED`; `CLOSED` is terminal → `409 ACCOUNT_NOT_ELIGIBLE`.
+- Idempotent: blocking an already `BLOCKED` (or unblocking an already `ACTIVE`) account returns `200` with current state, no new mutation and no duplicate audit event.
+- Status change takes the account row lock, so it serializes with in-flight transfers.
+- Effect of `BLOCKED`: transfer from/to the account → `409 ACCOUNT_NOT_ELIGIBLE`; `POST /recipients/resolve` → `404 RECIPIENT_NOT_AVAILABLE`; seed balance → `409 ACCOUNT_NOT_ELIGIBLE`; pending `AWAITING_OTP` transfer involving it becomes `FAILED` (`failureCode: ACCOUNT_NOT_ELIGIBLE`) at confirm. Balance and history remain readable.
+- Audited with actor, account, old/new status and reason.
 
 ### 6.7 Operator seed balance
 
 `POST /api/v1/operator/accounts/{accountId}/seed-balance`
 
-Headers: `Authorization`, `Idempotency-Key`, optional `X-Correlation-Id`.
+Headers: `Authorization`, `Idempotency-Key: <uuid>`.
 
 Request:
-
 ```json
 {
   "amount": "10000000",
@@ -313,7 +447,6 @@ Request:
 ```
 
 Response `201`:
-
 ```json
 {
   "seedTransactionId": "cc168d4a-12cd-4f0f-8c63-55b90ad1e310",
@@ -325,7 +458,7 @@ Response `201`:
 }
 ```
 
-FE behavior: Operator confirms action in UI and labels it “Demo funds”. Update displayed balance only from response/refetch. Retry after network timeout with same key.
+FE behavior: Operator confirms action in UI and labels it "Demo funds". Update displayed balance only from response/refetch. Retry after network timeout with same key. Seed follows the same idempotency rules as transfer (§6.9).
 
 Errors: `404 ACCOUNT_NOT_FOUND`; `409 ACCOUNT_NOT_ELIGIBLE`, `IDEMPOTENCY_KEY_REUSED`; `400 AMOUNT_INVALID` or `CURRENCY_MISMATCH`.
 
@@ -333,18 +466,12 @@ Errors: `404 ACCOUNT_NOT_FOUND`; `409 ACCOUNT_NOT_ELIGIBLE`, `IDEMPOTENCY_KEY_RE
 
 `POST /api/v1/recipients/resolve`
 
-Headers: `Authorization: Bearer <accessToken>`, `Content-Type: application/json`.
-
 Request:
-
 ```json
-{
-  "accountNumber": "1002003004"
-}
+{ "accountNumber": "1002003004" }
 ```
 
 Response `200`:
-
 ```json
 {
   "accountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
@@ -354,9 +481,7 @@ Response `200`:
 }
 ```
 
-`POST /api/v1/recipients/resolve` is authenticated and rate-limited. It returns a limited `recipientDisplayName` for confirmation. Do not expose email, phone, address or full account number. Nonexistent and ineligible account numbers return the same `404 RECIPIENT_NOT_AVAILABLE` Problem code.
-
-### 6.9 Create internal transfer
+### 6.9 Create internal transfer (Tiered 2FA)
 
 `POST /api/v1/transfers`
 
@@ -370,19 +495,21 @@ X-Correlation-Id: 47ec3533-9b7f-408c-a143-ab3918e56446
 ```
 
 Request:
-
 ```json
 {
   "sourceAccountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
   "destinationAccountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
   "amount": "50000",
   "currency": "VND",
+  "pin": "123456",
   "memo": "Shared lunch"
 }
 ```
 
-Response `201` for first committed transfer:
+#### Case A: Amount <= 5,000,000 VNĐ
+PIN verified. Transfer commits atomically.
 
+Response `201`:
 ```json
 {
   "transferId": "7a2327ae-b132-44a5-b682-982842717213",
@@ -397,7 +524,23 @@ Response `201` for first committed transfer:
 }
 ```
 
-`COMPLETED` response means source debit and destination credit committed. MVP has no externally pending transfer state. A rejected business operation returns Problem Details and no transfer balance mutation.
+#### Case B: Amount > 5,000,000 VNĐ (ví dụ 6,000,000 VNĐ)
+PIN verified. Server dispatches SMS OTP to customer phone and returns challenge. Balances remain unchanged.
+
+Response `200`:
+```json
+{
+  "transferId": "7a2327ae-b132-44a5-b682-982842717213",
+  "status": "AWAITING_OTP",
+  "expiresAt": "2026-09-28T10:32:00Z",
+  "message": "Transfer exceeds 5,000,000 VND. OTP sent to registered phone number.",
+  "expiresInSeconds": 120
+}
+```
+
+`AWAITING_OTP` creates a transfer record but **does not debit, credit or reserve funds**. Balance is checked again at confirm time (§6.10).
+
+`COMPLETED` response means source debit and destination credit committed. A rejected business operation (wrong PIN, insufficient funds, ineligible account, validation) returns Problem Details and no balance mutation.
 
 FE behavior:
 
@@ -405,32 +548,78 @@ FE behavior:
 2. Generate idempotency key once when user confirms submission.
 3. Disable duplicate submit while request is in flight, but do not rely on UI lock for correctness.
 4. On `201`, show confirmation and refetch balances/history.
-5. On timeout/network error, keep same key and exact request body. Offer retry/status reconciliation; do not generate a new key automatically.
-6. On `409 INSUFFICIENT_FUNDS`, show field/form error and refresh balance.
-7. On `409 IDEMPOTENCY_KEY_REUSED`, do not retry with that key and changed body; explain request conflict and start a new intentional operation with a new key only after user action.
+5. On `200` with `status: AWAITING_OTP`, render OTP modal with countdown from `expiresInSeconds`.
+6. On timeout/network error, keep same key and exact request body. Retry or reconcile via `GET /transfers/{transferId}`; do not generate a new key automatically.
+7. On `409 INSUFFICIENT_FUNDS`, show form error and refresh balance.
+8. On `409 IDEMPOTENCY_KEY_REUSED`, do not retry with that key and changed body; start a new intentional operation with a new key only after user action.
+9. On `400 PIN_INVALID` / `403 PIN_LOCKED`, show PIN error / lock duration; a corrected PIN is a new request with a new key.
 
-Transfer idempotency rules:
+Transfer and seed idempotency rules:
 
-- Same actor + same operation + same key + same canonical payload: return original logical transfer/seed response; no second balance mutation. First request returns `201`; replay returns `200` with `Idempotency-Replayed: true` response header.
+- Same actor + same operation + same key + same canonical payload: return original logical result; no second balance mutation. First request returns `201` (or `200` challenge); replay returns `200` with `Idempotency-Replayed: true` response header.
+- Replay of a step-up transfer returns its **current state**: while `AWAITING_OTP`, the original challenge with remaining `expiresInSeconds` (**no new OTP is sent**); after that, the `Transfer` with `COMPLETED`, `EXPIRED` or `FAILED`.
 - Same key but different payload: `409 IDEMPOTENCY_KEY_REUSED`.
-- Concurrent duplicates: exactly one transfer/seed record and one balance mutation.
+- Concurrent duplicates: exactly one transfer/seed record and one balance mutation (enforced by DB unique constraint on actor + operation + key).
+- Canonical payload hash excludes `pin` (secret); PIN is verified on every call, including replay.
 - Retain keys for at least 24 hours; keep financial record under standard demo retention. Do not purge key while result may need reconciliation.
-- Business rejection does not reserve successful result; corrected request requires new key.
-- Approve/reject does not require idempotency header: same terminal decision returns current result; opposite decision returns `409 ONBOARDING_ALREADY_DECIDED`.
+- Business rejection does not reserve a successful result; corrected request requires new key.
 - Key length: 16..128 printable ASCII characters; generated UUID recommended.
 
-### 6.10 Transfer history and detail
+### 6.10 Confirm Step-up Transfer with OTP
+
+`POST /api/v1/transfers/{transferId}/confirm-otp`
+
+Request:
+```json
+{
+  "otp": "849201"
+}
+```
+
+Response `201`:
+```json
+{
+  "transferId": "7a2327ae-b132-44a5-b682-982842717213",
+  "status": "COMPLETED",
+  "sourceAccountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
+  "destinationAccountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
+  "amount": "6000000",
+  "currency": "VND",
+  "memo": "Large purchase",
+  "createdAt": "2026-09-28T10:30:00Z",
+  "completedAt": "2026-09-28T10:31:00Z"
+}
+```
+
+Step-up transfer state machine:
+
+```text
+POST /transfers (> 5M, PIN ok) ──► AWAITING_OTP ──valid OTP + re-validation ok──► COMPLETED
+                                        │ 120s elapsed ─────────────────────────► EXPIRED
+                                        │ 5th wrong OTP ────────────────────────► FAILED (OTP_ATTEMPTS_EXCEEDED)
+                                        └ re-validation fails at confirm ───────► FAILED (INSUFFICIENT_FUNDS | ACCOUNT_NOT_ELIGIBLE)
+```
+
+Confirm rules:
+- Only the source-account owner may confirm; others get `404 TRANSFER_NOT_FOUND`.
+- In one DB transaction: lock both account rows (ascending ID), re-validate status/currency/available balance **under lock**, debit, credit, set `COMPLETED`, write audit. Risk rules run after commit, same as direct transfers.
+- Idempotent by `transferId` (no `Idempotency-Key` needed): confirm after `COMPLETED` returns `200` with the same `Transfer` and `Idempotency-Replayed: true`, no second mutation. Safe to retry after client timeout.
+- Wrong OTP → `400 OTP_INVALID` (status stays `AWAITING_OTP`); 5th wrong OTP → `409 STATE_CONFLICT`, status `FAILED`.
+- Confirm on `EXPIRED` → `409 TRANSFER_EXPIRED`; on `FAILED` → `409 STATE_CONFLICT`. Customer must start a new transfer with a new key.
+- Re-validation failure → `409 INSUFFICIENT_FUNDS` / `409 ACCOUNT_NOT_ELIGIBLE`, status `FAILED`, balances unchanged.
+- Expiry is evaluated lazily on read/confirm (`now > expiresAt`) and may also be persisted by a scheduled job; either way no balance is touched.
+
+### 6.11 Transfer history and detail
 
 `GET /api/v1/transfers?limit=20&cursor=<opaque>&status=COMPLETED&from=<RFC3339>&to=<RFC3339>`
 
-- All query parameters optional.
-- `status`: `COMPLETED` in synchronous MVP; future values must be additive and documented.
-- `from` inclusive; `to` exclusive; reject `from >= to`.
-- Result only includes transfers where current Customer owns source or destination account.
+- All query parameters optional. `status`: `AWAITING_OTP | COMPLETED | EXPIRED | FAILED`.
+- `from` inclusive; `to` exclusive; reject `from >= to` with `400 INVALID_DATE_RANGE`.
+- Visibility: source-account owner sees own transfers in **every** status; destination-account owner sees only `COMPLETED` incoming transfers (a pending/expired/failed transfer never moved money to them).
 - Stable order: `createdAt` descending, then `transferId` descending.
+- `counterpartyDisplayName` is limited display data; never email, phone or address.
 
 Response `200`:
-
 ```json
 {
   "items": [
@@ -450,28 +639,44 @@ Response `200`:
 }
 ```
 
-Transfer history uses a dedicated lightweight `TransferListItem` shape. It does not expose source/destination account IDs in list rows. `counterpartyDisplayName` is limited display data and must not include email, phone or address.
+#### Transfer detail and status (Transaction status use case)
 
+`GET /api/v1/transfers/{transferId}` returns the full `Transfer` with current `status`:
 
+| `status` | Meaning | Balance moved? | Extra fields |
+|---|---|---|---|
+| `AWAITING_OTP` | Step-up transfer waiting for SMS OTP | No | `expiresAt` |
+| `COMPLETED` | Debit + credit committed | Yes | `completedAt` |
+| `EXPIRED` | OTP not confirmed within 120s | No | — |
+| `FAILED` | 5 wrong OTP, or re-validation failed at confirm | No | `failureCode` |
 
-FE behavior: detail route can load directly by ID; do not require history screen to have populated Zustand first. Handle missing/unauthorized as not found.
+Example (`FAILED`):
+```json
+{
+  "transferId": "7a2327ae-b132-44a5-b682-982842717213",
+  "status": "FAILED",
+  "failureCode": "INSUFFICIENT_FUNDS",
+  "sourceAccountId": "a452a8cf-59f6-46f2-85a6-f2b8fd207db9",
+  "destinationAccountId": "3285a3ab-4273-4ab2-987e-62bfc062a456",
+  "amount": "6000000",
+  "currency": "VND",
+  "createdAt": "2026-09-28T10:30:00Z"
+}
+```
 
-### 6.11 Audit events
+Status is the committed DB state; `COMPLETED` is never shown before commit and terminal states (`COMPLETED`, `EXPIRED`, `FAILED`) never change. Destination owner gets `404 TRANSFER_NOT_FOUND` for non-`COMPLETED` transfers.
+
+FE behavior: detail route loads directly by ID (no dependency on history cache). Use it to reconcile after a timeout and to refresh the OTP modal state. Handle missing/unauthorized as not found.
+
+### 6.12 Audit events and risk flags
 
 `GET /api/v1/audit-events?limit=20&cursor=<opaque>&eventType=TRANSFER_COMPLETED&actorId=<uuid>&from=<RFC3339>&to=<RFC3339>`
 
-Auditor/Admin only. Supported filters are optional. Response has `items` and `nextCursor`; each item includes `eventId`, `eventType`, `actorId` (may be system), `targetType`, `targetId`, `outcome`, `occurredAt`, `correlationId`, and redacted `summary`. No raw token, password, secret or full sensitive request payload.
+Auditor/Admin only. Each item includes `eventId`, `eventType`, `actorId` (may be system), `targetType`, `targetId`, `outcome`, `occurredAt`, `correlationId`, and redacted `summary`. No raw token, password, PIN, OTP, secret or full sensitive request payload. No edit/delete endpoint exists.
 
-FE behavior: display read-only event details; no edit/delete endpoint exists. Unauthorized role receives `403 FORBIDDEN`.
+`GET /api/v1/operator/risk-flags?ruleId=<string>&transferId=<uuid>&from=<RFC3339>&to=<RFC3339>&limit=20&cursor=<opaque>`
 
-### 6.12 Risk flags (MVP read-only)
-
-`GET /api/v1/risk-flags?status=OPEN&ruleId=<string>&limit=20&cursor=<opaque>`
-
-Operator/Auditor/Admin only. MVP flags have status `OPEN`; response includes `flagId`, `transferId`, `ruleId`, `ruleVersion`, `reason` and `detectedAt`.
-
-Risk-flag review, notes and `REVIEWED` status are post-MVP options. MVP does not expose a review mutation endpoint.
-
+Operator/Auditor/Admin only; read-only flags with `flagId`, `transferId`, `ruleId`, `ruleVersion`, `reason`, `detectedAt`. Review workflow is post-MVP.
 
 ## 7. Standard error contract
 
@@ -494,11 +699,11 @@ All errors use `application/problem+json`:
 
 | HTTP | Stable codes (minimum) | FE behavior |
 |---|---|---|
-| `400` | `VALIDATION_ERROR`, `AMOUNT_INVALID`, `CURRENCY_MISMATCH`, `INVALID_DATE_RANGE` | Show field/form errors; do not retry unchanged request. |
-| `401` | `AUTHENTICATION_REQUIRED`, `SESSION_EXPIRED`, `INVALID_CREDENTIALS` | Refresh once if eligible; otherwise clear session/login. |
-| `403` | `FORBIDDEN` | Show access denied; do not retry. |
-| `404` | `CUSTOMER_NOT_FOUND`, `ACCOUNT_NOT_FOUND`, `TRANSFER_NOT_FOUND`, concealed resource code | Show not found; avoid exposing whether protected resource exists. |
-| `409` | `EMAIL_ALREADY_REGISTERED`, `ONBOARDING_ALREADY_DECIDED`, `ACCOUNT_NOT_ELIGIBLE`, `INSUFFICIENT_FUNDS`, `IDEMPOTENCY_KEY_REUSED`, `STATE_CONFLICT` | Show business conflict; refresh affected server state. |
+| `400` | `VALIDATION_ERROR`, `AMOUNT_INVALID`, `CURRENCY_MISMATCH`, `INVALID_DATE_RANGE`, `OTP_INVALID`, `PIN_INVALID` | Show field/form errors; do not retry unchanged request. |
+| `401` | `AUTHENTICATION_REQUIRED`, `SESSION_EXPIRED`, `CREDENTIALS_INVALID` | Refresh once if eligible; otherwise clear session/login. |
+| `403` | `FORBIDDEN`, `PIN_LOCKED` | Show access denied / lockout duration; do not retry. |
+| `404` | `CUSTOMER_NOT_FOUND`, `ACCOUNT_NOT_FOUND`, `TRANSFER_NOT_FOUND`, `RECIPIENT_NOT_AVAILABLE` | Show not found; avoid exposing whether protected resource exists. |
+| `409` | `PHONE_ALREADY_REGISTERED`, `EMAIL_ALREADY_REGISTERED`, `ACCOUNT_NOT_ELIGIBLE`, `INSUFFICIENT_FUNDS`, `IDEMPOTENCY_KEY_REUSED`, `TRANSFER_EXPIRED`, `STATE_CONFLICT` | Show business conflict; refresh affected server state. |
 | `429` | `RATE_LIMITED` | Respect `Retry-After`; never rapid-loop. |
 | `500` | `INTERNAL_ERROR` | Show generic message + correlation ID; no unsafe automatic mutation retry. |
 | `503` | `SERVICE_UNAVAILABLE` | Show temporary unavailable; safe retry only; transfer retry must reuse key. |
@@ -507,70 +712,81 @@ Validation framework details and stack traces never reach FE. BE returns generic
 
 ## 8. FE navigation and API call sequences
 
-### Customer onboarding
+### Customer onboarding & first login
 
 ```text
 Register screen
-  POST /auth/register
-  201 -> Pending approval screen
-  409 EMAIL_ALREADY_REGISTERED -> registration form error
+  POST /auth/register/send-otp
+  POST /auth/register (phone, email, password, fullName, otp)
+  201 -> Account created immediately -> Route to Login screen
 
 Login screen
-  POST /auth/login
-  200 -> save access token in memory; route by roles/status
-  PENDING -> pending screen
-  REJECTED -> rejected status screen
-  APPROVED -> dashboard
+  POST /auth/login (phone, password)
+  200 -> Save access token in memory
+  if user.isPinSet === false -> Route to Mandatory PIN Setup screen
+  if user.isPinSet === true -> Route to Dashboard
+
+PIN Setup screen
+  POST /customers/me/pin/setup (pin, confirmPin)
+  200 -> user.isPinSet = true -> Route to Dashboard
 ```
-
-### Operator approval and seed funds
-
-```text
-Operator onboarding queue
-  GET /operator/onboarding?status=PENDING
-  GET /operator/onboarding/{customerId}
-  POST .../approve OR POST .../reject
-  Approval response returns default accountId
-  POST /operator/accounts/{accountId}/seed-balance (Idempotency-Key)
-```
-
-FE must not call seed endpoint before approval response returns account ID. If response is lost, reload detail/queue and reconcile before retrying with same seed idempotency key.
 
 ### Customer transfer
 
 ```text
-Dashboard
-  GET /accounts
-  GET /transfers?limit=20
-
 Transfer form
-  GET /accounts (or use fresh cached account list)
-  POST /transfers (Idempotency-Key)
-  201/200 -> GET /accounts + GET /transfers
-  network timeout -> retry same body/key; never assume failure
+  Resolve recipient: POST /recipients/resolve
+  Submit transfer: POST /transfers (Idempotency-Key, amount, pin, ...)
+  if amount <= 5,000,000 VND:
+    201 COMPLETED -> Refresh balances and transfer history
+  if amount > 5,000,000 VND:
+    200 AWAITING_OTP -> Display OTP verification modal (countdown)
+    Submit OTP: POST /transfers/{transferId}/confirm-otp
+    201 COMPLETED (or 200 replay) -> Refresh balances and transfer history
+    400 OTP_INVALID -> Stay in modal, show remaining attempts
+    409 TRANSFER_EXPIRED / STATE_CONFLICT -> Close modal, show status, offer new transfer
+  network timeout -> retry same body/key (or same confirm call); reconcile via GET /transfers/{transferId}
+```
+
+### Operator counter operations
+
+```text
+Lookup customer
+  GET /operator/customers?phone=...   (exact match, audited)
+Create customer at counter
+  POST /operator/customers/send-otp -> POST /operator/customers
+Seed demo funds
+  POST /operator/accounts/{accountId}/seed-balance (Idempotency-Key)
+Block / unblock
+  POST /operator/accounts/{accountId}/block | /unblock (reason)
+```
+
+### Forgot password
+
+```text
+Forgot password screen
+  Choose channel SMS | EMAIL, enter phone | email
+  POST /auth/recover/initiate -> always generic 200 -> OTP screen
+  POST /auth/recover/confirm (otp, newPassword) -> 200 -> Login screen
+  400 OTP_INVALID -> "Mã OTP không đúng hoặc đã hết hạn"
 ```
 
 ## 9. Zustand and server-state ownership
 
-Use **TanStack Query** for server state and **Zustand** for client/UI state. Both can be used together without duplicating ownership.
-
-- Current UI state: navigation, modal/drawer, form draft before submission, table preferences.
-- Auth presentation state: current user summary and access token held in memory; clear on logout/refresh failure.
-
-Zustand must not be sole source of truth for:
-
-- Balance, account status, transfer status/history, onboarding decision, risk flag or audit record.
-- Permission enforcement.
-
-TanStack Query owns server responses, loading/error state, stale time, in-flight request deduplication, retries for safe reads and cache invalidation. After approve/reject invalidate onboarding queries; after seed/transfer invalidate accounts and history. Disable automatic retry for money mutations unless retry reuses the exact idempotency key and body. Optimistic balance updates are not allowed for MVP.
+Use **TanStack Query** for server state and **Zustand** for client/UI state.
+- Zustand stores UI navigation, modal visibility, and auth presentation state (`user`, token in memory).
+- TanStack Query manages API responses, loading/error states, and cache invalidation.
+- After transfer completion, seed or block/unblock, invalidate `accounts` and `transfers` queries.
+- Zustand must not be the sole source of truth for balance, account status, transfer status/history, risk flag or audit record, nor for permission enforcement.
+- Disable automatic retry for money mutations unless retry reuses the exact idempotency key and body. Optimistic balance updates are not allowed for MVP.
 
 ## 10. OpenAPI operation IDs and generated types
 
-- Every operation has stable unique `operationId`, e.g. `registerCustomer`, `createTransfer`, `getTransferHistory`.
+- Every operation has stable unique `operationId`, e.g. `registerCustomer`, `createTransfer`, `confirmTransferOtp`.
 - FE API client/types derive from `contracts/openapi.yaml`.
 - Do not hand-edit generated output; update source contract and regenerate.
 - CI fails for invalid OpenAPI, duplicate operation IDs or generated diff.
-- Use shared schema refs for `Problem`, `Page<T>`, `Money`, `CustomerStatus`, `Account`, `Transfer`.
+- Use shared schema refs for `Problem`, `PageBase`, `MoneyAmount`, `TransferStatus`, `Account`, `Transfer`.
 - Examples in this guide are illustrative; test fixtures must conform to OpenAPI validation.
 
 ## 11. Contract compatibility rules
@@ -588,22 +804,8 @@ No silent contract drift. Update OpenAPI, this guide and mock fixtures in same P
 
 ## 12. Team ownership and merge gates
 
-### FE can implement independently when
-
-- OpenAPI path/schema/status/auth is approved.
-- Mock examples cover success, empty, loading, field validation, unauthorized, forbidden, business conflict and unavailable states.
-- FE build/typecheck succeeds without running BE.
-
-### BE can implement independently when
-
-- OpenAPI schema and state transitions are approved.
-- Contract tests assert status, headers, schema and error code.
-- Ownership, roles, idempotency and money invariants have targeted tests.
-
-### Integration merge gate
-
-- OpenAPI validation passes.
-- FE generated client/types are current and FE build/typecheck passes.
-- BE contract/integration tests pass.
-- E2E onboarding → approval → seed balance → transfer → history succeeds in isolated environment.
-- No endpoint, field or status divergence exists between OpenAPI, BE and FE mocks.
+- `contracts/openapi.yaml` is the single source of truth.
+- FE generated types must strictly match `openapi.yaml`.
+- FE can implement independently once path/schema/status/auth is approved and mocks cover success, empty, loading, validation, unauthorized, forbidden, conflict and unavailable states.
+- BE can implement independently once contract tests assert status, headers, schema and error code, and ownership, roles, idempotency and money invariants have targeted tests.
+- Integration merge gate: valid OpenAPI, current FE generated types, passing BE contract/integration tests, and E2E register → login → PIN setup → seed → transfer (≤ 5M and > 5M with OTP) → history/status.
