@@ -1,6 +1,6 @@
 # API & Team Contract
 
-> **Contract status:** MVP implementation baseline. `../contracts/openapi.yaml` is normative for paths, schemas, status codes and security schemes. This guide adds FE call sequences, state behavior and implementation rules. If this guide and OpenAPI differ, update both in same change; do not guess in code.
+> **Contract status:** MVP implementation baseline. `../../contracts/openapi.yaml` is normative for paths, schemas, status codes and security schemes. This guide adds FE call sequences, state behavior and implementation rules. If this guide and OpenAPI differ, update both in same change; do not guess in code.
 
 ## 1. Frontend integration summary
 
@@ -50,12 +50,12 @@ Create one typed client in `frontend/src/api/`:
 
 Contract-first development is mandatory:
 
-1. `contracts/openapi.yaml` defines exact paths, schemas, required fields, headers and status codes.
-2. FE generates types, client functions and MSW mock fixtures from `contracts/openapi.yaml`.
+1. `../../contracts/openapi.yaml` defines exact paths, schemas, required fields, headers and status codes.
+2. FE generates types, client functions and MSW mock fixtures from `../../contracts/openapi.yaml`.
 3. BE generates server stubs/validation models or implements strict schema tests against the same OpenAPI file.
 4. Contract diffs must be approved before implementation PRs are merged.
 
-`contracts/openapi.yaml` is committed with the repo.
+`../../contracts/openapi.yaml` is committed with the repo.
 
 ## 3. API-wide conventions
 
@@ -783,7 +783,7 @@ Use **TanStack Query** for server state and **Zustand** for client/UI state.
 ## 10. OpenAPI operation IDs and generated types
 
 - Every operation has stable unique `operationId`, e.g. `registerCustomer`, `createTransfer`, `confirmTransferOtp`.
-- FE API client/types derive from `contracts/openapi.yaml`.
+- FE API client/types derive from `../../contracts/openapi.yaml`.
 - Do not hand-edit generated output; update source contract and regenerate.
 - CI fails for invalid OpenAPI, duplicate operation IDs or generated diff.
 - Use shared schema refs for `Problem`, `PageBase`, `MoneyAmount`, `TransferStatus`, `Account`, `Transfer`.
@@ -804,7 +804,7 @@ No silent contract drift. Update OpenAPI, this guide and mock fixtures in same P
 
 ## 12. Team ownership and merge gates
 
-- `contracts/openapi.yaml` is the single source of truth.
+- `../../contracts/openapi.yaml` is the single source of truth.
 - FE generated types must strictly match `openapi.yaml`.
 - FE can implement independently once path/schema/status/auth is approved and mocks cover success, empty, loading, validation, unauthorized, forbidden, conflict and unavailable states.
 - BE can implement independently once contract tests assert status, headers, schema and error code, and ownership, roles, idempotency and money invariants have targeted tests.

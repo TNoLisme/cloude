@@ -96,7 +96,7 @@ Least privilege là mặc định. Role không thay thế ownership check: Custo
 - Xác thực giao dịch phân tầng: mọi transfer yêu cầu PIN 6 số đúng; amount <= `5,000,000` VNĐ commit ngay (`201`); amount > `5,000,000` VNĐ trả `200 AWAITING_OTP`, gửi OTP SMS về SĐT đã đăng ký, chỉ debit/credit sau khi `POST /transfers/{transferId}/confirm-otp` hợp lệ. Trong trạng thái chờ OTP, số dư không thay đổi và không giữ chỗ (reserve) tiền.
 - Step-up state machine: `AWAITING_OTP → COMPLETED | EXPIRED (sau 120s) | FAILED (sai OTP 5 lần hoặc re-validation thất bại)`. Tại confirm, backend lock account rows và **kiểm tra lại** trạng thái, currency và số dư dưới lock trước khi debit/credit.
 - Idempotency cho step-up: replay `POST /transfers` cùng key/payload trả trạng thái hiện tại của cùng giao dịch (không gửi OTP mới); confirm idempotent theo `transferId` — gọi lại sau `COMPLETED` trả kết quả cũ, không trừ tiền lần hai.
-- Backend thực hiện debit, credit, transaction record và audit/outbox metadata trong atomic DB transaction.
+- Backend thực hiện debit, credit, transaction record và audit facts trong atomic DB transaction.
 - Thiếu số dư, tài khoản bị khóa, input sai hoặc currency không khớp phải từ chối mà không đổi balance.
 - API trả transaction ID và status. Client timeout không được xem là bằng chứng transfer thất bại; client phải tra cứu bằng idempotency key/transaction ID.
 
@@ -142,7 +142,7 @@ Least privilege là mặc định. Role không thay thế ownership check: Custo
 
 ### Business flows
 
-Sơ đồ dưới đây minh họa các FR ở trên; chi tiết request/response và mã lỗi nằm trong [API & Team Contract](./api-and-team-contract.md) và `contracts/openapi.yaml`. Màu: tím = Customer, xanh = Operator, xám = hệ thống.
+Sơ đồ dưới đây minh họa các FR ở trên; chi tiết request/response và mã lỗi nằm trong [API & Team Contract](./api-and-team-contract.md) và `../../contracts/openapi.yaml`. Màu: tím = Customer, xanh = Operator, xám = hệ thống.
 
 #### BF-1 Tổng quan vòng đời
 
@@ -311,7 +311,7 @@ Vì account và transfer nằm trong cùng modular monolith và cùng PostgreSQL
 2. Kiểm tra idempotency key và payload hash.
 3. Lock source/destination account rows theo thứ tự ID ổn định.
 4. Validate status, currency, amount, limits và available balance dưới lock.
-5. Ghi debit/credit, immutable transfer record, idempotency result và audit/outbox facts.
+5. Ghi debit/credit, immutable transfer record, idempotency result và audit facts.
 6. Commit một lần; chỉ sau commit mới trả success.
 7. Với lỗi trước commit, rollback mọi mutation.
 

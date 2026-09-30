@@ -71,7 +71,7 @@ Before FE/BE split work starts:
 - [ ] Add FE states for all stable error codes.
 - [ ] Freeze currency, amount limits, idempotency retention and risk thresholds in environment config.
 - [ ] Run E2E: register (phone OTP) → login by phone → PIN setup → seed → resolve recipient → transfer → history; forgot password via SMS and via Email.
-- [ ] Keep post-MVP options out of MVP code: broad operator account search, risk review, outbox, Kafka, Saga, read replica and microservices.
+- [ ] POST-MVP infrastructure remains out of scope.
 
 ## Non-goals retained
 

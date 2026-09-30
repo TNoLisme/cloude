@@ -152,7 +152,7 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 ### Contract and CI
 
-- Validate `contracts/openapi.yaml` and fail CI on invalid schema.
+- Validate `../../contracts/openapi.yaml` and fail CI on invalid schema.
 - Generate/check FE API types/client from committed contract.
 - Run backend unit and targeted integration tests, frontend typecheck/build/tests, dependency/security scanning appropriate to course CI limits.
 - Build container images in CI; deployment requires explicit environment configuration and health checks.
@@ -221,9 +221,9 @@ Avoid provider-specific dependencies in domain modules. Isolate provider-specifi
 
 ## 8. Observability
 
-- Propagate validated correlation ID from ingress to service logs and audit/outbox metadata.
+- Propagate validated correlation ID from ingress to service logs and audit metadata.
 - Structured logs: timestamp, severity, service, correlation ID, operation, outcome, duration; avoid sensitive payloads.
-- Metrics: request count/latency/error by endpoint, DB pool usage, transfer success/failure, idempotency replay/conflict, lock/deadlock/timeout, risk flag count and outbox backlog if present.
+- Metrics: request count/latency/error by endpoint, DB pool usage, transfer success/failure, idempotency replay/conflict, lock/deadlock/timeout, and risk flag count.
 - Distributed trace instrumentation is optional for single process; include it only if it materially helps cloud demo.
 - Alerts for service unhealthy, elevated 5xx, DB unavailable/pool exhaustion, repeated deadlocks and growing outbox backlog if broker used.
 - Dashboard must distinguish business outcome from transport status; for example, HTTP timeout does not prove transfer failed.
