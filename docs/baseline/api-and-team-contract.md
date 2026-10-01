@@ -527,6 +527,8 @@ Response `201`:
 #### Case B: Amount > 5,000,000 VNĐ (ví dụ 6,000,000 VNĐ)
 PIN verified. Server dispatches SMS OTP to customer phone and returns challenge. Balances remain unchanged.
 
+Commit challenge and transfer before dispatch. Dispatch failure/timeout returns `503 SERVICE_UNAVAILABLE`; a new compensating transaction changes only `AWAITING_OTP` to `FAILED` with `failureCode: OTP_DISPATCH_FAILED` and invalidates its challenge. Preserve terminal states if confirm/expiry won the race. Same-key replay returns current state without resending OTP; a new intentional transfer requires a new key. A crash or compensation failure may leave the transfer pending until expiry; timeout alone does not prove non-delivery or rollback.
+
 Response `200`:
 ```json
 {
@@ -648,7 +650,7 @@ Response `200`:
 | `AWAITING_OTP` | Step-up transfer waiting for SMS OTP | No | `expiresAt` |
 | `COMPLETED` | Debit + credit committed | Yes | `completedAt` |
 | `EXPIRED` | OTP not confirmed within 120s | No | — |
-| `FAILED` | 5 wrong OTP, or re-validation failed at confirm | No | `failureCode` |
+| `FAILED` | 5 wrong OTP, re-validation failed at confirm, or OTP dispatch failed | No | `failureCode` |
 
 Example (`FAILED`):
 ```json

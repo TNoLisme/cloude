@@ -122,15 +122,17 @@ app:
   rate-limit:
     storage: in-memory-instance-local
     policies:
-      login: { limit: 5, window: 60s, key: ip-phone }
-      registration-otp: { limit: 3, window: 300s, key: ip-phone }
-      recovery-initiate: { limit: 3, window: 300s, key: ip-identifier }
+      login: { limit: 5, window: 60s, independent-keys: [ip, phone] }
+      registration-otp: { limit: 3, window: 300s, independent-keys: [ip, phone] }
+      recovery-initiate: { limit: 3, window: 300s, independent-keys: [ip, identifier] }
       operator-customer-otp: { limit: 10, window: 300s, key: operator-id }
       recipient-resolve: { limit: 30, window: 60s, key: customer-id }
       operator-customer-lookup: { limit: 30, window: 60s, key: operator-id }
 ```
 
 Use environment overrides for datasource/secrets. Never commit secrets. Rate-limit counters use a synchronized in-memory per-key fixed window and monotonic clock; counters reset on restart, are not shared across replicas, and do not claim distributed protection. Bound map cardinality and evict expired entries. Trust forwarded IP only from explicitly configured trusted proxies; never trust arbitrary `X-Forwarded-For`. 429 uses OpenAPI Problem `RATE_LIMITED` and `Retry-After` integer seconds, minimum 1. Never log or metric-label raw phone/email.
+
+For independent-keys, limit/window applies to each separate operation-scoped bucket. Allow only if both have quota; either exhausted rejects. These are not concatenated IP-identifier keys. User approved retaining the previous numeric limit for each independent bucket on 2026-10-01; shared IPs therefore share that quota. See the [six-decision update](../2026-10-01-security-transaction-refinements.md) and Phase 02.
 
 ## 4. Migration plan and complete PostgreSQL DDL
 

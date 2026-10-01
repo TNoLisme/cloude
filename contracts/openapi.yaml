@@ -374,6 +374,10 @@ paths:
         If amount > 5,000,000 VND, creates transfer in AWAITING_OTP (no balance change, no funds reserved), sends phone OTP and
         returns challenge (200). Replay with same key + same payload returns the current state of the same logical transfer with
         Idempotency-Replayed true: the original challenge (remaining expiresInSeconds, no new OTP) while AWAITING_OTP, otherwise the Transfer.
+        Challenge and transfer commit before OTP dispatch. Dispatch failure or timeout returns 503 SERVICE_UNAVAILABLE;
+        compensation changes only AWAITING_OTP to FAILED with failureCode OTP_DISPATCH_FAILED and invalidates the challenge.
+        Terminal states are never overwritten. Same-key replay returns current state without resending OTP.
+        A crash before dispatch or compensation may leave AWAITING_OTP until expiry (best-effort delivery, no Outbox).
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -805,7 +809,7 @@ components:
       type: string
       enum: [AWAITING_OTP, COMPLETED, EXPIRED, FAILED]
       description: >-
-        AWAITING_OTP -> COMPLETED (valid OTP) | EXPIRED (120s elapsed) | FAILED (5 wrong OTP, or re-validation failed at confirm).
+        AWAITING_OTP -> COMPLETED (valid OTP) | EXPIRED (120s elapsed) | FAILED (5 wrong OTP, re-validation failed at confirm, or OTP dispatch failed).
         Transfers <= 5,000,000 VND are created directly as COMPLETED. Only COMPLETED changes balances. Terminal states never change.
 
     Transfer:
@@ -814,7 +818,7 @@ components:
       properties:
         transferId: { $ref: '#/components/schemas/Uuid' }
         status: { $ref: '#/components/schemas/TransferStatus' }
-        failureCode: { type: string, description: 'Present only when FAILED, e.g. OTP_ATTEMPTS_EXCEEDED, INSUFFICIENT_FUNDS, ACCOUNT_NOT_ELIGIBLE' }
+        failureCode: { type: string, description: 'Present only when FAILED, e.g. OTP_ATTEMPTS_EXCEEDED, INSUFFICIENT_FUNDS, ACCOUNT_NOT_ELIGIBLE, OTP_DISPATCH_FAILED' }
         expiresAt: { $ref: '#/components/schemas/Instant', description: Present while AWAITING_OTP }
         sourceAccountId: { $ref: '#/components/schemas/Uuid' }
         destinationAccountId: { $ref: '#/components/schemas/Uuid' }

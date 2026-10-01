@@ -57,7 +57,11 @@ Use package name convention matching roadmap (`rate_limit` should be Java packag
 
 ## OTP challenge and mailbox
 
+Approved PIN transaction boundary: before any money transaction starts, call a separate Spring-managed PinVerificationService with REQUIRES_NEW. Lock the PIN row, check lock expiry, verify PIN and update attempts/lock state within that short transaction. Return a typed outcome; map it to HTTP only after commit. Do not hold an outer transaction/row lock while invoking this service. Concurrent wrong attempts must not lose increments; a later money rollback must not undo committed PIN state.
+
 `OtpChallengeService.issue(OtpIssueCommand)` creates six-digit code via `SecureRandom`, stores salted adaptive hash (not raw code) and expiry 120s, max attempts 5, identifier/channel/purpose binding. `consume(OtpConsumeCommand)` runs transactional: select challenge for update by normalized identifier/purpose/channel and active state, reject absent/expired/consumed/invalidated, increment attempts for wrong code, invalidate at fifth, set consumed timestamp once on valid code. Return a typed result; HTTP layer maps exact OpenAPI stable Problem codes.
+
+For transfer confirmation, join the single caller transaction (REQUIRED), select the exact challenge referenced by transfer and validate its bindings. Do not use nested REQUIRES_NEW for a wrong OTP. Wrong-attempt counters and fifth-attempt invalidation/FAILED commit before HTTP error mapping; a valid OTP is consumed atomically with debit, credit, COMPLETED and audit. Technical failures roll back all of these. Phase 05 defines consistent transfer/challenge/account locking.
 
 `OtpSender` is a port with `send(OtpMessage)`; `LocalMailboxOtpSender` stores code only in process memory for local/demo, keyed by challenge ID + normalized identifier, expiry <= challenge TTL, bounded entry count, overwrite/evict expired entries, no DB persistence and no logs. Shared/cloud profiles must fail startup if mailbox enabled. Mailbox endpoint:
 
@@ -71,14 +75,16 @@ Controller is conditionally registered only under `local` or `demo`, server bind
 
 | Operation | Limit/window | Key | Applied response |
 |---|---:|---|---|
-| `POST /api/v1/auth/login` | 5 / 60s | Trusted client IP + normalized phone | HTTP 429 Problem `RATE_LIMITED`, `Retry-After` seconds |
-| `POST /api/v1/auth/register/send-otp` | 3 / 300s | Trusted client IP + phone | Same |
-| `POST /api/v1/auth/recover/initiate` | 3 / 300s | Trusted client IP + normalized identifier | Same |
+| `POST /api/v1/auth/login` | 5 / 60s per bucket | Independent trusted-IP bucket AND normalized-phone bucket | HTTP 429 Problem `RATE_LIMITED`, `Retry-After` seconds |
+| `POST /api/v1/auth/register/send-otp` | 3 / 300s per bucket | Independent trusted-IP bucket AND normalized-phone bucket | Same |
+| `POST /api/v1/auth/recover/initiate` | 3 / 300s per bucket | Independent trusted-IP bucket AND normalized-identifier bucket | Same |
 | `POST /api/v1/operator/customers/send-otp` | 10 / 300s | authenticated operator ID | Same |
 | `POST /api/v1/recipients/resolve` | 30 / 60s | authenticated customer ID | Same |
 | `GET /api/v1/operator/customers` | 30 / 60s | authenticated operator ID | Same |
 
 Configuration overrides these defaults. Counters are synchronized in-memory per application instance; reset on restart; not shared across replicas. Use monotonic time (`System.nanoTime`) for window accounting. Clamp `Retry-After` to >=1 second. Use trusted proxy configuration for client IP. Do not include raw identity values in metrics/logs. Bound map growth with expiry cleanup and max entries; document that an overloaded cardinality map evicts expired entries and fails closed or returns 429 rather than allocating unbounded memory. Select/test exact eviction behavior during implementation.
+
+User-approved clarification (2026-10-01): retain the old limit/window independently for each of the two buckets, scoped to the operation. Both must have quota; exhaustion of either rejects the request. Never concatenate IP and identifier into one key. Apply the same recovery policy whether or not an account exists. Shared-IP users share the IP quota; this trade-off is explicit. Operator/customer-ID policies above remain as listed.
 
 ## Error, audit, and persistence behavior
 
@@ -97,6 +103,8 @@ Configuration overrides these defaults. Counters are synchronized in-memory per 
 - OTP leading-zero generation, hash-at-rest, purpose/channel/identifier mismatch, expiry boundary, 1–4 wrong attempts, fifth invalidates, one-time consume under concurrent confirms.
 - Mailbox works only local/demo; test shared profile has no route and rejects mailbox config; endpoint bound/local guard verified.
 - Rate limiter tests every approved policy, exact allowed count, next request 429, retry-after, boundary/reset, key isolation and trusted-proxy behavior.
+- Test one IP rotating identifiers and one identifier accessed from rotating IPs; either exhausted bucket must reject, including unknown recovery identifiers. Concurrent admission must not exceed either quota.
+- Verify wrong PIN state commits before HTTP errors, and transfer wrong-OTP state commits without a nested transaction; valid OTP consumption rolls back on injected money failure.
 - Testcontainers PostgreSQL covers V2 schema/entity mapping after Phase 01 V1 is stabilized.
 
 ## Implementation sequence and gate

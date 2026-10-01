@@ -83,6 +83,10 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 ### OTP, PIN and account recovery
 
+- Approved transaction refinements: PIN check/attempt updates use a short independent transaction before money work. Transfer OTP confirm uses one transaction: wrong-attempt state commits before HTTP error mapping; valid consumption commits with debit, credit, transfer completion and audit. Technical failures roll back all money-transaction effects.
+- Login, registration OTP and recovery initiate use independent IP and identifier buckets, not a combined key; both need quota. Limits per bucket are respectively 5/60s, 3/300s and 3/300s, including unknown recovery identifiers. These counters remain instance-local.
+- Transfer OTP dispatch occurs after challenge/transfer commit. Failure/timeout returns 503 SERVICE_UNAVAILABLE and conditionally marks only AWAITING_OTP as FAILED/OTP_DISPATCH_FAILED while invalidating its challenge. Preserve terminal states; no resend on replay. A process crash or failed compensation may leave pending state until expiry; no Outbox delivery guarantee is claimed.
+
 - OTP: 6 random digits from a CSPRNG, TTL `120` seconds, single use, stored only as hash, bound to `identifier + channel + purpose` (`REGISTRATION`, `OPERATOR_CREATE_CUSTOMER`, `RECOVERY`, `PIN_RESET`, `TRANSFER_STEP_UP`). Max 5 verify attempts, then invalidate. Resend/initiate rate-limited per identifier and per IP.
 - OTP delivery goes through an `OtpSender` port (SMS / Email adapters). MVP uses a simulated adapter; OTP values never appear in application logs, traces, audit or API responses in shared/cloud environments.
 - Recovery anti-enumeration: `/auth/recover/initiate` returns identical status, body and timing for registered and unregistered identifiers (OTP dispatched asynchronously only on match); `/auth/recover/confirm` with unregistered identifier returns `400 OTP_INVALID`, same as wrong OTP. No `404` on recovery endpoints.
@@ -126,6 +130,7 @@ Targets are educational MVP goals, not production SLO commitments. Record machin
 
 - MVP uses two deterministic rules: transfer above `RISK_LARGE_TRANSFER_THRESHOLD` (baseline `5000000` VNĐ) or account exceeds `RISK_TRANSFER_COUNT_THRESHOLD` (baseline 5) transfers within `RISK_TRANSFER_COUNT_WINDOW_MINUTES` (baseline 10 minutes).
 - Evaluate after successful transfer commit. Flags never block or roll back transfer.
+- Publish the event in the active transfer transaction; AFTER_COMMIT listener calls a separate proxied REQUIRES_NEW risk service. Catch evaluation and commit failures outside that service. Synchronous listener time counts toward response latency; crash may omit flags under the approved best-effort policy.
 - Store rule ID/version, transfer ID, detection time and reason. Use a fixed clock in tests.
 - Thresholds and windows are environment-configurable; document effective non-secret values.
 - MVP flag query is read-only. Review notes and `REVIEWED` status workflow are post-MVP options.

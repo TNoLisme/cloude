@@ -62,7 +62,7 @@ Append-only enforcement: application exposes no update/delete method; runtime DB
 
 ## Cursor pagination
 
-All three page types use OpenAPI `PageBase` and shared `Limit`/`Cursor`: 1..100, default 20; nextCursor nullable string. Use descending `(created_at, id)` ordering; encode opaque Base64 URL-safe token from canonical `createdAt` ISO instant + `:` + UUID. Decode with maximum 256 characters, strict UTF-8, exact split count, `Instant.parse`, `UUID.fromString`; reject malformed input as `400 VALIDATION_ERROR` if no more specific code exists.
+All three page types use OpenAPI `PageBase` and shared `Limit`/`Cursor`: 1..100, default 20; nextCursor nullable string. Use descending timestamp/ID ordering. Serialize CursorPosition with version, timestamp (ISO instant) and id (UUID) to JSON UTF-8, then Base64 URL-safe without padding. Decode with maximum 256 characters, strict UTF-8 and JSON parsing; validate supported version, required field types, Instant and UUID. Do not split delimiters. Reject malformed input as `400 VALIDATION_ERROR` if no more specific code exists. Base64 is not encryption or authorization: always reapply role/ownership and filters; never trust cursor fields as access grants.
 
 ```sql
 WHERE (:cursor_time IS NULL
@@ -91,7 +91,7 @@ OPERATOR/AUDITOR/ADMIN only. Filters exact OpenAPI. Return `RiskFlag` fields onl
 
 ## Risk evaluation after commit
 
-Register `TransferCommittedRiskListener` with:
+Publish the event inside the active successful transfer transaction. Register `TransferCommittedRiskListener` with:
 
 ```java
 @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -105,7 +105,7 @@ public void onTransferCommitted(TransferCommittedEvent event) {
 }
 ```
 
-Do not log exception message if it may contain PII/SQL/secrets. If flag persistence uses a new transaction, use `REQUIRES_NEW` only in risk module after committed transfer is visible. Failure never reaches transfer caller as failure and never alters balances/status. Best-effort explicitly means process crash after transfer commit may leave a missing flag; this is accepted MVP behavior. Do not invent retry scheduler or durable queue. Re-running evaluator manually/in tests is safe due unique `(transfer_id, rule_id, rule_version)`; duplicate insert uses `ON CONFLICT DO NOTHING` or equivalent.
+RiskEvaluationService.evaluate must run with `@Transactional(propagation = Propagation.REQUIRES_NEW)` on a separate Spring-managed bean, called through its proxy, not by self-invocation. Evaluation and flag persistence commit in this new transaction. The listener catches exceptions outside the service call, including transaction commit failures. Do not log exception messages containing PII/SQL/secrets. Failure never reaches transfer caller as failure and never alters balances/status. AFTER_COMMIT is not automatically asynchronous; include synchronous listener time in latency measurement. Best-effort means process crash after transfer commit may leave a missing flag; this is accepted MVP behavior. Do not add a retry scheduler or durable queue. Re-running evaluation is safe due unique `(transfer_id, rule_id, rule_version)`; duplicate insert uses `ON CONFLICT DO NOTHING` or equivalent.
 
 ### Rules
 
@@ -119,10 +119,12 @@ Do not log exception message if it may contain PII/SQL/secrets. If flag persiste
 - Audit append transaction joins seed/transfer/status transaction; injected append failure rolls back those mutations.
 - Audit repository/API has insert/read only; no update/delete route; response redaction allowlist tests.
 - Cursor order, timestamp ties, page boundaries, empty page, malformed/oversized cursor, every filter, from/to boundaries.
+- JSON cursor round-trip preserves timestamps containing colons and fractional seconds; invalid JSON/version/types rejected; modified cursor cannot bypass ownership filters.
 - Role tests: unauthorized 401, authenticated wrong role 403, Auditor/Admin audit access; Operator/Auditor/Admin risk access.
 - Customer source/destination visibility; pending destination sees 404; no contact details in transfer list.
 - Risk exact threshold (5M no flag, 5M+1 flag), frequency 5 vs 6, rolling boundary, failed/pending transfers excluded.
 - AFTER_COMMIT listener not invoked on rollback; invoked after commit; evaluator exception logged with transfer/correlation and transfer remains committed; repeated evaluator creates no duplicate.
+- Read persisted flags from a fresh transaction to prove the new risk transaction committed; inject both evaluator and risk-commit failures and verify transfer success remains unchanged.
 - Testcontainers PostgreSQL for append-only, indexes/query semantics and unique idempotence.
 
 ## Implementation loop
