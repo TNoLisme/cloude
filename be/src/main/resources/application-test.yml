@@ -1,0 +1,6 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///banking_simulator

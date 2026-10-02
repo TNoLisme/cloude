@@ -3,6 +3,7 @@
 ## Documentation map
 
 - [Backend Feature Delivery Workflow](./backend-development-workflow.md): mandatory per-update lifecycle: spec, clarification, user approval, implementation, testing, review, handover.
+- [Observability and Debugging Policy](./observability-and-debugging.md): correlation, safe structured logs, error handling, metrics and sensitive-data rules.
 - [MVP baseline documentation](./baseline/README.md): approved MVP-wide requirements and decisions.
 - [Backend MVP phase roadmap](./projects/backend-mvp/00-roadmap.md): ordered phase specs. Review and approve each phase before its implementation.
 - [OpenAPI contract](../contracts/openapi.yaml): normative machine-readable API contract.

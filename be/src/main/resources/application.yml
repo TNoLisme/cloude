@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: banking-simulator
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/banking_simulator}
+    username: ${DB_USERNAME:banking}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+server:
+  servlet:
+    context-path: /api/v1
