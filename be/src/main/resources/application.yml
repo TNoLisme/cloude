@@ -17,6 +17,26 @@ spring:
     time-zone: UTC
     serialization:
       write-dates-as-timestamps: false
+app:
+  security:
+    access-token-ttl: 900s
+    refresh-token-ttl: 7d
+    refresh-cookie-name: refresh_token
+    jwt-secret: ${JWT_SECRET:}
+  rate-limit:
+    login-limit: 5
+    login-window: 60s
+    registration-otp-limit: 3
+    registration-otp-window: 300s
+    recovery-initiate-limit: 3
+    recovery-initiate-window: 300s
+    operator-otp-limit: 10
+    operator-otp-window: 300s
+    recipient-resolve-limit: 30
+    recipient-resolve-window: 60s
+    operator-lookup-limit: 30
+    operator-lookup-window: 60s
+    max-entries: 10000
 server:
   servlet:
     context-path: /api/v1

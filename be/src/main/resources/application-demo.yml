@@ -1,7 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: local
+      on-profile: demo
 server:
   address: 127.0.0.1
 app:

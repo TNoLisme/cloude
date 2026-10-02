@@ -1,7 +1,11 @@
 package com.bank.simulator.shared.health;
 
+import com.bank.simulator.identity.infrastructure.security.CsrfTokenService;
+import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
+import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(HealthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import({HealthControllerTest.ClockConfigurationTestConfig.class})
 class HealthControllerTest {
 
@@ -28,6 +33,15 @@ class HealthControllerTest {
 
     @MockBean
     private DatabaseHealthIndicator databaseHealthIndicator;
+
+    @MockBean
+    private CsrfTokenService csrfTokenService;
+
+    @MockBean
+    private JwtAccessTokenCodec jwtAccessTokenCodec;
+
+    @MockBean
+    private RefreshSessionService refreshSessionService;
 
     @Test
     void returnsExactHealthSchemaWhenDatabaseIsAvailable() throws Exception {
