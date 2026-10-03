@@ -1,5 +1,6 @@
 package com.bank.simulator.shared.idempotency;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -36,6 +37,23 @@ public class IdempotencyJdbcRepository {
                 """, id, actorId, operation, key, requestHash, Timestamp.from(now), Timestamp.from(expiresAt));
         return id;
     }
+
+    public IdempotencyClaim createOrFind(UUID actorId, String operation, String key, String requestHash,
+                                          Instant now, Instant expiresAt) {
+        UUID id = UUID.randomUUID();
+        try {
+            jdbc.update("""
+                    INSERT INTO idempotency_records (id, actor_id, operation, idempotency_key, request_hash, created_at, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, id, actorId, operation, key, requestHash, Timestamp.from(now), Timestamp.from(expiresAt));
+            return new IdempotencyClaim(new IdempotencyRecord(id, requestHash, null, null, null, expiresAt), true);
+        } catch (DuplicateKeyException conflict) {
+            return new IdempotencyClaim(find(actorId, operation, key), false);
+        }
+    }
+
+    public record IdempotencyClaim(IdempotencyRecord record, boolean created) {}
+
 
     public void complete(UUID id, int responseStatus, String responseBody, UUID resourceId) {
         jdbc.update("""

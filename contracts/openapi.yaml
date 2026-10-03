@@ -441,7 +441,7 @@ paths:
         Under account row locks the server re-validates account status, currency and available balance, then commits debit,
         credit, audit and status COMPLETED atomically. Idempotent by transferId (no Idempotency-Key header): calling again
         after COMPLETED returns 200 with the same Transfer and Idempotency-Replayed true, without a second mutation.
-        Wrong OTP returns 400 OTP_INVALID; the 5th wrong OTP sets status FAILED. After 120s status becomes EXPIRED.
+        Wrong OTP attempts 1-4 return 400 OTP_INVALID; the 5th wrong OTP sets status FAILED and returns 409 STATE_CONFLICT. After 120s status becomes EXPIRED.
       parameters: [{ $ref: '#/components/parameters/TransferId' }]
       requestBody:
         required: true

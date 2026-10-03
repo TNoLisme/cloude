@@ -24,6 +24,24 @@ public class AccountJdbcRepository {
                 """, accountId);
     }
 
+    public AccountPair lockPair(UUID accountA, UUID accountB) {
+        if (accountA == null || accountB == null || accountA.equals(accountB)) return null;
+        List<AccountRow> rows = jdbc.query("""
+                SELECT id, customer_id, account_number, account_type, status,
+                       balance::text AS balance, currency, opened_at
+                FROM accounts
+                WHERE id IN (?, ?)
+                ORDER BY id ASC
+                FOR UPDATE
+                """, AccountJdbcRepository::map, accountA, accountB);
+        if (rows.size() != 2) return null;
+        AccountRow first = rows.get(0);
+        AccountRow second = rows.get(1);
+        return first.id().equals(accountA) ? new AccountPair(first, second) : new AccountPair(second, first);
+    }
+
+    public record AccountPair(AccountRow source, AccountRow destination) {}
+
     public AccountRow find(UUID accountId) {
         return queryOne("""
                 SELECT id, customer_id, account_number, account_type, status,
@@ -31,7 +49,6 @@ public class AccountJdbcRepository {
                 FROM accounts WHERE id = ?
                 """, accountId);
     }
-
     public List<AccountRow> findByCustomer(UUID customerId) {
         return jdbc.query("""
                 SELECT id, customer_id, account_number, account_type, status,
@@ -39,7 +56,6 @@ public class AccountJdbcRepository {
                 FROM accounts WHERE customer_id = ? ORDER BY opened_at DESC, id DESC
                 """, AccountJdbcRepository::map, customerId);
     }
-
     public AccountRow findByAccountNumber(String accountNumber) {
         return queryOne("""
                 SELECT id, customer_id, account_number, account_type, status,
@@ -49,13 +65,15 @@ public class AccountJdbcRepository {
     }
 
     public void debit(UUID accountId, String amount) {
-        jdbc.update("UPDATE accounts SET balance = balance - CAST(? AS NUMERIC), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND balance >= CAST(? AS NUMERIC)",
+        int updated = jdbc.update("UPDATE accounts SET balance = balance - CAST(? AS NUMERIC), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND balance >= CAST(? AS NUMERIC)",
                 amount, accountId, amount);
+        if (updated != 1) throw new IllegalStateException("Insufficient account balance");
     }
 
     public void credit(UUID accountId, String amount) {
-        jdbc.update("UPDATE accounts SET balance = balance + CAST(? AS NUMERIC), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        int updated = jdbc.update("UPDATE accounts SET balance = balance + CAST(? AS NUMERIC), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 amount, accountId);
+        if (updated != 1) throw new IllegalStateException("Account is not available for credit");
     }
 
     public void updateStatus(UUID accountId, String status, Instant now) {

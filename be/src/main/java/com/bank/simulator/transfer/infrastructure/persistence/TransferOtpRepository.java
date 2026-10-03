@@ -24,7 +24,9 @@ public class TransferOtpRepository {
                     created_at, expires_at, max_attempts)
                 VALUES (?, ?, 'SMS', 'TRANSFER_STEP_UP', ?, ?, ?, 5)
                 """, challengeId, phone, otpHash, Timestamp.from(createdAt), Timestamp.from(expiresAt));
-        jdbc.update("UPDATE transfers SET otp_challenge_id = ? WHERE id = ?", challengeId, transferId);
+        int updated = jdbc.update("UPDATE transfers SET otp_challenge_id = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+                challengeId, transferId);
+        if (updated != 1) throw new IllegalStateException("Transfer challenge could not be linked");
     }
 
     public OtpChallengeRecord lock(UUID challengeId, Instant now) {
@@ -44,6 +46,11 @@ public class TransferOtpRepository {
     public void incrementAttempts(UUID id, int attempts, Instant invalidateAt) {
         jdbc.update("UPDATE otp_challenges SET attempts = ?, invalidated_at = ? WHERE id = ?",
                 attempts, invalidateAt == null ? null : Timestamp.from(invalidateAt), id);
+    }
+
+    public void updateAttempts(UUID id, int attempts, Instant invalidatedAt) {
+        jdbc.update("UPDATE otp_challenges SET attempts = ?, invalidated_at = ? WHERE id = ? AND consumed_at IS NULL AND invalidated_at IS NULL",
+                attempts, invalidatedAt == null ? null : Timestamp.from(invalidatedAt), id);
     }
 
     public void consume(UUID id, Instant consumedAt) {

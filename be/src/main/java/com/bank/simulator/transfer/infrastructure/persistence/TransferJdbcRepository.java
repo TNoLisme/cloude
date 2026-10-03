@@ -25,9 +25,18 @@ public class TransferJdbcRepository {
         return rows.stream().findFirst().orElse(null);
     }
 
+    public TransferRow lock(UUID transferId) {
+        List<TransferRow> rows = jdbc.query("""
+                SELECT id, source_account_id, destination_account_id, amount::text AS amount, currency,
+                       status, failure_code, memo, otp_challenge_id, created_at, expires_at, completed_at
+                FROM transfers WHERE id = ? FOR UPDATE
+                """, TransferJdbcRepository::map, transferId);
+        return rows.stream().findFirst().orElse(null);
+    }
+
     public UUID create(UUID sourceAccountId, UUID destinationAccountId, String amount, String currency,
-                       String status, String memo, UUID otpChallengeId, UUID idempotencyId,
-                       Instant createdAt, Instant expiresAt) {
+                        String status, String memo, UUID otpChallengeId, UUID idempotencyId,
+                        Instant createdAt, Instant expiresAt) {
         UUID transferId = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO transfers
@@ -50,13 +59,38 @@ public class TransferJdbcRepository {
                 """, TransferJdbcRepository::map, accountId, accountId);
     }
 
+    public List<TransferRow> findHistory(UUID accountId, String status, Instant from, Instant to,
+                                         Instant cursorCreatedAt, UUID cursorId, int limit) {
+        return jdbc.query("""
+                SELECT id, source_account_id, destination_account_id, amount::text AS amount, currency,
+                       status, failure_code, memo, otp_challenge_id, created_at, expires_at, completed_at
+                FROM transfers
+                WHERE (source_account_id = ? OR (destination_account_id = ? AND status = 'COMPLETED'))
+                  AND (? IS NULL OR status = ?)
+                  AND (? IS NULL OR created_at >= ?)
+                  AND (? IS NULL OR created_at <= ?)
+                  AND (? IS NULL OR (created_at, id) < (?, ?))
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """, TransferJdbcRepository::map, accountId, accountId, status, status,
+                from == null ? null : Timestamp.from(from), from == null ? null : Timestamp.from(from),
+                to == null ? null : Timestamp.from(to), to == null ? null : Timestamp.from(to),
+                cursorCreatedAt == null ? null : Timestamp.from(cursorCreatedAt),
+                cursorCreatedAt == null ? null : Timestamp.from(cursorCreatedAt), cursorId, limit);
+    }
+
     public void complete(UUID transferId, Instant completedAt) {
         jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?",
                 Timestamp.from(completedAt), Timestamp.from(completedAt), transferId);
     }
 
+    public void expire(UUID transferId, Instant now) {
+        jdbc.update("UPDATE transfers SET status = 'EXPIRED', failure_code = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+                Timestamp.from(now), transferId);
+    }
+
     public void fail(UUID transferId, String failureCode, Instant now) {
-        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, updated_at = ? WHERE id = ?",
+        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 failureCode, Timestamp.from(now), transferId);
     }
 

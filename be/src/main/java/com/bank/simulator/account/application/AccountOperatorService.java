@@ -53,8 +53,7 @@ public class AccountOperatorService {
             if (existing.responseBody() == null) {
                 throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_IN_PROGRESS", "Request is still in progress.");
             }
-            return SeedBalanceResult.replay(existing.resourceId(), accountId, command.amount(), command.currency(),
-                    existing.responseBody(), now);
+            return SeedBalanceResult.fromJson(existing.responseBody(), true);
         }
         UUID idempotencyId = idempotency.create(actor.userId(), OPERATION, idempotencyKey, hash, now,
                 now.plus(Duration.ofHours(24)));
@@ -65,11 +64,13 @@ public class AccountOperatorService {
         if (!"ACTIVE".equals(account.status()) || !"VND".equals(account.currency())) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_ELIGIBLE", "Account cannot receive seed funds.");
         }
-        seeds.insert(accountId, command.amount(), command.currency(), actor.userId(), command.reference(), idempotencyId, now);
+        SeedRecordJdbcRepository.SeedRecord seed = seeds.insert(accountId, command.amount(), command.currency(),
+                actor.userId(), command.reference(), idempotencyId, now);
         accounts.credit(accountId, command.amount());
         String balanceAfter = new BigInteger(account.balance()).add(new BigInteger(command.amount())).toString();
-        SeedBalanceResult result = new SeedBalanceResult(UUID.randomUUID(), accountId, command.amount(), command.currency(), balanceAfter, now, false);
-        idempotency.complete(idempotencyId, 201, result.toJson(), result.seedTransactionId());
+        SeedBalanceResult result = new SeedBalanceResult(seed.seedTransactionId(), accountId, command.amount(),
+                command.currency(), balanceAfter, seed.createdAt(), false);
+        idempotency.complete(idempotencyId, 201, result.toJson(), seed.seedTransactionId());
         audit.record(actor.userId(), firstRole(actor), "ACCOUNT_BALANCE_SEEDED", "ACCOUNT", accountId,
                 "SUCCESS", null, "Account balance seeded.");
         return result;
@@ -115,9 +116,18 @@ public class AccountOperatorService {
 
     public record SeedBalanceResult(UUID seedTransactionId, UUID accountId, String amount, String currency,
                                     String balanceAfter, Instant createdAt, boolean replayed) {
-        static SeedBalanceResult replay(UUID seedId, UUID accountId, String amount, String currency,
-                                        String responseBody, Instant now) {
-            return new SeedBalanceResult(seedId, accountId, amount, currency, null, now, true);
+        static SeedBalanceResult fromJson(String responseBody, boolean replayed) {
+            try {
+                var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(responseBody);
+                return new SeedBalanceResult(UUID.fromString(json.get("seedTransactionId").asText()),
+                        UUID.fromString(json.get("accountId").asText()), json.get("amount").asText(),
+                        json.get("currency").asText(), json.get("balanceAfter").asText(),
+                        Instant.parse(json.get("createdAt").asText()), replayed);
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException("Stored seed response is invalid", exception);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+                throw new IllegalStateException("Stored seed response is invalid", exception);
+            }
         }
 
         String toJson() {
