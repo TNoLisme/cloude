@@ -29,7 +29,7 @@ public class JdbcOtpChallengeRepository implements OtpChallengeRepository {
     }
 
     @Override
-    public OtpChallengeRecord lockActive(UUID id, String identifier, String channel, String purpose, Instant now) {
+    public OtpChallengeRecord lockChallenge(UUID id, String identifier, String channel, String purpose, Instant now) {
         List<OtpChallengeRecord> records = jdbcTemplate.query("""
                 SELECT id, identifier_normalized, channel, purpose, otp_hash, attempts, max_attempts,
                        expires_at, consumed_at, invalidated_at
@@ -47,9 +47,36 @@ public class JdbcOtpChallengeRepository implements OtpChallengeRepository {
     }
 
     @Override
+    public OtpChallengeRecord lockLatestActive(String identifier, String channel, String purpose, Instant now) {
+        List<OtpChallengeRecord> records = jdbcTemplate.query("""
+                SELECT id, identifier_normalized, channel, purpose, otp_hash, attempts, max_attempts,
+                       expires_at, consumed_at, invalidated_at
+                FROM otp_challenges
+                WHERE identifier_normalized = ? AND channel = ? AND purpose = ?
+                  AND consumed_at IS NULL AND invalidated_at IS NULL AND expires_at > ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                FOR UPDATE
+                """, (rs, row) -> new OtpChallengeRecord(
+                rs.getObject("id", UUID.class), rs.getString("identifier_normalized"), rs.getString("channel"),
+                rs.getString("purpose"), rs.getString("otp_hash"), rs.getInt("attempts"), rs.getInt("max_attempts"),
+                rs.getTimestamp("expires_at").toInstant(),
+                rs.getTimestamp("consumed_at") == null ? null : rs.getTimestamp("consumed_at").toInstant(),
+                rs.getTimestamp("invalidated_at") == null ? null : rs.getTimestamp("invalidated_at").toInstant()),
+                normalize(identifier), channel, purpose, Timestamp.from(now));
+        return records.stream().findFirst().orElse(null);
+    }
+
+    @Override
     public void incrementAttempts(UUID id, int attempts, Instant invalidatedAt) {
         jdbcTemplate.update("UPDATE otp_challenges SET attempts = ?, invalidated_at = ? WHERE id = ?",
                 attempts, invalidatedAt == null ? null : Timestamp.from(invalidatedAt), id);
+    }
+
+    @Override
+    public void invalidate(UUID id, Instant invalidatedAt) {
+        jdbcTemplate.update("UPDATE otp_challenges SET invalidated_at = ? WHERE id = ? AND consumed_at IS NULL AND invalidated_at IS NULL",
+                Timestamp.from(invalidatedAt), id);
     }
 
     @Override

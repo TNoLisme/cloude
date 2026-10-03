@@ -46,8 +46,18 @@ class OtpChallengeServiceTest {
         }
 
         @Override
-        public OtpChallengeRecord lockActive(UUID id, String identifier, String channel, String purpose, Instant now) {
+        public OtpChallengeRecord lockChallenge(UUID id, String identifier, String channel, String purpose, Instant now) {
             return records.get(id);
+        }
+
+        @Override
+        public OtpChallengeRecord lockLatestActive(String identifier, String channel, String purpose, Instant now) {
+            return records.values().stream()
+                    .filter(record -> record.identifier().equalsIgnoreCase(identifier)
+                            && record.channel().equals(channel) && record.purpose().equals(purpose)
+                            && record.consumedAt() == null && record.invalidatedAt() == null
+                            && record.expiresAt().isAfter(now))
+                    .findFirst().orElse(null);
         }
 
         @Override
@@ -55,6 +65,13 @@ class OtpChallengeServiceTest {
             OtpChallengeRecord record = records.get(id);
             records.put(id, new OtpChallengeRecord(record.id(), record.identifier(), record.channel(), record.purpose(),
                     record.otpHash(), attempts, record.maxAttempts(), record.expiresAt(), record.consumedAt(), invalidatedAt));
+        }
+
+        @Override
+        public void invalidate(UUID id, Instant invalidatedAt) {
+            OtpChallengeRecord record = records.get(id);
+            records.put(id, new OtpChallengeRecord(record.id(), record.identifier(), record.channel(), record.purpose(),
+                    record.otpHash(), record.attempts(), record.maxAttempts(), record.expiresAt(), record.consumedAt(), invalidatedAt));
         }
 
         @Override

@@ -8,3 +8,22 @@ app:
   otp:
     mailbox-enabled: true
     mailbox-guard-token: ${OTP_MAILBOX_GUARD_TOKEN:}
+  demo:
+    operator:
+      phone: ${DEMO_OPERATOR_PHONE:}
+      email: ${DEMO_OPERATOR_EMAIL:}
+      password: ${DEMO_OPERATOR_PASSWORD:}
+    auditor:
+      phone: ${DEMO_AUDITOR_PHONE:}
+      email: ${DEMO_AUDITOR_EMAIL:}
+      password: ${DEMO_AUDITOR_PASSWORD:}
+    customer-one:
+      phone: ${DEMO_CUSTOMER_ONE_PHONE:}
+      email: ${DEMO_CUSTOMER_ONE_EMAIL:}
+      password: ${DEMO_CUSTOMER_ONE_PASSWORD:}
+      pin: ${DEMO_CUSTOMER_ONE_PIN:}
+    customer-two:
+      phone: ${DEMO_CUSTOMER_TWO_PHONE:}
+      email: ${DEMO_CUSTOMER_TWO_EMAIL:}
+      password: ${DEMO_CUSTOMER_TWO_PASSWORD:}
+      pin: ${DEMO_CUSTOMER_TWO_PIN:}

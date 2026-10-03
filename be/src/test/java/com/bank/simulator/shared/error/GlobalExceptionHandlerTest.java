@@ -4,11 +4,11 @@ import com.bank.simulator.shared.api.Problem;
 import com.bank.simulator.shared.correlation.CorrelationIdFilter;
 import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
 import com.bank.simulator.shared.ratelimit.RateLimitPolicyFactory;
+import com.bank.simulator.identity.application.OnboardingService;
 import com.bank.simulator.shared.health.DatabaseHealthIndicator;
 import com.bank.simulator.identity.infrastructure.security.CsrfTokenService;
 import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,7 +17,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +45,9 @@ class GlobalExceptionHandlerTest {
 
     @MockBean
     private RateLimitPolicyFactory rateLimitPolicyFactory;
+
+    @MockBean
+    private OnboardingService onboardingService;
 
     @MockBean
     private DatabaseHealthIndicator databaseHealthIndicator;

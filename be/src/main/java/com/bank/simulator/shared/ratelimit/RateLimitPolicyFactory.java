@@ -23,6 +23,7 @@ public class RateLimitPolicyFactory {
             case "operator-otp" -> new RateLimitPolicy(operation, properties.operatorOtpLimit(), properties.operatorOtpWindow());
             case "recipient-resolve" -> new RateLimitPolicy(operation, properties.recipientResolveLimit(), properties.recipientResolveWindow());
             case "operator-lookup" -> new RateLimitPolicy(operation, properties.operatorLookupLimit(), properties.operatorLookupWindow());
+            case "operator-seed" -> new RateLimitPolicy(operation, properties.operatorLookupLimit(), properties.operatorLookupWindow());
             default -> throw new IllegalArgumentException("Unknown rate-limit operation");
         };
     }

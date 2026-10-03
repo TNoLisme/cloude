@@ -1,6 +1,7 @@
 package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.infrastructure.otp.LocalMailboxOtpSender;
+import com.bank.simulator.customer.infrastructure.AccountNumberGenerator;
 import com.bank.simulator.identity.infrastructure.otp.OtpSender;
 import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
 import com.bank.simulator.shared.ratelimit.RateLimitProperties;
@@ -49,6 +50,12 @@ class LocalOtpMailboxMvcTest {
 
     @TestConfiguration
     static class PolicyConfig {
+        @Bean
+        @Primary
+        AccountNumberGenerator accountNumberGenerator() {
+            return new AccountNumberGenerator(new java.security.SecureRandom());
+        }
+
         @Bean
         @Primary
         OtpSender otpSender() {

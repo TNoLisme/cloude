@@ -1,6 +1,7 @@
 package com.bank.simulator.shared.ratelimit;
 
 import com.bank.simulator.shared.api.Problem;
+import com.bank.simulator.identity.application.OnboardingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Duration;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -26,13 +28,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RateLimitEndpointMvcTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean RateLimitInterceptor rateLimitInterceptor;
+    @MockBean OnboardingService onboardingService;
     @MockBean JdbcTemplate jdbcTemplate;
 
     @Test
     void returnsProblem429AndRetryAfterWhenLoginBucketExhausted() throws Exception {
+        when(onboardingService.login("0912345678", "not-a-real-password"))
+                .thenThrow(new com.bank.simulator.shared.error.ApiException(org.springframework.http.HttpStatus.UNAUTHORIZED,
+                        "CREDENTIALS_INVALID", "Phone or password is invalid."));
         String body = "{\"phone\":\"0912345678\",\"password\":\"not-a-real-password\"}";
-        mockMvc.perform(post("/auth/login").contentType("application/json").content(body)).andExpect(status().isNotFound());
+        mockMvc.perform(post("/auth/login").contentType("application/json").content(body)).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/auth/login").contentType("application/json").content(body))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(content().contentType("application/problem+json"))
@@ -46,6 +51,12 @@ class RateLimitEndpointMvcTest {
 
     @TestConfiguration
     static class Properties {
+        @Bean
+        @org.springframework.context.annotation.Primary
+        RateLimitInterceptor rateLimitInterceptor(RateLimitProperties properties) {
+            return new RateLimitInterceptor(properties);
+        }
+
         @Bean
         @org.springframework.context.annotation.Primary
         RateLimitProperties rateLimitProperties() {

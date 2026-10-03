@@ -59,6 +59,11 @@ public class RefreshSessionService {
         }
     }
 
+    @Transactional
+    public int revokeAll(UUID userId) {
+        return repository.revokeAll(userId, clock.instant());
+    }
+
     private String hash(String rawToken) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")

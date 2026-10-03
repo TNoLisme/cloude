@@ -55,6 +55,8 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
         if ("POST".equals(method) && "/operator/customers/send-otp".equals(path)) return "operator-otp";
         if ("POST".equals(method) && "/recipients/resolve".equals(path)) return "recipient-resolve";
         if ("GET".equals(method) && "/operator/customers".equals(path)) return "operator-lookup";
+        if ("POST".equals(method) && path != null && path.matches("/operator/accounts/[^/]+/seed-balance")) return "operator-seed";
+        if ("POST".equals(method) && path != null && path.matches("/operator/accounts/[^/]+/(?:block|unblock)")) return "operator-seed";
         return null;
     }
 }

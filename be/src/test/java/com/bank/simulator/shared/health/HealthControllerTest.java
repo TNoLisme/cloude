@@ -3,6 +3,8 @@ package com.bank.simulator.shared.health;
 import com.bank.simulator.identity.infrastructure.security.CsrfTokenService;
 import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
+import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
+import com.bank.simulator.shared.ratelimit.RateLimitPolicyFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -42,6 +44,12 @@ class HealthControllerTest {
 
     @MockBean
     private RefreshSessionService refreshSessionService;
+
+    @MockBean
+    private RateLimitInterceptor rateLimitInterceptor;
+
+    @MockBean
+    private RateLimitPolicyFactory rateLimitPolicyFactory;
 
     @Test
     void returnsExactHealthSchemaWhenDatabaseIsAvailable() throws Exception {

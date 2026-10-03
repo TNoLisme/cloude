@@ -29,21 +29,36 @@ public class OtpChallengeService {
         this.clock = clock;
     }
 
-    @Transactional
     public OtpIssueResult issue(String identifier, String channel, String purpose) {
         UUID challengeId = UUID.randomUUID();
         String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
         Instant now = clock.instant();
         Instant expiresAt = now.plus(TTL);
         repository.create(challengeId, identifier, channel, purpose, hashingService.encode(code), now, expiresAt, MAX_ATTEMPTS);
-        sender.send(new OtpMessage(challengeId, identifier, code, expiresAt));
+        try {
+            sender.send(new OtpMessage(challengeId, identifier, code, expiresAt));
+        } catch (RuntimeException exception) {
+            repository.invalidate(challengeId, now);
+            throw exception;
+        }
         return new OtpIssueResult(challengeId, expiresAt, (int) TTL.toSeconds());
     }
 
     @Transactional
     public ConsumeResult consume(UUID challengeId, String identifier, String channel, String purpose, String code) {
         Instant now = clock.instant();
-        OtpChallengeRecord challenge = repository.lockActive(challengeId, identifier, channel, purpose, now);
+        OtpChallengeRecord challenge = repository.lockChallenge(challengeId, identifier, channel, purpose, now);
+        return consumeLocked(challenge, code, now);
+    }
+
+    @Transactional
+    public ConsumeResult consumeLatest(String identifier, String channel, String purpose, String code) {
+        Instant now = clock.instant();
+        OtpChallengeRecord challenge = repository.lockLatestActive(identifier, channel, purpose, now);
+        return consumeLocked(challenge, code, now);
+    }
+
+    private ConsumeResult consumeLocked(OtpChallengeRecord challenge, String code, Instant now) {
         if (challenge == null) return ConsumeResult.NOT_FOUND;
         if (challenge.consumedAt() != null) return ConsumeResult.ALREADY_USED;
         if (challenge.invalidatedAt() != null || challenge.attempts() >= challenge.maxAttempts()) return ConsumeResult.ATTEMPTS_EXCEEDED;
