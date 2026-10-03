@@ -59,25 +59,39 @@ public class TransferJdbcRepository {
                 """, TransferJdbcRepository::map, accountId, accountId);
     }
 
-    public List<TransferRow> findHistory(UUID accountId, String status, Instant from, Instant to,
+    public List<TransferRow> findHistory(List<UUID> accountIds, String status, Instant from, Instant to,
                                          Instant cursorCreatedAt, UUID cursorId, int limit) {
-        return jdbc.query("""
+        if (accountIds.isEmpty()) return List.of();
+        String placeholders = String.join(",", java.util.Collections.nCopies(accountIds.size(), "?"));
+        String sql = """
                 SELECT id, source_account_id, destination_account_id, amount::text AS amount, currency,
                        status, failure_code, memo, otp_challenge_id, created_at, expires_at, completed_at
                 FROM transfers
-                WHERE (source_account_id = ? OR (destination_account_id = ? AND status = 'COMPLETED'))
+                WHERE (source_account_id IN (%s) OR (destination_account_id IN (%s) AND status = 'COMPLETED'))
                   AND (? IS NULL OR status = ?)
                   AND (? IS NULL OR created_at >= ?)
-                  AND (? IS NULL OR created_at <= ?)
-                  AND (? IS NULL OR (created_at, id) < (?, ?))
+                  AND (? IS NULL OR created_at < ?)
+                  AND (? IS NULL OR created_at < ? OR (created_at = ? AND id < ?))
                 ORDER BY created_at DESC, id DESC
                 LIMIT ?
-                """, TransferJdbcRepository::map, accountId, accountId, status, status,
-                from == null ? null : Timestamp.from(from), from == null ? null : Timestamp.from(from),
-                to == null ? null : Timestamp.from(to), to == null ? null : Timestamp.from(to),
-                cursorCreatedAt == null ? null : Timestamp.from(cursorCreatedAt),
-                cursorCreatedAt == null ? null : Timestamp.from(cursorCreatedAt), cursorId, limit);
+                """.formatted(placeholders, placeholders);
+        java.util.List<Object> args = new java.util.ArrayList<>(accountIds);
+        args.addAll(accountIds);
+        args.add(status);
+        args.add(status);
+        args.add(from == null ? null : Timestamp.from(from));
+        args.add(from == null ? null : Timestamp.from(from));
+        args.add(to == null ? null : Timestamp.from(to));
+        args.add(to == null ? null : Timestamp.from(to));
+        Timestamp cursorTime = cursorCreatedAt == null ? null : Timestamp.from(cursorCreatedAt);
+        args.add(cursorTime);
+        args.add(cursorTime);
+        args.add(cursorTime);
+        args.add(cursorId);
+        args.add(limit);
+        return jdbc.query(sql, TransferJdbcRepository::map, args.toArray());
     }
+
 
     public void complete(UUID transferId, Instant completedAt) {
         jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?",

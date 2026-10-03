@@ -134,7 +134,8 @@ class TransferServiceTest {
         var transferOtp = mock(TransferOtpRepository.class);
         var txManager = new InlineTransactionManager();
         var service = new TransferService(accounts, transfers, idempotency, transferOtp, identities,
-                otpHashing, otpRepository, sender, pinCredentials, audit, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), txManager);
+                otpHashing, otpRepository, sender, pinCredentials, audit, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
+                mock(org.springframework.context.ApplicationEventPublisher.class), txManager);
         return new Dependencies(service, accounts, transfers, idempotency, identities, otpHashing, transferOtp, pinCredentials, audit);
     }
 

@@ -18,6 +18,10 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 app:
+  risk:
+    large-transfer-threshold: ${RISK_LARGE_TRANSFER_THRESHOLD:5000000}
+    frequency-window: ${RISK_TRANSFER_COUNT_WINDOW_MINUTES:10}m
+    frequency-count-threshold: ${RISK_TRANSFER_COUNT_THRESHOLD:5}
   security:
     access-token-ttl: 900s
     refresh-token-ttl: 7d

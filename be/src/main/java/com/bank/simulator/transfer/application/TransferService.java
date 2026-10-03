@@ -12,6 +12,7 @@ import com.bank.simulator.shared.error.ApiException;
 import com.bank.simulator.shared.idempotency.IdempotencyJdbcRepository;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferOtpRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -45,6 +46,7 @@ public class TransferService {
     private final PinCredentialService pinCredentials;
     private final AuditWriter audit;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
     private final TransactionTemplate transactions;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -53,7 +55,7 @@ public class TransferService {
                            IdentityJdbcRepository identities, OtpHashingService otpHashing,
                            OtpChallengeRepository otpRepository, OtpSender sender,
                            PinCredentialService pinCredentials, AuditWriter audit, Clock clock,
-                           PlatformTransactionManager transactionManager) {
+                           ApplicationEventPublisher events, PlatformTransactionManager transactionManager) {
         this.accounts = accounts;
         this.transfers = transfers;
         this.idempotency = idempotency;
@@ -65,6 +67,7 @@ public class TransferService {
         this.pinCredentials = pinCredentials;
         this.audit = audit;
         this.clock = clock;
+        this.events = events;
         this.transactions = new TransactionTemplate(transactionManager);
     }
 
@@ -163,7 +166,12 @@ public class TransferService {
         idempotency.complete(idempotencyId, 201, transferJson(transfer), transferId);
         audit.record(actor.userId(), "CUSTOMER", "TRANSFER_COMPLETED", "TRANSFER", transferId,
                 "SUCCESS", null, "Internal transfer completed.");
+        publishRiskEvent(transfer, source.id(), now);
         return CreateResult.transfer(transfer, false);
+    }
+
+    private void publishRiskEvent(TransferJdbcRepository.TransferRow transfer, UUID sourceAccountId, Instant completedAt) {
+        events.publishEvent(new TransferCommittedEvent(transfer.id(), sourceAccountId, transfer.amount(), completedAt, correlationId()));
     }
 
     public boolean confirm(AuthenticatedActor actor, UUID transferId, String otp) {
@@ -213,7 +221,17 @@ public class TransferService {
         transfers.complete(transferId, now);
         audit.record(actor.userId(), "CUSTOMER", "TRANSFER_COMPLETED", "TRANSFER", transferId,
                 "SUCCESS", null, "Internal transfer completed.");
+        publishRiskEvent(transfers.find(transferId), source.id(), now);
         return ConfirmOutcome.success();
+    }
+
+    private UUID correlationId() {
+        String value = org.slf4j.MDC.get("correlationId");
+        try {
+            return value == null ? null : UUID.fromString(value);
+        } catch (IllegalArgumentException error) {
+            return null;
+        }
     }
 
     private UUID customerId(AuthenticatedActor actor) {

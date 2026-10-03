@@ -42,6 +42,11 @@ public class CsrfTokenService {
         try {
             byte[] nonce = Base64.getUrlDecoder().decode(parts[0]);
             byte[] suppliedSignature = Base64.getUrlDecoder().decode(parts[1]);
+            Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+            if (!encoder.encodeToString(nonce).equals(parts[0])
+                    || !encoder.encodeToString(suppliedSignature).equals(parts[1])) {
+                return false;
+            }
             return nonce.length == 32 && MessageDigest.isEqual(sign(nonce), suppliedSignature);
         } catch (IllegalArgumentException exception) {
             return false;

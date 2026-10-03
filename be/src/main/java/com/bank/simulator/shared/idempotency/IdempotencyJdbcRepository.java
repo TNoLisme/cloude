@@ -1,6 +1,5 @@
 package com.bank.simulator.shared.idempotency;
 
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -41,15 +40,18 @@ public class IdempotencyJdbcRepository {
     public IdempotencyClaim createOrFind(UUID actorId, String operation, String key, String requestHash,
                                           Instant now, Instant expiresAt) {
         UUID id = UUID.randomUUID();
-        try {
-            jdbc.update("""
-                    INSERT INTO idempotency_records (id, actor_id, operation, idempotency_key, request_hash, created_at, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, id, actorId, operation, key, requestHash, Timestamp.from(now), Timestamp.from(expiresAt));
-            return new IdempotencyClaim(new IdempotencyRecord(id, requestHash, null, null, null, expiresAt), true);
-        } catch (DuplicateKeyException conflict) {
-            return new IdempotencyClaim(find(actorId, operation, key), false);
+        List<UUID> inserted = jdbc.query("""
+                INSERT INTO idempotency_records (id, actor_id, operation, idempotency_key, request_hash, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (actor_id, operation, idempotency_key) DO NOTHING
+                RETURNING id
+                """, (rs, row) -> rs.getObject("id", UUID.class), id, actorId, operation, key, requestHash,
+                Timestamp.from(now), Timestamp.from(expiresAt));
+        if (!inserted.isEmpty()) {
+            return new IdempotencyClaim(new IdempotencyRecord(inserted.getFirst(), requestHash, null, null, null, expiresAt), true);
         }
+        IdempotencyRecord existing = find(actorId, operation, key);
+        return new IdempotencyClaim(existing, false);
     }
 
     public record IdempotencyClaim(IdempotencyRecord record, boolean created) {}
