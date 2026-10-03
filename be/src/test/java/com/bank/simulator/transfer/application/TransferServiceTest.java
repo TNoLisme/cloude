@@ -24,6 +24,7 @@ import java.time.ZoneOffset;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -40,24 +41,20 @@ class TransferServiceTest {
 
     @Test
     void invalidPinStopsTransferBeforeAccountMutation() {
-        UUID userId = UUID.randomUUID();
-        UUID customerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.pinCredentials.verify(customerId, "001234")).thenReturn(PinCredentialService.VerifyResult.INVALID);
         assertThatThrownBy(() -> d.service.create(new AuthenticatedActor(userId, Set.of("CUSTOMER")),
                 new TransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null),
                 "abcdefghijklmnop")).isInstanceOf(ApiException.class)
-                .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.FORBIDDEN));
+                .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.FORBIDDEN));
         verifyNoInteractions(d.accounts, d.transfers, d.idempotency, d.audit);
     }
 
     @Test
     void missingDestinationStopsTransferAfterOrderedLockAttempt() {
-        UUID userId = UUID.randomUUID();
-        UUID customerId = UUID.randomUUID();
-        UUID sourceId = UUID.randomUUID();
-        UUID destinationId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.pinCredentials.verify(customerId, "001234")).thenReturn(PinCredentialService.VerifyResult.VALID);
@@ -70,39 +67,72 @@ class TransferServiceTest {
     }
 
     @Test
+    void sameKeyInProgressClaimReturnsConflictWithoutCreatingAnotherTransfer() {
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        var d = dependencies();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.pinCredentials.verify(customerId, "001234")).thenReturn(PinCredentialService.VerifyResult.VALID);
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
+                account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
+        String requestHash;
+        try {
+            requestHash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(("createTransfer|v1|" + sourceId + "|" + destinationId + "|2000|VND|<null>")
+                            .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
+        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop"))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), requestHash, null, null, null, Instant.MAX));
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"),
+                eq(requestHash), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
+                        new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), requestHash, null, null, null, Instant.MAX), false));
+
+        assertThatThrownBy(() -> d.service.create(new AuthenticatedActor(userId, Set.of("CUSTOMER")),
+                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
+                "abcdefghijklmnop"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    assertThat(((ApiException) error).status()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(((ApiException) error).code()).isEqualTo("IDEMPOTENCY_IN_PROGRESS");
+                });
+        verify(d.idempotency, never()).createOrFind(any(), anyString(), anyString(), anyString(), any(), any());
+        verify(d.transfers, never()).create(any(), any(), anyString(), anyString(), anyString(), any(), any(), any(), any(), any());
+        verify(d.accounts, never()).debit(any(), anyString());
+    }
+
+    @Test
     void invalidOtpIncrementsAttemptBeforeReturningBadRequest() {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
         UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId,
-                Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
-        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
-                account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId, Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
         when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 0));
         when(d.otpHashing.matches("000000", "hash")).thenReturn(false);
         assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "000000"))
                 .isInstanceOf(ApiException.class)
-                .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.BAD_REQUEST));
+                .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.BAD_REQUEST));
         verify(d.transferOtp).updateAttempts(challengeId, 1, null);
         verify(d.accounts, never()).debit(any(), anyString());
     }
 
     @Test
-    void fifthInvalidOtpFailsTransferAndInvalidatesChallenge() {
+    void fifthInvalidOtpFailsTransfer() {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
         UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId,
-                Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
-        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
-                account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId, Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
         when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 4));
         when(d.otpHashing.matches("000000", "hash")).thenReturn(false);
         assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "000000"))
                 .isInstanceOf(ApiException.class)
-                .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT));
+                .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT));
         verify(d.transferOtp).updateAttempts(challengeId, 5, Instant.EPOCH);
         verify(d.transfers).fail(transferId, "OTP_INVALID", Instant.EPOCH);
     }
@@ -112,11 +142,10 @@ class TransferServiceTest {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), transferId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, UUID.randomUUID(), UUID.randomUUID(),
-                UUID.randomUUID(), Instant.EPOCH.minusSeconds(120), Instant.EPOCH));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), Instant.EPOCH.minusSeconds(120), Instant.EPOCH));
         assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "000000"))
                 .isInstanceOf(ApiException.class)
-                .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT));
+                .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT));
         verify(d.transfers).expire(transferId, Instant.EPOCH);
         verifyNoInteractions(d.accounts, d.transferOtp);
     }
@@ -132,38 +161,32 @@ class TransferServiceTest {
         var pinCredentials = mock(PinCredentialService.class);
         var audit = mock(AuditWriter.class);
         var transferOtp = mock(TransferOtpRepository.class);
-        var txManager = new InlineTransactionManager();
         var service = new TransferService(accounts, transfers, idempotency, transferOtp, identities,
                 otpHashing, otpRepository, sender, pinCredentials, audit, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
-                mock(org.springframework.context.ApplicationEventPublisher.class), txManager);
+                mock(org.springframework.context.ApplicationEventPublisher.class), new InlineTransactionManager());
         return new Dependencies(service, accounts, transfers, idempotency, identities, otpHashing, transferOtp, pinCredentials, audit);
     }
 
-    private TransferJdbcRepository.TransferRow transfer(UUID id, UUID sourceId, UUID destinationId, UUID challengeId,
-                                                         Instant createdAt, Instant expiresAt) {
-        return new TransferJdbcRepository.TransferRow(id, sourceId, destinationId, "6000000", "VND", "AWAITING_OTP",
-                null, null, challengeId, createdAt, expiresAt, null);
+    private TransferJdbcRepository.TransferRow transfer(UUID id, UUID sourceId, UUID destinationId, UUID challengeId, Instant createdAt, Instant expiresAt) {
+        return new TransferJdbcRepository.TransferRow(id, sourceId, destinationId, "6000000", "VND", "AWAITING_OTP", null, null, challengeId, createdAt, expiresAt, null);
     }
 
     private IdentityJdbcRepository.CustomerRecord customer(UUID customerId, UUID userId) {
-        return new IdentityJdbcRepository.CustomerRecord(customerId, userId, "Customer", null, Instant.EPOCH,
-                "0912345678", "c@example.test", true);
+        return new IdentityJdbcRepository.CustomerRecord(customerId, userId, "Customer", null, Instant.EPOCH, "0912345678", "c@example.test", true);
     }
 
     private AccountJdbcRepository.AccountRow account(UUID id, UUID customerId, String balance) {
-        return new AccountJdbcRepository.AccountRow(id, customerId, "123456789012", "CHECKING", "ACTIVE", balance,
-                "VND", Instant.EPOCH);
+        return new AccountJdbcRepository.AccountRow(id, customerId, "123456789012", "CHECKING", "ACTIVE", balance, "VND", Instant.EPOCH);
     }
 
     private com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord otpRecord(UUID id, int attempts) {
-        return new com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord(id, "0912345678", "SMS",
-                "TRANSFER_STEP_UP", "hash", attempts, 5, Instant.EPOCH.plusSeconds(120), null, null);
+        return new com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord(id, "0912345678", "SMS", "TRANSFER_STEP_UP", "hash", attempts, 5, Instant.EPOCH.plusSeconds(120), null, null);
     }
 
-    private record Dependencies(TransferService service, AccountJdbcRepository accounts,
-                                TransferJdbcRepository transfers, IdempotencyJdbcRepository idempotency,
-                                IdentityJdbcRepository identities, OtpHashingService otpHashing,
-                                TransferOtpRepository transferOtp, PinCredentialService pinCredentials, AuditWriter audit) {}
+    private record Dependencies(TransferService service, AccountJdbcRepository accounts, TransferJdbcRepository transfers,
+                                IdempotencyJdbcRepository idempotency, IdentityJdbcRepository identities,
+                                OtpHashingService otpHashing, TransferOtpRepository transferOtp,
+                                PinCredentialService pinCredentials, AuditWriter audit) {}
 
     private static final class InlineTransactionManager implements PlatformTransactionManager {
         @Override public TransactionStatus getTransaction(TransactionDefinition definition) { return mock(TransactionStatus.class); }

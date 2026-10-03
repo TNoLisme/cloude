@@ -72,6 +72,68 @@ class TransferControllerMvcTest {
     }
 
     @Test
+    void returnsOriginalReplayBodyAndHeader() throws Exception {
+        UUID actorId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        authenticate(actorId);
+        var transfers = mock(TransferService.class);
+        var queries = mock(TransferQueryService.class);
+        when(transfers.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
+                new TransferService.CreateResult(false, transferId, "COMPLETED", null, null, 0, null, true,
+                        null, null, null, null));
+        when(queries.get(any(), eq(transferId))).thenReturn(view(transferId, "COMPLETED"));
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+
+        mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
+                        .contentType("application/json")
+                        .content("{\"sourceAccountId\":\"" + UUID.randomUUID() + "\",\"destinationAccountId\":\"" + UUID.randomUUID() + "\",\"amount\":\"2000\",\"currency\":\"VND\",\"pin\":\"001234\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Idempotency-Replayed", "true"))
+                .andExpect(jsonPath("$.transferId").value(transferId.toString()));
+    }
+
+    @Test
+    void rejectsInvalidTransferBodyBeforeCallingService() throws Exception {
+        authenticate(UUID.randomUUID());
+        var transfers = mock(TransferService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, mock(TransferQueryService.class))).build();
+
+        mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
+                        .contentType("application/json")
+                        .content("{\"sourceAccountId\":\"" + UUID.randomUUID() + "\",\"destinationAccountId\":\"" + UUID.randomUUID() + "\",\"amount\":\"1\",\"currency\":\"VND\",\"pin\":\"12\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(transfers);
+    }
+
+    @Test
+    void confirmReturnsCreatedThenReplayStatusAndHeader() throws Exception {
+        UUID actorId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        authenticate(actorId);
+        var transfers = mock(TransferService.class);
+        var queries = mock(TransferQueryService.class);
+        when(transfers.confirm(any(), eq(transferId), eq("123456"))).thenReturn(false, true);
+        when(queries.get(any(), eq(transferId))).thenReturn(view(transferId, "COMPLETED"));
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+
+        mvc.perform(post("/transfers/{id}/confirm-otp", transferId).contentType("application/json").content("{\"otp\":\"123456\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Idempotency-Replayed", "false"));
+        mvc.perform(post("/transfers/{id}/confirm-otp", transferId).contentType("application/json").content("{\"otp\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Idempotency-Replayed", "true"));
+    }
+
+    @Test
+    void rejectsMalformedConfirmOtpBeforeCallingService() throws Exception {
+        authenticate(UUID.randomUUID());
+        var transfers = mock(TransferService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, mock(TransferQueryService.class))).build();
+
+        mvc.perform(post("/transfers/{id}/confirm-otp", UUID.randomUUID()).contentType("application/json").content("{\"otp\":\"abc\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(transfers);
+    }
+
+    @Test
     void listsTransfersWithQueryFiltersAndCursor() throws Exception {
         UUID actorId = UUID.randomUUID();
         authenticate(actorId);
@@ -87,6 +149,7 @@ class TransferControllerMvcTest {
         verify(queries).list(any(), eq(new TransferQueryService.HistoryQuery(10, "cursor", "COMPLETED",
                 Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-02T00:00:00Z"))));
     }
+
 
     private void authenticate(UUID actorId) {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(

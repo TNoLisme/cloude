@@ -55,9 +55,10 @@ class AccountOperatorServiceTest {
         var audit = mock(AuditWriter.class);
         var service = service(accounts, seeds, idempotency, audit);
         var actor = new AuthenticatedActor(actorId, Set.of("OPERATOR"));
-        when(idempotency.find(actorId, "seedAccountBalance", "abcdefghijklmnop"))
-                .thenReturn(new IdempotencyJdbcRepository.IdempotencyRecord(
-                        UUID.randomUUID(), "different-hash", 201, "{}", UUID.randomUUID(), Instant.MAX));
+        var existingId = UUID.randomUUID();
+        when(idempotency.createOrFind(eq(actorId), eq("seedAccountBalance"), eq("abcdefghijklmnop"), anyString(), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
+                        new IdempotencyJdbcRepository.IdempotencyRecord(existingId, "different-hash", 201, "{}", UUID.randomUUID(), Instant.MAX), false));
 
         assertThatThrownBy(() -> service.seed(actor, UUID.randomUUID(),
                 new SeedBalanceCommand("1000", "VND", "demo"), "abcdefghijklmnop"))
@@ -84,12 +85,13 @@ class AccountOperatorServiceTest {
         var audit = mock(AuditWriter.class);
         var service = service(accounts, seeds, idempotency, audit);
         var actor = new AuthenticatedActor(actorId, Set.of("OPERATOR"));
-        when(idempotency.find(actorId, "seedAccountBalance", key)).thenReturn(null);
-        when(idempotency.create(eq(actorId), eq("seedAccountBalance"), eq(key), anyString(), any(), any()))
-                .thenReturn(idempotencyId);
+        when(idempotency.createOrFind(eq(actorId), eq("seedAccountBalance"), eq(key), anyString(), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
+                        new IdempotencyJdbcRepository.IdempotencyRecord(idempotencyId, "hash", null, null, null,
+                                now.plusSeconds(3600)), true));
         when(accounts.lock(accountId)).thenReturn(new AccountJdbcRepository.AccountRow(accountId, UUID.randomUUID(),
                 "123456789012", "CHECKING", "ACTIVE", "10000", "VND", Instant.EPOCH));
-        when(seeds.insert(eq(accountId), eq("2000"), eq("VND"), eq(actorId), eq("demo"), eq(idempotencyId), any()))
+        when(seeds.insert(eq(accountId), eq("2000"), eq("VND"), eq(actorId), eq("demo"), any(), any()))
                 .thenReturn(new SeedRecordJdbcRepository.SeedRecord(ledgerId, accountId, "2000", "VND", now));
 
         var created = service.seed(actor, accountId, new SeedBalanceCommand("2000", "VND", "demo"), key);
@@ -107,9 +109,10 @@ class AccountOperatorServiceTest {
         } catch (java.security.NoSuchAlgorithmException exception) {
             throw new AssertionError(exception);
         }
-        when(idempotency.find(actorId, "seedAccountBalance", key)).thenReturn(
-                new IdempotencyJdbcRepository.IdempotencyRecord(idempotencyId, hash, 201,
-                        created.toJson(), ledgerId, now.plusSeconds(3600)));
+        when(idempotency.createOrFind(eq(actorId), eq("seedAccountBalance"), eq(key), eq(hash), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
+                        new IdempotencyJdbcRepository.IdempotencyRecord(idempotencyId, hash, 201,
+                                created.toJson(), ledgerId, now.plusSeconds(3600)), false));
         var replay = service.seed(actor, accountId, new SeedBalanceCommand("2000", "VND", "demo"), key);
         org.assertj.core.api.Assertions.assertThat(replay).isEqualTo(new AccountOperatorService.SeedBalanceResult(
                 ledgerId, accountId, "2000", "VND", "12000", now, true));
@@ -125,9 +128,10 @@ class AccountOperatorServiceTest {
         var audit = mock(AuditWriter.class);
         var service = service(accounts, seeds, idempotency, audit);
         var actor = new AuthenticatedActor(UUID.randomUUID(), Set.of("OPERATOR"));
-        when(idempotency.find(any(), eq("seedAccountBalance"), anyString())).thenReturn(null);
-        when(idempotency.create(any(), eq("seedAccountBalance"), anyString(), anyString(), any(), any()))
-                .thenReturn(UUID.randomUUID());
+        when(idempotency.createOrFind(any(), eq("seedAccountBalance"), anyString(), anyString(), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
+                        new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), "hash", null, null, null,
+                                Instant.MAX), true));
         when(accounts.lock(accountId)).thenReturn(new AccountJdbcRepository.AccountRow(accountId, UUID.randomUUID(),
                 "123456789012", "CHECKING", "BLOCKED", "0", "VND", Instant.EPOCH));
 

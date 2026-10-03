@@ -45,7 +45,9 @@ public class AccountOperatorService {
         validate(command, idempotencyKey);
         String hash = hash(accountId, command);
         Instant now = clock.instant();
-        IdempotencyJdbcRepository.IdempotencyRecord existing = idempotency.find(actor.userId(), OPERATION, idempotencyKey);
+        IdempotencyJdbcRepository.IdempotencyClaim claim = idempotency.createOrFind(actor.userId(), OPERATION,
+                idempotencyKey, hash, now, now.plus(Duration.ofHours(24)));
+        IdempotencyJdbcRepository.IdempotencyRecord existing = claim.created() ? null : claim.record();
         if (existing != null) {
             if (!existing.requestHash().equals(hash)) {
                 throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was used with another request.");
@@ -55,8 +57,7 @@ public class AccountOperatorService {
             }
             return SeedBalanceResult.fromJson(existing.responseBody(), true);
         }
-        UUID idempotencyId = idempotency.create(actor.userId(), OPERATION, idempotencyKey, hash, now,
-                now.plus(Duration.ofHours(24)));
+        UUID idempotencyId = claim.record().id();
         AccountJdbcRepository.AccountRow account = accounts.lock(accountId);
         if (account == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Account is not available.");

@@ -133,6 +133,7 @@ public class TransferService {
         }
         if (existing != null) {
             if (!existing.requestHash().equals(requestHash)) throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was used with another request.");
+            if (existing.resourceId() == null) throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_IN_PROGRESS", "Request is still in progress.");
             var prior = transfers.find(existing.resourceId());
             if (prior != null) {
                 if ("AWAITING_OTP".equals(prior.status())) {

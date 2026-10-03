@@ -40,6 +40,10 @@ public class IdempotencyJdbcRepository {
     public IdempotencyClaim createOrFind(UUID actorId, String operation, String key, String requestHash,
                                           Instant now, Instant expiresAt) {
         UUID id = UUID.randomUUID();
+        jdbc.update("""
+                DELETE FROM idempotency_records
+                WHERE actor_id = ? AND operation = ? AND idempotency_key = ? AND expires_at <= ?
+                """, actorId, operation, key, Timestamp.from(now));
         List<UUID> inserted = jdbc.query("""
                 INSERT INTO idempotency_records (id, actor_id, operation, idempotency_key, request_hash, created_at, expires_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
