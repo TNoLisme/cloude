@@ -44,5 +44,22 @@ public class PinCredentialService {
         return ChangeResult.CHANGED;
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public VerifyResult verify(UUID customerId, String pin) {
+        Instant now = clock.instant();
+        IdentityJdbcRepository.PinRecord record = repository.lockPin(customerId);
+        if (record == null || record.pinHash() == null) return VerifyResult.NOT_SET;
+        if (record.lockedUntil() != null && record.lockedUntil().isAfter(now)) return VerifyResult.LOCKED;
+        if (!hashing.matches(pin, record.pinHash())) {
+            int attempts = record.failedAttempts() + 1;
+            boolean locked = attempts >= MAX_FAILURES;
+            repository.updatePinFailure(customerId, locked ? MAX_FAILURES : attempts,
+                    locked ? now.plus(LOCK_DURATION) : null, now);
+            return locked ? VerifyResult.LOCKED : VerifyResult.INVALID;
+        }
+        return VerifyResult.VALID;
+    }
+
     public enum ChangeResult { CHANGED, INVALID, LOCKED, NOT_SET }
+    public enum VerifyResult { VALID, INVALID, LOCKED, NOT_SET }
 }

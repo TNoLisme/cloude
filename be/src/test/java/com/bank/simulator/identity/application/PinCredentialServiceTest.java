@@ -17,6 +17,22 @@ import static org.mockito.Mockito.when;
 class PinCredentialServiceTest {
 
     @Test
+    void invalidPinVerificationPersistsFailureWithoutChangingPin() {
+        IdentityJdbcRepository repository = mock(IdentityJdbcRepository.class);
+        PinHashingService hashing = mock(PinHashingService.class);
+        UUID customerId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-10-02T00:00:00Z");
+        when(repository.lockPin(customerId)).thenReturn(new IdentityJdbcRepository.PinRecord("hash", 1, null));
+        when(hashing.matches("000000", "hash")).thenReturn(false);
+        PinCredentialService service = new PinCredentialService(repository, hashing,
+                Clock.fixed(now, ZoneOffset.UTC));
+
+        PinCredentialService.VerifyResult result = service.verify(customerId, "000000");
+
+        assertThat(result).isEqualTo(PinCredentialService.VerifyResult.INVALID);
+        verify(repository).updatePinFailure(customerId, 2, null, now);
+    }
+    @Test
     void fifthInvalidPinPersistsLockUntilFifteenMinutesLater() {
         IdentityJdbcRepository repository = mock(IdentityJdbcRepository.class);
         PinHashingService hashing = mock(PinHashingService.class);
