@@ -141,13 +141,17 @@ class TransferServiceTest {
     void expiredOtpCommitsExpiredTransferBeforeErrorResponse() {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), transferId = UUID.randomUUID();
         var d = dependencies();
+        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), Instant.EPOCH.minusSeconds(120), Instant.EPOCH));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, UUID.randomUUID(), Instant.EPOCH.minusSeconds(120), Instant.EPOCH));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
+                account(sourceId, customerId, "10000000"), account(destinationId, UUID.randomUUID(), "0")));
         assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "000000"))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT));
+        verify(d.accounts).lockPair(sourceId, destinationId);
         verify(d.transfers).expire(transferId, Instant.EPOCH);
-        verifyNoInteractions(d.accounts, d.transferOtp);
+        verifyNoInteractions(d.transferOtp);
     }
 
     private Dependencies dependencies() {

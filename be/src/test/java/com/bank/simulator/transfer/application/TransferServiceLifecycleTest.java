@@ -53,6 +53,79 @@ class TransferServiceLifecycleTest {
     }
 
     @Test
+    void blockedSourceFailsTransferAndInvalidatesOtpWithoutMovingMoney() {
+        var d = dependencies();
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.accounts.find(sourceId)).thenReturn(account(sourceId, customerId, "10000000"));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
+                account(sourceId, customerId, "BLOCKED", "10000000", "VND"),
+                account(destinationId, UUID.randomUUID(), "ACTIVE", "0", "VND")));
+        when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 0));
+        when(d.otpHashing.matches("123456", "hash")).thenReturn(true);
+
+        assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "123456"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    assertThat(((ApiException) error).status()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(((ApiException) error).code()).isEqualTo("ACCOUNT_NOT_ELIGIBLE");
+                });
+        verify(d.transfers).fail(transferId, "ACCOUNT_NOT_ELIGIBLE", Instant.EPOCH);
+        verify(d.transferOtp).invalidate(challengeId, Instant.EPOCH);
+        verify(d.accounts, never()).debit(any(), anyString());
+        verify(d.accounts, never()).credit(any(), anyString());
+        verify(d.transferOtp, never()).consume(any(), any());
+    }
+
+    @Test
+    void blockedDestinationFailsTransferAndInvalidatesOtpWithoutMovingMoney() {
+        var d = dependencies();
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.accounts.find(sourceId)).thenReturn(account(sourceId, customerId, "10000000"));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
+                account(sourceId, customerId, "ACTIVE", "10000000", "VND"),
+                account(destinationId, UUID.randomUUID(), "BLOCKED", "0", "VND")));
+        when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 0));
+        when(d.otpHashing.matches("123456", "hash")).thenReturn(true);
+
+        assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "123456"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> assertThat(((ApiException) error).code()).isEqualTo("ACCOUNT_NOT_ELIGIBLE"));
+        verify(d.transfers).fail(transferId, "ACCOUNT_NOT_ELIGIBLE", Instant.EPOCH);
+        verify(d.transferOtp).invalidate(challengeId, Instant.EPOCH);
+        verify(d.accounts, never()).debit(any(), anyString());
+        verify(d.accounts, never()).credit(any(), anyString());
+    }
+
+    @Test
+    void currencyMismatchFailsTransferWithoutMovingMoney() {
+        var d = dependencies();
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.accounts.find(sourceId)).thenReturn(account(sourceId, customerId, "10000000"));
+        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId));
+        when(d.accounts.lockPair(sourceId, destinationId)).thenReturn(new AccountJdbcRepository.AccountPair(
+                account(sourceId, customerId, "ACTIVE", "10000000", "VND"),
+                account(destinationId, UUID.randomUUID(), "ACTIVE", "0", "USD")));
+        when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 0));
+        when(d.otpHashing.matches("123456", "hash")).thenReturn(true);
+
+        assertThatThrownBy(() -> d.service.confirm(new AuthenticatedActor(userId, Set.of("CUSTOMER")), transferId, "123456"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> assertThat(((ApiException) error).code()).isEqualTo("ACCOUNT_NOT_ELIGIBLE"));
+        verify(d.transfers).fail(transferId, "ACCOUNT_NOT_ELIGIBLE", Instant.EPOCH);
+        verify(d.transferOtp).invalidate(challengeId, Instant.EPOCH);
+        verify(d.accounts, never()).debit(any(), anyString());
+        verify(d.accounts, never()).credit(any(), anyString());
+    }
+
+    @Test
     void duplicateConfirmReplaysWithoutMoneyMutation() {
         var d = dependencies();
         UUID userId = UUID.randomUUID(), transferId = UUID.randomUUID();
@@ -113,7 +186,11 @@ class TransferServiceLifecycleTest {
     }
 
     private AccountJdbcRepository.AccountRow account(UUID id, UUID customerId, String balance) {
-        return new AccountJdbcRepository.AccountRow(id, customerId, "123456789012", "CHECKING", "ACTIVE", balance, "VND", Instant.EPOCH);
+        return account(id, customerId, "ACTIVE", balance, "VND");
+    }
+
+    private AccountJdbcRepository.AccountRow account(UUID id, UUID customerId, String status, String balance, String currency) {
+        return new AccountJdbcRepository.AccountRow(id, customerId, "123456789012", "CHECKING", status, balance, currency, Instant.EPOCH);
     }
 
     private com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord otpRecord(UUID id, int attempts) {

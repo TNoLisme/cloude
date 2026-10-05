@@ -187,20 +187,21 @@ public class TransferService {
         if (transfer == null) return ConfirmOutcome.error(unavailableAccount());
         if ("COMPLETED".equals(transfer.status())) return ConfirmOutcome.replay();
         if (!"AWAITING_OTP".equals(transfer.status())) return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "STATE_CONFLICT", "Transfer is not awaiting OTP."));
+        UUID customerId = customerId(actor);
         Instant now = clock.instant();
+        AccountJdbcRepository.AccountPair pair = accounts.lockPair(transfer.sourceAccountId(), transfer.destinationAccountId());
+        if (pair == null || !pair.source().customerId().equals(customerId)) return ConfirmOutcome.error(unavailableAccount());
         if (transfer.expiresAt() == null || !transfer.expiresAt().isAfter(now)) {
             transfers.expire(transferId, now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "TRANSFER_EXPIRED", "Transfer OTP expired."));
         }
-        AccountJdbcRepository.AccountPair pair = accounts.lockPair(transfer.sourceAccountId(), transfer.destinationAccountId());
-        if (pair == null || !pair.source().customerId().equals(customerId(actor))) return ConfirmOutcome.error(unavailableAccount());
-        var source = pair.source();
         var challenge = transferOtp.lock(transfer.otpChallengeId(), now);
         if (challenge == null || challenge.consumedAt() != null || challenge.invalidatedAt() != null) {
             return ConfirmOutcome.error(new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID", "OTP is invalid."));
         }
         if (!challenge.expiresAt().isAfter(now)) {
             transfers.expire(transferId, now);
+            transferOtp.invalidate(challenge.id(), now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "TRANSFER_EXPIRED", "Transfer OTP expired."));
         }
         if (!otpHashing.matches(otp, challenge.otpHash())) {
@@ -212,13 +213,23 @@ public class TransferService {
             }
             return ConfirmOutcome.error(new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID", "OTP is invalid."));
         }
+        var source = pair.source();
+        var destination = pair.destination();
+        if (!source.customerId().equals(customerId)) return ConfirmOutcome.error(unavailableAccount());
+        if (!eligibleForConfirm(source) || !eligibleForConfirm(destination)
+                || !"VND".equals(transfer.currency())) {
+            transfers.fail(transferId, "ACCOUNT_NOT_ELIGIBLE", now);
+            transferOtp.invalidate(challenge.id(), now);
+            return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_ELIGIBLE", "Account is not eligible for transfer."));
+        }
         if (new BigInteger(source.balance()).compareTo(new BigInteger(transfer.amount())) < 0) {
             transfers.fail(transferId, "INSUFFICIENT_FUNDS", now);
+            transferOtp.invalidate(challenge.id(), now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_FUNDS", "Available balance is insufficient."));
         }
         transferOtp.consume(challenge.id(), now);
         accounts.debit(source.id(), transfer.amount());
-        accounts.credit(pair.destination().id(), transfer.amount());
+        accounts.credit(destination.id(), transfer.amount());
         transfers.complete(transferId, now);
         audit.record(actor.userId(), "CUSTOMER", "TRANSFER_COMPLETED", "TRANSFER", transferId,
                 "SUCCESS", null, "Internal transfer completed.");
@@ -254,8 +265,11 @@ public class TransferService {
         if (!actor.hasRole("CUSTOMER")) throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Request is forbidden.");
     }
 
+    private boolean eligibleForConfirm(AccountJdbcRepository.AccountRow account) {
+        return account != null && "ACTIVE".equals(account.status()) && "VND".equals(account.currency());
+    }
     private void validateEligible(AccountJdbcRepository.AccountRow account) {
-        if (!"ACTIVE".equals(account.status()) || !"VND".equals(account.currency())) throw unavailableAccount();
+        if (!eligibleForConfirm(account)) throw unavailableAccount();
     }
 
     private ApiException unavailableAccount() {
