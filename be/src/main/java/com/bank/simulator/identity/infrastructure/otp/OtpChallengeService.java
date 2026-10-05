@@ -48,17 +48,18 @@ public class OtpChallengeService {
     public ConsumeResult consume(UUID challengeId, String identifier, String channel, String purpose, String code) {
         Instant now = clock.instant();
         OtpChallengeRecord challenge = repository.lockChallenge(challengeId, identifier, channel, purpose, now);
-        return consumeLocked(challenge, code, now);
+        return consumeLocked(challenge, code, now, identifier, channel, purpose);
     }
 
     @Transactional
     public ConsumeResult consumeLatest(String identifier, String channel, String purpose, String code) {
         Instant now = clock.instant();
         OtpChallengeRecord challenge = repository.lockLatestActive(identifier, channel, purpose, now);
-        return consumeLocked(challenge, code, now);
+        return consumeLocked(challenge, code, now, identifier, channel, purpose);
     }
 
-    private ConsumeResult consumeLocked(OtpChallengeRecord challenge, String code, Instant now) {
+    private ConsumeResult consumeLocked(OtpChallengeRecord challenge, String code, Instant now,
+                                        String identifier, String channel, String purpose) {
         if (challenge == null) return ConsumeResult.NOT_FOUND;
         if (challenge.consumedAt() != null) return ConsumeResult.ALREADY_USED;
         if (challenge.invalidatedAt() != null || challenge.attempts() >= challenge.maxAttempts()) return ConsumeResult.ATTEMPTS_EXCEEDED;
@@ -68,8 +69,7 @@ public class OtpChallengeService {
             repository.incrementAttempts(challenge.id(), attempts, attempts >= challenge.maxAttempts() ? now : null);
             return attempts >= challenge.maxAttempts() ? ConsumeResult.ATTEMPTS_EXCEEDED : ConsumeResult.INVALID;
         }
-        repository.consume(challenge.id(), now);
-        return ConsumeResult.VALID;
+        return repository.consume(challenge.id(), now) ? ConsumeResult.VALID : ConsumeResult.ALREADY_USED;
     }
 
     public enum ConsumeResult { VALID, INVALID, EXPIRED, ALREADY_USED, ATTEMPTS_EXCEEDED, NOT_FOUND }

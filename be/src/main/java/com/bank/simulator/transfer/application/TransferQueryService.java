@@ -27,6 +27,7 @@ public class TransferQueryService {
         this(transfers, accounts, identities, new CursorCodec(new ObjectMapper()));
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TransferQueryService(TransferJdbcRepository transfers, AccountJdbcRepository accounts,
                                 IdentityJdbcRepository identities, CursorCodec cursors) {
         this.transfers = transfers;

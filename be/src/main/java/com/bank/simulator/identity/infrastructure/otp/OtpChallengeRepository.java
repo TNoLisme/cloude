@@ -16,5 +16,5 @@ public interface OtpChallengeRepository {
 
     void invalidate(UUID id, Instant invalidatedAt);
 
-    void consume(UUID id, Instant consumedAt);
+    boolean consume(UUID id, Instant consumedAt);
 }

@@ -33,8 +33,7 @@ Additional checks:
 
 ## Remaining gates
 
-- PostgreSQL/Testcontainers integration remains blocked before container startup by Docker API negotiation HTTP 400 and empty metadata. Tests remain enabled.
-- Seed response replay path needs PostgreSQL verification and should be reviewed before acceptance; current in-memory tests cover authorization/validation/idempotency conflict only.
-- Phase 04 still needs PostgreSQL atomicity/concurrency tests, full MockMvc contract coverage for new routes, recipient resolve, and integration against V3 migration.
-- Phase 05/06 transfer, audit query, risk endpoints remain unimplemented.
-- Do not mark Phase 04 complete. Do not commit or push.
+- PostgreSQL/Testcontainers integration passes with Docker Desktop and PostgreSQL 16.
+- Seed response replay path has targeted unit/MVC coverage; full production database concurrency remains covered by the broader PostgreSQL acceptance plan.
+- Phase 05 transfer and Phase 06 history/audit/risk implementation are complete with targeted verification.
+- Full load, outage/recovery, deployment, and Phase 07 frontend acceptance remain outside Phase 04.

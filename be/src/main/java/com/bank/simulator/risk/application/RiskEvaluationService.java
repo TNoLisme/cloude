@@ -20,6 +20,7 @@ public class RiskEvaluationService {
     private final RiskProperties properties;
     private final java.time.Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public RiskEvaluationService(RiskFlagRepository flags, CursorCodec cursors,
                                  TransferCompletedCountRepository completedTransfers,
                                  RiskProperties properties, java.time.Clock clock) {

@@ -14,6 +14,7 @@ public class RateLimitInterceptor {
     private final InMemoryRateLimiter limiter;
     private final LongSupplier nanoClock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public RateLimitInterceptor(RateLimitProperties properties) {
         this(new InMemoryRateLimiter(properties.maxEntries()), System::nanoTime);
     }

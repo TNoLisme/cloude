@@ -1,14 +1,38 @@
 # Phase 06 Implementation Note
 
-Phase 06 history, audit query, and risk implementation not started.
+## Status
 
-## Remaining
+Implemented and targeted-verified. PostgreSQL/Testcontainers gate passes.
 
-- Cursor pagination for transfers and audit events.
-- Read-only audit event endpoint.
+## Implemented
+
+- Cursor pagination for transfer history, audit events, and risk flags.
+- Transfer history filters: status, date range, ownership visibility, stable `(created_at, id)` ordering.
+- Incoming/outgoing transfer projection with masked counterparty account and display name.
+- Read-only audit event endpoint restricted to `AUDITOR` and `ADMIN`.
+- Audit response redaction; metadata remains internal.
 - V4 risk flag migration and persistence.
-- AFTER_COMMIT risk evaluation.
-- Large-transfer and frequency rules.
-- PostgreSQL redaction, pagination, uniqueness, and failure-isolation tests.
+- `LARGE_TRANSFER` and `HIGH_FREQUENCY` rules.
+- `AFTER_COMMIT` risk evaluation using `REQUIRES_NEW` persistence.
+- Best-effort risk failure isolation.
+- V5 schema constraints and indexes.
 
-Phase 06 remains incomplete. Do not commit or push.
+## Verification
+
+- Targeted non-container backend suite passes.
+- `FoundationPostgresTest` passes.
+- `OtpChallengePostgresTest` passes.
+- `RefreshSessionPostgresTest` passes.
+- Flyway V1–V5 applies successfully.
+- Docker Desktop/Testcontainers/Ryuk/PostgreSQL 16 verified.
+- `git diff --check` passes.
+
+## Remaining acceptance scope
+
+- Full load test and p95/p99 report.
+- DB outage/restart recovery tests.
+- Response-loss-after-commit retry test.
+- Opposite-direction transfer and block-vs-confirm race tests.
+- Dependency/image security scan.
+- Phase 07 frontend contract integration.
+- Phase 08 deployment/demo acceptance.

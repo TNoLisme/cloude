@@ -38,7 +38,7 @@ class OtpChallengePostgresTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("app.security.jwt-secret", () -> "01234567890123456789012345678901");
-        registry.add("spring.flyway.enabled", () -> false);
+        registry.add("spring.flyway.enabled", () -> true);
     }
 
     @Autowired JdbcTemplate jdbcTemplate;

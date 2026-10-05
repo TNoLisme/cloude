@@ -80,9 +80,9 @@ public class JdbcOtpChallengeRepository implements OtpChallengeRepository {
     }
 
     @Override
-    public void consume(UUID id, Instant consumedAt) {
-        jdbcTemplate.update("UPDATE otp_challenges SET consumed_at = ? WHERE id = ?",
-                Timestamp.from(consumedAt), id);
+    public boolean consume(UUID id, Instant consumedAt) {
+        return jdbcTemplate.update("UPDATE otp_challenges SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL AND invalidated_at IS NULL",
+                Timestamp.from(consumedAt), id) == 1;
     }
 
     private String normalize(String identifier) {

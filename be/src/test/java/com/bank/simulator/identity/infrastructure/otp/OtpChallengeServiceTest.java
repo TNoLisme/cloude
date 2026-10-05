@@ -75,10 +75,12 @@ class OtpChallengeServiceTest {
         }
 
         @Override
-        public void consume(UUID id, Instant consumedAt) {
+        public boolean consume(UUID id, Instant consumedAt) {
             OtpChallengeRecord record = records.get(id);
+            if (record == null || record.consumedAt() != null || record.invalidatedAt() != null) return false;
             records.put(id, new OtpChallengeRecord(record.id(), record.identifier(), record.channel(), record.purpose(),
                     record.otpHash(), record.attempts(), record.maxAttempts(), record.expiresAt(), consumedAt, record.invalidatedAt()));
+            return true;
         }
     }
 }

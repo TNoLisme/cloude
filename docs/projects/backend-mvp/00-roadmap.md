@@ -1,6 +1,6 @@
 # Backend MVP Delivery Roadmap
 
-**Status:** Detailed design baseline; implementation remains gated per phase.  
+**Status:** Phases 01–06 implementation complete with targeted verification; Phases 07–08 remain planned.  
 **Scope:** Cross-cutting design, package layout, dependency baseline, database migration map, phase order and global acceptance gates.  
 **Workflow:** [`../../backend-development-workflow.md`](../../backend-development-workflow.md).  
 **MVP baseline:** [`../../baseline/README.md`](../../baseline/README.md), [`../../baseline/mvp-requirements-and-architecture.md`](../../baseline/mvp-requirements-and-architecture.md), [`../../baseline/api-and-team-contract.md`](../../baseline/api-and-team-contract.md), [`../../baseline/mvp-decision-record.md`](../../baseline/mvp-decision-record.md), [`../../baseline/quality-security-and-cloud.md`](../../baseline/quality-security-and-cloud.md), [`../../../contracts/openapi.yaml`](../../../contracts/openapi.yaml).
