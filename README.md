@@ -16,7 +16,20 @@ Read first:
 4. [Backend roadmap](docs/projects/backend-mvp/00-roadmap.md)
 5. [API contract](contracts/openapi.yaml)
 
-## Prerequisites
+## Backend quick start
+
+Detailed backend setup, Docker PostgreSQL, Testcontainers and Swagger instructions:
+
+- [Backend setup and API explorer](be/README.md)
+
+Runtime API explorer when backend is running:
+
+```text
+Swagger UI: http://localhost:8080/api/v1/swagger-ui/index.html
+OpenAPI JSON: http://localhost:8080/api/v1/v3/api-docs
+Health: http://localhost:8080/api/v1/health
+```
+
 
 - Java 21 or compatible JDK. Maven compiler target is Java 21.
 - Maven 3.9+.
@@ -32,16 +45,57 @@ mvn -version
 python --version
 ```
 
-## Backend setup
+Compose PostgreSQL host port is `5437` to avoid collision with existing manual PostgreSQL container on `5436`.
+Requires Docker Desktop with Linux containers enabled.
 
-Run commands from `be/` unless path is shown explicitly.
+Create local environment file. Do not commit `.env`:
+
+```powershell
+cd D:\work\Xgame\XCreative\Cloud\cloude
+Copy-Item .env.example .env
+notepad .env
+```
+
+Set a local PostgreSQL password and random `JWT_SECRET` with at least 32 UTF-8 bytes. Start PostgreSQL and backend:
+
+```powershell
+docker compose config
+docker compose up --build -d
+docker compose ps
+```
+
+Check backend, OpenAPI and logs:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/health
+Invoke-WebRequest http://localhost:8080/api/v1/v3/api-docs
+docker compose logs --no-color backend
+```
+
+FE integration URLs:
+
+```text
+API base: http://localhost:8080/api/v1
+Swagger UI: http://localhost:8080/api/v1/swagger-ui/index.html
+OpenAPI JSON: http://localhost:8080/api/v1/v3/api-docs
+Health: http://localhost:8080/api/v1/health
+```
+
+Stop services and preserve database volume:
+
+```powershell
+docker compose down
+```
+
+Never run `docker compose down -v`, `DROP`, or `TRUNCATE` against retained local data without explicit approval. Testcontainers tests use disposable PostgreSQL and are separate from Compose runtime.
+
 
 ### Configure PostgreSQL
 
 Set environment variables. Do not commit credentials.
 
 ```powershell
-$env:DB_URL = "jdbc:postgresql://localhost:5435/banking_simulator"
+$env:DB_URL = "jdbc:postgresql://localhost:5436/banking_simulator"
 $env:DB_USERNAME = "banking"
 $env:DB_PASSWORD = "<local-password>"
 ```
@@ -118,11 +172,11 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 ## Current implementation status
 
 - Phase 01: backend foundation.
-- Phase 02–06: design complete; implementation requires separate approval.
+- Phase 02–06: implemented and verified with full Maven suite, OpenAPI validation, Docker/Testcontainers, and PostgreSQL migration checks.
 - Phase 07: FE contract integration design complete.
 - Phase 08: quality/demo/deployment design complete.
 
-Do not assume a later phase endpoint exists until its implementation and targeted tests are complete.
+Phase 02–06 acceptance scope excludes load testing, outage/restart recovery, dependency/image scanning, FE integration, and deployment/demo acceptance. Those belong to Phases 07–08 and remain separate gates.
 
 ## Debugging and logs
 

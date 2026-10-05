@@ -4,7 +4,7 @@ spring:
   config:
     import: optional:file:.env[.properties]
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5435/banking_simulator}
+    url: ${DB_URL:jdbc:postgresql://localhost:5436/banking_simulator}
     username: ${DB_USERNAME:banking}
     password: ${DB_PASSWORD:}
   flyway:

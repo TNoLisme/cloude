@@ -39,7 +39,12 @@ class JwtAccessTokenCodecTest {
         Clock clock = Clock.systemUTC();
         JwtAccessTokenCodec codec = new JwtAccessTokenCodec(SECRET, java.time.Duration.ofSeconds(900), clock);
         String token = codec.issue(UUID.randomUUID(), List.of("CUSTOMER"));
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+        String signature = token.substring(token.lastIndexOf('.') + 1);
+        int signatureStart = token.lastIndexOf('.') + 1;
+        int tamperIndex = signatureStart + Math.max(1, signature.length() / 2);
+        char original = token.charAt(tamperIndex);
+        char replacement = original == 'A' ? 'B' : 'A';
+        String tampered = token.substring(0, tamperIndex) + replacement + token.substring(tamperIndex + 1);
         assertThatThrownBy(() -> codec.verify(tampered)).isInstanceOf(RuntimeException.class);
     }
 }

@@ -1,7 +1,6 @@
 package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.infrastructure.otp.LocalMailboxOtpSender;
-import com.bank.simulator.customer.infrastructure.AccountNumberGenerator;
 import com.bank.simulator.identity.infrastructure.otp.OtpSender;
 import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
 import com.bank.simulator.shared.ratelimit.RateLimitProperties;
@@ -12,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -33,6 +33,7 @@ class LocalOtpMailboxMvcTest {
     @Autowired MockMvc mockMvc;
     @MockBean LocalMailboxOtpSender mailbox;
     @MockBean JdbcTemplate jdbcTemplate;
+    @MockBean PlatformTransactionManager transactionManager;
     @MockBean RateLimitInterceptor rateLimitInterceptor;
 
     @Test
@@ -50,12 +51,6 @@ class LocalOtpMailboxMvcTest {
 
     @TestConfiguration
     static class PolicyConfig {
-        @Bean
-        @Primary
-        AccountNumberGenerator accountNumberGenerator() {
-            return new AccountNumberGenerator(new java.security.SecureRandom());
-        }
-
         @Bean
         @Primary
         OtpSender otpSender() {

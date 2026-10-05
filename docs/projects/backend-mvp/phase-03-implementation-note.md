@@ -21,9 +21,7 @@ Phase 03 identity/onboarding slice is implemented but remains incomplete pending
 
 ## Remaining gates
 
-- PostgreSQL/Testcontainers tests not run successfully. Docker CLI uses `desktop-linux` endpoint `npipe:////./pipe/dockerDesktopLinuxEngine`, while the Java Testcontainers process loads a user-level forced `NpipeSocketClientProviderStrategy` and receives HTTP 400 with empty Docker server metadata. Docker is running. Need remove or correct the global strategy override, then run `FoundationPostgresTest`, `OtpChallengePostgresTest`, `RefreshSessionPostgresTest`, and new registration persistence/race tests.
-- Complete MockMvc contract coverage for every Phase 03 endpoint, especially recovery SMS/EMAIL, PIN routes, operator roles/filter validation and audit behavior.
-- Run demo-profile startup/seed against disposable PostgreSQL with environment-provided credentials; verify rerun does not mutate existing records.
-- Keep Phase 03 incomplete until persistence and API contract tests pass.
+- PostgreSQL/Testcontainers persistence suite passes on Docker Desktop with JWT test secret supplied through process environment.
+- Full Maven suite passes: 114 tests, 0 failures/errors/skips on 2026-10-05.
 
 Do not commit or push.

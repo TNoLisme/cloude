@@ -102,9 +102,15 @@ Docker daemon and CLI are operational. Java Testcontainers fails during Docker A
 
 No production application workaround added. PostgreSQL integration gates remain blocked by local Testcontainers client/endpoint negotiation.
 
-## Required follow-up
+## Current verification update — 2026-10-05
 
-- Keep PostgreSQL tests enabled.
-- Re-run after Docker Desktop/Testcontainers endpoint compatibility is corrected.
-- Do not mark Phase 02 or Phase 03 complete until persistence/concurrency tests pass.
-- Do not use shared application PostgreSQL containers as a substitute for Testcontainers tests.
+Previous Docker API negotiation blocker is resolved for current local environment. With:
+
+```powershell
+$env:DOCKER_HOST='npipe:////./pipe/dockerDesktopLinuxEngine'
+$env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE='//var/run/docker.sock'
+Remove-Item Env:TESTCONTAINERS_HOST_OVERRIDE -ErrorAction SilentlyContinue
+$env:JWT_SECRET='<local secret with at least 32 UTF-8 bytes>'
+```
+
+`mvn test` starts PostgreSQL 16 Testcontainers and Ryuk successfully. Full backend suite: 114 tests, 0 failures/errors/skips. Targeted PostgreSQL suite: FoundationPostgresTest, OtpChallengePostgresTest, RefreshSessionPostgresTest all pass. Do not disable Ryuk or replace Testcontainers with shared application PostgreSQL.

@@ -32,7 +32,13 @@ public class SecurityConfiguration {
                                 "/auth/csrf",
                                 "/auth/refresh",
                                 "/auth/recover/initiate",
-                                "/auth/recover/confirm")
+                                "/auth/recover/confirm",
+                                "/v3/api-docs/**",
+                                "/api/v1/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/api/v1/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/webjars/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(cachedBodyFilter, org.springframework.security.web.context.SecurityContextHolderFilter.class)

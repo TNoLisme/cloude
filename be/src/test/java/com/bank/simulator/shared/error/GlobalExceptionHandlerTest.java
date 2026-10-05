@@ -2,13 +2,13 @@ package com.bank.simulator.shared.error;
 
 import com.bank.simulator.shared.api.Problem;
 import com.bank.simulator.shared.correlation.CorrelationIdFilter;
-import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
-import com.bank.simulator.shared.ratelimit.RateLimitPolicyFactory;
 import com.bank.simulator.identity.application.OnboardingService;
-import com.bank.simulator.shared.health.DatabaseHealthIndicator;
 import com.bank.simulator.identity.infrastructure.security.CsrfTokenService;
 import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
+import com.bank.simulator.shared.health.DatabaseHealthIndicator;
+import com.bank.simulator.shared.ratelimit.RateLimitInterceptor;
+import com.bank.simulator.shared.ratelimit.RateLimitPolicyFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest
+@WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, CorrelationIdFilter.class, GlobalExceptionHandlerTest.TestController.class,
         GlobalExceptionHandlerTest.TestBeans.class})
@@ -60,6 +60,18 @@ class GlobalExceptionHandlerTest {
 
     @MockBean
     private RefreshSessionService refreshSessionService;
+
+    @MockBean
+    private com.bank.simulator.account.application.AccountQueryService accountQueryService;
+
+    @MockBean
+    private com.bank.simulator.account.application.AccountOperatorService accountOperatorService;
+
+    @MockBean
+    private com.bank.simulator.account.application.AccountStatusService accountStatusService;
+
+    @MockBean
+    private com.bank.simulator.transfer.application.TransferQueryService transferQueryService;
     @Test
     void mapsApiExceptionToProblemDetails() throws Exception {
         UUID correlationId = UUID.randomUUID();

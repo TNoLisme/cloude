@@ -1,6 +1,6 @@
 # Phase 02 Implementation Note
 
-Phase 02 application foundations are implemented, but PostgreSQL/Testcontainers persistence verification remains incomplete.
+Phase 02 application foundations are implemented and verified, including PostgreSQL/Testcontainers persistence gates.
 
 ## Implemented and verified
 
@@ -14,14 +14,14 @@ Phase 02 application foundations are implemented, but PostgreSQL/Testcontainers 
 
 ## Verification
 
-- Targeted non-container Phase 02/03 suite: 33 tests, 0 failures/errors/skips in latest Surefire reports.
-- Backend compile: passed.
-- OpenAPI validation: passed, 29 operations.
-- `git diff --check`: passed; line-ending conversion warnings only.
+- Full Maven suite: 114 tests, 0 failures/errors/skips on 2026-10-05.
+- PostgreSQL/Testcontainers: FoundationPostgresTest (1), OtpChallengePostgresTest (1), RefreshSessionPostgresTest (2) pass.
+- Docker Desktop 29.4.1, Ryuk, PostgreSQL 16, and Flyway V1–V5 verified.
+- OpenAPI validation: 29 operations passed.
+- `git diff --check` passed.
 
-## Remaining gate
+## Remaining scope
 
-- `FoundationPostgresTest`, `OtpChallengePostgresTest`, and `RefreshSessionPostgresTest` still cannot start containers through Java Testcontainers. Docker CLI connects and runs containers, but Testcontainers uses a user-level forced `NpipeSocketClientProviderStrategy` and receives HTTP 400 with empty server metadata. Correct the local Testcontainers strategy/endpoint and rerun the tests. No application workaround added.
-- Do not mark Phase 02 complete until all PostgreSQL persistence tests pass.
+- Load testing, outage/restart recovery, dependency/image scan, FE integration, and deployment/demo acceptance remain separate later-phase gates.
 
 Do not commit or push.

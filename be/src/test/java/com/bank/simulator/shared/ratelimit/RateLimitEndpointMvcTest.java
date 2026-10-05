@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.Duration;
 
@@ -22,7 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {"app.security.jwt-secret=01234567890123456789012345678901",
-        "app.rate-limit.login-limit=1", "app.rate-limit.login-window=60s", "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration,org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration"})
+        "app.rate-limit.login-limit=1", "app.rate-limit.login-window=60s",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"})
 @AutoConfigureMockMvc(addFilters = false)
 @Import(RateLimitEndpointMvcTest.Properties.class)
 class RateLimitEndpointMvcTest {
@@ -30,6 +32,7 @@ class RateLimitEndpointMvcTest {
     @Autowired MockMvc mockMvc;
     @MockBean OnboardingService onboardingService;
     @MockBean JdbcTemplate jdbcTemplate;
+    @MockBean PlatformTransactionManager transactionManager;
 
     @Test
     void returnsProblem429AndRetryAfterWhenLoginBucketExhausted() throws Exception {

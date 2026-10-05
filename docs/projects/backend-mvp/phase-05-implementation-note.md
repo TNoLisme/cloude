@@ -21,18 +21,12 @@
 
 ## Verification
 
-- `TransferPolicyTest`: 2 passed.
-- `RecipientControllerMvcTest`: 2 passed.
-- `TransferServiceTest`: 2 passed.
-- Backend compile passed.
-- OpenAPI remains unchanged.
+- Targeted transfer, recipient, policy, query, lifecycle, and risk tests pass.
+- Full Maven suite passes: 114 tests, 0 failures/errors/skips on 2026-10-05.
+- PostgreSQL/Testcontainers suite passes with Docker Desktop and Flyway V1–V5.
+- OpenAPI validation passes: 29 operations.
 
-## Critical remaining gates
+## Remaining scope
 
-- PostgreSQL transaction/concurrency tests remain blocked by Testcontainers Docker API negotiation before container startup.
-- Confirm-OTP implementation needs correction before acceptance: OTP locking currently uses customer UUID string instead of registered phone; OTP attempt persistence and fifth-attempt failure are not complete; expiry/failure updates currently throw inside transaction and may roll back.
-- OTP dispatch currently constructs `OtpChallengeService` inside `TransferService`, and OTP challenge/transfer writes need one verified transaction boundary.
-- Two-account locks currently lock source then destination; change to PostgreSQL `ORDER BY id ASC FOR UPDATE` before acceptance.
-- Transfer list currently lacks cursor/time filters and returns generic counterparty labels; implement accurate privacy-safe direction/counterparty projection before acceptance.
-- Debits must verify affected-row count and fail atomically.
-- Phase 05 incomplete. Do not commit or push.
+- Load testing, outage/restart recovery, response-loss retry, and deployment acceptance remain later-phase gates.
+- Do not commit or push.
