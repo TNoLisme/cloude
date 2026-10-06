@@ -1,5 +1,6 @@
 package com.bank.simulator.identity.web;
 
+import com.bank.simulator.identity.application.OnboardingService;
 import com.bank.simulator.identity.infrastructure.security.CsrfTokenService;
 import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
@@ -24,16 +25,19 @@ import java.util.UUID;
 public class SessionController {
 
     private final RefreshSessionService refreshSessionService;
+    private final OnboardingService onboardingService;
     private final CsrfTokenService csrfTokenService;
     private final JwtAccessTokenCodec accessTokenCodec;
     private final String cookieName;
     private final Clock clock;
 
-    public SessionController(RefreshSessionService refreshSessionService, CsrfTokenService csrfTokenService,
+    public SessionController(RefreshSessionService refreshSessionService, OnboardingService onboardingService,
+                             CsrfTokenService csrfTokenService,
                              JwtAccessTokenCodec accessTokenCodec,
                              @Value("${app.security.refresh-cookie-name:refresh_token}") String cookieName,
                              Clock clock) {
         this.refreshSessionService = refreshSessionService;
+        this.onboardingService = onboardingService;
         this.csrfTokenService = csrfTokenService;
         this.accessTokenCodec = accessTokenCodec;
         this.cookieName = cookieName;
@@ -48,10 +52,11 @@ public class SessionController {
             return problem(403, "FORBIDDEN", request);
         }
         try {
-            RefreshSessionService.IssuedRefreshSession session = refreshSessionService.rotate(rawToken);
-        response.addHeader("Set-Cookie", cookieHeader(session.rawToken(), remainingSeconds(session.expiresAt()), request.isSecure()));
+            OnboardingService.RefreshResult refreshed = onboardingService.refreshSession(rawToken);
+            RefreshSessionService.IssuedRefreshSession session = refreshed.session();
+            response.addHeader("Set-Cookie", cookieHeader(session.rawToken(), remainingSeconds(session.expiresAt()), request.isSecure()));
             String accessToken = accessTokenCodec.issue(session.userId(), session.roles());
-            return ResponseEntity.ok(new AccessTokenResponse(accessToken, "Bearer", 900));
+            return ResponseEntity.ok(new RefreshResponse(accessToken, "Bearer", 900, refreshed.user()));
         } catch (IllegalArgumentException exception) {
             return problem(401, "SESSION_EXPIRED", request);
         }
@@ -95,6 +100,7 @@ public class SessionController {
                 + "; Path=/api/v1/auth; HttpOnly" + (secure ? "; Secure" : "") + "; SameSite=Lax";
     }
 
-    public record AccessTokenResponse(String accessToken, String tokenType, int expiresIn) {
+    public record RefreshResponse(String accessToken, String tokenType, int expiresIn,
+                                  OnboardingService.UserSummary user) {
     }
 }

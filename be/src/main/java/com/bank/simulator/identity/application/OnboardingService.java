@@ -100,13 +100,25 @@ public class OnboardingService {
             invalidCredentials();
         }
         List<String> roles = repository.roles(user.userId());
-        UUID customerId = user.customerId() == null ? user.userId() : user.customerId();
-        String displayName = user.fullName() == null ? phone : user.fullName();
         RefreshSessionService.IssuedRefreshSession session = sessions.issue(user.userId());
         String accessToken = tokens.issue(user.userId(), roles);
         audit(user.userId(), roles.stream().findFirst().orElse(null), "LOGIN", "USER", user.userId(), "SUCCESS", "User logged in.");
-        return new LoginResult(accessToken, session, new UserSummary(user.userId(), customerId, displayName,
-                user.phone(), user.email(), roles, user.pinSet()));
+        return new LoginResult(accessToken, session, userSummary(user, roles));
+    }
+
+    @Transactional
+    public RefreshResult refreshSession(String rawToken) {
+        RefreshSessionService.IssuedRefreshSession session = sessions.rotate(rawToken);
+        IdentityJdbcRepository.UserRecord user = repository.findByUserId(session.userId());
+        if (user == null || !user.active()) throw new IllegalArgumentException("Refresh session is invalid");
+        return new RefreshResult(session, userSummary(user, session.roles()));
+    }
+
+    private UserSummary userSummary(IdentityJdbcRepository.UserRecord user, List<String> roles) {
+        UUID customerId = user.customerId() == null ? user.userId() : user.customerId();
+        String displayName = user.fullName() == null ? user.phone() : user.fullName();
+        return new UserSummary(user.userId(), customerId, displayName,
+                user.phone(), user.email(), roles, user.pinSet());
     }
 
     public IdentityJdbcRepository.CustomerRecord currentCustomer(AuthenticatedActor actor) {
@@ -261,6 +273,7 @@ public class OnboardingService {
     public record RegistrationResult(UUID customerId, String phone, String email, String fullName,
                                     IdentityJdbcRepository.AccountRecord account, Instant createdAt) {}
     public record LoginResult(String accessToken, RefreshSessionService.IssuedRefreshSession session, UserSummary user) {}
+    public record RefreshResult(RefreshSessionService.IssuedRefreshSession session, UserSummary user) {}
     public record UserSummary(UUID userId, UUID customerId, String displayName, String phone, String email,
                               List<String> roles, boolean isPinSet) {}
     public record RecoveryResult(String identifier, String channel, int expiresInSeconds, String message) {}

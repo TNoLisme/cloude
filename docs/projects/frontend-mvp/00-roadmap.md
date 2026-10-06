@@ -71,7 +71,7 @@ Mỗi nhóm API ghi tiến độ `mock-only → BE-ready → integrated → veri
 
 ## Điểm cần làm rõ và giới hạn contract
 
-- Session sau reload: refresh chỉ trả accessToken/tokenType/expiresIn, không trả UserSummary; chưa có staff `/me`. Đang hỏi người dùng chốt đăng nhập lại sau reload hay thay đổi contract để bootstrap đầy đủ. Chặn phần bootstrap phụ thuộc quyết định này.
+- Session sau reload: `POST /auth/refresh` trả cùng shape với login, gồm access token và `user: UserSummary`, để khôi phục role/workspace; không cần staff `/me`. BE và OpenAPI đã được cập nhật theo quyết định này. FE vẫn chưa triển khai bootstrap/runtime test.
 - Lần sai OTP transfer thứ 5: quyết định mới nhất chốt `409 STATE_CONFLICT`; OpenAPI có 409 nhưng description còn ghi chung wrong OTP 400. FE dùng quyết định đã chốt, ghi mismatch để BE sửa description; không tự đổi response.
 - Replay transfer/seed thành công là `200` + `Idempotency-Replayed`; đoạn BE integration nói replay 409 là mâu thuẫn với endpoint. `409 IDEMPOTENCY_KEY_REUSED` là conflict, không xem là thành công.
 - Account response chỉ có số masked; không tạo nút copy số đầy đủ, QR nhận tiền hoặc tự suy ra số. Demo lấy số người nhận từ fixture BE được cấp.
@@ -85,4 +85,4 @@ Handover mỗi phase ghi file, API coverage, lệnh/kết quả thực, screensh
 
 ## Kiểm chứng bộ tài liệu (2026-10-02)
 
-Đã đối chiếu endpoint/schema với OpenAPI hiện tại, BE phase 07 và các quyết định mới nhất về OTP/transaction. Kiểm tra 9 tệp frontend: toàn bộ link tương đối resolve được, code fences cân bằng; `git diff --check` không báo lỗi. Chưa scaffold/frontend dependency/build hay test runtime. Điểm bootstrap sau reload đang chờ người dùng chốt; các phần thiết kế độc lập đã được viết đầy đủ. Chưa commit/push.
+Đã đối chiếu endpoint/schema với OpenAPI và BE phase 07 tại thời điểm viết bộ docs. Kiểm tra 9 tệp frontend: toàn bộ link tương đối resolve được, code fences cân bằng; `git diff --check` không báo lỗi. Chưa scaffold/frontend dependency/build hay test runtime. Quyết định bootstrap sau reload đã được chốt và cập nhật vào contract; FE chưa triển khai hoặc kiểm chứng runtime. Chưa commit/push.

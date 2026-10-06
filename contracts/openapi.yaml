@@ -83,13 +83,13 @@ paths:
       operationId: refreshSession
       tags: [Auth]
       security: []
-      description: Requires refresh cookie, credentials include, and X-CSRF-Token.
+      description: Requires refresh cookie, credentials include, and X-CSRF-Token. Returns a fresh UserSummary with the rotated access token so clients can restore session and workspace after reload.
       parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
       responses:
         '200':
           description: Access and refresh tokens rotated
           headers: { Set-Cookie: { schema: { type: string } } }
-          content: { application/json: { schema: { $ref: '#/components/schemas/AccessTokenResponse' } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/LoginResponse' } } }
         '401': { $ref: '#/components/responses/ProblemResponse' }
         '403': { $ref: '#/components/responses/ProblemResponse' }
 

@@ -1,6 +1,6 @@
 # FE 01 — Foundation, API client và session
 
-Trạng thái: thiết kế; chưa triển khai. Tham chiếu [roadmap](00-roadmap.md), [OpenAPI](../../../contracts/openapi.yaml), [BE integration](../backend-mvp/07-fe-contract-integration.md). Phụ thuộc quyết định bootstrap trong roadmap.
+Trạng thái: thiết kế; chưa triển khai. Tham chiếu [roadmap](00-roadmap.md), [OpenAPI](../../../contracts/openapi.yaml), [BE integration](../backend-mvp/07-fe-contract-integration.md). Quyết định bootstrap sau reload đã chốt: refresh trả cùng shape với login.
 
 ## Cấu trúc đề xuất
 
@@ -37,7 +37,7 @@ Trong tab đã có UserSummary: refresh có single-flight để nhiều request 
 
 Logout gọi API với bearer/cookie/CSRF; thành công xóa token/UserSummary/CSRF, query cache và sensitive forms. Nếu logout request thất bại, có thể kết thúc phiên UI nhưng phải báo chưa xác nhận thu hồi phiên server. Đổi user phải cancel query cũ, xóa cache và không nhận response muộn của phiên cũ; query key có userId.
 
-Chưa chốt bootstrap sau reload: không tự bịa `/auth/me`, không coi JWT decode là hồ sơ đã được backend xác minh. Hoàn thiện nhánh này theo quyết định trong roadmap.
+Khi reload, giữ màn hình ở trạng thái khôi phục phiên; lấy CSRF token rồi gọi `POST /auth/refresh` với `credentials: include` và `X-CSRF-Token`. Response có access token cùng `user: UserSummary` để điền session store và chọn workspace theo roles. `401 SESSION_EXPIRED` xóa session/cache và chuyển login; không tự bịa `/auth/me`, không coi JWT decode là hồ sơ đã được backend xác minh. Nhiều request trong cùng tab dùng một refresh single-flight; không persist access token hoặc UserSummary để bootstrap.
 
 ## Lỗi chung
 

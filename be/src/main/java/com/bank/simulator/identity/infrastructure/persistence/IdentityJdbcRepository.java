@@ -52,6 +52,12 @@ public class IdentityJdbcRepository {
         return rows.stream().findFirst().orElse(null);
     }
 
+    public UserRecord findByUserId(UUID userId) {
+        List<UserRecord> rows = jdbc.query("SELECT u.id, u.phone, u.email_normalized, u.password_hash, u.is_active, c.id AS customer_id, c.full_name, c.created_at AS customer_created_at, EXISTS (SELECT 1 FROM customer_pins p WHERE p.customer_id = c.id AND p.pin_hash IS NOT NULL) AS pin_set FROM users u LEFT JOIN customers c ON c.user_id = u.id WHERE u.id = ?",
+                (rs, row) -> new UserRecord(rs.getObject("id", UUID.class), rs.getString("phone"), rs.getString("email_normalized"), rs.getString("password_hash"), rs.getBoolean("is_active"), rs.getObject("customer_id", UUID.class), rs.getString("full_name"), rs.getTimestamp("customer_created_at") == null ? null : rs.getTimestamp("customer_created_at").toInstant(), rs.getBoolean("pin_set")), userId);
+        return rows.stream().findFirst().orElse(null);
+    }
+
     public List<String> roles(UUID userId) {
         return jdbc.queryForList("SELECT role FROM user_roles WHERE user_id = ? ORDER BY role", String.class, userId);
     }

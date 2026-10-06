@@ -1,6 +1,7 @@
 package com.bank.simulator.identity.infrastructure.security;
 
 import com.bank.simulator.BankingSimulatorApplication;
+import com.bank.simulator.identity.application.OnboardingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +40,7 @@ class RefreshSessionPostgresTest {
     }
 
     @Autowired RefreshSessionService service;
+    @Autowired OnboardingService onboarding;
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
@@ -77,6 +79,28 @@ class RefreshSessionPostgresTest {
             assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
         }
         assertThat(success.get()).isEqualTo(1);
+    }
+
+    @Test
+    void refreshBootstrapUsesCurrentRolesAndKeepsOldCookieWhenUserIsInactive() {
+        UUID userId = insertUser();
+        jdbcTemplate.update("INSERT INTO user_roles(user_id, role) VALUES (?, 'OPERATOR')", userId);
+        RefreshSessionService.IssuedRefreshSession original = service.issue(userId);
+        jdbcTemplate.update("UPDATE users SET is_active = FALSE WHERE id = ?", userId);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> onboarding.refreshSession(original.rawToken()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT revoked_at FROM refresh_sessions WHERE id = ?",
+                (rs, row) -> rs.getTimestamp(1), original.sessionId())).isNull();
+
+        jdbcTemplate.update("UPDATE users SET is_active = TRUE WHERE id = ?", userId);
+        var refreshed = onboarding.refreshSession(original.rawToken());
+
+        assertThat(refreshed.user().userId()).isEqualTo(userId);
+        assertThat(refreshed.user().customerId()).isEqualTo(userId);
+        assertThat(refreshed.user().roles()).containsExactly("OPERATOR");
+        assertThat(refreshed.user().isPinSet()).isFalse();
+        assertThat(refreshed.user().phone()).isNotBlank();
     }
 
     private UUID insertUser() {

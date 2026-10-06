@@ -101,7 +101,7 @@ Roles are not interchangeable. BE checks resource ownership for every Customer r
 | `POST /auth/register/send-otp` | Anonymous | Dispatch 6-digit registration OTP to phone number; `200`. |
 | `POST /auth/register` | Anonymous | Register with phone OTP; creates active customer & default checking account immediately; `201`. |
 | `POST /auth/login` | Anonymous | Login with phone + password; returns tokens, user info & `isPinSet` flag; `200`. |
-| `POST /auth/refresh` | Refresh token | Rotate refresh token cookie and return new access token; `200`. |
+| `POST /auth/refresh` | Refresh token | Rotate refresh token cookie and return new access token plus `UserSummary`; `200`. |
 | `POST /auth/logout` | Authenticated | Revoke refresh session and clear cookie; `204`. |
 | `GET /auth/csrf` | Anonymous/session | Issue CSRF token for cookie-authenticated refresh/logout; `200`. |
 | `POST /auth/recover/initiate` | Anonymous | Request password recovery OTP via chosen channel (`SMS` or `EMAIL`); always generic `200` (anti-enumeration). |
@@ -226,7 +226,7 @@ FE behavior:
 2. If `user.isPinSet === false`, immediately route customer to **Mandatory PIN Setup** screen before enabling transfer functions.
 3. If `user.isPinSet === true`, route to customer dashboard.
 
-`POST /api/v1/auth/refresh`: sends refresh cookie; returns new `accessToken`, `tokenType`, `expiresIn`.
+`POST /api/v1/auth/refresh`: sends refresh cookie and `X-CSRF-Token`; returns `200` with the same response shape as login (`accessToken`, `tokenType`, `expiresIn`, `user: UserSummary`) and rotates the HttpOnly refresh cookie. FE uses the returned `user` to restore identity, roles and workspace after a page reload; no JWT decoding or persisted access token is needed. On `401 SESSION_EXPIRED`, clear in-memory session state and require login. A rejected refresh must not rotate the cookie.
 `POST /api/v1/auth/logout`: sends refresh cookie and bearer token; revokes session; `204`.
 
 ### 6.3 Account Recovery (Forgot Password via SMS or Email OTP)

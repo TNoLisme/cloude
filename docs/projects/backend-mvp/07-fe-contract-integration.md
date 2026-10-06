@@ -47,7 +47,7 @@ Do not assume npm if repo standard says Bun; package manager is environment/tool
 
 - Vite dev server proxy `/api` to backend origin; preserve path `/api/v1/...` exactly. Proxy only local development; deployed ingress serves FE and API same origin.
 - No wildcard CORS with credentials. Backend CORS may remain disabled for same-origin mode; if separate origin becomes explicitly approved, exact origin allowlist, `allowCredentials=true`, and CSRF tests required.
-- Access token stored only in React memory/session presentation state (Zustand per baseline), never localStorage/sessionStorage/IndexedDB.
+- Access token stored only in React memory/session presentation state (Zustand per baseline), never localStorage/sessionStorage/IndexedDB. After reload, FE obtains CSRF token, calls refresh, and restores identity/workspace from the returned `user: UserSummary` (same shape as login); no staff `/me` endpoint or JWT decoding is required.
 - Refresh cookie is HttpOnly and browser-managed. Refresh/logout request must set `credentials: "include"`; CSRF token from `GET /auth/csrf` stored in memory and sent as `X-CSRF-Token`. No separate readable CSRF cookie.
 - Typed API client adds bearer header for protected requests; JSON content type only for body; correlation UUID per user action; Idempotency-Key stable per money mutation/retry.
 - Parse `application/problem+json` into typed error preserving status, code, detail, fieldErrors, correlationId. Do not parse `message` as authoritative field.
