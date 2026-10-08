@@ -1,6 +1,7 @@
 package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.application.OnboardingService;
+import com.bank.simulator.identity.application.RecoveryService;
 import com.bank.simulator.identity.domain.AuthenticatedActor;
 import com.bank.simulator.identity.infrastructure.otp.OtpChallengeService;
 import jakarta.validation.Valid;
@@ -21,11 +22,13 @@ import java.time.Instant;
 public class OnboardingController {
 
     private final OnboardingService service;
+    private final RecoveryService recovery;
 
     private final Clock clock;
 
-    public OnboardingController(OnboardingService service, Clock clock) {
+    public OnboardingController(OnboardingService service, RecoveryService recovery, Clock clock) {
         this.service = service;
+        this.recovery = recovery;
         this.clock = clock;
     }
 
@@ -52,13 +55,22 @@ public class OnboardingController {
 
     @PostMapping("/auth/recover/initiate")
     public RecoveryResponse recoverInitiate(@Valid @RequestBody RecoverInitiateRequest request) {
-        OnboardingService.RecoveryResult result = service.initiateRecovery(request.identifier(), request.channel());
+        RecoveryService.InitiateResult result = recovery.initiate(request.identifier(), request.channel());
         return new RecoveryResponse(result.identifier(), result.channel(), result.expiresInSeconds(), result.message());
+    }
+
+    @PostMapping("/auth/recover/verify")
+    public ResponseEntity<RecoveryVerifyResponse> recoverVerify(@Valid @RequestBody RecoverVerifyRequest request) {
+        RecoveryService.VerifyResult result = recovery.verify(request.identifier(), request.channel(), request.otp());
+        if (!result.valid()) throw new com.bank.simulator.shared.error.ApiException(HttpStatus.BAD_REQUEST,
+                "OTP_INVALID", "OTP is invalid.");
+        return ResponseEntity.ok().header("Cache-Control", "no-store")
+                .body(new RecoveryVerifyResponse(result.resetToken(), result.expiresInSeconds()));
     }
 
     @PostMapping("/auth/recover/confirm")
     public MessageResponse recoverConfirm(@Valid @RequestBody RecoverConfirmRequest request) {
-        service.confirmRecovery(request.identifier(), request.channel(), request.otp(), request.newPassword());
+        recovery.confirm(request.resetToken(), request.newPassword());
         return new MessageResponse("Password reset successfully and active sessions revoked");
     }
 
@@ -157,9 +169,11 @@ public class OnboardingController {
     public record RecoverInitiateRequest(@NotBlank String identifier,
                                          @NotBlank @Pattern(regexp = "^(SMS|EMAIL)$") String channel) {}
     public record RecoveryResponse(String identifier, String channel, int expiresInSeconds, String message) {}
-    public record RecoverConfirmRequest(@NotBlank String identifier,
+    public record RecoverVerifyRequest(@NotBlank String identifier,
                                         @NotBlank @Pattern(regexp = "^(SMS|EMAIL)$") String channel,
-                                        @NotBlank @Pattern(regexp = "^[0-9]{6}$") String otp,
+                                        @NotBlank @Pattern(regexp = "^[0-9]{6}$") String otp) {}
+    public record RecoveryVerifyResponse(String resetToken, int expiresInSeconds) {}
+    public record RecoverConfirmRequest(String resetToken,
                                         @NotBlank @Size(min = 12, max = 128) String newPassword) {}
     public record CustomerProfile(java.util.UUID customerId, String fullName, String phone, String email, boolean isPinSet, Instant createdAt) {}
     public record SetupPinRequest(@NotBlank @Pattern(regexp = "^[0-9]{6}$") String pin,

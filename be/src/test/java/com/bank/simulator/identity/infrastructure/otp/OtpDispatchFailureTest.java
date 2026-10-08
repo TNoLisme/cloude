@@ -40,6 +40,7 @@ class OtpDispatchFailureTest {
             records.put(id, new OtpChallengeRecord(record.id(), record.identifier(), record.channel(), record.purpose(),
                     record.otpHash(), record.attempts(), record.maxAttempts(), record.expiresAt(), null, invalidatedAt));
         }
+        @Override public void invalidateActive(String identifier, String channel, String purpose, Instant invalidatedAt) { }
         @Override public boolean consume(UUID id, Instant consumedAt) { return true; }
     }
 }

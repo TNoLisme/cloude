@@ -34,6 +34,8 @@ app:
     registration-otp-window: 300s
     recovery-initiate-limit: 3
     recovery-initiate-window: 300s
+    recovery-verify-limit: 5
+    recovery-verify-window: 300s
     operator-otp-limit: 10
     operator-otp-window: 300s
     recipient-resolve-limit: 30

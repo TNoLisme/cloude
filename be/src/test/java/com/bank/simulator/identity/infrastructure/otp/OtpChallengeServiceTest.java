@@ -75,6 +75,16 @@ class OtpChallengeServiceTest {
         }
 
         @Override
+        public void invalidateActive(String identifier, String channel, String purpose, Instant invalidatedAt) {
+            records.values().stream()
+                    .filter(record -> record.identifier().equalsIgnoreCase(identifier)
+                            && record.channel().equals(channel) && record.purpose().equals(purpose)
+                            && record.consumedAt() == null && record.invalidatedAt() == null)
+                    .map(OtpChallengeRecord::id).toList()
+                    .forEach(id -> invalidate(id, invalidatedAt));
+        }
+
+        @Override
         public boolean consume(UUID id, Instant consumedAt) {
             OtpChallengeRecord record = records.get(id);
             if (record == null || record.consumedAt() != null || record.invalidatedAt() != null) return false;

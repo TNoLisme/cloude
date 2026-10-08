@@ -78,6 +78,7 @@ Controller is conditionally registered only under `local` or `demo`, server bind
 | `POST /api/v1/auth/login` | 5 / 60s per bucket | Independent trusted-IP bucket AND normalized-phone bucket | HTTP 429 Problem `RATE_LIMITED`, `Retry-After` seconds |
 | `POST /api/v1/auth/register/send-otp` | 3 / 300s per bucket | Independent trusted-IP bucket AND normalized-phone bucket | Same |
 | `POST /api/v1/auth/recover/initiate` | 3 / 300s per bucket | Independent trusted-IP bucket AND normalized-identifier bucket | Same |
+| `POST /api/v1/auth/recover/verify` | 5 / 300s per bucket | Independent trusted-IP bucket AND normalized-identifier bucket | Same |
 | `POST /api/v1/operator/customers/send-otp` | 10 / 300s | authenticated operator ID | Same |
 | `POST /api/v1/recipients/resolve` | 30 / 60s | authenticated customer ID | Same |
 | `GET /api/v1/operator/customers` | 30 / 60s | authenticated operator ID | Same |

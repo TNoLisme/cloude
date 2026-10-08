@@ -34,6 +34,7 @@ public class OtpChallengeService {
         String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
         Instant now = clock.instant();
         Instant expiresAt = now.plus(TTL);
+        if ("RECOVERY".equals(purpose)) repository.invalidateActive(identifier, channel, purpose, now);
         repository.create(challengeId, identifier, channel, purpose, hashingService.encode(code), now, expiresAt, MAX_ATTEMPTS);
         try {
             sender.send(new OtpMessage(challengeId, identifier, code, expiresAt));

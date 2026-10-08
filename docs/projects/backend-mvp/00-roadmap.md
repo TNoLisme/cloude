@@ -125,6 +125,7 @@ app:
       login: { limit: 5, window: 60s, independent-keys: [ip, phone] }
       registration-otp: { limit: 3, window: 300s, independent-keys: [ip, phone] }
       recovery-initiate: { limit: 3, window: 300s, independent-keys: [ip, identifier] }
+      recovery-verify: { limit: 5, window: 300s, independent-keys: [ip, identifier] }
       operator-customer-otp: { limit: 10, window: 300s, key: operator-id }
       recipient-resolve: { limit: 30, window: 60s, key: customer-id }
       operator-customer-lookup: { limit: 30, window: 60s, key: operator-id }

@@ -23,7 +23,6 @@ import java.util.UUID;
 @Service
 public class OnboardingService {
 
-    private static final String GENERIC_RECOVERY_MESSAGE = "If the information is registered, an OTP has been sent to the selected channel.";
     private static final String DUMMY_HASH = "$2a$12$C6UzMDM.H6dfI/f/IKcEe.VeY6QK7f3h8Y7l8J0Q3jz7wH9t0Q8u";
 
     private final IdentityJdbcRepository repository;
@@ -159,30 +158,6 @@ public class OnboardingService {
         audit(actor.userId(), actor.roles().stream().findFirst().orElse(null), "PIN_RESET", "CUSTOMER", customer.customerId(), "SUCCESS", "Transaction PIN reset.");
     }
 
-    public RecoveryResult initiateRecovery(String identifier, String channel) {
-        String normalized = normalize(identifier);
-        IdentityJdbcRepository.UserRecord user = repository.findByIdentifier(normalized, channel);
-        if (user != null) otpService.issue(normalized, channel, "RECOVERY");
-        audit(user == null ? null : user.userId(), null, "PASSWORD_RECOVERY_INITIATED", "USER",
-                user == null ? null : user.userId(), user == null ? "NO_MATCH" : "SUCCESS",
-                "Password recovery initiated.");
-        return new RecoveryResult(identifier, channel, 120, GENERIC_RECOVERY_MESSAGE);
-    }
-
-    @Transactional
-    public void confirmRecovery(String identifier, String channel, String otp, String newPassword) {
-        String normalized = normalize(identifier);
-        IdentityJdbcRepository.UserRecord user = repository.findByIdentifier(normalized, channel);
-        if (user == null || requireOtpResult(normalized, channel, "RECOVERY", otp) != OtpChallengeService.ConsumeResult.VALID) {
-            audit(user == null ? null : user.userId(), null, "PASSWORD_RECOVERY_CONFIRMED", "USER",
-                    user == null ? null : user.userId(), "FAILURE", "Password recovery confirmation rejected.");
-            throw new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID", "OTP is invalid.");
-        }
-        repository.updatePassword(user.userId(), passwordHashing.encode(newPassword));
-        sessions.revokeAll(user.userId());
-        audit(user.userId(), firstRole(user.userId()), "PASSWORD_RECOVERY_CONFIRMED", "USER", user.userId(), "SUCCESS", "Password recovered; active sessions revoked.");
-    }
-
     public OtpChallengeService.OtpIssueResult sendOperatorOtp(AuthenticatedActor actor, String phone) {
         requireOperator(actor);
         return otpService.issue(phone, "SMS", "OPERATOR_CREATE_CUSTOMER");
@@ -276,7 +251,6 @@ public class OnboardingService {
     public record RefreshResult(RefreshSessionService.IssuedRefreshSession session, UserSummary user) {}
     public record UserSummary(UUID userId, UUID customerId, String displayName, String phone, String email,
                               List<String> roles, boolean isPinSet) {}
-    public record RecoveryResult(String identifier, String channel, int expiresInSeconds, String message) {}
     public record OperatorCustomerView(UUID customerId, String fullName, String phone, String email,
                                        boolean isPinSet, Instant createdAt, List<IdentityJdbcRepository.AccountRecord> accounts) {}
 }

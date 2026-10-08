@@ -12,6 +12,8 @@ public record RateLimitProperties(
         Duration registrationOtpWindow,
         int recoveryInitiateLimit,
         Duration recoveryInitiateWindow,
+        int recoveryVerifyLimit,
+        Duration recoveryVerifyWindow,
         int operatorOtpLimit,
         Duration operatorOtpWindow,
         int recipientResolveLimit,

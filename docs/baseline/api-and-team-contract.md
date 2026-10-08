@@ -105,7 +105,8 @@ Roles are not interchangeable. BE checks resource ownership for every Customer r
 | `POST /auth/logout` | Authenticated | Revoke refresh session and clear cookie; `204`. |
 | `GET /auth/csrf` | Anonymous/session | Issue CSRF token for cookie-authenticated refresh/logout; `200`. |
 | `POST /auth/recover/initiate` | Anonymous | Request password recovery OTP via chosen channel (`SMS` or `EMAIL`); always generic `200` (anti-enumeration). |
-| `POST /auth/recover/confirm` | Anonymous | Verify OTP and set new password; revokes all existing sessions; `200`. Unknown identifier = `400 OTP_INVALID`. |
+| `POST /auth/recover/verify` | Anonymous | Verify OTP; on success return a one-time reset token valid for 300 seconds. Unknown identifier and invalid OTP = `400 OTP_INVALID`. |
+| `POST /auth/recover/confirm` | Anonymous | Accept reset token and new password; revoke all refresh sessions; `200`. Invalid/expired/used token = `400 RECOVERY_TOKEN_INVALID`. |
 | `GET /customers/me` | Customer | Return own profile including phone, email, and `isPinSet`; `200`. |
 | `POST /customers/me/pin/setup` | Customer | Mandatory first-login PIN configuration (6 digits); `200`. |
 | `POST /customers/me/pin/change` | Customer | Change PIN by providing valid current PIN; `200`. |
@@ -253,17 +254,37 @@ Response `200`:
 }
 ```
 
-Anti-enumeration: response status, body and timing are **identical** whether or not the identifier is registered. BE looks up the account, then dispatches the OTP asynchronously (after the response / after commit) only when a match exists; no match → no OTP, same response. Rate limit (`429`) applies equally to both cases.
+Anti-enumeration: status and body are identical whether or not the identifier is registered; no match → no OTP. Rate limit (`429`) applies equally to both cases. Uniform response timing and asynchronous dispatch remain a security acceptance target to verify separately; do not assume the current simulated sender proves them.
 
-#### Step 2: Confirm recovery with OTP and new password
-`POST /api/v1/auth/recover/confirm`
+#### Step 2: Verify OTP
+`POST /api/v1/auth/recover/verify`
 
 Request:
 ```json
 {
   "identifier": "0912345678",
   "channel": "SMS",
-  "otp": "849201",
+  "otp": "849201"
+}
+```
+
+Response `200`:
+```json
+{
+  "resetToken": "<opaque-one-time-token>",
+  "expiresInSeconds": 300
+}
+```
+
+Wrong/expired/used OTP or unknown identifier → `400 OTP_INVALID`. OTP attempts are persisted; the fifth wrong attempt invalidates the OTP. Independent IP and normalized-identifier buckets each allow 5 requests per 300 seconds (`429 RATE_LIMITED` if either is exhausted). A successful verify consumes the OTP and issues a new reset token; it does not change the password.
+
+#### Step 3: Set new password
+`POST /api/v1/auth/recover/confirm`
+
+Request:
+```json
+{
+  "resetToken": "<opaque-one-time-token>",
   "newPassword": "NewSecurePassword123!"
 }
 ```
@@ -276,13 +297,14 @@ Response `200`:
 ```
 
 Recovery rules:
-- `channel = SMS` requires `identifier` to be the registered phone; `channel = EMAIL` requires the registered email. Mismatched identifier/channel returns `400 VALIDATION_ERROR`.
-- OTP: 6 digits, TTL `120` seconds, single use, bound to `identifier + channel + purpose=RECOVERY`. A new initiate invalidates the previous recovery OTP. 5 wrong attempts invalidate the OTP; initiate is rate-limited (`429 RATE_LIMITED`).
-- On success, BE hashes and stores the new password and **revokes all refresh tokens of the user** (force logout on every device). Existing access tokens expire naturally within their short TTL.
-- Errors: `400 OTP_INVALID` (wrong/expired/used OTP **or unregistered identifier** — indistinguishable by design), `400 VALIDATION_ERROR` (format, identifier/channel mismatch, password policy — syntax only, never reveals existence), `429 RATE_LIMITED`. Recovery endpoints never return `404`.
-- Audit records every initiate, including unmatched identifiers (internal outcome `NO_MATCH`, never exposed in API) to detect enumeration attempts.
+- `channel = SMS` looks up the registered phone; `channel = EMAIL` looks up the registered email. An identifier not registered on the selected channel receives the generic initiate response and `400 OTP_INVALID` at verify; malformed request syntax may return `400 VALIDATION_ERROR`.
+- OTP: 6 digits, TTL `120` seconds, single use, bound to `identifier + channel + purpose=RECOVERY`. A new initiate invalidates the previous recovery OTP and any active reset token for that account. Initiate is rate-limited (`429 RATE_LIMITED`).
+- Reset token: cryptographically random, stored only as a hash, bound to the user, valid for 300 seconds, one-time use. FE holds it only in memory; no URL, browser storage, analytics or logs. Reload after verify requires starting recovery again. A new verify invalidates prior active reset tokens for that user.
+- On success, BE consumes the reset token, hashes and stores the new password, and **revokes all refresh tokens of the user** in one transaction. Existing access tokens expire naturally within their short TTL. The user returns to login.
+- Errors: verify `400 OTP_INVALID` (wrong/expired/used OTP **or unregistered identifier**); confirm `400 RECOVERY_TOKEN_INVALID` (missing/wrong/expired/used token); `400 VALIDATION_ERROR` for request/password syntax; verify/initiate can return `429 RATE_LIMITED`. Recovery endpoints never return `404`.
+- Audit records initiate, verify and confirm without OTP, password or reset token. Unknown identifiers never appear in public error responses.
 
-FE behavior: "Quên mật khẩu" screen → choose channel (SMS/Email) → enter registered phone or email → enter OTP → enter new password twice (the confirm field is FE-only validation, not sent to BE) → on `200` clear any in-memory session and route to Login.
+FE behavior: "Quên mật khẩu" → choose channel (SMS/Email) and enter identifier → generic initiate response → OTP screen → call verify → only on `200` show new-password form (entered twice locally) → call confirm with reset token and newPassword → clear in-memory session and route to Login. Never treat six typed digits alone as verified.
 
 ### 6.4 Mandatory First-Login PIN Setup & PIN Management
 
@@ -769,8 +791,10 @@ Block / unblock
 Forgot password screen
   Choose channel SMS | EMAIL, enter phone | email
   POST /auth/recover/initiate -> always generic 200 -> OTP screen
-  POST /auth/recover/confirm (otp, newPassword) -> 200 -> Login screen
+  POST /auth/recover/verify (identifier, channel, otp) -> 200 + resetToken -> new password screen
   400 OTP_INVALID -> "Mã OTP không đúng hoặc đã hết hạn"
+  POST /auth/recover/confirm (resetToken, newPassword) -> 200 -> Login screen
+  400 RECOVERY_TOKEN_INVALID -> restart recovery
 ```
 
 ## 9. Zustand and server-state ownership

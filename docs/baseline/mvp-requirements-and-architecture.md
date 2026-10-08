@@ -112,7 +112,7 @@ Least privilege là mặc định. Role không thay thế ownership check: Custo
 ### FR-07 Audit trail
 
 - Ghi actor, action, target, timestamp, outcome, correlation ID và metadata cần thiết.
-- Ghi audit cho login outcome phù hợp, registration/counter creation, account creation, seed balance, transfer, PIN setup/change/reset, password recovery (initiate/confirm) và thay đổi quyền/trạng thái.
+- Ghi audit cho login outcome phù hợp, registration/counter creation, account creation, seed balance, transfer, PIN setup/change/reset, password recovery (initiate/verify/confirm) và thay đổi quyền/trạng thái.
 - Audit trail không chứa password, PIN, OTP, token, secret hoặc toàn bộ payload nhạy cảm.
 - Customer không thể sửa hoặc xóa audit record qua API.
 
@@ -127,10 +127,12 @@ Least privilege là mặc định. Role không thay thế ownership check: Custo
 
 - Người dùng bấm "Quên mật khẩu" và chọn kênh nhận OTP: `SMS` (nhập SĐT đã đăng ký) hoặc `EMAIL` (nhập email đã đăng ký).
 - Bước 1 `POST /auth/recover/initiate`: hệ thống gửi OTP 6 số (TTL 120 giây) tới đúng kênh đã chọn. Identifier phải khớp loại kênh.
-- Bước 2 `POST /auth/recover/confirm`: người dùng nhập OTP + mật khẩu mới (FE yêu cầu nhập 2 lần). OTP chỉ dùng một lần, gắn với `identifier + channel + purpose`; sai 5 lần thì OTP bị vô hiệu.
+- Bước 2 `POST /auth/recover/verify`: người dùng nhập OTP. OTP dùng một lần, gắn với `identifier + channel + purpose`, sai 5 lần bị vô hiệu. OTP hợp lệ trả reset token ngẫu nhiên, dùng một lần, TTL 5 phút; FE chỉ giữ trong bộ nhớ.
+- Bước 3 `POST /auth/recover/confirm`: FE gửi reset token và mật khẩu mới (trên giao diện nhập/xác nhận 2 lần). API không còn nhận OTP cùng mật khẩu. Reset token sai, hết hạn hoặc đã dùng trả `400 RECOVERY_TOKEN_INVALID`.
+- Yêu cầu OTP mới vô hiệu OTP và reset token cũ. `/verify` giới hạn riêng bucket IP và identifier, mỗi bucket 5 lần/300 giây; hết một bucket là từ chối.
 - Khi thành công: lưu password hash mới và **thu hồi toàn bộ refresh token** của user (force logout mọi thiết bị) trong cùng transaction. Đây là yêu cầu bắt buộc cho mọi sự kiện đổi mật khẩu.
-- Initiate bị rate-limit theo identifier và IP. Audit ghi initiate/confirm với outcome (kể cả identifier không khớp, outcome nội bộ `NO_MATCH`), không ghi OTP hoặc mật khẩu.
-- Chống dò tài khoản (anti-enumeration): initiate **luôn trả `200` với cùng nội dung** dù identifier có đăng ký hay không; OTP được gửi bất đồng bộ chỉ khi có tài khoản, để thời gian phản hồi không lộ thông tin. Confirm với identifier không tồn tại trả `400 OTP_INVALID`, giống hệt OTP sai. Hai endpoint recovery không bao giờ trả `404`.
+- Initiate bị rate-limit theo identifier và IP. Audit ghi các bước recovery có user tương ứng, không ghi OTP, reset token hoặc mật khẩu.
+- Chống dò tài khoản (anti-enumeration): initiate **luôn trả `200` với cùng nội dung** dù identifier có đăng ký hay không; verify với identifier không tồn tại trả `400 OTP_INVALID`, giống OTP sai. Không trả `404`. Cần kiểm thử thêm chênh lệch thời gian phản hồi giữa tài khoản có/không có trước nghiệm thu bảo mật.
 - Rủi ro chấp nhận (accepted risk): luồng đăng ký vẫn trả `409 PHONE_ALREADY_REGISTERED` / `EMAIL_ALREADY_REGISTERED` để UX rõ ràng; giảm thiểu bằng rate limit chặt trên `send-otp` và yêu cầu OTP hợp lệ trước khi submit.
 
 ### FR-10 Transaction PIN management
@@ -233,17 +235,19 @@ Chỉ `COMPLETED` làm thay đổi số dư. Replay `POST /transfers` cùng key 
 flowchart TD
     FG["Quên mật khẩu<br/>chọn kênh nhận OTP"] --> SMS["Kênh SMS<br/>nhập SĐT đã đăng ký"]
     FG --> EM["Kênh Email<br/>nhập email đã đăng ký"]
-    SMS --> GEN["Luôn trả 200 chung<br/>OTP gửi bất đồng bộ nếu có tài khoản"]
+    SMS --> GEN["Luôn trả 200 chung<br/>gửi OTP nếu có tài khoản"]
     EM --> GEN
-    GEN --> CF["Nhập OTP + mật khẩu mới<br/>sai hoặc không tồn tại → 400 OTP_INVALID"]
+    GEN --> VF["Nhập OTP → verify<br/>sai hoặc không tồn tại → 400 OTP_INVALID"]
+    VF --> TK["OTP đúng → reset token 5 phút<br/>chỉ giữ trong bộ nhớ"]
+    TK --> CF["Nhập mật khẩu mới 2 lần<br/>confirm bằng reset token"]
     CF --> RS["Đổi mật khẩu<br/>thu hồi mọi refresh token (force logout)"]
 
     classDef customer fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef done fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef system fill:#F1EFE8,stroke:#5F5E5A,color:#444441
-    class FG,SMS,EM,CF customer
+    class FG,SMS,EM,VF,CF customer
     class RS done
-    class GEN system
+    class GEN,TK system
 ```
 
 #### BF-5 Nghiệp vụ Operator tại quầy (FR-02, FR-02b, FR-03)
@@ -426,7 +430,7 @@ Each phase must leave a runnable, testable increment. FE and BE can work in para
 - Operator block makes transfer from/to the account fail with `409 ACCOUNT_NOT_ELIGIBLE`; unblock restores it; repeated block is idempotent; both are audited.
 - Operator customer lookup requires exactly one exact filter; unfiltered request returns `400`.
 - Account recovery works via both SMS and Email channels; after success, old password fails and all previous refresh tokens are rejected.
-- Recovery initiate returns identical status/body for registered and unregistered identifiers; confirm with unregistered identifier returns `400 OTP_INVALID`.
+- Recovery initiate returns identical status/body for registered and unregistered identifiers; verify with unregistered identifier returns `400 OTP_INVALID`; invalid reset token at confirm returns `400 RECOVERY_TOKEN_INVALID`.
 - Operator seed balance updates only eligible account and creates traceable record.
 - Customer A cannot read or transfer from Customer B account by substituting IDs.
 - Valid internal transfer debits source and credits destination by identical exact decimal amount.

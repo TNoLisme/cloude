@@ -16,5 +16,7 @@ public interface OtpChallengeRepository {
 
     void invalidate(UUID id, Instant invalidatedAt);
 
+    void invalidateActive(String identifier, String channel, String purpose, Instant invalidatedAt);
+
     boolean consume(UUID id, Instant consumedAt);
 }

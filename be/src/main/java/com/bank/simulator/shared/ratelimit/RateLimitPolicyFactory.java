@@ -20,6 +20,7 @@ public class RateLimitPolicyFactory {
             case "login" -> new RateLimitPolicy(operation, properties.loginLimit(), properties.loginWindow());
             case "registration-otp" -> new RateLimitPolicy(operation, properties.registrationOtpLimit(), properties.registrationOtpWindow());
             case "recovery-initiate" -> new RateLimitPolicy(operation, properties.recoveryInitiateLimit(), properties.recoveryInitiateWindow());
+            case "recovery-verify" -> new RateLimitPolicy(operation, properties.recoveryVerifyLimit(), properties.recoveryVerifyWindow());
             case "operator-otp" -> new RateLimitPolicy(operation, properties.operatorOtpLimit(), properties.operatorOtpWindow());
             case "recipient-resolve" -> new RateLimitPolicy(operation, properties.recipientResolveLimit(), properties.recipientResolveWindow());
             case "operator-lookup" -> new RateLimitPolicy(operation, properties.operatorLookupLimit(), properties.operatorLookupWindow());

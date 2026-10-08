@@ -80,6 +80,15 @@ public class JdbcOtpChallengeRepository implements OtpChallengeRepository {
     }
 
     @Override
+    public void invalidateActive(String identifier, String channel, String purpose, Instant invalidatedAt) {
+        jdbcTemplate.update("""
+                UPDATE otp_challenges SET invalidated_at = ?
+                WHERE identifier_normalized = ? AND channel = ? AND purpose = ?
+                  AND consumed_at IS NULL AND invalidated_at IS NULL
+                """, Timestamp.from(invalidatedAt), normalize(identifier), channel, purpose);
+    }
+
+    @Override
     public boolean consume(UUID id, Instant consumedAt) {
         return jdbcTemplate.update("UPDATE otp_challenges SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL AND invalidated_at IS NULL",
                 Timestamp.from(consumedAt), id) == 1;

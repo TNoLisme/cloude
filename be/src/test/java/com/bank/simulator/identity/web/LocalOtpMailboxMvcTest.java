@@ -61,7 +61,7 @@ class LocalOtpMailboxMvcTest {
         @Primary
         RateLimitProperties rateLimitProperties() {
             return new RateLimitProperties(5, Duration.ofSeconds(60), 3, Duration.ofSeconds(300),
-                    3, Duration.ofSeconds(300), 10, Duration.ofSeconds(300),
+                    3, Duration.ofSeconds(300), 5, Duration.ofSeconds(300), 10, Duration.ofSeconds(300),
                     30, Duration.ofSeconds(60), 30, Duration.ofSeconds(60), 1000);
         }
     }

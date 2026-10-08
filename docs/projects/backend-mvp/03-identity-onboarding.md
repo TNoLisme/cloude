@@ -19,7 +19,7 @@ Implement exact operations and DTOs from OpenAPI:
 - `POST /auth/refresh` → `AccessTokenResponse`, statuses 200/401/403, `X-CSRF-Token`, rotated `Set-Cookie`.
 - `POST /auth/logout` → 204; authenticated bearer, refresh cookie and CSRF header.
 - `GET /auth/csrf` → `CsrfTokenResponse`.
-- `POST /auth/recover/initiate` and `/confirm`; generic anti-enumeration response, OTP via SMS/Email.
+- `POST /auth/recover/initiate`, `/verify` and `/confirm`; generic anti-enumeration response, OTP via SMS/Email, single-use reset token after verification.
 - `GET /customers/me` → own `CustomerProfile`.
 - `/customers/me/pin/setup`, `/change`, `/forgot/initiate`, `/forgot/confirm` exact request/status schemas.
 - `POST /operator/customers/send-otp`, `POST /operator/customers` for OPERATOR/ADMIN.
@@ -96,7 +96,7 @@ These are module boundaries, not exact controllers. Refine records with validati
 ### Recovery/PIN
 
 - Recovery initiate always returns the same OpenAPI generic 200 body for registered/unregistered identifier and channel. Do not reveal lookup result in response/timing; dispatch only for match.
-- Recovery confirm validates OTP bound to identifier/channel/RECOVERY; transaction updates password hash, consumes OTP and revokes all refresh sessions for user. Old refresh tokens fail after commit.
+- Recovery verify validates and consumes OTP bound to identifier/channel/RECOVERY, then issues a single-use reset token (TTL 5 minutes). Recovery confirm accepts only reset token + new password; transaction updates password hash, consumes token and revokes all refresh sessions for user. New initiate invalidates previous OTP/reset token. Old refresh tokens fail after commit.
 - PIN setup allowed only when no PIN is configured; change requires valid current PIN; forgot-PIN initiate sends PHONE OTP and confirm resets PIN after OTP verification. Five consecutive incorrect PIN checks lock for 15 minutes. Reset flow updates failure/lock counters according to baseline; document test behavior.
 - PIN not returned, serialized, audited, or logged.
 
@@ -119,7 +119,7 @@ Email normalization: trim and lowercase using `Locale.ROOT`; store normalized un
 - Staff login compatibility alias is `customerId=userId`; no customer/account rows; user-role array supports multiple roles.
 - Refresh rotation/cookie, CSRF, logout and old-token revocation.
 - PIN setup only once, change, reset OTP, wrong attempt lock and unlock after fixed clock 15 minutes.
-- Recovery SMS and EMAIL; anti-enumeration status/body; successful reset revokes all user sessions in same transaction; invalid/unknown confirm returns identical OTP_INVALID.
+- Recovery SMS and EMAIL; anti-enumeration status/body; successful reset revokes all user sessions in same transaction; invalid/unknown verify returns `OTP_INVALID`, invalid/expired/used confirm token returns `RECOVERY_TOKEN_INVALID`.
 - Local mailbox OTP usable by local E2E; no log output/shared route.
 - API response and error bodies validate against OpenAPI. PostgreSQL Testcontainers cover atomicity and uniqueness races.
 

@@ -12,7 +12,8 @@ Các path trong bảng có prefix `/api/v1`. DTO lấy từ generated types.
 | Đăng ký: xác nhận | POST /auth/register | phone, email, password, fullName, otp, address tùy chọn; 201 RegistrationResponse |
 | Đăng nhập | POST /auth/login | phone/password; 200 LoginResponse + cookie |
 | Recovery: gửi mã | POST /auth/recover/initiate | identifier/channel SMS hoặc EMAIL; 200 chung |
-| Recovery: đặt mật khẩu | POST /auth/recover/confirm | identifier/channel/otp/newPassword; 200 MessageResponse |
+| Recovery: xác minh mã | POST /auth/recover/verify | identifier/channel/otp; 200 trả resetToken và expiresInSeconds=300 |
+| Recovery: đặt mật khẩu | POST /auth/recover/confirm | resetToken/newPassword; 200 MessageResponse |
 | Đặt PIN | POST /customers/me/pin/setup | pin/confirmPin; 200 |
 | Đổi PIN | POST /customers/me/pin/change | currentPin/newPin/confirmNewPin; 200 |
 | Quên PIN: gửi mã | POST /customers/me/pin/forgot/initiate | Không tự thêm identifier/body chưa có schema |
@@ -30,7 +31,7 @@ Confirm password ở FE chỉ kiểm tra trùng và không gửi field thừa. C
 
 Login: idle/submitting/invalid/rate-limited/success. Unknown phone và wrong password cùng thông báo chung; không tra cứu tồn tại. Tắt double submit. Nhận UserSummary rồi chọn workspace theo roadmap; CUSTOMER chưa có PIN vào setup. Role chỉ dùng điều hướng, backend vẫn kiểm tra request.
 
-Recovery: chọn SMS/EMAIL → nhập identifier → generic confirmation → OTP + mật khẩu mới hai lần. Chuyển channel/identifier phải khởi tạo lại flow. Nội dung luôn “Nếu thông tin đã đăng ký, mã OTP sẽ được gửi tới kênh bạn chọn”, không tuyên bố tìm thấy account. 400 OTP_INVALID bao gồm identifier không tồn tại. Thành công xóa phiên UI và về login; các refresh session cũ bị thu hồi nhưng access token cũ có thể còn sống đến TTL, không mô tả force logout tức thời mọi request.
+Recovery: chọn SMS/EMAIL → nhập identifier → generic confirmation → màn OTP riêng → verify thành công mới mở form mật khẩu mới hai lần. Chuyển channel/identifier hoặc yêu cầu OTP mới khởi tạo lại flow và làm resetToken cũ không còn dùng được. Nội dung luôn “Nếu thông tin đã đăng ký, mã OTP sẽ được gửi tới kênh bạn chọn”, không tuyên bố tìm thấy account. `400 OTP_INVALID` ở verify bao gồm identifier không tồn tại. FE giữ resetToken chỉ trong memory, không lưu URL/browser storage/query cache/log; reload sau verify phải bắt đầu lại. `400 RECOVERY_TOKEN_INVALID` ở confirm dẫn về bước yêu cầu OTP mới, không thử dùng lại token. Thành công xóa phiên UI và về login; các refresh session cũ bị thu hồi nhưng access token cũ có thể còn sống đến TTL, không mô tả force logout tức thời mọi request.
 
 PIN: setup trước transfer; change cần PIN hiện tại, reset cần OTP phone. Thành công tải lại GET /customers/me và đồng bộ isPinSet presentation state. PIN_LOCKED không có trường remaining-seconds chuẩn thì không tạo countdown chính xác từ thời điểm nhận lỗi; thông báo khóa tạm và cho thử lại theo server. Không thể reset PIN bằng quyền Operator.
 

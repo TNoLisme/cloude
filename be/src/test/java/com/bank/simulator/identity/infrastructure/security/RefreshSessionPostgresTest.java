@@ -90,8 +90,10 @@ class RefreshSessionPostgresTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> onboarding.refreshSession(original.rawToken()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(jdbcTemplate.queryForObject("SELECT revoked_at FROM refresh_sessions WHERE id = ?",
-                (rs, row) -> rs.getTimestamp(1), original.sessionId())).isNull();
+        java.sql.Timestamp revokedAt = jdbcTemplate.queryForObject(
+                "SELECT revoked_at FROM refresh_sessions WHERE id = ?",
+                (rs, row) -> rs.getTimestamp(1), original.sessionId());
+        assertThat(revokedAt).isNull();
 
         jdbcTemplate.update("UPDATE users SET is_active = TRUE WHERE id = ?", userId);
         var refreshed = onboarding.refreshSession(original.rawToken());

@@ -1,6 +1,7 @@
 package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.application.OnboardingService;
+import com.bank.simulator.identity.application.RecoveryService;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -29,7 +30,7 @@ class OnboardingCookieTest {
                         "0912345678", "customer@example.test", List.of("CUSTOMER"), false));
         OnboardingService service = mock(OnboardingService.class);
         when(service.login("0912345678", "password")).thenReturn(login);
-        OnboardingController controller = new OnboardingController(service,
+        OnboardingController controller = new OnboardingController(service, mock(RecoveryService.class),
                 Clock.fixed(now, ZoneOffset.UTC));
 
         MockHttpServletRequest secureRequest = new MockHttpServletRequest();

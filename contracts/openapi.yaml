@@ -111,7 +111,7 @@ paths:
       description: >-
         Request recovery OTP via chosen channel (SMS to registered phone or EMAIL to registered email).
         Anti-enumeration: always returns the same 200 body whether or not the identifier is registered;
-        OTP is dispatched asynchronously only when a matching account exists, so response time does not reveal existence.
+        OTP is dispatched only when a matching account exists. A new request invalidates the previous recovery OTP and any active reset token for that account.
       requestBody:
         required: true
         content:
@@ -124,14 +124,37 @@ paths:
         '400': { $ref: '#/components/responses/ProblemResponse' }
         '429': { $ref: '#/components/responses/ProblemResponse' }
 
+  /auth/recover/verify:
+    post:
+      operationId: verifyAccountRecoveryOtp
+      tags: [Auth]
+      security: []
+      description: >-
+        Verify the single-use 6-digit OTP (TTL 120s) for the chosen SMS or EMAIL channel.
+        On success, consume the OTP and return a one-time reset token valid for 300 seconds.
+        Wrong, expired, used OTP and unknown identifier return the same 400 OTP_INVALID.
+        Each independent IP and identifier rate-limit bucket allows 5 requests per 300 seconds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecoverVerifyRequest' }
+      responses:
+        '200':
+          description: OTP verified; reset token issued
+          content: { application/json: { schema: { $ref: '#/components/schemas/RecoverVerifyResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/recover/confirm:
     post:
       operationId: confirmAccountRecovery
       tags: [Auth]
       security: []
       description: >-
-        Validate single-use 6-digit OTP (TTL 120s) from chosen channel and set new password. Revokes all refresh tokens of the user (force logout on every device).
-        Anti-enumeration: an unregistered identifier returns 400 OTP_INVALID, identical to a wrong OTP.
+        Accept only the one-time reset token obtained from /auth/recover/verify and a new password.
+        Atomically consume the token, save the new password and revoke all refresh tokens of the user.
+        Missing, invalid, expired or used token returns 400 RECOVERY_TOKEN_INVALID.
       requestBody:
         required: true
         content:
@@ -668,14 +691,28 @@ components:
       properties:
         message: { type: string, example: "Password reset successfully and active sessions revoked" }
 
-    RecoverConfirmRequest:
+    RecoverVerifyRequest:
       type: object
       additionalProperties: false
-      required: [identifier, channel, otp, newPassword]
+      required: [identifier, channel, otp]
       properties:
         identifier: { type: string }
         channel: { $ref: '#/components/schemas/RecoveryChannel' }
         otp: { type: string, pattern: '^[0-9]{6}$' }
+
+    RecoverVerifyResponse:
+      type: object
+      required: [resetToken, expiresInSeconds]
+      properties:
+        resetToken: { type: string, description: 'Opaque one-time recovery proof; keep in memory only and never put in a URL or log' }
+        expiresInSeconds: { type: integer, example: 300 }
+
+    RecoverConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [resetToken, newPassword]
+      properties:
+        resetToken: { type: string, description: 'One-time token returned by recovery verify' }
         newPassword: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
 
     SetupPinRequest:

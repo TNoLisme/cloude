@@ -25,7 +25,8 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
         String operation = operation(request.getMethod(), path);
         if (operation == null) return true;
         RateLimitPolicy policy = policies.policy(operation);
-        if (operation.equals("login") || operation.equals("registration-otp") || operation.equals("recovery-initiate")) {
+        if (operation.equals("login") || operation.equals("registration-otp")
+                || operation.equals("recovery-initiate") || operation.equals("recovery-verify")) {
             String identifier = bodyIdentifier(request, operation);
             rateLimiter.check(policies.trustedIpKey(operation, clientIpResolver.resolve(request)), policy);
             rateLimiter.check(policies.identifierKey(operation, identifier), policy);
@@ -52,6 +53,7 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
         if ("POST".equals(method) && "/auth/login".equals(path)) return "login";
         if ("POST".equals(method) && "/auth/register/send-otp".equals(path)) return "registration-otp";
         if ("POST".equals(method) && "/auth/recover/initiate".equals(path)) return "recovery-initiate";
+        if ("POST".equals(method) && "/auth/recover/verify".equals(path)) return "recovery-verify";
         if ("POST".equals(method) && "/operator/customers/send-otp".equals(path)) return "operator-otp";
         if ("POST".equals(method) && "/recipients/resolve".equals(path)) return "recipient-resolve";
         if ("GET".equals(method) && "/operator/customers".equals(path)) return "operator-lookup";

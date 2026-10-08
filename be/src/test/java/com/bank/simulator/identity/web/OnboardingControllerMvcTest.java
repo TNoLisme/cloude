@@ -1,6 +1,7 @@
 package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.application.OnboardingService;
+import com.bank.simulator.identity.application.RecoveryService;
 import com.bank.simulator.identity.infrastructure.persistence.IdentityJdbcRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OnboardingControllerMvcTest {
 
     private final OnboardingService service = mock(OnboardingService.class);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new OnboardingController(service,
+    private final RecoveryService recovery = mock(RecoveryService.class);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new OnboardingController(service, recovery,
             Clock.fixed(Instant.parse("2026-10-02T00:00:00Z"), ZoneOffset.UTC)))
             .setControllerAdvice(new com.bank.simulator.shared.error.GlobalExceptionHandler())
             .build();
@@ -134,8 +136,8 @@ class OnboardingControllerMvcTest {
 
     @Test
     void recoveryInitiateReturnsGenericResponseWithoutRevealingMatch() throws Exception {
-        when(service.initiateRecovery("missing@example.test", "EMAIL"))
-                .thenReturn(new OnboardingService.RecoveryResult("missing@example.test", "EMAIL", 120,
+        when(recovery.initiate("missing@example.test", "EMAIL"))
+                .thenReturn(new RecoveryService.InitiateResult("missing@example.test", "EMAIL", 120,
                         "If the information is registered, an OTP has been sent to the selected channel."));
 
         mvc.perform(post("/auth/recover/initiate").contentType(MediaType.APPLICATION_JSON).content("""
@@ -146,17 +148,43 @@ class OnboardingControllerMvcTest {
     }
 
     @Test
-    void recoveryConfirmUnknownIdentifierReturnsOtpInvalidProblem() throws Exception {
-        doThrow(new com.bank.simulator.shared.error.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                "OTP_INVALID", "OTP is invalid.")).when(service).confirmRecovery(
-                "missing@example.test", "EMAIL", "012345", "new-password-1234");
+    void recoveryVerifyUnknownIdentifierReturnsOtpInvalidProblem() throws Exception {
+        when(recovery.verify("missing@example.test", "EMAIL", "012345"))
+                .thenReturn(RecoveryService.VerifyResult.invalid());
 
-        mvc.perform(post("/auth/recover/confirm").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"identifier":"missing@example.test","channel":"EMAIL","otp":"012345",
-                         "newPassword":"new-password-1234"}
+        mvc.perform(post("/auth/recover/verify").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"identifier":"missing@example.test","channel":"EMAIL","otp":"012345"}
                         """))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
                 .andExpect(jsonPath("$.code").value("OTP_INVALID"));
+    }
+
+    @Test
+    void recoveryVerifyReturnsResetTokenOnlyAfterValidOtp() throws Exception {
+        when(recovery.verify("0912345678", "SMS", "012345"))
+                .thenReturn(new RecoveryService.VerifyResult("opaque-reset-token", 300));
+
+        mvc.perform(post("/auth/recover/verify").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"identifier":"0912345678","channel":"SMS","otp":"012345"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.resetToken").value("opaque-reset-token"))
+                .andExpect(jsonPath("$.expiresInSeconds").value(300));
+    }
+
+    @Test
+    void recoveryConfirmRejectsOldOtpAndPasswordPayload() throws Exception {
+        doThrow(new com.bank.simulator.shared.error.ApiException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                "RECOVERY_TOKEN_INVALID", "Recovery token is invalid or expired."))
+                .when(recovery).confirm(isNull(), eq("new-password-1234"));
+
+        mvc.perform(post("/auth/recover/confirm").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"identifier":"0912345678","channel":"SMS","otp":"012345",
+                         "newPassword":"new-password-1234"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("RECOVERY_TOKEN_INVALID"));
     }
 }

@@ -28,20 +28,6 @@ import static org.mockito.Mockito.when;
 class OnboardingServiceTest {
 
     @Test
-    void recoveryConfirmWithUnknownUserFailsAsGenericInvalidOtp() {
-        IdentityJdbcRepository repository = mock(IdentityJdbcRepository.class);
-        when(repository.findByIdentifier("missing@example.test", "EMAIL")).thenReturn(null);
-        OnboardingService service = service(repository);
-
-        assertThatThrownBy(() -> service.confirmRecovery("missing@example.test", "EMAIL", "123456", "new-password-123"))
-                .isInstanceOfSatisfying(com.bank.simulator.shared.error.ApiException.class, exception -> {
-                    assertThat(exception.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(exception.code()).isEqualTo("OTP_INVALID");
-                });
-        verify(repository, never()).updatePassword(any(UUID.class), anyString());
-    }
-
-    @Test
     void operatorMustHaveAllowedRole() {
         OnboardingService service = service(mock(IdentityJdbcRepository.class));
 

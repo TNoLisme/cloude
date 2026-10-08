@@ -32,6 +32,7 @@ public class SecurityConfiguration {
                                 "/auth/csrf",
                                 "/auth/refresh",
                                 "/auth/recover/initiate",
+                                "/auth/recover/verify",
                                 "/auth/recover/confirm",
                                 "/v3/api-docs/**",
                                 "/api/v1/v3/api-docs/**",
