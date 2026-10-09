@@ -22,11 +22,11 @@ public class AuditEventRepository {
                 SELECT id, event_type, actor_id, target_type, target_id, outcome,
                        occurred_at, correlation_id, summary
                 FROM audit_events
-                WHERE (? IS NULL OR event_type = ?)
-                  AND (? IS NULL OR actor_id = ?)
-                  AND (? IS NULL OR occurred_at >= ?)
-                  AND (? IS NULL OR occurred_at < ?)
-                  AND (? IS NULL OR occurred_at < ? OR (occurred_at = ? AND id < ?))
+                WHERE (CAST(? AS VARCHAR) IS NULL OR event_type = ?)
+                  AND (CAST(? AS UUID) IS NULL OR actor_id = ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR occurred_at >= ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR occurred_at < ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR occurred_at < ? OR (occurred_at = ? AND id < ?))
                 ORDER BY occurred_at DESC, id DESC
                 LIMIT ?
                 """);

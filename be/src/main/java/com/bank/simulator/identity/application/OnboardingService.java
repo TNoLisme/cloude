@@ -69,8 +69,13 @@ public class OnboardingService {
 
     @Transactional
     public RegistrationResult register(String phone, String email, String password, String fullName, String address, String otp) {
-        String normalizedEmail = normalize(email);
         requireOtp(phone, "SMS", "REGISTRATION", otp);
+        return createVerifiedRegistration(phone, email, password, fullName, address);
+    }
+
+    // Package-only: caller must validate proof and hold the registration transaction.
+    RegistrationResult createVerifiedRegistration(String phone, String email, String password, String fullName, String address) {
+        String normalizedEmail = normalize(email);
         if (repository.findByPhone(phone) != null) conflict("PHONE_ALREADY_REGISTERED", "Phone number is already registered.");
         if (repository.findByIdentifier(normalizedEmail, "EMAIL") != null) conflict("EMAIL_ALREADY_REGISTERED", "Email address is already registered.");
         UUID userId = UUID.randomUUID();

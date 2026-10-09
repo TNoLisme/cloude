@@ -30,6 +30,26 @@ paths:
         '409': { $ref: '#/components/responses/ProblemResponse' }
         '429': { $ref: '#/components/responses/ProblemResponse' }
 
+  /auth/register/verify-otp:
+    post:
+      operationId: verifyRegistrationOtp
+      tags: [Auth]
+      security: []
+      description: Consume a valid registration SMS OTP and issue a phone-bound one-time proof valid for 300 seconds. A new OTP request invalidates existing proofs. Wrong/expired/used OTP returns 400 OTP_INVALID. IP and phone buckets each allow 5 requests per 300 seconds by default.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterVerifyRequest' }
+      responses:
+        '200':
+          description: Verified; keep registrationToken in memory only, never in URL, browser storage or logs
+          headers:
+            Cache-Control: { schema: { type: string }, description: no-store }
+          content: { application/json: { schema: { $ref: '#/components/schemas/RegisterVerifyResponse' } } }
+        '400': { $ref: '#/components/responses/ProblemResponse' }
+        '429': { $ref: '#/components/responses/ProblemResponse' }
+
   /auth/register:
     post:
       operationId: registerCustomer
@@ -578,14 +598,35 @@ components:
     RegisterRequest:
       type: object
       additionalProperties: false
-      required: [phone, email, password, fullName, otp]
+      required: [phone, email, password, fullName]
+      description: Supply exactly one of legacy otp or registrationToken obtained from verify-otp. Token consumption and account creation are atomic. Invalid/expired/used/wrong-phone token returns 400 REGISTRATION_TOKEN_INVALID.
+      oneOf:
+        - required: [otp]
+          not: { required: [registrationToken] }
+        - required: [registrationToken]
+          not: { required: [otp] }
       properties:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
         email: { $ref: '#/components/schemas/EmailAddress' }
         password: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
         fullName: { type: string, minLength: 1, maxLength: 120 }
         otp: { type: string, pattern: '^[0-9]{6}$', description: 6-digit OTP verified via SMS }
+        registrationToken: { type: string, minLength: 1, maxLength: 128, writeOnly: true, description: Opaque phone-bound one-time proof from verify-otp, TTL 300s }
         address: { type: string, maxLength: 300 }
+
+    RegisterVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, otp]
+      properties:
+        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        otp: { type: string, pattern: '^[0-9]{6}$' }
+    RegisterVerifyResponse:
+      type: object
+      required: [registrationToken, expiresInSeconds]
+      properties:
+        registrationToken: { type: string, description: Opaque proof; memory only }
+        expiresInSeconds: { type: integer, minimum: 1, example: 300 }
 
     RegistrationResponse:
       type: object

@@ -29,11 +29,11 @@ public class RiskFlagRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT id, transfer_id, rule_id, rule_version, reason, detected_at
                 FROM risk_flags
-                WHERE (? IS NULL OR rule_id = ?)
-                  AND (? IS NULL OR transfer_id = ?)
-                  AND (? IS NULL OR detected_at >= ?)
-                  AND (? IS NULL OR detected_at < ?)
-                  AND (? IS NULL OR detected_at < ? OR (detected_at = ? AND id < ?))
+                WHERE (CAST(? AS VARCHAR) IS NULL OR rule_id = ?)
+                  AND (CAST(? AS UUID) IS NULL OR transfer_id = ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR detected_at >= ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR detected_at < ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR detected_at < ? OR (detected_at = ? AND id < ?))
                 ORDER BY detected_at DESC, id DESC
                 LIMIT ?
                 """);

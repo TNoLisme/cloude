@@ -2,6 +2,7 @@ package com.bank.simulator.identity.web;
 
 import com.bank.simulator.identity.application.OnboardingService;
 import com.bank.simulator.identity.application.RecoveryService;
+import com.bank.simulator.identity.application.RegistrationVerificationService;
 import com.bank.simulator.identity.domain.AuthenticatedActor;
 import com.bank.simulator.identity.infrastructure.otp.OtpChallengeService;
 import jakarta.validation.Valid;
@@ -23,25 +24,42 @@ public class OnboardingController {
 
     private final OnboardingService service;
     private final RecoveryService recovery;
+    private final RegistrationVerificationService registrationVerification;
 
     private final Clock clock;
 
     public OnboardingController(OnboardingService service, RecoveryService recovery, Clock clock) {
+        this(service, recovery, clock, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OnboardingController(OnboardingService service, RecoveryService recovery, Clock clock, RegistrationVerificationService registrationVerification) {
         this.service = service;
         this.recovery = recovery;
         this.clock = clock;
+        this.registrationVerification = registrationVerification;
     }
 
     @PostMapping("/auth/register/send-otp")
     public SendOtpResponse sendRegistrationOtp(@Valid @RequestBody SendOtpRequest request) {
-        OtpChallengeService.OtpIssueResult result = service.sendRegistrationOtp(request.phone());
+        OtpChallengeService.OtpIssueResult result = registrationVerification == null ? service.sendRegistrationOtp(request.phone()) : registrationVerification.sendOtp(request.phone());
         return new SendOtpResponse(request.phone(), result.expiresInSeconds(), "OTP sent successfully");
     }
 
     @PostMapping("/auth/register")
     public ResponseEntity<RegistrationResponse> register(@Valid @RequestBody RegisterRequest request) {
-        OnboardingService.RegistrationResult result = service.register(request.phone(), request.email(), request.password(), request.fullName(), request.address(), request.otp());
+        if ((request.otp() == null) == (request.registrationToken() == null)) throw new com.bank.simulator.shared.error.ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Exactly one registration proof is required.");
+        OnboardingService.RegistrationResult result = request.registrationToken() == null
+                ? service.register(request.phone(), request.email(), request.password(), request.fullName(), request.address(), request.otp())
+                : registrationVerification.register(request.phone(), request.email(), request.password(), request.fullName(), request.address(), request.registrationToken());
         return ResponseEntity.status(HttpStatus.CREATED).body(registration(result));
+    }
+
+    @PostMapping("/auth/register/verify-otp")
+    public ResponseEntity<RegistrationVerificationService.VerifyResult> verifyRegistration(@Valid @RequestBody RegisterVerifyRequest request) {
+        var result = registrationVerification.verify(request.phone(), request.otp());
+        if (result.registrationToken() == null) throw new com.bank.simulator.shared.error.ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID", "OTP is invalid.");
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(result);
     }
 
     @PostMapping("/auth/login")
@@ -120,9 +138,11 @@ public class OnboardingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(registration(result));
     }
     @GetMapping("/operator/customers")
-    public OnboardingService.OperatorCustomerView operatorLookup(@RequestParam(required = false) String phone,
-                                                                  @RequestParam(required = false) String email) {
-        return service.lookup(actor().value(), phone, email);
+    public OperatorCustomerResponse operatorLookup(@RequestParam(required = false) String phone,
+                                                    @RequestParam(required = false) String email) {
+        var customer = service.lookup(actor().value(), phone, email);
+        return new OperatorCustomerResponse(customer.customerId(), customer.fullName(), customer.phone(), customer.email(),
+                customer.isPinSet(), customer.createdAt(), customer.accounts().stream().map(this::account).toList());
     }
 
     private AuthenticatedActor actorValue() {
@@ -155,7 +175,10 @@ public class OnboardingController {
                                   @NotBlank @Size(min = 12, max = 128) String password,
                                   @NotBlank @Size(min = 1, max = 120) String fullName,
                                   @Pattern(regexp = "^[0-9]{6}$") String otp,
-                                  @Size(max = 300) String address) {}
+                                  @Size(max = 300) String address,
+                                  @Size(min = 1, max = 128) String registrationToken) {}
+    public record RegisterVerifyRequest(@NotBlank @Pattern(regexp = "^0[3-9][0-9]{8}$") String phone,
+                                        @NotBlank @Pattern(regexp = "^[0-9]{6}$") String otp) {}
     public record OperatorSendOtpRequest(@NotBlank @Pattern(regexp = "^0[3-9][0-9]{8}$") String phone) {}
     public record OperatorCreateCustomerRequest(@NotBlank @Pattern(regexp = "^0[3-9][0-9]{8}$") String phone,
                                                 @NotBlank @Email @Size(max = 254) String email,
@@ -186,5 +209,7 @@ public class OnboardingController {
                                           @NotBlank @Pattern(regexp = "^[0-9]{6}$") String confirmNewPin) {}
     public record MessageResponse(String message) {}
     public record RegistrationResponse(java.util.UUID customerId, String phone, String email, String fullName, Account account, Instant createdAt) {}
+    public record OperatorCustomerResponse(java.util.UUID customerId, String fullName, String phone, String email,
+                                           boolean isPinSet, Instant createdAt, java.util.List<Account> accounts) {}
     public record Account(java.util.UUID accountId, String accountNumberMasked, String accountType, String status, String balance, String currency, Instant openedAt) {}
 }
