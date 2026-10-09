@@ -92,3 +92,12 @@ Mười hai scenario API smoke: role/ownership403; operator lookup/seed + replay
 5. Build có cảnh báo bundle lớn; giữ làm mục tối ưu kế tiếp, không tăng warning limit để che. Không thêm API resend/cancel transfer vì backend không có.
 
 Runtime QA hiện có backend loopback8080 và Vite5173, container35437. Logs/build artifacts ở `be/target` và `frontend/dist` bị ignore. Khi dọn, chỉ dừng đúng helper/container QA đã xác nhận danh tính; không xóa volume hoặc dữ liệu giữ lại. Không ghi credentials QA vào docs/commit.
+
+## Bàn giao Git/PR
+
+Ngày09/10/2026, theo yêu cầu người dùng, đã tạo nhánh `frontend` từ `main` và push lên `origin/frontend`. PR về `main`: [#1 — Digital Banking Simulator](https://github.com/TNoLisme/cloude/pull/1), trạng thái open, không phải draft; chưa merge.
+
+- `0c5d58c`: backend xác minh đăng ký, contract, sửa lỗi tích hợp và regression.
+- `c089819`: frontend responsive, nguồn thiết kế, bằng chứng QA và hướng dẫn/tiến độ.
+- Bản ghi PR được cập nhật bằng commit tài liệu tiếp theo trên cùng nhánh.
+- `outputs/` giữ nguyên ngoài commit; node_modules/dist/target/tsbuildinfo và secrets bị ignore. Không sửa hoặc push trực tiếp vào `main`.
