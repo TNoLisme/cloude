@@ -25,7 +25,7 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
         String operation = operation(request.getMethod(), path);
         if (operation == null) return true;
         RateLimitPolicy policy = policies.policy(operation);
-        if (operation.equals("login") || operation.equals("registration-otp")
+        if (operation.equals("login") || operation.equals("registration-otp") || operation.equals("registration-verify")
                 || operation.equals("recovery-initiate") || operation.equals("recovery-verify")) {
             String identifier = bodyIdentifier(request, operation);
             rateLimiter.check(policies.trustedIpKey(operation, clientIpResolver.resolve(request)), policy);
@@ -39,7 +39,7 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
     private String bodyIdentifier(HttpServletRequest request, String operation) {
         Object body = request.getAttribute("cachedRequestBody");
         if (body instanceof String json) {
-            String field = operation.equals("login") || operation.equals("registration-otp") ? "phone" : "identifier";
+            String field = operation.equals("login") || operation.equals("registration-otp") || operation.equals("registration-verify") ? "phone" : "identifier";
             try {
                 return new com.fasterxml.jackson.databind.ObjectMapper().readTree(json).path(field).asText("missing");
             } catch (Exception ignored) {
@@ -52,6 +52,7 @@ public class RateLimitHandlerInterceptor implements HandlerInterceptor {
     private String operation(String method, String path) {
         if ("POST".equals(method) && "/auth/login".equals(path)) return "login";
         if ("POST".equals(method) && "/auth/register/send-otp".equals(path)) return "registration-otp";
+        if ("POST".equals(method) && "/auth/register/verify-otp".equals(path)) return "registration-verify";
         if ("POST".equals(method) && "/auth/recover/initiate".equals(path)) return "recovery-initiate";
         if ("POST".equals(method) && "/auth/recover/verify".equals(path)) return "recovery-verify";
         if ("POST".equals(method) && "/operator/customers/send-otp".equals(path)) return "operator-otp";

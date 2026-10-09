@@ -5,6 +5,7 @@ Educational simulator for Cloud Application Development. System handles simulate
 ## Repository map
 
 - `be/`: Java 21 / Spring Boot backend.
+- `frontend/`: React / TypeScript / Ant Design responsive UI; [setup and checks](frontend/README.md).
 - `contracts/openapi.yaml`: HTTP contract source of truth.
 - `docs/`: architecture, security, delivery workflow and phase designs.
 
@@ -15,6 +16,7 @@ Read first:
 3. [MVP baseline](docs/baseline/README.md)
 4. [Backend roadmap](docs/projects/backend-mvp/00-roadmap.md)
 5. [API contract](contracts/openapi.yaml)
+6. [Digital Banking UI progress and API mapping](docs/projects/frontend-mvp/continuation-status.md)
 
 ## Backend quick start
 

@@ -27,6 +27,7 @@ public class SecurityConfiguration {
                                 "/health",
                                 "/__local/otp-mailbox",
                                 "/auth/register/send-otp",
+                                "/auth/register/verify-otp",
                                 "/auth/register",
                                 "/auth/login",
                                 "/auth/csrf",

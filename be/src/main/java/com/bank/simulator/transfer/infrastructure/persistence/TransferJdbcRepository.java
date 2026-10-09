@@ -41,11 +41,12 @@ public class TransferJdbcRepository {
         jdbc.update("""
                 INSERT INTO transfers
                     (id, source_account_id, destination_account_id, amount, currency, status, memo,
-                     otp_challenge_id, idempotency_record_id, created_at, expires_at, updated_at)
-                VALUES (?, ?, ?, CAST(? AS NUMERIC), ?, ?, ?, ?, ?, ?, ?, ?)
+                     otp_challenge_id, idempotency_record_id, created_at, expires_at, updated_at, completed_at)
+                VALUES (?, ?, ?, CAST(? AS NUMERIC), ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, transferId, sourceAccountId, destinationAccountId, amount, currency, status, memo,
                 otpChallengeId, idempotencyId, Timestamp.from(createdAt),
-                expiresAt == null ? null : Timestamp.from(expiresAt), Timestamp.from(createdAt));
+                expiresAt == null ? null : Timestamp.from(expiresAt), Timestamp.from(createdAt),
+                "COMPLETED".equals(status) ? Timestamp.from(createdAt) : null);
         return transferId;
     }
 
@@ -68,10 +69,10 @@ public class TransferJdbcRepository {
                        status, failure_code, memo, otp_challenge_id, created_at, expires_at, completed_at
                 FROM transfers
                 WHERE (source_account_id IN (%s) OR (destination_account_id IN (%s) AND status = 'COMPLETED'))
-                  AND (? IS NULL OR status = ?)
-                  AND (? IS NULL OR created_at >= ?)
-                  AND (? IS NULL OR created_at < ?)
-                  AND (? IS NULL OR created_at < ? OR (created_at = ? AND id < ?))
+                  AND (CAST(? AS VARCHAR) IS NULL OR status = ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at >= ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at < ?)
+                  AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at < ? OR (created_at = ? AND id < ?))
                 ORDER BY created_at DESC, id DESC
                 LIMIT ?
                 """.formatted(placeholders, placeholders);
