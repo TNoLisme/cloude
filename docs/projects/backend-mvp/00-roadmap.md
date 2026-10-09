@@ -52,7 +52,7 @@ be/
     │   ├── application.yml
     │   ├── application-local.yml
     │   ├── application-demo.yml
-    │   └── db/migration/V1__*.sql ... V4__*.sql
+    │   └── db/migration/V1__*.sql ... V7__*.sql
     └── test/java/com/bank/simulator/<module>/...
 ```
 
@@ -143,10 +143,11 @@ For independent-keys, limit/window applies to each separate operation-scoped buc
 - V2 `V2__identity_security_and_idempotency.sql`: `otp_challenges`, `refresh_sessions`, `idempotency_records`.
 - V3 `V3__seed_ledger_and_transfers.sql`: `account_seed_records`, `transfers`.
 - V4 `V4__risk_flags.sql`: `risk_flags`.
+- V5 `V5__mvp_schema_constraints_and_indexes.sql`: forward-compatible MVP constraints and indexes for transfer state, OTP linkage, query support and idempotency behavior.
+- V6 `V6__recovery_reset_tokens.sql`: password-recovery reset-token persistence.
+- V7 `V7__registration_verification_tokens.sql`: phone-registration verification-token persistence.
 
 No fake health/metadata table. Flyway `flyway_schema_history` tracks migrations; health runs datasource probe and returns exactly OpenAPI `{status,timestamp}`. Audit table is physically installed in V1 so mutations in earlier feature phases can write audit facts atomically; logical ownership remains audit module.
-
-Rules: PostgreSQL UUID, `TIMESTAMPTZ`, VND `NUMERIC(19,0)`, Java `BigDecimal` scale 0, no float/double. FK only inside owning module. Cross-module UUIDs remain scalar. Add forward migrations only. No startup reset, destructive down migration, DROP, TRUNCATE or bulk deletes.
 
 #### V1 SQL — identity, customer, accounts, audit
 

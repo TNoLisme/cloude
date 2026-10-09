@@ -27,7 +27,7 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Compose starts PostgreSQL 16, waits until its healthcheck passes, then starts backend. Flyway applies V1–V5 automatically. PostgreSQL host port is `5437`, chosen to avoid collision with standalone local PostgreSQL on `5436`.
+Compose starts PostgreSQL 16, waits until its healthcheck passes, then starts backend. Flyway applies V1–V7 automatically. PostgreSQL host port is `5437`, chosen to avoid collision with standalone local PostgreSQL on `5436`.
 
 ## Verify services
 

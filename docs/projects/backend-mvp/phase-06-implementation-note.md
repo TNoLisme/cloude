@@ -23,7 +23,7 @@ Implemented and targeted-verified. PostgreSQL/Testcontainers gate passes.
 - `FoundationPostgresTest` passes.
 - `OtpChallengePostgresTest` passes.
 - `RefreshSessionPostgresTest` passes.
-- Flyway V1–V5 applies successfully.
+- Flyway V1–V5 applies successfully for the phase-06 schema baseline; V6–V7 are covered by later recovery/registration evidence and current V1–V7 baseline.
 - Docker Desktop/Testcontainers/Ryuk/PostgreSQL 16 verified.
 - `git diff --check` passes.
 

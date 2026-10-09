@@ -23,7 +23,7 @@
 
 - Targeted transfer, recipient, policy, query, lifecycle, and risk tests pass.
 - Full Maven suite passes: 114 tests, 0 failures/errors/skips on 2026-10-05.
-- PostgreSQL/Testcontainers suite passes with Docker Desktop and Flyway V1–V5.
+- PostgreSQL/Testcontainers suite passes with Docker Desktop and Flyway V1–V5 for the phase-05 schema baseline. V6–V7 are covered by later recovery/registration evidence and current V1–V7 baseline.
 - OpenAPI validation passes: 29 operations.
 
 ## Remaining scope

@@ -17,7 +17,7 @@ API base `/api/v1`; DTO sinh từ [contract](../../../contracts/openapi.yaml).
 | --- | --- | --- | --- |
 | Login/session/workspace | OnboardingController, SessionController, CsrfController | POST auth/login, refresh, logout; GET auth/csrf | AuthPages, session/client; quyền server, refresh single-flight, cookie/CSRF; đổi user xóa cache |
 | Đăng ký | OnboardingService + RegistrationVerificationService mới | POST auth/register/send-otp, register/verify-otp, register | Gửi → xác minh → hồ sơ; proof memory 300s; thành công về login, không tự đăng nhập |
-| Recovery | RecoveryService, migration V6 | POST auth/recover/initiate, verify, confirm | Yêu cầu → màn OTP → màn mật khẩu và xác nhận; quyền reset server; thông báo chung; OTP/proof hết hạn |
+| Recovery | RecoveryService, migrations V6–V7 | POST auth/recover/initiate, verify, confirm; POST auth/register/verify-otp and register proof | Yêu cầu → xác minh OTP → mật khẩu mới; registration proof hết hạn/phone-bound/one-use |
 | Hồ sơ/PIN | OnboardingController, PinCredentialService | GET customers/me; POST customers/me/pin/setup, change, forgot/initiate, forgot/confirm | CUSTOMER; code 6 chữ số giữ số 0 đầu; staff không bị ép tạo PIN |
 | Tổng quan/tài khoản | AccountController, AccountQueryService | GET accounts, accounts/{id} | Ownership server; số che; tiền string/BigInt; không optimistic balance |
 | Chuyển tiền/người nhận | RecipientController, TransferController, TransferService | POST recipients/resolve, transfers, transfers/{id}/confirm-otp; GET transfers/{id} | CUSTOMER + PIN; key ổn định; bước OTP theo status server; lỗi mạng giữ intent/key để đối soát |

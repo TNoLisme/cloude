@@ -28,6 +28,9 @@ public class LocalMailboxOtpSender implements OtpSender {
             throw new IllegalStateException("Local OTP mailbox is full");
         }
         messages.put(message.challengeId(), new MailboxEntry(normalize(message.identifier()), message.code(), message.expiresAt()));
+        System.out.println("==================================================");
+        System.out.println(">>> [LOCAL OTP] " + message.identifier() + " => MÃ OTP: " + message.code() + " <<<");
+        System.out.println("==================================================");
     }
 
     public String findCode(String identifier) {

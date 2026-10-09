@@ -426,10 +426,12 @@ Do not add ledger silently in current Phase 06. It changes scope and query seman
 | V1 | users, roles, customers, PIN, accounts, audit | Existing |
 | V2 | OTP, refresh sessions, idempotency | Existing |
 | V3 | seed records, transfers | Existing |
-| V4 | risk flags | Added in working tree; PostgreSQL unverified |
-| V5 | Corrective constraints/indexes and idempotency expiry policy | Required before DB acceptance |
+| V4 | risk flags | Existing |
+| V5 | Corrective constraints and indexes | Existing |
+| V6 | Recovery reset tokens | Existing |
+| V7 | Registration verification tokens | Existing |
 
-V5 candidates:
+Current migration baseline is V1–V7. V5 constraints/indexes are already applied. Do not treat following historical candidate list as pending work:
 
 - Unique non-null transfer OTP challenge.
 - Completed transfer frequency index.
@@ -443,7 +445,7 @@ Never edit an already-applied migration. Add forward migration only.
 
 Testcontainers PostgreSQL must verify:
 
-1. Flyway applies V1..V5 in order.
+1. Flyway applies V1..V7 in order.
 2. `information_schema` contains every expected table, column, type and nullability.
 3. Unique constraints reject duplicate phone, email, account number and scoped idempotency key.
 4. Account balance check rejects negative balance.
@@ -526,9 +528,9 @@ Không thêm `account_ledger_entries` trong MVP. Current balance + seed record +
 
 ## 10. Schema constraints cần có
 
-V3 hiện giữ DDL đã duyệt; các kiểm tra state bổ sung chuyển sang V5 sau khi xác nhận V3 đã apply ở environment nào:
+V5 đã triển khai các constraint/index cần thiết cho MVP. Không còn trạng thái “candidate” hoặc “pending” trong migration baseline:
 
-- `AWAITING_OTP` bắt buộc `expires_at` và `otp_challenge_id`.
+- `AWAITING_OTP` bắt buộc có `expires_at` và `otp_challenge_id`.
 - `expires_at` chỉ được set khi `AWAITING_OTP`.
 - `COMPLETED` iff `completed_at IS NOT NULL`.
 - Partial unique index trên non-null `otp_challenge_id`.
@@ -537,13 +539,14 @@ Index frequency riêng trên `completed_at` chưa được thêm. Trước hết
 
 ## 11. Idempotency retention decision
 
-Unique `(actor_id, operation, idempotency_key)` khiến expired record tiếp tục reserve key. `find()` bỏ qua expired row nhưng insert conflict vẫn xảy ra. Đây là mismatch cần quyết định trước V5.
+Unique `(actor_id, operation, idempotency_key)` keeps an expired record reserved until controlled cleanup. Current MVP does not silently reuse expired keys. This preserves replay safety and avoids deleting an idempotency record while its related business result may still need reconciliation.
 
-Khuyến nghị MVP: trước khi insert claim, xử lý record đã hết hạn trong cùng scope có khóa phù hợp và thay thế atomically. Giữ record active nguyên vẹn; expired idempotency rows có thể xóa/reuse sau retention. Không xóa seed/transfer business records. Test race cho active key và expired key trong PostgreSQL.
+Cleanup of expired idempotency rows is a future controlled maintenance operation. It must never delete seed or transfer business records. Any change to expired-key reuse requires a new forward migration and PostgreSQL race tests.
+
 
 ## 12. Database acceptance tests
 
-1. Flyway apply đúng V1..V4; V5 chỉ sau khi expiry policy chốt.
+1. Flyway apply đúng V1..V7; tất cả migration hiện hữu đã được kiểm tra qua Testcontainers PostgreSQL theo evidence mới nhất.
 2. Verify tables, columns, PostgreSQL types, nullability và constraints qua metadata.
 3. Unique phone/email/account number/scoped idempotency.
 4. Non-negative balance, supported currency/status, valid state timestamps.
@@ -561,9 +564,9 @@ Schema đã review theo MVP scope: 12 bảng đều có consumer; chưa thấy b
 
 Acceptance còn pending:
 
-- Chốt idempotency expired-key behavior rồi viết forward migration.
-- Tạo V5 constraints/index chỉ sau khi kiểm tra V3 đã apply hay chưa.
-- Chạy PostgreSQL/Testcontainers; code compilation và unit tests không thay thế DB acceptance.
+- Chạy bổ sung concurrency, rollback, restart/retry và DB outage acceptance theo [09-acceptance-gap-and-team-plan.md](./09-acceptance-gap-and-team-plan.md).
+- Chạy k6 load test và ghi p50/p95/p99, error rate, resource usage và financial invariants.
+- Security scan, CI evidence và cloud deployment vẫn chưa thuộc migration baseline.
 
 ### 8.1 Bảng bắt buộc giữ
 

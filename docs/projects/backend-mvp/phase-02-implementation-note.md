@@ -16,7 +16,7 @@ Phase 02 application foundations are implemented and verified, including Postgre
 
 - Full Maven suite: 114 tests, 0 failures/errors/skips on 2026-10-05.
 - PostgreSQL/Testcontainers: FoundationPostgresTest (1), OtpChallengePostgresTest (1), RefreshSessionPostgresTest (2) pass.
-- Docker Desktop 29.4.1, Ryuk, PostgreSQL 16, and Flyway V1–V5 verified.
+- Docker Desktop 29.4.1, Ryuk, PostgreSQL 16, and Flyway V1–V5 were verified for this phase. Later migrations V6–V7 are covered by the current V1–V7 baseline and newer registration/recovery evidence.
 - OpenAPI validation: 29 operations passed.
 - `git diff --check` passed.
 

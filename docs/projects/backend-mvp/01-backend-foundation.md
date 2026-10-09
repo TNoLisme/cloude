@@ -50,7 +50,7 @@ be/scripts/validate-openapi.py
 be/README.md
 ```
 
-Create only files required to build this phase. The migration filename above is V1 because no fake `app_metadata`/health table is allowed; Phase 01 creates the first real schema owned by identity/customer. Flyway's own `flyway_schema_history` tracks migration state. V1 DDL is defined in `00-roadmap.md` only after harmonizing V1–V4; do not duplicate conflicting SQL here.
+Create only files required to build this phase. The migration filename above is V1 because no fake `app_metadata`/health table is allowed; Phase 01 creates the first real schema owned by identity/customer. Flyway's own `flyway_schema_history` tracks migration state. The current full backend baseline contains V1–V7; Phase 01 only defines and verifies V1. Do not duplicate later migration SQL here.
 
 ## Runtime and configuration
 
