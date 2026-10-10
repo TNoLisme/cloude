@@ -1,287 +1,156 @@
-# BE-4 — Kế hoạch Audit, Risk, Integration và Acceptance
+# BE-4 — Audit, Risk, Test Support, Resilience Evidence, Integration
 
-**Người phụ trách:** BE-4 / Integration Owner  
-**Reviewer:** Tất cả module owner  
-**Phối hợp:** BE-1 security; BE-2 DB metrics; BE-3 financial evidence; FE/BE k6/CI/E2E  
-**Trạng thái:** Kế hoạch thực thi; BE-4 điều phối, không tự làm toàn bộ execution.  
-**Mục tiêu:** Bảo đảm audit/risk đúng và chuyển toàn bộ code/test thành acceptance package có evidence thật.
+**Người phụ trách:** BE-4 / Integration Owner
+**Reviewer:** Tất cả module owner review chéo phần mình
+**Mục tiêu:** Giữ audit/risk đúng, biến mọi output thành acceptance package, làm merge gate. Không ôm hết execution (không viết k6/CI/scan/metrics thay người khác).
 
 ---
 
-## 1. Phạm vi công việc
+## 1. Vai trò trong team
 
-### 1.1 Bao gồm
+BE-4 là **Integration Owner** và **owner test support/resilience harness**: merge OpenAPI duy nhất, cấp số migration, điều phối `pom.xml`/`application*.yml`/docker, sở hữu disposable PostgreSQL support, DB-unavailable/restart harness, container image scan, evidence matrix + final report. BE-4 review business PR nhưng không fix hộ logic module khác. Member nộp evidence chậm/fail thì BE-4 mark BLOCKED, gửi lỗi về owner.
 
-- Audit append/query/redaction.
-- Risk rules và AFTER_COMMIT.
-- Cursor pagination review.
-- Acceptance matrix.
-- Evidence naming/index.
-- Merge gate.
-- CI review.
-- Load-result review.
-- Security/log scan review.
-- Final local acceptance report.
-- Documentation synchronization.
+## 2. Phạm vi chi tiết
 
-### 1.2 Không bao gồm
-
-- Viết toàn bộ k6 script.
-- Viết toàn bộ GitHub Actions.
-- Sở hữu identity/account/transfer implementation.
-- Thêm ML/review workflow/risk blocking.
-- Cloud provisioning trước local gate.
-- Đánh dấu `ACCEPTED` khi P0 chưa đủ evidence.
-
----
-
-## 2. File và vùng code
+### Được sửa
 
 ```text
 be/src/main/java/com/bank/simulator/audit/**
 be/src/main/java/com/bank/simulator/risk/**
 be/src/test/java/com/bank/simulator/audit/**
 be/src/test/java/com/bank/simulator/risk/**
+be/src/test/java/com/bank/simulator/shared/health/** (test only; production behavior owner routed by module)
+be/src/test/java/com/bank/simulator/DisposablePostgresTestSupport.java (tạo mới, infrastructure only)
+be/src/test/java/com/bank/simulator/DatabaseFailureRecoveryTest.java (harness; no business implementation)
 docs/projects/backend-mvp/evidence/**
 docs/projects/backend-mvp/09-acceptance-gap-and-team-plan.md
 docs/projects/backend-mvp/10-detailed-team-task-handover.md
+contracts/openapi.yaml (merge duy nhất, theo proposal đã approve)
+pom.xml / application*.yml / docker-compose.yml / Dockerfile (điều phối, không tự ý đổi behavior)
 ```
 
-Shared ownership:
+### Không được sửa
 
-| Khu vực | Owner | Quy tắc |
-|---|---|---|
-| `contracts/openapi.yaml` | BE-4 merge | Module owner proposal |
-| Flyway numbering | BE-4 | Không sửa migration cũ |
-| `pom.xml`/application config | BE-4 điều phối | Affected owner review |
-| `docker-compose.yml`/`Dockerfile` | BE-4 | FE/BE hỗ trợ |
-| `09`/`10` docs | BE-4 | Nhận input từ owner |
+- `identity/**`, `account/**`, `transfer/**` implementation (chỉ review; lỗi trả đúng owner).
+- `frontend/**` business flow (FE/BE own).
+- `tests/load/**` implementation (FE/BE own).
+- Migration V1–V7 đã apply. V8+ chỉ tạo khi có proposal approved.
+- Không sửa production health/transfer/auth behavior dưới danh nghĩa harness; gửi finding đến owner module.
 
----
+## 3. Đầu vào
 
-## 3. Kết quả phải bàn giao
+1. `audit/**`: AuditWriter record-only, append-only, actor/type/target/outcome/time/correlation/summary, redaction list.
+2. `risk/**`: RiskEvaluationService + TransferCommittedRiskListener AFTER_COMMIT, rules LARGE_TRANSFER v1 (>5M), HIGH_FREQUENCY v1 (>5 completed outgoing/10p), read-only không block/rollback.
+3. `docs/.../06-history-audit-risk.md` + OpenAPI audit/risk codes.
+4. Evidence thô từ BE-1/2/3/FE: command + output + log, chưa tổng hợp.
 
+## 4. Quy trình thực hiện
+
+### Bước 0 — Khóa checklist merge gate + evidence template (Tiên quyết — Thiết lập quy chuẩn)
+
+1. Tạo `evidence/_TEMPLATE.md`: Requirement | Owner | Command | Evidence link | Status | Gap | Next. Status chỉ PLANNED | IMPLEMENTED | VERIFIED | BLOCKED | NOT_ACCEPTED. Cấm ACCEPTED lẻ tẻ.
+2. Công bố PR 10 điểm gate:
 ```text
-- Audit/risk test output.
-- Acceptance matrix.
-- Evidence index.
-- Merge review result.
-- FE handoff package.
-- Final local acceptance report.
-- Open gaps/blocked decision list.
+1 owner + scope rõ
+2 test + exact command
+3 pass/fail/skipped thật
+4 OpenAPI none/diff approved
+5 DB/migration none/V mới
+6 role impact
+7 money/idempotency impact
+8 FE handoff note
+9 secret/log review
+10 không churn unrelated
+```
+Thiếu 1 điểm → request changes, không merge.
+
+### Bước 1 — Audit/risk correctness (Độc lập, làm ngay)
+
+Audit checklist (mỗi dòng 1 test hoặc query proof):
+- Events đủ: register, counter create, account create, seed, block/unblock, transfer, PIN, recovery, auth outcome.
+- Mỗi row: actor/type/target/outcome/time/correlation/summary. Thiếu field là fail.
+- Redaction: grep password/hash/PIN/OTP/token/secret/account full trong response + log + DB audit payload. Có hit là fix.
+- Append-only: không có update/delete API audit. Thử gọi trực tiếp repo update phải không tồn tại hoặc bị chặn.
+- Phân quyền: Customer không query audit, Auditor/Admin đúng role. Test 403 matrix.
+- Cursor/filter ổn định:分页 repeat same cursor trả cùng thứ tự.
+
+Risk checklist:
+- 5M đúng → không flag. 5M+1 → flag LARGE_TRANSFER v1.
+- 5 outgoing completed/10p → không flag. Cái thứ 6 → flag HIGH_FREQUENCY v1.
+- Incoming/pending/failed loại trừ khỏi frequency count. Test từng loại.
+- AFTER_COMMIT: risk listener chạy sau commit. Kill risk bean trong test → transfer vẫn commit, không rollback.
+- Re-eval cùng (transfer_id,rule_id,version) không duplicate row.
+- Output `BE4-audit-risk.md` + test log.
+
+Lệnh:
+```powershell
+cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
+mvn -q -Dtest="*Audit*Test,*Risk*Test" test
 ```
 
-Mẫu evidence:
+### Bước 2 — Disposable PostgreSQL support và resilience harness
 
-```text
-Requirement:
-Owner:
-Environment:
-Database isolation:
-Command:
-Tool version:
-Expected:
-Actual:
-Status:
-Evidence file:
-Security review:
-Known limitation:
-Next action:
-```
+1. Tạo `DisposablePostgresTestSupport.java`: PostgreSQL/Testcontainers lifecycle cho test, isolated database/schema, no retained data, no destructive command against shared DB. BE-1/2/3 consume only; không fork base.
+2. Tạo `DatabaseFailureRecoveryTest.java` cho harness:
+   - DB unavailable: stop only disposable dependency, gọi health, assert `503` + safe `{status,timestamp}`, transfer không false success, restore dependency, assert recovery.
+   - Application restart: chạy request trên disposable stack, restart only disposable backend process/container sau commit hoặc controlled boundary, retry cùng idempotency key, assert persisted transfer/balance/idempotency result.
+3. BE-3 owns transfer-specific assertions; BE-1 owns auth/OTP dispatch assertions; BE-4 owns lifecycle, command, isolation and evidence. Harness không sửa production business logic.
+4. Output: `BE4-resilience.md` gồm exact setup/teardown, command, container IDs, expected/actual, skipped/blocked reason.
 
-Không ghi password, PIN, OTP, JWT, refresh token, secret, full account number.
+### Bước 3 — Evidence matrix sống (Theo dõi liên tục theo từng PR)
 
----
+1. Cập nhật matrix liên tục: thêm row mới từ PR merged, chuyển PLANNED→IMPLEMENTED khi code xong, →VERIFIED chỉ khi BE-4 chạy lại command pass trên máy sạch.
+2. Link evidence thật (file path + commit hash), không link design docs thay pass.
+3. Row BLOCKED ghi rõ blocker + owner. Không im lặng gánh; nếu có blocker kéo dài → escalate user/lead.
+4. Giữ V1–V7 đồng bộ: migration baseline, OpenAPI version, test counts BE/FE. Số stale là BE-4 chịu trách nhiệm fix ngay.
 
-## 4. Kế hoạch thực thi theo bước
+### Bước 4 — Review PR + điều phối shared files (xuyên suốt)
 
-### Bước 1 — Chuẩn hóa status matrix
+- OpenAPI: chỉ merge proposal có approve module owner + BE-4. Drift không proposal → revert.
+- Migration numbering: cấp số tiếp theo, check forward-only, rollback compatible note.
+- `pom.xml`/yml/docker: đổi config phải ghi lý do + ảnh hưởng BE/FE + test lại.
+- Review k6/CI/scan của người khác ở mức checklist (có file, có run log, không secret), không viết hộ.
+- Giữ `git diff --check` sạch. Churn format unrelated → yêu cầu tách PR.
 
-Tạo bảng:
+### Bước 5 — Final acceptance report (Tổng kết sau khi P0 evidence đủ)
 
-```text
-Requirement | Owner | Endpoint/module | Command | Evidence | Status | Gap | Next action
-```
+1. Tổng hợp từng P0: rollback, timeout, restart, DB outage, overdraft, idempotency, opposite lock, block-vs-confirm, k6, scan, CI BE/FE, FE 3-role E2E, OpenAPI/build/test.
+2. Mỗi dòng: status VERIFIED/BLOCKED/NOT_ACCEPTED + evidence link + command. Không lấy design docs làm pass.
+3. Kết luận duy nhất 1 dòng: `ACCEPTED` hoặc `NOT_ACCEPTED` + gaps còn lại. Không mập mờ "cơ bản đạt".
+4. Gửi FE handoff package 1 bản duy nhất: OpenAPI version, error/role matrix, demo env setup, mailbox guard, synthetic data, state examples, audit/risk rows mẫu, health/Swagger/base URL, smoke/E2E/k6 commands, limitations (best-effort risk, no real SMS, no ML, no cancel/resend).
+5. Output `evidence/FINAL-ACCEPTANCE.md`.
 
-Status hợp lệ:
+| Row | Dependency | Required contract before implementation | Owner of failure |
+|---|---|---|---|
+| BE-1 auth/OTP tests | Disposable PG support from BE-4 | profile, fixture isolation, safe reset API | BE-1 behavior; BE-4 harness |
+| BE-2 account/seed tests | Disposable PG support from BE-4 | DB lifecycle, synthetic fixture contract | BE-2 behavior; BE-4 harness |
+| BE-3 transfer tests | BE-1 PIN/OTP contract + BE-2 lock/status contract + BE-4 PG support | method signatures, transaction boundary, error codes | module owner of failing behavior |
+| FE/BE E2E | frozen OpenAPI + BE handoffs | DTOs, state/error matrix, synthetic users | FE/BE UI; corresponding BE module for API |
+| FE/BE k6 | BE-1 auth setup + BE-2 dataset/query + BE-3 invariant | disposable seed, expected balances, correlation/error rules | FE/BE script; corresponding BE owner for API |
+| BE-4 final report | evidence from all owners | exact command/output, environment, actual status | evidence-producing owner |
 
-```text
-PLANNED
-IMPLEMENTED
-VERIFIED
-BLOCKED
-NOT_ACCEPTED
-```
+BE-4 publishes test-support contract before BE-1/2/3 start PostgreSQL integration tests. Module owners may begin isolated unit tests and implementation immediately. A missing input blocks only the dependent integration case, not unrelated tasks.
 
-Không dùng `ACCEPTED` trong từng row. Chỉ final report mới kết luận `ACCEPTED` hoặc `NOT ACCEPTED`.
+## 5. Dependencies and handoff contracts
 
-### Bước 2 — Audit integrity
+| Work item | Depends on | Required handoff | If missing |
+|---|---|---|---|
+| BE-1/2/3 PostgreSQL integration tests | BE-4 test support | isolated lifecycle, fixture/reset API, no shared DB cleanup | module unit tests continue; PG evidence marked BLOCKED |
+| BE-3 transfer tests | BE-1 OTP/PIN + BE-2 account lock contract | consume-once semantics, lock signature/order, status/error codes | tests use agreed contract draft; owner approval required before merge |
+| DB outage/restart harness | Disposable stack and health route | service names, ports, health path, idempotency key fixture | do not stop retained/shared services; report BLOCKED |
+| FE/BE E2E | frozen OpenAPI + module handoffs | DTO/error/state matrices + synthetic fixture | contract gate continues; affected flow BLOCKED |
+| FE/BE k6 | BE-1 auth setup + BE-2 dataset + BE-3 invariant query review | credentials via env, seed SQL, expected balances | build script skeleton; do not run without disposable dataset |
+| Final report | all owner evidence | exact command/output/environment/status | mark missing rows BLOCKED, never infer pass |
 
-Kiểm tra audit events cho:
+BE-4 publishes test-support contract before PostgreSQL integration cases start. This gates only PG integration; BE-1/2/3 can continue isolated implementation and unit tests.
 
-- Registration.
-- Counter customer creation.
-- Account creation.
-- Seed.
-- Block/unblock.
-- Transfer success/failure cần audit.
-- PIN setup/change/reset.
-- Recovery initiate/verify/confirm.
-- Auth outcome cần audit.
-
-Mỗi row phải có:
-
-- actor.
-- event type.
-- target.
-- outcome.
-- occurredAt.
-- correlationId.
-- safe summary.
-
-Không được có:
-
-- password/hash.
-- PIN/OTP.
-- access/refresh/CSRF token.
-- secret.
-- full account number.
-- raw credential identifier.
-- PII không cần thiết.
-
-Kiểm tra append-only:
-
-- Không có update/delete route.
-- Customer không query audit.
-- Auditor/Admin query đúng role.
-- Cursor/filter ổn định.
-
-### Bước 3 — Risk integrity
-
-Rules phải verify:
-
-- `LARGE_TRANSFER v1`: `5,000,000` không flag.
-- `5,000,001` có flag.
-- `HIGH_FREQUENCY v1`: 5 outgoing completed không flag.
-- 6 outgoing completed trong 10 phút có flag.
-- Incoming không tính.
-- Pending/failed không tính.
-- Chạy sau transfer commit.
-- Risk failure không rollback transfer.
-- Re-evaluation không duplicate `(transfer_id, rule_id, rule_version)`.
-- Không có review state/mutation endpoint.
-
-### Bước 4 — Evidence review từ BE-1/2/3
-
-Mỗi owner gửi:
-
-1. Command.
-2. Actual output.
-3. Database/profile.
-4. Test count.
-5. Security review.
-6. FE impact.
-7. Known limitation.
-
-BE-4 kiểm tra:
-
-- Output có thật.
-- Không lấy planned docs làm pass.
-- Không chứa secret.
-- Test đúng database isolation.
-- Status trong matrix đúng.
-
-### Bước 5 — Merge gate review
-
-Mỗi PR kiểm tra:
-
-1. Đúng owner.
-2. Scope bounded.
-3. Test command/output.
-4. OpenAPI impact.
-5. DB/migration impact.
-6. Role/ownership impact.
-7. Money/idempotency impact.
-8. FE handoff.
-9. Secret/log/privacy.
-10. Unrelated format/generated files.
-
-### Bước 6 — Review k6/CI từ FE/BE
-
-BE-4 không viết thay FE/BE. Review:
-
-- k6 workload đúng 50 VU/20 RPS/10 phút.
-- Disposable DB.
-- Expected business 4xx tách unexpected 5xx.
-- p50/p95/p99.
-- CPU/RAM/pool/lock metrics.
-- Financial invariant.
-- CI OpenAPI/FE jobs.
-- Artifact không có secret.
-
-### Bước 7 — Final local acceptance
-
-Chỉ chuyển final state sau khi có evidence:
-
-- Rollback.
-- Timeout-after-commit.
-- Restart/retry.
-- DB outage.
-- Concurrent overdraft.
-- Concurrent idempotency.
-- Opposite-direction lock.
-- Block-vs-confirm.
-- k6.
-- Security/dependency/image/log scan.
-- FE Customer/Operator/Auditor E2E.
-- OpenAPI/build/test.
-
-### Bước 8 — Cloud decision gate
-
-Chưa triển khai cloud trước local gate.
-
-Khi local pass, team chốt một provider:
-
-```text
-AWS ECS/EC2
-hoặc GCP Cloud Run
-hoặc Render/Railway
-```
-
-Chốt thêm:
-
-- region.
-- account/project owner.
-- budget cap.
-- alert.
-- TLS.
-- database backup.
-- secret manager.
-- same-origin ingress.
-- rollback.
-- teardown.
-
----
-
-## 5. Lệnh kiểm thử và review
-
-Audit/risk:
+## 6. Lệnh nghiệm thu
 
 ```powershell
 cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
-mvn -q -Dtest="*Audit*Test,*Risk*Test,*Transfer*Test" test
-```
-
-Backend gate:
-
-```powershell
+mvn -q -Dtest="*Audit*Test,*Risk*Test" test
 mvn -q -DskipTests package
 mvn -q test
-```
-
-Contract/FE gate:
-
-```powershell
 cd ..
 python be/scripts/validate-openapi.py
 cd frontend
@@ -289,104 +158,40 @@ npm run api:check
 npm run typecheck
 npm test
 npm run build
-```
-
-Diff:
-
-```powershell
 cd ..
 git diff --check
 ```
 
-Nếu một command fail:
+BE-4 chạy full gate này trước final report. Fail ở đâu ghi đúng chỗ đó, không sửa vội để xanh giả.
 
-- Ghi exact error.
-- Phân loại code/test/environment/tooling.
-- Không retry vô hạn.
-- Không đổi status thành pass.
+## 7. Tiêu chí đạt
 
----
+- [ ] Audit đủ events + redaction 0 hit + append-only proof.
+- [ ] Risk 5M/5M+1 + 5/6 frequency + AFTER_COMMIT + no-duplicate pass.
+- [ ] DB-unavailable health/transfer fail-closed harness pass + restored dependency proof.
+- [ ] Application restart retry same-key proof.
+- [ ] Container image scan report has image digest, tool/version, severity summary and disposition.
+- [ ] Matrix đủ P0 rows, status chuẩn, link evidence thật.
+- [ ] PR gate 10 điểm áp mọi PR, có review log.
+- [ ] V1–V7 + OpenAPI + counts đồng bộ.
+- [ ] Final report 1 kết luận ACCEPTED/NOT_ACCEPTED.
+- [ ] FE handoff 1 package duy nhất.
 
-## 6. Acceptance criteria
+## 8. Nghiệm thu (ai check BE-4)
 
-- Audit/risk tests pass.
-- P0 evidence links đầy đủ.
-- Planned/implemented/verified tách biệt.
-- Contract/DB/security impact reviewed.
-- Migration baseline V1–V7 đồng bộ.
-- k6/CI/security có owner riêng.
-- Final report ghi rõ `ACCEPTED` hoặc `NOT_ACCEPTED`.
-- Known limitations được liệt kê.
+- Module owners check chéo phần mình trong matrix: sai là BE-4 sửa ngay.
+- User/lead check final report: mỗi VERIFIED bấm link ra evidence thật. Link chết hoặc docs suông là fail.
+- Fail nếu: dùng design docs thay test log, ACCEPTED lẻ tẻ, merge OpenAPI không proposal, migration cũ bị sửa.
 
----
+## 9. Bàn giao
 
-## 7. FE handoff package
+Tạo `evidence/BE4-audit-risk.md`, matrix sống, `evidence/FINAL-ACCEPTANCE.md`, FE handoff package.
+Cho BE-1: log checklist, auth audit yêu cầu, scan format.
+Cho BE-2: seed/block audit yêu cầu, DB metric fields cần.
+Cho BE-3: transfer audit/risk yêu cầu, invariant/report template.
+Cho FE/BE: contract/error matrix chốt, E2E matrix template, screenshot policy, CI artifact path, k6 review checklist.
+Nhận từ BE-1/2/3/FE: command/output thật, DB/profile, test counts, security review, FE impact, limitation. Thiếu là mark BLOCKED, không tự bịa.
 
-Gửi một package duy nhất:
+## 10. Cấm
 
-1. OpenAPI path/schema/version.
-2. Error code matrix.
-3. Role/ownership matrix.
-4. Demo setup bằng environment credentials.
-5. Local mailbox setup.
-6. Synthetic test-data instructions.
-7. State transition examples.
-8. Expected audit rows.
-9. Expected risk rows.
-10. Health/Swagger/base URL.
-11. API smoke command.
-12. Browser E2E command.
-13. k6 report path.
-14. Known limitations:
-
-```text
-Best-effort risk flagging
-No real SMS/Email delivery
-No ML
-No cancel/resend transfer endpoint
-No cloud acceptance before provider evidence
-```
-
----
-
-## 8. Handoff cho owner khác
-
-### BE-1
-
-- Sensitive-log checklist.
-- Auth audit events.
-- Security scan format.
-- Auth gaps.
-
-### BE-2
-
-- Account/seed/block audit.
-- DB metric fields.
-- Schema/index evidence.
-
-### BE-3
-
-- Transfer audit/risk requirements.
-- Financial invariant format.
-- Failure/recovery report template.
-
-### FE/BE
-
-- Final contract/error matrix.
-- E2E matrix.
-- Screenshot policy.
-- CI artifact path.
-- k6 review checklist.
-
----
-
-## 9. Definition of Done
-
-- Audit/risk verified.
-- Matrix current.
-- Every P0 item has owner/status/evidence.
-- Merge gate reviewed.
-- FE handoff delivered.
-- Final local report ready.
-- No cloud `ACCEPTED` before provider-specific evidence.
-- No commit/push without explicit instruction.
+Không fix hộ logic module khác. Không merge khi gate thiếu điểm. Không commit `.env`/secret/OTP. Không `down -v`/`DROP`/`TRUNCATE`. Không tự commit/push khi chưa lệnh rõ.

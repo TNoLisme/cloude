@@ -1,424 +1,146 @@
-# BE-3 — Kế hoạch Transfer và Financial Consistency
+# BE-3 — Transfer Failure, Concurrency, Idempotency
 
-**Người phụ trách:** BE-3  
-**Reviewer:** BE-2, BE-1, BE-4  
-**Phối hợp:** FE/BE  
-**Trạng thái:** P0 rủi ro cao nhất; chưa nghiệm thu trước khi test PostgreSQL pass.  
-**Mục tiêu:** Chứng minh tiền không mất, không tạo thêm, không debit hai lần, không âm balance, không deadlock và retry an toàn.
+**Người phụ trách:** BE-3
+**Reviewer:** BE-2 (lock/API), BE-1 (PIN/OTP boundary), BE-4 (evidence)
+**Mục tiêu:** Chứng minh tiền đúng dưới failure/retry/concurrency bằng test PG thật. Scope thu hẹp: không k6/CI/audit.
 
 ---
 
-## 1. Phạm vi công việc
+## 1. Vai trò
 
-### 1.1 Bao gồm
+BE-3 own `transfer/**`. Bài toán khó nhất team: rollback, timeout retry, overdraft, same-key race, opposite lock, duplicate confirm, block-vs-confirm. Chỉ dùng API boundary module khác, không sửa impl họ.
 
-- Recipient resolve.
-- Transfer create/confirm/list/detail.
-- Small transfer atomicity.
-- Large transfer OTP state machine.
-- Idempotency replay/conflict.
-- Ordered account-pair locking.
-- Test-only rollback injection.
-- Timeout-after-commit retry.
-- Concurrent overdraft.
-- Concurrent duplicate idempotency.
-- Opposite-direction locking.
-- Duplicate OTP confirm.
-- Block-vs-confirm race.
-- PostgreSQL/Testcontainers evidence.
+## 2. Phạm vi
 
-### 1.2 Không bao gồm
-
-- Account repository redesign.
-- Identity/OTP sender redesign.
-- Audit repository redesign.
-- Risk rule redesign.
-- Real notification delivery.
-- Cancel/resend endpoint.
-- Ledger/double-entry accounting.
-- Cloud deployment.
-- Sửa OpenAPI nếu chưa approved.
-
----
-
-## 2. File và vùng code
+### Được sửa
 
 ```text
 be/src/main/java/com/bank/simulator/transfer/**
 be/src/test/java/com/bank/simulator/transfer/**
-be/src/test/java/com/bank/simulator/UiApiRegressionPostgresTest.java
+be/src/test/java/com/bank/simulator/TransferUiApiRegressionPostgresTest.java (tạo mới, BE-3 own)
+docs/projects/backend-mvp/evidence/BE3-*.md
 ```
 
-Nguyên tắc module:
+### Không được sửa
 
-- Không inject Account repository mới vào transfer business path nếu đã có module API.
-- Nếu cần đổi `AccountModuleApi`, BE-2 review trước.
-- Không đổi Identity OTP implementation trực tiếp; BE-1 cung cấp boundary.
-- Không sửa migration cũ.
-- Test concurrency phải chạy PostgreSQL, không chỉ mock/H2.
+- `identity/**`, `account/**`, `audit/**`, `risk/**`. Cần đổi thì proposal.
+- `frontend/**`, `tests/load/**`, `.github/**`.
+- Migration cũ, OpenAPI (chỉ proposal).
 
----
+Không refactor package/architecture cho giống docs. Giữ impl, chốt boundary đủ test.
 
-## 3. Kết quả phải bàn giao
+## 3. Đầu vào
 
+1. `transfer/**`: create/confirm, lockPair, debit/credit, idempotency key + hash, OTP consume, state machine.
+2. Lock API BE-2 publishes as `BE2-lock-api.md`. Contract is an input dependency; BE-3 can implement tests against signature before BE-2 finishes implementation. If signature changes, stop affected integration test and agree versioned change with BE-2.
+3. PIN/OTP boundary BE-1. Disposable PostgreSQL support BE-4.
+4. `docs/.../05-transfers.md` + OpenAPI transfer codes.
+
+## 4. Dependencies and contracts
+
+| Work item | Depends on | Required handoff | If dependency missing |
+|---|---|---|---|
+| Transfer unit tests and local implementation | Frozen OpenAPI + current transfer API | Existing DTO/error/state contract | Continue unit tests; record mismatch, do not change contract unapproved |
+| PostgreSQL concurrency tests | BE-4 `DisposablePostgresTestSupport` | isolated PG fixture/reset/lifecycle API | Keep unit tests moving; mark PG proof blocked, do not create private container |
+| Account locking and block race | BE-2 account lock/status contract | method signature, lock order `id ASC`, eligible-state definition | BE-3 may author tests against agreed contract draft; do not patch `account/**` |
+| OTP confirm race | BE-1 OTP consume contract | consume-once result and transaction boundary | Test transfer state behavior with contract fixture; report mismatch to BE-1 |
+| FE handoff / unknown outcome | Frozen OpenAPI + final error/state matrix | stable codes, key retention and reconcile endpoint | FE/BE may run contract gate; full E2E waits for handoff |
+
+BE-2 owns seed concurrency; BE-3 owns transfer concurrency. `UiApiRegressionPostgresTest.java` is legacy and frozen. BE-2 and BE-3 use separate regression test classes.
+
+## 5. Quy trình thực hiện
+
+### Bước 0 — Vẽ state + boundary (Tiên quyết — Chưa code)
+
+- Vẽ: `AWAITING_OTP → COMPLETED / EXPIRED / FAILED`. Ghi chuyển nào cho phép, terminal không quay lui.
+- Ghi: PIN check trước money tx, large create không debit/reserve, confirm lock trong tx, risk sau commit, không network call trong money tx.
+- Ghi MISMATCH nếu code khác docs/OpenAPI, báo BE-4. Output vào `BE3-rollback-timeout.md` mục hiện trạng.
+
+### Bước 1 — Rollback + timeout (Làm ngay, độc lập)
+
+1. Tạo test-only injector:
 ```text
-- Test rollback.
-- Test concurrency.
-- Test timeout/retry.
-- Test state race.
-- PostgreSQL output.
-- Financial invariant summary.
-- FE transfer handoff.
-- Known flaky/timing limitations.
+TransferFailureInjector.afterDebitBeforeCredit()
+prod = no-op, test profile = throw
+Không if(testMode) trong business code
+Không bật ngoài test profile
+```
+2. Test rollback: disposable PG → seed source → transfer → debit chạy → injector throw trước credit → rollback.
+Assert: source/dest unchanged, không COMPLETED, không idempotency success, không audit commit, không risk flag từ rollback.
+3. Test timeout-after-commit: commit → delay/suppress response → retry đúng body + K1 → original result, debit/credit đúng 1 lần. Không tạo K2 tự động.
+4. Output `BE3-rollback-timeout.md` + log.
+
+### Bước 2 — Concurrency tiền (Trọng tâm P0 — Sau khi setup PG)
+
+Dùng CountDownLatch + ExecutorService, Future timeout, shutdown finally. Không sleep sync, không retry vô hạn. Bắt buộc PostgreSQL/Testcontainers qua `DisposablePostgresTestSupport.java` do BE-4 own; mock/H2 không chứng minh row lock.
+
+| ID | Setup | Kỳ vọng |
+|---|---|---|
+| CON-01 | Source 1M, 2×600k concurrent | 1 commit 409 còn lại, final source 400k, dest +600k, không âm |
+| CON-02 | N request cùng actor/key/payload | 1 transfer, 1 debit/credit, replay trả original; khác payload → 409 |
+| CON-03 | A→B + B→A concurrent | cùng lock API order id ASC, bounded timeout, không deadlock lâu dài |
+
+Mỗi case: seed known balance → latch start đồng thời → join timeout → assert balance + row counts + state. Ghi balance trước/sau + counts vào `BE3-concurrency.md`.
+
+Lệnh:
+```powershell
+cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
+mvn -q -Dtest="*TransferServiceTest,*TransferServiceLifecycleTest,*TransferControllerMvcTest,*Recipient*Test" test
+mvn -q -Dtest="*Transfer*PostgresTest,TransferUiApiRegressionPostgresTest" test
 ```
 
-Mẫu:
+### Bước 3 — OTP/block race (Phối hợp BE-2)
 
-```text
-Scenario:
-Owner:
-Files:
-Database:
-Command:
-Expected:
-Actual:
-Pass/fail:
-Financial invariant:
-FE behavior:
-Next owner:
-```
+- Duplicate confirm: 1 COMPLETED, 1 debit/credit, OTP consume 1 lần, call sau replay/conflict đúng contract.
+- Block-vs-confirm (làm cùng BE-2): tạo AWAITING_OTP → race block vs confirm → confirm lock lại + revalidate dưới lock → ineligible FAILED đúng code, balance unchanged, OTP invalidate, terminal không ghi đè.
+- Review boundary checklist mục Bước 0, tick từng dòng pass/fail.
+- Output `BE3-otp-race.md` + FE handoff status/error matrix.
 
----
+### Bước 4 — 5M boundary + terminal guard (Hoàn thiện ma trận lỗi)
 
-## 4. Kế hoạch thực thi theo bước
+- 5M đúng → small path, 5M+1 → OTP path. Sai path là fail.
+- Terminal COMPLETED/FAILED/EXPIRED không chuyển ngược. Test cố ghi đè phải fail.
+- Ghi error matrix gửi FE/BE: insufficient/eligibility/currency/Idempotency-Replayed/timeout=unknown/detail reconcile/không cancel-resend.
 
-### Bước 1 — Đối chiếu transfer contract
-
-Đọc:
-
-- `docs/baseline/api-and-team-contract.md`.
-- `docs/baseline/mvp-requirements-and-architecture.md`.
-- `docs/baseline/quality-security-and-cloud.md`.
-- `docs/projects/backend-mvp/05-transfers.md`.
-- `docs/projects/2026-10-01-security-transaction-refinements.md`.
-- `contracts/openapi.yaml`.
-
-Lập bảng:
-
-| Scenario | Request | Expected status/code | Balance effect | Test | Gap |
-|---|---|---|---|---|---|
-| Small success | <=5M | 201 | debit+credit | ... | ... |
-| Large create | >5M | 200 | unchanged | ... | ... |
-| OTP success | confirm | 201 | debit+credit | ... | ... |
-| OTP replay | confirm again | 200 replay | unchanged | ... | ... |
-| Insufficient | any | 409 | unchanged | ... | ... |
-| Blocked | any | 409 | unchanged | ... | ... |
-| Expired | confirm | 409 | unchanged | ... | ... |
-| Wrong OTP | confirm | 400/409 | unchanged | ... | ... |
-
-### Bước 2 — Tạo test-only failure seam
-
-Khuyến nghị interface:
-
-```java
-public interface TransferFailureInjector {
-    void afterDebitBeforeCredit();
-}
-```
-
-Quy tắc:
-
-- Production implementation no-op.
-- Test profile implementation throw exception.
-- Không dùng `if (testMode)` trong business code.
-- Không bật injector trong `local`, `demo`, shared hoặc cloud.
-- Bean test phải được bật rõ trong test context.
-
-### Bước 3 — Rollback sau debit trước credit
-
-Flow:
-
-1. Tạo disposable PostgreSQL.
-2. Tạo source/destination account.
-3. Seed source.
-4. Gửi transfer hợp lệ.
-5. Debit source chạy.
-6. Injector throw trước credit.
-7. Transaction rollback.
-
-Assert:
-
-- Source balance về giá trị trước request.
-- Destination balance không đổi.
-- Không có `COMPLETED` transfer.
-- Không có successful idempotency response.
-- Không có audit committed.
-- Không có risk flag từ transfer rollback.
-- Retry cùng key xử lý theo semantics đã chốt, không tạo double mutation.
-
-### Bước 4 — Timeout-after-commit
-
-Mô phỏng bằng test harness hoặc hook chỉ dành cho test:
-
-1. Submit transfer với key K1.
-2. Commit DB.
-3. Delay/suppress response.
-4. Client coi kết quả là unknown.
-5. Retry đúng body + K1.
-6. Assert original logical response.
-7. Assert source debit đúng một lần.
-8. Assert destination credit đúng một lần.
-
-Không:
-
-- Tạo K2 tự động.
-- Trừ tiền theo UI assumption.
-- Trả business failure chỉ vì HTTP timeout.
-
-### Bước 5 — Concurrent overdraft
-
-Scenario:
-
-```text
-Source balance: 1,000,000 VND
-Request A: 600,000 VND
-Request B: 600,000 VND
-```
-
-Implementation:
-
-- `CountDownLatch` cho start barrier.
-- `ExecutorService` fixed pool.
-- Timeout cho mỗi `Future`.
-- Shutdown executor trong `finally`.
-- Log test-only request outcome, không log secret.
-
-Expected:
-
-- Exactly one commit.
-- One `409 INSUFFICIENT_FUNDS`.
-- Final source `400,000`.
-- Destination receives one `600,000`.
-- No negative balance.
-- No lost update.
-
-Không dùng sleep tùy ý để đồng bộ. Dùng latch/barrier/timeout.
-
-### Bước 6 — Concurrent duplicate idempotency
-
-Gửi N request cùng:
-
-- actor.
-- operation.
-- idempotency key.
-- canonical payload.
-
-Assert:
-
-- Một transfer row.
-- Một debit.
-- Một credit.
-- Replay trả original logical result.
-- Payload khác cùng key trả `409 IDEMPOTENCY_KEY_REUSED`.
-- Không có duplicate audit/risk mutation.
-
-### Bước 7 — Opposite-direction locking
-
-Chạy A→B và B→A đồng thời nhiều lần:
-
-- Hai flow dùng cùng lock API.
-- SQL lock order theo PostgreSQL `id ASC`.
-- Future timeout hữu hạn.
-- Không deadlock lâu dài.
-- Nếu fail, capture exception/lock evidence rồi fail test.
-- Không retry vô hạn để che lỗi.
-
-### Bước 8 — Duplicate OTP confirm
-
-Tạo transfer `AWAITING_OTP`, gửi confirm đồng thời:
-
-- Một `COMPLETED`.
-- Một debit/credit pair.
-- OTP consume một lần.
-- Request còn lại replay hoặc state conflict đúng contract.
-- Confirm sau completed không đổi balance.
-
-### Bước 9 — Block-vs-confirm race
-
-1. Tạo large transfer `AWAITING_OTP`.
-2. Chạy block source/destination và confirm OTP cạnh tranh.
-3. Confirm lock lại transfer/challenge/accounts.
-4. Revalidate status, ownership, currency, account state, balance dưới lock.
-
-Assert:
-
-- Account không eligible → `FAILED` đúng failure code.
-- Balance không đổi.
-- OTP invalidated theo contract.
-- Terminal state không bị ghi đè.
-
-### Bước 10 — Review transaction boundary
-
-Xác nhận:
-
-- PIN verification trước money transaction.
-- Large transfer create chưa debit/reserve.
-- Confirm OTP lock accounts trong confirm transaction.
-- Debit, credit, complete, audit, OTP consume atomic.
-- Risk chạy sau commit.
-- Không network call trong money transaction.
-
----
-
-## 5. Lệnh kiểm thử
-
-Unit/MVC:
+## 6. Lệnh nghiệm thu
 
 ```powershell
 cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
 mvn -q -Dtest="*TransferServiceTest,*TransferServiceLifecycleTest,*TransferControllerMvcTest,*Recipient*Test" test
+mvn -q -Dtest="*Transfer*PostgresTest,TransferUiApiRegressionPostgresTest" test
+cd ..
+git diff --check
 ```
 
-PostgreSQL:
+Testcontainers fail → ghi exact error, phân loại env/tool/code, không thay shared PG, không ghi pass.
 
-```powershell
-mvn -q -Dtest="*Transfer*PostgresTest,UiApiRegressionPostgresTest" test
-```
+## 7. Tiêu chí đạt
 
-Package:
+- [ ] Rollback pass: balances unchanged, không tác dụng phụ.
+- [ ] Timeout retry 1 mutation, trả original.
+- [ ] Overdraft không âm, đúng 409.
+- [ ] Same-key 1 resource, replay đúng.
+- [ ] Opposite không deadlock lâu dài.
+- [ ] Duplicate confirm 1 debit.
+- [ ] Block-vs-confirm đúng state.
+- [ ] Terminal không quay lui.
+- [ ] Dùng DisposablePostgresTestSupport của BE-4, không container riêng.
 
-```powershell
-mvn -q -DskipTests package
-```
+## 8. Nghiệm thu
 
-Dùng cấu hình Testcontainers trong:
+- BE-2 check lock/order dùng đúng API chốt.
+- BE-1 check PIN/OTP boundary không vi phạm.
+- BE-4 chạy lại lệnh mục 6, so counts.
+- Fail nếu: H2/mock cho lock test, sleep-sync flaky, injector lọt prod, terminal ghi đè.
 
-```text
-docs/projects/backend-mvp/evidence/docker-testcontainers.md
-```
+## 9. Bàn giao
 
-Nếu Docker/Testcontainers fail:
+Tạo `evidence/BE3-rollback-timeout.md`, `BE3-concurrency.md`, `BE3-otp-race.md`.
+Cho BE-1: PIN/OTP boundary thực tế, wrong-attempt commit.
+Cho BE-2: lock/order validation, snapshot, block race setup, lock metric.
+Cho BE-4: injector design, PG output, invariant summary, flaky note.
+Cho FE/BE: state machine, 5M boundary, header/body/key/retry, timeout unknown, OTP attempt/expiry, error matrix, mailbox + dataset. Không optimistic, không cancel/resend.
 
-- Ghi exact error.
-- Phân loại environment/tooling/code.
-- Không thay bằng shared PostgreSQL.
-- Không bỏ qua test rồi ghi pass.
+## 10. Cấm
 
----
-
-## 6. Tiêu chí nghiệm thu
-
-### Financial correctness
-
-- Rollback test pass.
-- Không one-sided debit/credit.
-- Không balance âm.
-- Exact VND integer amount.
-- Reject không đổi balance.
-
-### Concurrency
-
-- Overdraft test pass.
-- Same-key duplicate pass.
-- Opposite-direction no persistent deadlock.
-- Duplicate confirm một mutation.
-- Block-vs-confirm revalidate dưới lock.
-
-### State/idempotency
-
-- `5,000,000` hoàn tất không OTP.
-- `5,000,001` tạo `AWAITING_OTP`, balance unchanged.
-- Expired thành `EXPIRED`.
-- Fifth wrong OTP thành failure đúng contract.
-- Terminal state không quay lui.
-- Timeout retry trả original result.
-
-### Evidence
-
-```text
-- Command.
-- Test count.
-- PostgreSQL version.
-- Thread/barrier setup.
-- Expected/actual.
-- Final balances.
-- Transfer rows.
-- Idempotency rows.
-- Audit/risk rows.
-- Timeout/deadlock diagnostics.
-```
-
----
-
-## 7. Handoff cho FE/BE
-
-Gửi:
-
-1. State machine `AWAITING_OTP/COMPLETED/EXPIRED/FAILED`.
-2. Boundary `5,000,000` và `5,000,001`.
-3. Request body/header.
-4. Idempotency key generate/retry.
-5. Timeout = unknown, không failed.
-6. `GET /transfers/{transferId}` reconciliation.
-7. Wrong OTP attempts.
-8. Expiry.
-9. Insufficient funds/account eligibility/currency mismatch.
-10. `Idempotency-Replayed`.
-11. Không optimistic balance.
-12. Không cancel/resend UI.
-13. Error matrix:
-
-```text
-201 COMPLETED
-200 AWAITING_OTP
-200 replay
-400 OTP_INVALID
-409 STATE_CONFLICT
-409 TRANSFER_EXPIRED
-409 INSUFFICIENT_FUNDS
-409 ACCOUNT_NOT_ELIGIBLE
-503 SERVICE_UNAVAILABLE
-```
-
-14. OTP mailbox prerequisites.
-15. Synthetic source/destination dataset.
-16. Expected balance before/after từng scenario.
-
----
-
-## 8. Handoff cho owner khác
-
-### BE-1
-
-- PIN verification boundary.
-- OTP linkage/consume.
-- Wrong attempt commit.
-- PIN failure không rollback theo money failure.
-
-### BE-2
-
-- Account lock API.
-- Pair lock order.
-- Status/currency/balance snapshot.
-- Block-vs-confirm setup.
-- DB lock metric.
-
-### BE-4
-
-- Failure injector design.
-- Testcontainers command/output.
-- Financial invariant summary.
-- Timing/flakiness limitations.
-- Required evidence paths.
-
----
-
-## 9. Definition of Done
-
-- Dedicated tests tồn tại.
-- Mỗi concurrency test bounded timeout.
-- PostgreSQL/Testcontainers pass.
-- Test hook chỉ bật test profile.
-- FE nhận exact status/error/reconciliation rules.
-- BE-4 review evidence.
-- Không commit/push nếu chưa được yêu cầu.
+Không sửa module khác. Không k6/CI/FE. Không `down -v`/`DROP`/`TRUNCATE`. 1 PR 1 scenario.

@@ -84,7 +84,7 @@ ML chỉ xem xét post-MVP khi có dataset, tiêu chí đánh giá, privacy desi
 
 ### P0.1 Failure and recovery
 
-**Owner:** BE-4 coordinates; BE-3 owns transfer scenarios; FE/BE supports E2E and evidence.
+**Owner:** BE-4 owns disposable-environment harness and evidence; BE-3 owns transfer fail-closed behavior; BE-1 owns OTP dispatch failure semantics; FE/BE verifies user-visible unknown outcome.
 
 Required scenarios:
 
@@ -120,7 +120,7 @@ Required scenarios:
 
 ### P0.2 Concurrency and financial invariants
 
-**Owner:** BE-3.
+**Owner:** BE-3 owns transfer concurrency; BE-2 owns account/seed concurrency; BE-1 owns auth/session/registration concurrency. BE-4 verifies shared DB harness and consolidates evidence.
 
 Required scenarios:
 
@@ -129,7 +129,7 @@ Required scenarios:
 3. Opposite-direction transfers A→B and B→A.
 4. Duplicate OTP confirmation submitted concurrently.
 5. Account block races with transfer confirmation.
-6. Concurrent duplicate seed requests.
+- Concurrent duplicate seed requests (BE-2).
 
 Assertions:
 
@@ -145,7 +145,7 @@ Use PostgreSQL/Testcontainers. Mock-only tests do not prove row-lock behavior.
 
 ### P0.3 Load test with k6
 
-**Owner:** BE-4; FE/BE supports realistic user-flow data and smoke validation.
+**Execution owner:** FE/BE writes and runs `tests/load/banking-mvp.js`; BE-2 owns seed SQL, synthetic balances, invariant query and DB metrics; BE-3 reviews financial assertions; BE-4 verifies report and acceptance status.
 
 Baseline workload:
 
@@ -191,25 +191,25 @@ Detailed individual work orders:
 - [BE-4 — Audit, Risk, Integration](./14-be-4-audit-risk-integration.md)
 - [FE/BE — Contract, E2E, k6, CI](./15-fe-be-contract-e2e-load-ci.md)
 
-### BE-1 — Identity, Security, Onboarding
+### BE-1 — Identity, Security, Onboarding, CI Backend
 
-Owns identity/customer modules, authentication, session, OTP/PIN/recovery, onboarding and security regression. Also owns dependency, secret and sensitive-log review. Does not own transfer concurrency, k6 implementation or full CI workflow.
+Owns `identity/**`, `customer/**`, `SecurityConfiguration`, `OnboardingController`, auth/session/OTP/PIN/recovery, rate-limit, auth audit facts, OTP dispatch failure behavior and `.github/workflows/backend-ci.yml`. Owns customer registration and default-account creation orchestration. Does not own account/operator services, transfer, shared PostgreSQL test support, k6 or FE CI.
 
-### BE-2 — Account, Operator, and Database Support
+### BE-2 — Account, Operator, DB Support
 
-Owns account/operator operations, account constraints, seed concurrency, account-level lock behavior and DB metrics support. Coordinates with BE-3 on account lock APIs and block-vs-confirm tests. Does not own transfer orchestration or identity implementation.
+Owns `account/**`, account/operator acceptance, seed concurrency, block/status, DB constraints/indexes, DB metrics, k6 synthetic dataset and invariant SQL. Publishes account lock/status contract for BE-3 before transfer integration tests. Does not edit onboarding controller or transfer implementation.
 
-### BE-3 — Transfer and Financial Consistency
+### BE-3 — Transfer Financial Consistency
 
-Owns transfer rollback, transfer-specific concurrency, idempotency races, ordered locks, OTP-confirm races, timeout-after-commit and block-vs-confirm scenarios. Does not directly modify another module's repository implementation.
+Owns `transfer/**`, transfer rollback/timeout, overdraft, transfer idempotency race, opposite lock, duplicate OTP confirm and block-vs-confirm transfer behavior. Owns only transfer regression test files. Uses BE-1 auth/OTP contract and BE-2 account lock/status contract; does not edit their implementation.
 
-### BE-4 — Audit, Risk, and Integration Owner
+### BE-4 — Audit, Risk, Test Support, Resilience Evidence, Integration
 
-Owns audit/risk implementation, evidence matrix, acceptance review, merge gate and final report. Coordinates execution but does not write all k6, CI, security scan or DB metric work alone.
+Owns `audit/**`, `risk/**`, disposable PostgreSQL test support, DB-unavailable/restart test harness, container image scan, evidence matrix and final acceptance report. Does not fix business code owned by BE-1/2/3; reports failures to that owner.
 
-### FE/BE — Contract Consumer, E2E, k6, and CI Support
+### FE/BE — Contract, E2E, k6, CI Frontend
 
-Owns generated types, API drift checks, browser E2E, synthetic test data, k6 script, FE/OpenAPI GitHub Actions jobs, same-origin routing checks and browser evidence. Does not change BE business behavior to make UI tests pass.
+Owns frontend API integration, browser 3-role E2E, unknown-outcome UI, `tests/load/banking-mvp.js`, `.github/workflows/frontend-contract.yml` and routing checks. Depends on frozen OpenAPI plus BE-1/2/3 handoff for final end-to-end and load assertions.
 
 ## 6. Shared-file ownership and conflict prevention
 
@@ -217,15 +217,22 @@ Only one owner edits each shared file at a time:
 
 | Shared area | Owner |
 |---|---|
-| `contracts/openapi.yaml` | Integration Owner; module owner proposes changes |
-| `pom.xml` | Integration Owner with affected BE approval |
-| `application*.yml` | Integration Owner |
-| `SecurityConfiguration` | BE-1; cross-role changes require Integration Owner review |
-| Global error/correlation | BE-4; BE-1 reviews auth errors |
-| Flyway migration numbering | Integration Owner |
+| `contracts/openapi.yaml` | BE-4 merge; module owner proposal |
+| `pom.xml` | BE-4 điều phối + owner liên quan |
+| `application*.yml` | BE-4 |
+| `SecurityConfiguration` | BE-1; đổi cross-role cần BE-4 review |
+| Global error/correlation | BE-4; BE-1 review auth |
+| Flyway numbering | BE-4 |
 | `docker-compose.yml`, `Dockerfile` | BE-4 |
-| Backend roadmap/status docs | BE-4 |
-| Frontend generated OpenAPI output | FE/BE; never hand-edit |
+| `.github/workflows/backend-ci.yml` | BE-1; BE-4 review |
+| `.github/workflows/frontend-contract.yml` | FE/BE; BE-4 review |
+| `be/src/test/java/com/bank/simulator/AccountUiApiRegressionPostgresTest.java` | BE-2 |
+| `be/src/test/java/com/bank/simulator/TransferUiApiRegressionPostgresTest.java` | BE-3 |
+| `be/src/test/java/com/bank/simulator/DisposablePostgresTestSupport.java` | BE-4; BE-1/2/3 consume only |
+| `be/src/test/java/com/bank/simulator/DatabaseFailureRecoveryTest.java` | BE-4 harness; BE-1/3 assertions by contract |
+| `be/src/test/java/com/bank/simulator/UiApiRegressionPostgresTest.java` | Legacy; no new edits after split |
+| Backend roadmap/status | BE-4 |
+| Frontend generated output | FE/BE; không sửa tay |
 
 Rules:
 
@@ -288,19 +295,19 @@ Use environment variables for local JWT secret and database settings. Never past
 
 ### Step 1 — Failure/recovery tests
 
-BE-3 writes transfer fault-injection tests. BE-4 adds recovery orchestration and evidence format. FE/BE runs unknown-outcome and reconciliation flows.
+BE-4 owns disposable test support and resilience harness. BE-3 owns transfer rollback and timeout/retry behavior plus transfer assertions inside restart/DB-outage scenarios. BE-1 owns OTP dispatch failure and auth-related assertions. FE/BE owns unknown-outcome/reconciliation UI and evidence.
 
 ### Step 2 — Concurrency tests
 
-BE-3 writes PostgreSQL tests for overdraft, duplicate key, opposite direction, duplicate confirm and block race. BE-2 reviews account locking API.
+BE-1 owns auth/session/registration concurrency. BE-2 owns seed/account concurrency. BE-3 owns transfer overdraft, duplicate transfer key, opposite direction, duplicate confirm and block-vs-confirm transfer assertions. BE-4 owns disposable PG support and verifies isolation.
 
 ### Step 3 — k6 load test
 
-BE-4 creates script and disposable dataset. FE/BE verifies login, PIN and transfer setup. Run baseline, save raw summary and acceptance report.
+FE/BE creates `tests/load/banking-mvp.js` and disposable scenario. BE-2 provides seed SQL, balance dataset and invariant query plus pool/lock metrics runbook. BE-3 reviews financial invariant checks. BE-4 reviews script and evidence format. Run baseline, save raw summary and acceptance report.
 
 ### Step 4 — Security and observability review
 
-BE-1 reviews auth/OTP/PIN/session/rate-limit controls. BE-4 scans logs, dependencies and image. Confirm no sensitive fields leak.
+BE-1 owns dependency, secret and sensitive-log scans plus OTP/mailbox security. BE-4 owns container image scan review and final scan disposition. BE-2 provides DB metrics. FE/BE verifies browser-visible cookie/CORS/routing behavior.
 
 ### Step 5 — Local final acceptance
 
@@ -375,7 +382,7 @@ FE must provide:
 
 ## 11. Current handover
 
-Next work starts with P0.1 failure/recovery and P0.2 concurrency. Do not add ML, ledger, microservices, Kafka, Outbox, review workflow or real notification delivery.
+Next work starts with publishing BE-4 disposable PostgreSQL test-support contract and freezing shared interfaces. BE-1/2/3 can implement module-local work and unit tests in parallel; PostgreSQL integration cases start when the shared support is available. Do not add ML, ledger, microservices, Kafka, Outbox, review workflow or real notification delivery.
 
 Keep local Docker/Testcontainers databases isolated. Do not run `docker compose down -v`, `DROP`, `TRUNCATE` or bulk deletion against retained data.
 

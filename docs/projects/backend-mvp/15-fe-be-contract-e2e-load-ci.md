@@ -1,42 +1,18 @@
-# FE/BE — Kế hoạch Contract, Browser E2E, k6 và CI
+# FE/BE — Contract, E2E, k6, CI Frontend
 
-**Người phụ trách:** Thành viên FE/BE integration  
-**Reviewer:** BE-4 và module owner liên quan  
-**Phối hợp:** BE-1 auth; BE-2 account/dataset/metrics; BE-3 transfer/invariant  
-**Trạng thái:** Kế hoạch thực thi; dùng backend thật, không fallback mock khi backend lỗi.  
-**Mục tiêu:** Bảo đảm FE dùng đúng contract thật, chạy E2E cho Customer/Operator/Auditor, tạo k6 load script, thêm CI FE/OpenAPI và kiểm tra same-origin routing.
+**Người phụ trách:** FE/BE integration
+**Reviewer:** BE-4 + module owner liên quan
+**Mục tiêu:** FE dùng backend thật, xong browser 3 role, xong k6 + CI FE/OpenAPI + routing. Không sửa BE để UI pass.
 
 ---
 
-## 1. Phạm vi công việc
+## 1. Vai trò
 
-### 1.1 Bao gồm
+FE/BE là **owner duy nhất** frontend integration + k6 HTTP scenario + CI frontend. Không sửa `be/src/main/**` để UI pass. Backend lỗi thì báo BE owner, không fallback mock âm thầm. k6 dataset/invariant query lấy từ BE-2, không tự đoán số dư.
 
-- OpenAPI type generation/drift check.
-- FE typecheck/test/build.
-- API smoke với backend thật.
-- Browser E2E Customer/Operator/Auditor.
-- Unknown outcome/reconciliation.
-- Synthetic data setup.
-- k6 script/report.
-- GitHub Actions FE/OpenAPI jobs.
-- Same-origin local/cloud routing validation.
-- Responsive evidence.
-- Handoff package cho BE-4.
+## 2. Phạm vi
 
-### 1.2 Không bao gồm
-
-- Sửa backend business để UI pass.
-- Sửa Account/Transfer repository.
-- Contract change chưa approved.
-- Real customer data.
-- Real SMS/Email.
-- Cloud provisioning trước local acceptance.
-- Lưu password/PIN/OTP/token để phục vụ test.
-
----
-
-## 2. File và vùng code
+### Được sửa
 
 ```text
 frontend/src/api/**
@@ -44,58 +20,54 @@ frontend/scripts/**
 frontend/package.json
 frontend/vite.config.ts
 frontend/src/** tests
+tests/load/banking-mvp.js (tạo mới)
+.github/workflows/frontend-contract.yml (tạo mới: OpenAPI + FE)
+docs/projects/backend-mvp/evidence/FEBE-*.md
 contracts/openapi.yaml (proposal only)
-tests/load/banking-mvp.js
-.github/workflows/**
 ```
 
-Quy tắc:
+### Không được sửa
 
-- Generated OpenAPI output không sửa tay.
-- Contract proposal gửi BE-4.
-- FE không tự đổi status/error để khớp UI.
-- Mock chỉ dùng unit/component test đã chủ động bật.
-- Backend lỗi thật không được âm thầm fallback mock.
+- `be/src/main/**` business logic, migration, repository/service.
+- Generated OpenAPI output bằng tay.
+- Contract chưa approved.
 
----
+Mock chỉ bật chủ động cho unit/component. Flow E2E/k6 bắt buộc backend thật + disposable PG.
 
-## 3. Kết quả phải bàn giao
+## 3. Đầu vào
 
-```text
-- FE contract gate output.
-- Browser E2E matrix.
-- k6 script và report.
-- GitHub Actions workflow/run.
-- Same-origin routing evidence.
-- Screenshot/video synthetic data.
-- Known FE limitations.
-- Contract mismatch list.
-```
+1. `contracts/openapi.yaml` hiện tại + generated types. Drift là dừng, báo BE-4.
+2. Handoff từ BE-1: auth endpoint/cookie/CSRF, OTP TTL/attempt, mailbox guard, synthetic credentials qua env.
+3. Handoff từ BE-2: account DTO, status matrix, lookup XOR, seed key/replay, block reason, dataset synthetic + invariant query.
+4. Handoff từ BE-3: transfer state machine, 5M boundary, key/retry/timeout unknown, error matrix, Idempotency-Replayed.
+5. Handoff từ BE-4: error/role matrix chốt, screenshot policy, CI artifact path.
 
-Mẫu:
+## 4. Dependencies and handoff contracts
 
-```text
-Task:
-Environment:
-Backend revision:
-Browser/tool version:
-Command:
-Expected:
-Actual:
-Status:
-Evidence path:
-Backend owner:
-Next action:
-```
+| FE/BE work | Depends on | Required input | Independent work if input missing |
+|---|---|---|---|
+| Contract gate, typecheck, build, FE CI | Current frozen OpenAPI | spec path, generated types and validator command | Fully proceeds; report drift, do not edit generated output by hand |
+| Customer auth E2E | BE-1 | synthetic credentials via env, OTP mailbox guard, cookie/CSRF sequence | Build non-secret test skeleton; execution waits for valid local setup |
+| Account/operator E2E | BE-2 | synthetic customers/accounts, known balances, seed/block error matrix | Build selectors/assertion skeleton; no invented account state |
+| Transfer E2E and unknown outcome | BE-3 | state/error matrix, retry key rule, reconcile route | Contract tests continue; behavior run waits for stable API |
+| k6 run | BE-1 + BE-2 + BE-3 | auth setup + seed SQL + expected balances/invariant query | Script structure can be prepared; load run blocked until disposable dataset exists |
+| Final evidence | BE-4 | evidence schema, image/CI report links, status vocabulary | Keep raw results; do not mark acceptance without BE-4 review |
 
----
+Contract change protocol: stop only affected flow, open proposal with operation/schema diff and consumer impact, wait for BE-4 + module owner approval, regenerate types from approved OpenAPI, rerun affected gates. No shared FE/BE/BE implementation edits.
 
-## 4. Kế hoạch thực thi theo bước
+## 5. Quy trình
 
-### Bước 1 — Contract gate
+### Bước 0 — Dựng nền disposable + guard secret (Tiên quyết — Chuẩn bị môi trường)
 
-Chạy:
+1. Tạo disposable PG (không dùng DB giữ lại). Seed theo file BE-2.
+2. Demo profile guard + env credentials. Không ghi secret vào Git/md/screenshot/video/storage.
+3. Mailbox guard: local/demo only.
+4. Check base path không lặp `/api/v1`, `credentials:include`, token memory-only, key stable.
+Done khi `api:smoke` pass trên nền disposable.
 
+### Gói A — Contract gate (Làm ngay, độc lập)
+
+1. Chạy:
 ```powershell
 cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\frontend
 npm run api:check
@@ -103,385 +75,106 @@ npm run typecheck
 npm test
 npm run build
 npm run api:smoke
-```
-
-Kiểm tra:
-
-- Generated types match OpenAPI.
-- Base path không lặp `/api/v1`.
-- `credentials: include` cho cookie flow.
-- CSRF header đúng refresh/logout.
-- Bearer token chỉ memory.
-- Idempotency key giữ nguyên khi retry.
-- Mutation không auto-retry unsafe.
-- `Problem.code` quyết định UI behavior.
-- 204 không parse JSON.
-- 401/403/404/409/429/500/503 phân biệt đúng.
-
-Nếu drift:
-
-1. Dừng integration path.
-2. Ghi operation/schema affected.
-3. Báo BE-4 và BE owner.
-4. Không sửa generated file tay.
-
-### Bước 2 — Chuẩn bị synthetic data
-
-Dùng:
-
-- Disposable PostgreSQL.
-- Local/demo profile được guard.
-- Credentials qua environment variables.
-- OTP mailbox local có guard.
-
-Không ghi credential vào:
-
-- Git.
-- `.md`.
-- Screenshot.
-- Video.
-- CI output.
-- FE localStorage/sessionStorage.
-
-Chuẩn bị dataset:
-
-```text
-Customer A: active account, known balance
-Customer B: active account, known balance
-Operator: lookup/seed/block permission
-Auditor: audit/risk read-only permission
-```
-
-Ghi account IDs/full account numbers trong disposable env/secret mechanism, không ghi vào docs public.
-
-### Bước 3 — Customer browser E2E
-
-Chạy theo thứ tự:
-
-1. Registration send OTP.
-2. Verify registration OTP/proof.
-3. Submit profile/register.
-4. Login phone/password.
-5. Setup PIN.
-6. Read profile/accounts/balance.
-7. Resolve recipient.
-8. Transfer đúng `5,000,000`.
-9. Kiểm tra `COMPLETED`, balance/history.
-10. Transfer `5,000,001`.
-11. Kiểm tra `AWAITING_OTP`, balance unchanged.
-12. Wrong OTP lần đầu.
-13. Valid OTP.
-14. Confirm replay.
-15. OTP expiry.
-16. History/detail source.
-17. Destination chỉ thấy completed.
-18. Recovery SMS.
-19. Recovery Email.
-20. Change PIN/reset PIN.
-
-Mỗi case ghi:
-
-```text
-Scenario
-Input class, không ghi secret
-Expected status/UI
-Actual status/UI
-API correlation ID nếu safe
-Screenshot
-Pass/fail/skipped
-```
-
-### Bước 4 — Operator browser E2E
-
-1. Login Operator.
-2. Lookup exact phone.
-3. Lookup exact email.
-4. No-filter bị chặn.
-5. Both-filter bị chặn.
-6. Tạo counter customer bằng OTP khách.
-7. Seed balance.
-8. Replay cùng seed key.
-9. Block account với reason.
-10. Xác minh Customer transfer bị backend reject.
-11. Unblock.
-12. Xác minh UI refetch status/balance từ server.
-13. Kiểm tra masked account.
-14. Kiểm tra seed cancel không tạo mutation.
-
-### Bước 5 — Auditor browser E2E
-
-1. Login Auditor.
-2. Mở audit.
-3. Filter event/time/actor.
-4. Cursor load more.
-5. Xem seed/block/transfer/recovery events.
-6. Mở risk.
-7. Kiểm tra `LARGE_TRANSFER`.
-8. Kiểm tra `HIGH_FREQUENCY`.
-9. Không có mutation control.
-10. Customer/Operator route trực tiếp trả denied.
-11. Logout clear session/cache.
-
-### Bước 6 — Unknown outcome/reconciliation
-
-Verify:
-
-- Network timeout không hiển thị business failure giả.
-- Exact body/key giữ trong memory để retry.
-- Có transfer ID thì gọi detail.
-- Không có transfer ID thì retry cùng key/body sau khi user action.
-- Không optimistic balance.
-- Retry không tạo duplicate.
-- Confirm retry dùng transfer ID cũ.
-- Completed replay không debit lần hai.
-
-### Bước 7 — k6 load test
-
-Tạo file:
-
-```text
-tests/load/banking-mvp.js
-```
-
-Nếu repo đã có thư mục test load khác, ghi rõ path và thống nhất với BE-4 trước khi tạo.
-
-Baseline:
-
-```text
-50 VU
-20 RPS steady target
-10 phút
-Transfers <= 5,000,000 VND
-Disposable PostgreSQL
-Synthetic identities/accounts
-```
-
-Scenario chính:
-
-- Health check.
-- Login/session setup.
-- Account read.
-- Recipient resolve.
-- Small transfer.
-- History read.
-- Idempotency replay sample.
-
-Scenario riêng tùy chọn:
-
-- Transfer >5M.
-- OTP mailbox.
-- Confirm replay.
-
-k6 phải ghi/kiểm tra:
-
-- p50/p95/p99.
-- throughput.
-- expected business 4xx.
-- unexpected 5xx.
-- status/code distribution.
-- correlation header.
-- idempotency replay.
-- final source/destination balance.
-- duplicate transfer row/debit/credit.
-
-Mục tiêu:
-
-```text
-Transfer p95 <= 500 ms
-Balance p95 <= 500 ms
-0 financial invariant violation
-0 duplicate debit/credit
-```
-
-BE-2 cung cấp DB pool/lock metrics. BE-3 cung cấp invariant query. BE-4 review report.
-
-Nếu k6 chưa cài:
-
-- Ghi version/install method.
-- Không commit binary.
-- Không ghi token/credential.
-
-### Bước 8 — GitHub Actions FE/OpenAPI
-
-Tạo workflow sau khi BE-4 review tên file/path.
-
-Jobs tối thiểu:
-
-```yaml
-openapi:
-  - validate OpenAPI
-  - npm run api:check
-
-frontend:
-  - npm ci
-  - npm run typecheck
-  - npm test
-  - npm run build
-
-backend:
-  - gọi job/command do BE-4 duyệt
-```
-
-Quy tắc:
-
-- Dùng lockfile.
-- Pin Node/npm nếu repo yêu cầu.
-- Dùng GitHub Secrets cho secret.
-- Không hard-code JWT/DB/mailbox token.
-- Upload test/build report không chứa secret.
-- CI fail khi generated types drift.
-
-### Bước 9 — Same-origin routing
-
-Local:
-
-```text
-http://127.0.0.1:5173/api/* → http://localhost:8080/api/*
-```
-
-Cloud acceptance mặc định:
-
-```text
-https://bank.example.com/      → frontend
-https://bank.example.com/api/* → backend
-```
-
-Kiểm tra browser thật:
-
-- Refresh cookie được gửi.
-- CSRF header được gửi/accept.
-- Deep link SPA fallback hoạt động.
-- `/api/v1/health` tới backend.
-- Không wildcard CORS credential.
-- Logout xóa state/cache.
-- Refresh sau reload khôi phục session.
-
-Cross-origin chỉ chấp nhận khi đã test:
-
-- Exact CORS.
-- `allowCredentials=true`.
-- `SameSite=None; Secure`.
-- HTTPS.
-- Preflight.
-- Chrome/Firefox browser behavior.
-
----
-
-## 5. Lệnh kiểm thử
-
-```powershell
-cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\frontend
-npm run api:check
-npm run typecheck
-npm test
-npm run build
-npm run api:smoke
-```
-
-k6:
-
-```powershell
-k6 run tests/load/banking-mvp.js
-```
-
-OpenAPI:
-
-```powershell
 cd ..
 python be/scripts/validate-openapi.py
 ```
+2. Check tay: types match contract, CSRF đúng refresh/logout, không auto-retry unsafe (đặc biệt POST transfer), Problem.code drive UI, 204 không parse JSON.
+3. Drift → dừng integration, ghi operation/schema lệch, báo BE-4 + owner. Không sửa generated tay.
+4. Output `FEBE-contract-gate.md`: command + output + drift list (none hoặc chi tiết).
 
-Diff:
+### Gói B — Browser E2E 3 role (Sau khi qua Contract Gate)
+
+Dataset: Customer A/B active + balance known (lấy BE-2), Operator, Auditor. Screenshots chỉ synthetic.
+
+Customer 20 bước:
+```text
+register OTP/proof → login phone → PIN setup → account/balance →
+resolve dest → transfer 5M (small) → transfer 5M+1 (OTP) →
+wrong OTP 1 lần → valid OTP → replay cùng key →
+expiry case → history list → detail source/dest →
+recovery SMS → recovery Email → change PIN → reset PIN → logout
+```
+Mỗi bước: action + expected UI + API status + screenshot synthetic.
+
+Operator:
+```text
+login → lookup phone → lookup email → no/both filter chặn →
+counter create OTP → seed → replay key (không credit 2) →
+block reason → Customer transfer reject check →
+unblock → refetch server (không cache cũ) → masked check →
+cancel action không mutation
+```
+
+Auditor:
+```text
+login → audit filter/cursor → seed/block/transfer/recovery events →
+risk large/frequency rows → không có nút mutate →
+direct Customer/Operator route denied → logout clear cache
+```
+
+Unknown-outcome (bắt buộc, làm cùng BE-3):
+- Timeout sau commit: UI không false-fail, giữ key/body retry, detail reconcile, không optimistic tạo K2, không duplicate, confirm dùng ID cũ.
+- Ghi video/log nếu có.
+
+Output `FEBE-e2e-matrix.md` + screenshots. Fail bước nào ghi exact API response + UI state, báo BE owner đúng module.
+
+### Gói C — k6 + CI FE (Sau khi nhận dataset từ BE-2)
+
+1. Tạo `tests/load/banking-mvp.js`:
+- 50 VU, 20 RPS steady, 10 phút. Transfers chính ≤5M để OTP không dominate latency. Step-up >5M riêng tùy chọn với mailbox.
+- Setup: health → login/session (token pool) → account read → resolve → small transfer → history → replay sample.
+- Phân loại business 4xx vs unexpected 5xx. Check status/code + correlation + replay header.
+- Teardown: final balance query (lấy từ BE-2) + duplicate row/debit/credit check.
+- Chạy:
+```powershell
+k6 run tests/load/banking-mvp.js
+```
+2. Target: transfer p95 ≤500ms, balance p95 ≤500ms, 0 invariant violation, 0 duplicate. Fail ghi số thật + bottleneck (BE CPU/RAM, DB connections, lock waits), không nâng threshold che.
+3. Tạo `.github/workflows/frontend-contract.yml`: openapi validate + `api:check`; `npm ci`, typecheck, test, build; upload artifact không secret; drift làm fail.
+4. Same-origin check:
+- Local `127.0.0.1:5173/api → localhost:8080/api`: cookie gửi, CSRF accept, SPA fallback, health tới BE, không wildcard CORS credential.
+- Cloud `bank.example.com/ + /api/*` (khi có): tương tự. Cross-origin chỉ pass khi test exact CORS + SameSite=None/Secure + HTTPS + browser thật.
+5. Output: k6 script + `FEBE-k6-report.md` (version, commit, machine/Docker shape, PG version/config, VU/RPS/mix, p50/p95/p99, throughput, 4xx/5xx, CPU/RAM/conn/lock, invariant, duplicate) + CI run xanh.
+
+## 6. Lệnh nghiệm thu
 
 ```powershell
+cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\frontend
+npm run api:check
+npm run typecheck
+npm test
+npm run build
+npm run api:smoke
+k6 run ../tests/load/banking-mvp.js
+cd ..
+python be/scripts/validate-openapi.py
 git diff --check
 ```
 
----
+## 7. Tiêu chí đạt
 
-## 6. Tiêu chí nghiệm thu
+- [ ] Contract/build/smoke pass, drift none hoặc có proposal.
+- [ ] 3-role E2E pass hoặc skipped rõ lý do + evidence.
+- [ ] Unknown-outcome pass (không false-fail, không duplicate).
+- [ ] k6 report đủ p50/p95/p99 + throughput + error class + resource + invariant + duplicate.
+- [ ] CI FE/OpenAPI pass.
+- [ ] Screenshots synthetic, không secret/PII thật.
+- [ ] Responsive 360/768/1024/1440 note + a11y limitations.
 
-### Contract/build
+## 8. Nghiệm thu
 
-- `api:check` pass.
-- Typecheck pass.
-- FE tests pass.
-- Production build pass.
-- API smoke pass backend thật.
+- BE-4 check: chạy lại lệnh mục 6, so report. k6 thiếu invariant/resource là fail.
+- BE-1 check auth flow/cookie/CSRF đúng. BE-2 check dataset/invalidation. BE-3 check transfer/timeout matrix.
+- Fail nếu: sửa BE để UI pass, mock trong E2E/k6, nâng threshold che bottleneck, screenshot dính secret.
 
-### Browser
+## 9. Bàn giao
 
-- Customer E2E pass hoặc ghi explicit skipped reason.
-- Operator E2E pass hoặc ghi explicit skipped reason.
-- Auditor E2E pass hoặc ghi explicit skipped reason.
-- Unknown outcome/reconciliation pass.
-- Role direct-route denial pass.
-- Responsive 360/768/1024/1440 evidence.
+Cho BE-4: command/output, E2E matrix, k6 path/version/report, CI path/run/artifact, screenshots, limitations, mismatch list, a11y/perf note.
+Cho BE-1: auth setup thực tế, mailbox guard, credential env, recovery/PIN prerequisites.
+Cho BE-2: seed fixtures dùng thật, lookup fixtures, DB metric fields cần thêm, balance dataset kết quả.
+Cho BE-3: transfer dataset, expected balances, timeout hook dùng thật, invariant query, OTP prerequisites.
+Nhận từ BE: dataset + error matrix + state machine. Thiếu là mark BLOCKED, không tự bịa data.
 
-### k6
+## 10. Cấm
 
-- Script tồn tại.
-- Report có p50/p95/p99.
-- Có throughput/error class/resource context.
-- Có balance/idempotency invariant.
-- Business 4xx tách unexpected 5xx.
-
-### CI
-
-- Workflow chạy pass.
-- Contract drift làm CI fail.
-- FE build/test chạy trên clean install.
-- Artifact không có secret.
-
----
-
-## 7. Handoff cho BE-4
-
-Gửi:
-
-- Commands và output thật.
-- Browser scenario matrix.
-- k6 path/version/report.
-- CI workflow path/run/artifact.
-- Screenshot/video synthetic.
-- FE limitations.
-- Contract mismatch list.
-- Accessibility/performance limitations.
-- Same-origin/cross-origin result.
-
-## 8. Handoff cho BE owners
-
-### BE-1
-
-- Auth setup.
-- Mailbox guard.
-- Role credential mechanism.
-- Recovery/PIN prerequisites.
-
-### BE-2
-
-- Account/seed fixtures.
-- Operator lookup fixtures.
-- DB metric fields.
-- Expected balance dataset.
-
-### BE-3
-
-- Transfer dataset.
-- Expected balances.
-- Timeout/reconciliation hook.
-- Invariant query.
-- OTP scenario prerequisites.
-
----
-
-## 9. Definition of Done
-
-- E2E dùng backend thật.
-- Backend lỗi không fallback mock âm thầm.
-- k6 report ghi kết quả thật.
-- CI workflow được BE-4 review.
-- FE handoff package delivered.
-- Không unapproved contract/backend changes.
-- Không secret trong artifacts.
-- Không commit/push nếu chưa được yêu cầu.
+Không sửa BE. Không commit secret/OTP/token. Không E2E/k6 trên DB giữ lại. Không wildcard CORS + credential. 1 PR 1 gói.

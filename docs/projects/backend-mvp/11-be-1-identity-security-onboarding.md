@@ -1,322 +1,217 @@
-# BE-1 — Kế hoạch Identity, Security và Onboarding
+# BE-1 — Identity, Security, Onboarding, CI Backend
 
-**Người phụ trách:** BE-1  
-**Reviewer:** BE-4  
-**Phối hợp:** BE-2, BE-3, FE/BE  
-**Trạng thái:** Kế hoạch thực thi; chưa đánh dấu nghiệm thu trước khi có output thật.  
-**Mục tiêu:** Kiểm tra và hoàn thiện lớp identity/security/onboarding, sau đó bàn giao contract và evidence đủ để FE chạy E2E không phải đoán nghiệp vụ.
+**Người phụ trách:** BE-1
+**Reviewer:** BE-4 (Integration Owner)
+**Mục tiêu:** Khóa đúng lớp auth/security, chứng minh bằng test thật trên PostgreSQL, own onboarding controller/orchestration, xong CI backend + dependency/secret/log scan. Không ôm transfer/k6/FE.
 
 ---
 
-## 1. Phạm vi công việc
+## 1. Vai trò trong team
 
-### 1.1 Bao gồm
+BE-1 là **owner duy nhất** của auth boundary. Mọi quyết định về login/session/JWT/CSRF/rate-limit/OTP/PIN/recovery do BE-1 chốt. Người khác cần đổi behavior auth phải gửi proposal, BE-1 review.
 
-- Đăng ký Customer bằng phone OTP và registration verification token.
-- Operator tạo Customer tại quầy bằng OTP của khách.
-- Đăng nhập bằng phone + password.
-- JWT access token.
-- Refresh token rotation và logout.
-- CSRF cho refresh/logout.
-- Recovery bằng SMS và Email.
-- PIN setup/change/reset và lockout.
-- Role authorization và ownership denial.
-- Rate limit theo policy đã duyệt.
-- Local OTP mailbox guard.
-- Audit auth/onboarding.
-- Dependency scan, secret scan và sensitive-log review.
+BE-1 không own Testcontainer base, shared error handler, account/operator services, transfer, k6 hoặc FE CI.
 
-### 1.2 Không bao gồm
 
-- Debit/credit transfer hoặc transfer concurrency.
-- Account balance và seed implementation.
-- k6 script.
-- Cloud provisioning.
-- Real SMS/Email provider.
-- ML fraud detection.
-- Public endpoint mới ngoài OpenAPI.
-- Sửa migration đã applied.
+## 2. Phạm vi chi tiết
 
----
-
-## 2. File và vùng code được phép sửa
+### 2.1 Được sửa (duy nhất BE-1 được merge trực tiếp)
 
 ```text
 be/src/main/java/com/bank/simulator/identity/**
 be/src/main/java/com/bank/simulator/customer/**
 be/src/main/java/com/bank/simulator/shared/ratelimit/**
+be/src/main/java/com/bank/simulator/shared/error/** (chỉ gửi auth error proposal; BE-4 owns shared handler)
 be/src/test/java/com/bank/simulator/identity/**
 be/src/test/java/com/bank/simulator/customer/**
+be/src/test/java/com/bank/simulator/shared/ratelimit/**
+be/src/test/java/com/bank/simulator/identity/web/OnboardingControllerTest.java
+.github/workflows/backend-ci.yml (tạo mới, chỉ job backend)
+docs/projects/backend-mvp/evidence/BE1-*.md (tự tạo)
 ```
 
-File dùng chung:
+### 2.2 Không được sửa
+
+- `account/**`, `transfer/**`, `audit/**`, `risk/**` implementation. Chỉ đọc để hiểu boundary.
+- `frontend/**`, `tests/load/**`, `.github/workflows/frontend-contract.yml`.
+- `contracts/openapi.yaml`: chỉ gửi proposal cho BE-4.
+- Migration V1–V7 đã apply: không sửa. Cần schema mới phải qua BE-4 cấp số V8+.
+
+### 2.3 Shared ownership (điểm chạm duy nhất)
 
 | File/vùng | Quy tắc |
 |---|---|
-| `SecurityConfiguration` | BE-1 sửa; BE-4 review |
-| Global error/correlation | BE-4 sở hữu; BE-1 gửi yêu cầu auth |
-| `contracts/openapi.yaml` | Không sửa trực tiếp; gửi proposal cho BE-4 |
-| Flyway migration | Chỉ Integration Owner cấp version; không sửa V1–V7 |
-| `OnboardingController` | Có thể chung BE-2; chốt owner PR trước khi sửa |
+| `SecurityConfiguration.java` | BE-1 own. Đổi cross-role phải có BE-4 review |
+| `OnboardingController.java` | BE-1 owns controller and onboarding orchestration. BE-2 không sửa; chỉ gửi AccountCreation contract proposal nếu cần |
+| `shared/error/**` | BE-4 owns global handler; BE-1 chỉ gửi auth error proposal |
+| `DisposablePostgresTestSupport.java` | BE-4 owns; BE-1 consumes only |
 
-Trước khi sửa:
+## 3. Đầu vào (đọc trước khi code)
 
-1. Đọc `git status`.
-2. Ghi file đang có thay đổi không thuộc task.
-3. Không reset/discard thay đổi của người khác.
-4. Không thêm password/OTP/PIN/token vào test fixture committed.
+1. `be/src/main/java/.../identity/**`: login, refresh, logout, recovery, registration, OTP.
+2. `SecurityConfiguration`: filter chain, JWT verifier, CSRF check, role mapping.
+3. `shared/ratelimit`: bucket IP vs identifier, TTL, key format.
+4. `docs/projects/backend-mvp/02-shared-security.md`, `03-identity-onboarding.md`.
+5. `contracts/openapi.yaml`: auth error codes, 401/403/429 shape.
+6. `DisposablePostgresTestSupport.java` contract from BE-4 for integration tests.
 
----
+Dependency rule: BE-1 can implement auth and unit tests without BE-4 support. PostgreSQL integration tests consume BE-4 support; no private container fork.
 
-## 3. Kết quả phải bàn giao
+## 4. Quy trình thực hiện chi tiết
 
-BE-1 phải tạo hoặc cập nhật:
+### Bước 0 — Khảo sát hiện trạng (Tiên quyết — Chưa code)
 
-```text
-- Implementation note của task.
-- Test output thực tế.
-- Security checklist.
-- Auth error matrix.
-- Role/ownership matrix.
-- FE handoff note.
-- Known gaps và skipped checks.
-```
+- Liệt kê mọi endpoint auth: method + path + role + rate-limit key.
+- Ghi ra giấy: token lưu đâu (memory vs cookie), refresh rotation thế nào, CSRF check ở đâu, recovery token TTL bao lâu, PIN lock sau mấy lần sai.
+- Output: bảng 1 trang trong `BE1-auth-regression.md` mục "Hiện trạng". Nếu phát hiện behavior khác docs, ghi `MISMATCH` và báo BE-4 ngay, không tự sửa docs pass.
 
-Mỗi handoff ghi:
+### Bước 1 — Chốt onboarding boundary và test support contract
 
-```text
-Task:
-File thay đổi:
-API impact:
-DB/migration impact:
-Security impact:
-Command:
-Kết quả thực tế:
-Evidence path:
-Known limitation:
-Owner tiếp theo:
-```
-
----
-
-## 4. Kế hoạch thực thi theo bước
-
-### Bước 1 — Kiểm tra baseline và contract
-
-Đọc:
-
-- `docs/baseline/api-and-team-contract.md`.
-- `docs/baseline/quality-security-and-cloud.md`.
-- `contracts/openapi.yaml`.
-- `docs/projects/backend-mvp/02-shared-security.md`.
-- `docs/projects/backend-mvp/03-identity-onboarding.md`.
-
-Lập bảng:
-
-| Flow | Endpoint | Role | Success | Error | Test hiện có | Gap |
-|---|---|---|---|---|---|---|
-| Login | `/auth/login` | Public | 200 | 400/401/429 | ... | ... |
-| Refresh | `/auth/refresh` | Cookie + CSRF | 200 | 401/403 | ... | ... |
-| Registration | `/auth/register/*` | Public | 200/201 | 400/409/429 | ... | ... |
-| Recovery | `/auth/recover/*` | Public | 200 | 400/429 | ... | ... |
-| PIN | `/customers/me/pin/*` | Customer | 200 | 400/403 | ... | ... |
-| Counter | `/operator/customers/*` | Operator/Admin | 200/201 | 400/403/409 | ... | ... |
-
-Không đổi contract chỉ vì test hoặc FE đang tiện hơn.
+- BE-1 owns `OnboardingController.java` và gọi onboarding/default-account flow qua contract hiện có.
+- Không tạo `AccountCreationService` mới nếu chưa có quyết định chuyển ownership tạo account sang `account/**`.
+- Nếu cần contract mới, ghi method signature, input/output, transaction owner, error mapping vào proposal gửi BE-2 + BE-4; không tự thêm abstraction.
+- Dùng `DisposablePostgresTestSupport.java` do BE-4 cung cấp. Không tạo container/base riêng.
 
 ### Bước 2 — Auth/session regression
 
-Kiểm tra:
+Viết/bổ sung test theo ma trận sau. Mỗi dòng là 1 test case thật, không test chay bằng mock DB (trừ OtpSender được mock):
 
-1. Phone/password đúng trả `200`.
-2. Email không được dùng làm login.
-3. Phone không tồn tại và password sai có cùng lớp lỗi `401 CREDENTIALS_INVALID`.
-4. JWT hết hạn, sai chữ ký, sai key đều bị từ chối.
-5. Role lấy từ token đã verify, không lấy từ body/header client.
-6. Customer gọi Operator endpoint nhận `403`.
-7. Auditor không seed/block/create customer.
-8. Refresh rotation chỉ có tối đa một winner khi gọi đồng thời.
-9. Refresh token cũ không dùng lại được sau rotation.
-10. Logout revoke session.
-11. CSRF thiếu/sai chặn refresh/logout.
-12. Recovery thành công revoke toàn bộ refresh sessions.
+| ID | Input | Kỳ vọng |
+|---|---|---|
+| AUTH-01 | Login phone đúng + password đúng | 200, access token memory, refresh cookie HttpOnly |
+| AUTH-02 | Login sai password | 401 đúng Problem.code, không leak user tồn tại hay không |
+| AUTH-03 | Login bằng email | 400/404 theo contract (email không phải identifier login) |
+| AUTH-04 | JWT hết hạn | 401 |
+| AUTH-05 | JWT sai chữ ký/sai key | 401 |
+| AUTH-06 | Customer gọi operator API | 403 deny-by-default |
+| AUTH-07 | Auditor gọi mutate | 403 |
+| AUTH-08 | 2 refresh concurrent cùng token | 1 winner 200, 1 loser 401, token cũ hết hiệu lực |
+| AUTH-09 | Logout | refresh revoke, gọi lại 401 |
+| AUTH-10 | Recovery confirm | revoke toàn bộ refresh sessions |
+| AUTH-11 | Thiếu/sai X-CSRF-Token ở refresh/logout | 403 |
+| AUTH-12 | Login 6 lần/60s cùng IP | lần 6 bị 429, bucket identifier riêng không ảnh hưởng user khác |
 
-### Bước 3 — OTP/PIN regression
+Cách làm từng test:
 
-Kiểm tra:
+1. Viết test đỏ trước (TDD): chạy, xem fail đúng lý do missing/wrong.
+2. Fix minimal trong `identity/**`.
+3. Chạy lại đơn test đó pass.
+4. Chạy cả package không vỡ test cũ.
 
-- OTP có leading zero.
-- OTP lưu hash, không lưu plaintext.
-- OTP bind đúng `identifier + channel + purpose`.
-- OTP sai lần 1–4 giữ trạng thái pending.
-- Sai lần 5 invalidate theo contract.
-- OTP hết hạn/đã consume/đã invalidate không dùng lại.
-- Password hash và PIN hash dùng policy riêng.
-- PIN setup không ghi đè PIN đã cấu hình.
-- PIN change cần current PIN.
-- Sai PIN 5 lần lock 15 phút.
-- PIN failure commit độc lập với transaction tiền.
+Lệnh:
 
-### Bước 4 — Registration/recovery atomicity
+```powershell
+cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
+mvn -q -Dtest="*Security*Test,*Onboarding*Test,*Refresh*Test" test
+```
 
-Kiểm tra:
+### Bước 3 — OTP/PIN/recovery atomicity (Song song hoặc sau Bước 2)
 
-1. Registration hợp lệ tạo đúng một user, role, customer, PIN row và default account.
-2. OTP/proof sai tạo không tạo bản ghi.
-3. Proof bound phone, one-use, expiry đúng.
-4. Resend vô hiệu proof cũ.
-5. Duplicate phone/email trả đúng `409`, không tạo partial record.
-6. Hai registration đồng thời cùng phone/email chỉ một request commit.
-7. Recovery initiate trả body/status generic cho identifier tồn tại và không tồn tại.
-8. Recovery verify chỉ trả reset token sau OTP đúng.
-9. Recovery confirm nhận reset token, không nhận raw OTP.
-10. Reset token one-use và expiry-bound.
-11. Password reset revoke refresh sessions.
+| ID | Input | Kỳ vọng |
+|---|---|---|
+| OTP-01 | OTP có leading-zero `001234` | verify đúng, không trim sai |
+| OTP-02 | DB chỉ lưu hash, không plaintext | query DB kiểm tra |
+| OTP-03 | Sai OTP 1–4 lần | vẫn pending, attempt tăng |
+| OTP-04 | Sai lần 5 | invalidate, đúng contract code |
+| OTP-05 | Registration proof dùng 2 lần | lần 2 fail, one-use |
+| OTP-06 | Resend OTP | OTP cũ vô hiệu |
+| OTP-07 | 2 register concurrent cùng phone/email | 1 commit 201, 1 conflict 409 |
+| REC-01 | Recovery initiate user không tồn tại | vẫn generic 200/202, không oracle |
+| REC-02 | Recovery verify đúng → reset token one-use | dùng lại fail |
+| REC-03 | Recovery confirm | đổi password, revoke sessions |
+| PIN-01 | Setup/change/reset PIN | đúng flow, sai 5 lần lock 15 phút |
 
-### Bước 5 — Security/log review
+Lưu ý:
 
-Kiểm tra bằng test/log capture:
+- OtpSender mock trong test, nhưng uniqueness/concurrency bắt buộc PostgreSQL (DisposablePostgresTestSupport do BE-4 cung cấp).
+- Không log OTP/password/token. Test nào cần assert log thì capture và kiểm tra không chứa secret.
 
-- Không có password, password hash, PIN, OTP, token, JWT, refresh cookie.
-- Không có full account number.
-- Không có raw phone/email nếu không cần.
-- Audit summary không chứa request body nhạy cảm.
-- Local mailbox bị chặn ngoài `local/demo`.
-- HTTPS profile bật `Secure` cookie.
-- Không có wildcard CORS với credentials.
-- Error public không lộ SQL/stack trace/credential.
+Lệnh:
 
-### Bước 6 — Chuẩn bị FE handoff
+```powershell
+mvn -q -Dtest="*Otp*Test,*Registration*Test,*Recovery*Test" test
+```
 
-Tạo handoff theo mục 8. Gửi cho FE/BE và BE-3 trước khi họ chạy E2E.
+### Bước 4 — Rate-limit 2 bucket (Gộp vào Bước 2 hoặc làm độc lập)
 
----
+- Chứng minh IP bucket và identifier bucket độc lập: flood từ 1 IP block IP đó nhưng user khác IP khác vẫn pass; flood 1 identifier block identifier đó nhưng identifier khác vẫn pass.
+- Cấu hình chốt: login 5/60s, register OTP 3/300s, recover initiate 3/300s, recover verify 5/300s. Đổi số phải báo BE-4 + FE/BE (ảnh hưởng E2E/k6).
+- Output: bảng số + test log.
 
-## 5. Lệnh kiểm thử
+### Bước 5 — OTP dispatch failure, mailbox guard + secret/log scan
 
-Chạy targeted trước:
+1. OTP dispatch failure: force `OtpSender` failure after `AWAITING_OTP` boundary. Assert `503 SERVICE_UNAVAILABLE`, proof/OTP retirement semantics, `AWAITING_OTP -> FAILED` only, terminal state not overwritten. Transfer-side state assertion belongs to BE-3.
+2. Mailbox (local OTP viewer): only profile `local/demo`. Prod profile bật mailbox là fail review.
+3. Secret scan: grep `.env`, `JWT_SECRET`, `password`, `otp`, `BEGIN PRIVATE KEY` trong `be/src`, log, artifact. Có hit là phải fix, không ghi "để sau".
+4. Sensitive-log review: chạy 1 flow register→login→transfer→recovery, capture log, assert không có password/PIN/OTP/token/account full.
+5. Dependency scan: `mvn dependency:tree` + tool team chốt (OWASP DC hoặc tương đương). Ghi version tool + số CVE critical/high.
+
+### Bước 6 — CI backend (Sau khi test auth & scan ổn định)
+
+Tạo `.github/workflows/backend-ci.yml` chỉ job backend:
+
+```yaml
+- mvn -q -DskipTests package
+- mvn -q test
+- python be/scripts/validate-openapi.py
+- upload surefire reports (không secret)
+```
+
+Không bỏ k6/FE vào file này. FE CI do FE/BE own file riêng.
+
+Tiêu chí: push branch test → CI xanh. Fail thì fix code, không disable test để xanh giả.
+
+## 5. Test và lệnh nghiệm thu
+
+Lệnh chuẩn BE-1 (ghi exact output vào evidence):
 
 ```powershell
 cd D:\work\Xgame\XCreative\yuiyL\Cloud\cloude\be
 mvn -q -Dtest="*Security*Test,*Onboarding*Test,*Recovery*Test,*Registration*Test,*Otp*Test,*Refresh*Test" test
-```
-
-Nếu pattern không chọn đúng test:
-
-```powershell
-mvn -q -Dtest=DemoDataSeederTest,RegistrationTokenPostgresTest,OtpChallengePostgresTest,RefreshSessionPostgresTest test
-```
-
-Build:
-
-```powershell
 mvn -q -DskipTests package
-```
-
-OpenAPI:
-
-```powershell
 python scripts/validate-openapi.py
+cd ..
+git diff --check
 ```
 
-Dùng Testcontainers PostgreSQL cho uniqueness, persistence và concurrency. Mock chỉ dùng cho `OtpSender` hoặc external adapter.
+Bắt buộc PostgreSQL/Testcontainers cho uniqueness/concurrency. Mock/H2 không đủ evidence lock. Testcontainers fail thì ghi exact error, phân loại env/tool/code, không thay shared PG, không ghi pass.
 
-Không ghi credential thật vào output. Không chạy test trên database giữ lại.
+## 6. Tiêu chí đạt (DoD) — thiếu 1 là chưa xong
 
----
+- [ ] `DisposablePostgresTestSupport.java` from BE-4 is used for PostgreSQL integration tests; no private container/base fork.
+- [ ] AUTH-01→12 pass trên PostgreSQL, log đính kèm.
+- [ ] OTP/PIN/recovery matrix pass, DB không plaintext secret.
+- [ ] Rate-limit 2 bucket chứng minh độc lập.
+- [ ] Mailbox chỉ local/demo, prod tắt.
+- [ ] Secret/log scan 0 hit敏感, dependency scan có report.
+- [ ] `backend-ci.yml` xanh trên GitHub Actions.
+- [ ] Không sửa migration cũ, không đổi OpenAPI lén.
 
-## 6. Tiêu chí nghiệm thu BE-1
+## 7. Nghiệm thu (ai check, check gì)
 
-### Bắt buộc pass
+- BE-4 check: chạy lại lệnh mục 5 trên máy sạch, so output với evidence BE-1 nộp. Khớp pass count + không secret mới ACCEPT.
+- BE-3 check boundary: PIN verify API/result, OTP consume once, lock semantics đủ để transfer dùng. Thiếu là BE-1 bổ sung.
+- FE/BE check handoff: auth endpoint list + cookie/CSRF sequence chạy được thật, không phải docs suông.
 
-- Auth test đúng status và error code.
-- Registration/recovery atomicity pass.
-- Refresh rotation concurrent có một winner.
-- Rate limit dùng bucket IP và identifier độc lập.
-- Mailbox không có route ngoài local/demo.
-- Secret không xuất hiện trong API/log/audit/fixture/evidence.
-- OpenAPI không drift.
-- Không sửa migration cũ.
+Fail nghiệm thu nếu: test chỉ pass bằng H2/mock cho case cần PG, CI xanh bằng cách skip test, log còn secret, OpenAPI drift không proposal.
 
-### Evidence phải có
+## 8. Bàn giao (trả về cái gì, docs nào, cho ai)
 
-```text
-- Test command và exit code.
-- Số test pass/fail/skip.
-- Profile dùng khi test.
-- PostgreSQL/Testcontainers status.
-- Security scan output.
-- Log redaction result.
-- Known limitation.
-```
+Output: `BE1-auth-regression.md`, `BE1-otp-pin-recovery.md`, `BE1-onboarding.md`, `BE1-ci-scan.md`.
 
-Không đánh dấu `VERIFIED` chỉ dựa trên docs thiết kế.
+- `BE1-auth-regression.md`: hiện trạng + ma trận AUTH-01→12 + exact command + pass/fail + duration.
+- `BE1-otp-pin-recovery.md`: ma trận OTP/REC/PIN + DB hash proof + OTP dispatch failure + error code table.
+- `BE1-onboarding.md`: registration/counter creation proof, owner boundary, account creation proposal if needed, FE handoff.
+- `BE1-ci-scan.md`: CI file path + run link + dependency scan + secret/log scan output (redacted).
 
----
 
-## 7. Handoff cho FE/BE
+Cho BE-3: PIN verify contract, OTP consume boundary, wrong-attempt commit behavior.
+Cho BE-4: auth audit events cần log, rate-limit metrics, scan output gốc.
+Cho FE/BE: endpoint list, cookie/CSRF sequence, `UserSummary` + staff alias cảnh báo, OTP TTL/attempt, mailbox guard, synthetic credential setup qua env. Không gửi OTP/password/token thật.
 
-Gửi các nội dung sau, không gửi secret:
+## 9. Cấm và chống conflict
 
-1. Danh sách auth endpoints từ OpenAPI.
-2. Sequence login → CSRF → refresh → logout.
-3. Cookie path, `HttpOnly`, `SameSite`, `Secure`.
-4. `UserSummary`: `userId`, `customerId`, roles, `isPinSet`.
-5. Cảnh báo staff `customerId=userId` chỉ là alias.
-6. Route guard matrix.
-7. OTP TTL, purpose, channel, max attempts.
-8. Registration proof lifecycle.
-9. Recovery anti-enumeration.
-10. Error codes:
-
-```text
-CREDENTIALS_INVALID
-OTP_INVALID
-REGISTRATION_TOKEN_INVALID
-RECOVERY_TOKEN_INVALID
-PIN_INVALID
-PIN_LOCKED
-RATE_LIMITED
-FORBIDDEN
-```
-
-11. Mailbox guard procedure.
-12. Synthetic credential setup qua environment.
-13. Browser E2E prerequisites.
-
----
-
-## 8. Handoff cho owner khác
-
-### BE-2
-
-- Customer/profile lookup interface.
-- Customer ID ownership semantics.
-- Staff role behavior.
-- Quy tắc không inject identity repository trực tiếp.
-
-### BE-3
-
-- PIN verification API/result.
-- OTP challenge consume API.
-- PIN verification nằm trước money transaction.
-- Transfer OTP confirmation dùng transaction transfer.
-- Failure/lock semantics.
-
-### BE-4
-
-- Auth audit event list.
-- Rate-limit policy/metrics.
-- Sensitive-data scan result.
-- Security test output.
-- Known gaps.
-
----
-
-## 9. Definition of Done
-
-- Test và scan có output thật.
-- Implementation note cập nhật.
-- FE handoff hoàn tất.
-- BE-4 review security/contract impact.
-- Không commit/push nếu chưa được yêu cầu.
+- Không chạm `transfer/**`, `account/**`, `audit/**`, `risk/**`.
+- Không tạo container riêng ngoài base. Cần helper mới thì proposal.
+- Không commit `.env`, secret, OTP thật. Không `docker compose down -v`, `DROP`, `TRUNCATE`.
+- 1 PR 1 gói (A/B/C). Không trộn migration + refactor + feature.
