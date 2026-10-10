@@ -1,40 +1,36 @@
 # Backend MVP — Quy trình phối hợp và bàn giao
 
-**Mục đích:** Quy định boundary, dependency, test, evidence và merge gate cho 4 BE + 1 FE/BE. Đây là protocol chung; plan thực thi từng người nằm trong file 11–15.
+**Mục đích:** Quy định boundary, dependency, test, evidence và merge gate cho **3 BE + 1 FE/BE (4 thành viên)**. Cập nhật tiến độ realtime tại [progress.md](../../progress.md). Đây là protocol chung; plan thực thi từng người nằm trong file 11–15.
 
 ## 1. Nguồn kế hoạch
 
 - [09 — Acceptance gaps và ownership](./09-acceptance-gap-and-team-plan.md)
-- [11 — BE-1 Identity/Security/Onboarding](./11-be-1-identity-security-onboarding.md)
-- [12 — BE-2 Account/Operator/DB](./12-be-2-account-operator-db-support.md)
+- [11 — BE-A Identity/Security/Account Lifecycle](./11-be-1-identity-security-onboarding.md) (Gộp BE-1 + BE-2 Account Lifecycle)
 - [13 — BE-3 Transfer/Consistency](./13-be-3-transfer-financial-consistency.md)
-- [14 — BE-4 Audit/Risk/Test support/Integration](./14-be-4-audit-risk-integration.md)
-- [15 — FE/BE Contract/E2E/k6/CI](./15-fe-be-contract-e2e-load-ci.md)
+- [14 — BE-B Audit/Test support/Integration/Data](./14-be-4-audit-risk-integration.md) (Gộp BE-4 + BE-2 Data Support)
+- [15 — FE/BE Contract/E2E/k6/Fraud Flagging/CI](./15-fe-be-contract-e2e-load-ci.md)
 
 ## 2. Owner và code boundary
 
 | Owner | Owns | Không sửa |
 |---|---|---|
-| BE-1 | `identity/**`, `customer/**`, `SecurityConfiguration`, `OnboardingController`, auth/session/OTP/PIN/recovery/rate-limit, backend CI | account/operator implementation, transfer, shared error handler, test support, k6, FE CI |
-| BE-2 | `account/**`, account/operator/seed/block, account tests, DB metrics, k6 dataset/query | `OnboardingController`, transfer, audit/risk, k6 script, CI workflows |
+| BE-A | `identity/**`, `customer/**`, `account/**`, `SecurityConfiguration`, `OnboardingController`, auth/session/OTP/PIN/recovery/rate-limit, account lock/status, seed concurrency, backend CI | transfer, audit/risk, shared error handler, disposable test support, k6, FE CI |
 | BE-3 | `transfer/**`, transfer tests, rollback/concurrency/idempotency/retry | identity/account/audit/risk implementation, k6, CI |
-| BE-4 | `audit/**`, `risk/**`, `shared/error/**`, disposable PostgreSQL test support, resilience harness, image scan, evidence/matrix, OpenAPI merge | business implementation thuộc BE-1/2/3, FE business flow, k6 implementation |
-| FE/BE | `frontend/**` integration, generated types via generator, E2E, `tests/load/banking-mvp.js`, FE CI | backend implementation, migration, unapproved contract |
+| BE-B | `audit/**`, `shared/error/**`, disposable PostgreSQL test support, resilience harness, image scan, k6 synthetic dataset seed SQL & invariant query, evidence/matrix, OpenAPI merge | business implementation thuộc BE-A/3, FE business flow, k6 implementation |
+| FE/BE | `frontend/**` integration, generated types via generator, E2E, `tests/load/banking-mvp.js`, Rule-based Anomaly/Fraud Detection UI & logic, FE CI | backend implementation, migration, unapproved contract |
 
-Mỗi file có một owner. Reviewer không đồng nghĩa co-owner. Không sửa file ngoài boundary để unblock nhanh; mở proposal gửi đúng owner.
+Mỗi file có một owner. Reviewer không đồng nghĩa co-owner. Không sửa file ngoài boundary để unblock nhanh; mở proposal gửi đúng owner. Mọi tiến độ cập nhật vào [progress.md](../../progress.md).
 
 ## 3. Shared contract và dependency bắt buộc
 
 | Consumer | Provider | Contract/handoff bắt buộc | Việc được làm trước khi nhận |
 |---|---|---|---|
-| BE-1/2/3 PostgreSQL integration tests | BE-4 | `DisposablePostgresTestSupport.java`: disposable lifecycle, fixture/reset contract, no retained DB | Unit tests và implementation module-local |
-| BE-3 transfer | BE-2 | lock API/order `id ASC`, account eligibility/status/currency contract | Transfer unit tests và test theo contract draft đã thống nhất |
-| BE-3 transfer | BE-1 | PIN verify result, OTP consume-once semantics, transaction boundary | Transfer unit tests theo current API |
-| BE-2 onboarding requirement | BE-1 | `OnboardingController`/registration owner; account creation proposal nếu cần | Account/operator work độc lập |
-| FE/BE auth E2E | BE-1 | endpoint, cookie/CSRF, mailbox guard, synthetic auth setup | OpenAPI/typecheck/build/CI |
-| FE/BE account E2E + k6 | BE-2 | fixtures, known balances, seed SQL, invariant query, DB metrics | k6 skeleton và contract gate |
+| BE-A/3 PostgreSQL integration tests | BE-B | `DisposablePostgresTestSupport.java`: disposable lifecycle, fixture/reset contract, no retained DB | Unit tests và implementation module-local |
+| BE-3 transfer | BE-A | lock API/order `id ASC`, account eligibility/status/currency contract, PIN verify result, OTP consume-once semantics | Transfer unit tests và test theo contract draft đã thống nhất |
+| FE/BE auth & account E2E | BE-A | endpoint, cookie/CSRF, mailbox guard, synthetic auth setup, account DTO, status matrix | OpenAPI/typecheck/build/CI |
 | FE/BE transfer E2E + k6 | BE-3 | state/error matrix, idempotency/retry/reconcile behavior | Contract gate và test skeleton |
-| Final acceptance | BE-1/2/3/FE/BE | exact command/output, environment, evidence link, status | Matrix setup and review gates |
+| FE/BE k6 run | BE-B | dataset synthetic, known balances, seed SQL, invariant query, DB metrics | k6 skeleton và contract gate |
+| Final acceptance | BE-A/3/FE/BE | exact command/output, environment, evidence link, status | Matrix setup and review gates |
 
 Missing handoff blocks only dependent integration proof. It does not block unrelated unit tests or module-local implementation. Report missing input as `BLOCKED`; do not invent contract/data.
 

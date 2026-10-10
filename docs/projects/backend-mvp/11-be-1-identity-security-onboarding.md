@@ -1,48 +1,53 @@
-# BE-1 — Identity, Security, Onboarding, CI Backend
+# BE-A — Identity, Security, Account Lifecycle, CI Backend (Gộp BE-1 + BE-2 Account)
 
-**Người phụ trách:** BE-1
-**Reviewer:** BE-4 (Integration Owner)
-**Mục tiêu:** Khóa đúng lớp auth/security, chứng minh bằng test thật trên PostgreSQL, own onboarding controller/orchestration, xong CI backend + dependency/secret/log scan. Không ôm transfer/k6/FE.
+**Người phụ trách:** BE-A  
+**Reviewer:** BE-B (Integration Lead)  
+**Tiến độ chung:** Cập nhật tại [progress.md](../../progress.md)  
+**Kỹ thuật làm chủ để bảo vệ đồ án:**  
+1. `Strong Authentication & RBAC (3 Roles: Customer, Operator, Auditor)`: Phân quyền chặt chẽ, chống đọc trộm tài khoản chéo (`IDOR`).
+2. `Token Rotation & Session Revocation`: Cơ chế thu hồi phiên cũ, xoay vòng Refresh Token an toàn.
+3. `Brute-force PIN/OTP Lockout`: Tự động khóa tạm thời sau 5 lần nhập sai.
+4. `Pessimistic Locking (SELECT ... FOR UPDATE)`: Khóa dòng số dư khi nạp tiền, chống cộng tiền 2 lần khi bấm đồng thời.
 
 ---
 
 ## 1. Vai trò trong team
 
-BE-1 là **owner duy nhất** của auth boundary. Mọi quyết định về login/session/JWT/CSRF/rate-limit/OTP/PIN/recovery do BE-1 chốt. Người khác cần đổi behavior auth phải gửi proposal, BE-1 review.
+BE-A là **owner duy nhất** của cụm Auth, Security, Customer và Account Lifecycle. Quản lý trọn vẹn từ lúc khách hàng đăng ký $\rightarrow$ xác thực $\rightarrow$ cấp tài khoản $\rightarrow$ quản lý số dư và trạng thái khóa/mở tài khoản.
 
-BE-1 không own Testcontainer base, shared error handler, account/operator services, transfer, k6 hoặc FE CI.
-
+BE-A không own Testcontainer base, transfer core logic, audit Kafka consumer, k6 load script hoặc FE CI.
 
 ## 2. Phạm vi chi tiết
 
-### 2.1 Được sửa (duy nhất BE-1 được merge trực tiếp)
+### 2.1 Được sửa (duy nhất BE-A được merge trực tiếp)
 
 ```text
 be/src/main/java/com/bank/simulator/identity/**
 be/src/main/java/com/bank/simulator/customer/**
+be/src/main/java/com/bank/simulator/account/** (account lifecycle, balance lock, block/unblock)
 be/src/main/java/com/bank/simulator/shared/ratelimit/**
-be/src/main/java/com/bank/simulator/shared/error/** (chỉ gửi auth error proposal; BE-4 owns shared handler)
+be/src/main/java/com/bank/simulator/shared/error/** (chỉ gửi auth/account error proposal; BE-B owns shared handler)
 be/src/test/java/com/bank/simulator/identity/**
 be/src/test/java/com/bank/simulator/customer/**
-be/src/test/java/com/bank/simulator/shared/ratelimit/**
-be/src/test/java/com/bank/simulator/identity/web/OnboardingControllerTest.java
-.github/workflows/backend-ci.yml (tạo mới, chỉ job backend)
-docs/projects/backend-mvp/evidence/BE1-*.md (tự tạo)
+be/src/test/java/com/bank/simulator/account/**
+be/src/test/java/com/bank/simulator/AccountUiApiRegressionPostgresTest.java
+.github/workflows/backend-ci.yml (tạo mới, job backend auth & account)
+docs/projects/backend-mvp/evidence/BEA-*.md (tự tạo)
 ```
 
 ### 2.2 Không được sửa
 
-- `account/**`, `transfer/**`, `audit/**`, `risk/**` implementation. Chỉ đọc để hiểu boundary.
+- `transfer/**`, `audit/**` implementation. Chỉ đọc để hiểu boundary.
 - `frontend/**`, `tests/load/**`, `.github/workflows/frontend-contract.yml`.
-- `contracts/openapi.yaml`: chỉ gửi proposal cho BE-4.
-- Migration V1–V7 đã apply: không sửa. Cần schema mới phải qua BE-4 cấp số V8+.
+- `contracts/openapi.yaml`: chỉ gửi proposal cho BE-B.
+- Migration đã apply: không sửa. Cần schema mới phải qua BE-B cấp số migration.
 
 ### 2.3 Shared ownership (điểm chạm duy nhất)
 
 | File/vùng | Quy tắc |
 |---|---|
-| `SecurityConfiguration.java` | BE-1 own. Đổi cross-role phải có BE-4 review |
-| `OnboardingController.java` | BE-1 owns controller and onboarding orchestration. BE-2 không sửa; chỉ gửi AccountCreation contract proposal nếu cần |
+| `SecurityConfiguration.java` | BE-A own. Đổi cross-role phải có BE-B review |
+| `OnboardingController.java` | BE-A owns controller and onboarding orchestration |
 | `shared/error/**` | BE-4 owns global handler; BE-1 chỉ gửi auth error proposal |
 | `DisposablePostgresTestSupport.java` | BE-4 owns; BE-1 consumes only |
 

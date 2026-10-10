@@ -1,18 +1,17 @@
-# BE-2 — Account, Operator, Database Support
+# BE-2 — (LƯU Ý: ĐÃ SÁP NHẬP SANG BE-A VÀ BE-B)
 
-**Người phụ trách:** BE-2
-**Reviewer:** BE-4 (Integration Owner)
-**Mục tiêu:** Khóa đúng account/operator, chứng minh IDOR/lookup/seed/block bằng test PG thật, chốt trước lock API cho BE-3, cung cấp DB metrics + k6 dataset cho FE/BE.
+> **Thông báo cấu trúc mới (4 Thành Viên):**
+> Nhóm đã tối ưu hóa tổ chức từ 5 thành viên xuống **4 thành viên**:
+> 1. Toàn bộ logic **Account Lifecycle, Chống IDOR, Pessimistic Locking số dư, Block/Unblock** $\rightarrow$ Đã chuyển sang **[BE-A (Xem file 11)](./11-be-1-identity-security-onboarding.md)** phụ trách.
+> 2. Toàn bộ phần **DB Support, Tạo 100 tài khoản mẫu + Câu truy vấn SQL bảo toàn số dư cho k6** $\rightarrow$ Đã chuyển sang **[BE-B (Xem file 14)](./14-be-4-audit-risk-integration.md)** phụ trách.
+> 3. Cập nhật tiến độ realtime tại **[progress.md](../../progress.md)**.
 
 ---
 
-## 1. Vai trò trong team
+## 1. Vai trò phân rã cũ (Lưu trữ tham khảo)
 
-BE-2 là **owner duy nhất** `account/**`. Mọi quyết định read/lookup/seed/block thuộc BE-2.
-
-BE-2 là **DB support**: review constraint/index, runbook pool/lock, chuẩn bị seed SQL + invariant query cho k6. FE/BE không tự đoán dataset, lấy từ BE-2.
-
-BE-2 **không** ôm transfer orchestration, audit/risk, k6 HTTP scenario, FE CI.
+- **Phần Nghiệp vụ Tài khoản:** Đã gộp vào **BE-A** để khép kín vòng đời User $\rightarrow$ Account.
+- **Phần Dữ liệu & Kịch bản Test:** Đã gộp vào **BE-B** để tập trung một đầu mối chuẩn bị môi trường test và dữ liệu k6 cho cả team.
 
 ## 2. Phạm vi chi tiết
 

@@ -1,14 +1,19 @@
-# FE/BE — Contract, E2E, k6, CI Frontend
+# FE/BE — Contract, E2E, k6, Fraud Flagging & CI Frontend
 
-**Người phụ trách:** FE/BE integration
-**Reviewer:** BE-4 + module owner liên quan
-**Mục tiêu:** FE dùng backend thật, xong browser 3 role, xong k6 + CI FE/OpenAPI + routing. Không sửa BE để UI pass.
+**Người phụ trách:** FE/BE Integration  
+**Reviewer:** BE-B (Integration Lead) + module owner liên quan  
+**Tiến độ chung:** Cập nhật tại [progress.md](../../progress.md)  
+**Kỹ thuật làm chủ để bảo vệ đồ án:**  
+1. `Multi-role Web Experience`: Giao diện trực quan cho 3 nhóm đối tượng (`Customer`, `Bank Operator`, `Auditor/Admin`) kết nối API thật.
+2. `Offline & Retry UX with Idempotency`: Xử lý giao diện khi mất mạng, giữ dữ liệu và tự động retry an toàn cùng `Idempotency-Key`.
+3. `Rule-based Anomaly / Fraud Flagging`: Triển khai và hiển thị phát hiện giao dịch bất thường (cảnh báo giao dịch `> 5 triệu` hoặc `quá 5 lần/10 phút`) trên UI cho Auditor.
+4. `Load Testing with k6 (Performance Metrics)`: Viết kịch bản bắn tải 50 VUs trong 10 phút, đo đạc P95/P99 latency, Throughput (RPS) và Error rate.
 
 ---
 
 ## 1. Vai trò
 
-FE/BE là **owner duy nhất** frontend integration + k6 HTTP scenario + CI frontend. Không sửa `be/src/main/**` để UI pass. Backend lỗi thì báo BE owner, không fallback mock âm thầm. k6 dataset/invariant query lấy từ BE-2, không tự đoán số dư.
+FE/BE là **owner duy nhất** frontend integration + k6 HTTP scenario + Rule-based Anomaly/Fraud Detection UI & logic + CI frontend. Không sửa `be/src/main/**` để UI pass. Backend lỗi thì báo BE owner, không fallback mock âm thầm. k6 dataset/invariant query lấy từ BE-B, không tự đoán số dư.
 
 ## 2. Phạm vi
 
@@ -16,6 +21,7 @@ FE/BE là **owner duy nhất** frontend integration + k6 HTTP scenario + CI fron
 
 ```text
 frontend/src/api/**
+frontend/src/components/** (bao gồm Fraud/Risk flag UI)
 frontend/scripts/**
 frontend/package.json
 frontend/vite.config.ts

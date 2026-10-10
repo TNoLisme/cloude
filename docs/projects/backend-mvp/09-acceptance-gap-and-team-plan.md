@@ -181,35 +181,30 @@ No duplicate debit/credit
 
 If target fails, report actual result and bottleneck. Do not hide failure by raising thresholds.
 
-## 5. Team ownership: 4 BE + 1 FE/BE
+## 5. Team ownership: 3 BE + 1 FE/BE (Đội hình 4 thành viên)
 
 Detailed individual work orders:
 
-- [BE-1 — Identity, Security, Onboarding](./11-be-1-identity-security-onboarding.md)
-- [BE-2 — Account, Operator, DB Support](./12-be-2-account-operator-db-support.md)
-- [BE-3 — Transfer, Financial Consistency](./13-be-3-transfer-financial-consistency.md)
-- [BE-4 — Audit, Risk, Integration](./14-be-4-audit-risk-integration.md)
-- [FE/BE — Contract, E2E, k6, CI](./15-fe-be-contract-e2e-load-ci.md)
+- [BE-A — Identity, Security, Account Lifecycle, CI Backend](./11-be-1-identity-security-onboarding.md) (Gộp BE-1 + BE-2 Account Lifecycle)
+- [BE-3 — Transfer, Financial Consistency, Idempotency](./13-be-3-transfer-financial-consistency.md)
+- [BE-B — Audit, Test Support, Integration, Invariant Data](./14-be-4-audit-risk-integration.md) (Gộp BE-4 + BE-2 Data Support)
+- [FE/BE — Contract, E2E, k6, Fraud Flagging, CI Frontend](./15-fe-be-contract-e2e-load-ci.md)
 
-### BE-1 — Identity, Security, Onboarding, CI Backend
+### BE-A — Identity, Security & Account Lifecycle
+* **Kỹ thuật làm chủ:** `Authentication & RBAC (3 Roles)`, `Token Rotation & Session Revocation`, `Pessimistic Locking (SELECT ... FOR UPDATE)`.
+* **Phạm vi code:** `identity/**`, `customer/**`, `account/**`, `SecurityConfiguration`, `OnboardingController`, auth/session/OTP/PIN/recovery, rate-limit, account lock/status, seed concurrency (Pessimistic lock số dư) và `.github/workflows/backend-ci.yml`. Không sửa `transfer/**`, disposable test support, k6 script hay FE CI.
 
-Owns `identity/**`, `customer/**`, `SecurityConfiguration`, `OnboardingController`, auth/session/OTP/PIN/recovery, rate-limit, auth audit facts, OTP dispatch failure behavior and `.github/workflows/backend-ci.yml`. Owns customer registration and default-account creation orchestration. Does not own account/operator services, transfer, shared PostgreSQL test support, k6 or FE CI.
+### BE-3 — Transfer Financial Consistency & Idempotency
+* **Kỹ thuật làm chủ:** `Idempotency-Key Pattern`, `Strong Transactional Consistency (ACID Rollback)`, `Deadlock Prevention (Sorted Resource Locking)`.
+* **Phạm vi code:** `transfer/**`, `banking-common`, transfer rollback/timeout, overdraft, transfer idempotency race, opposite lock, duplicate OTP confirm và block-vs-confirm transfer behavior. Sử dụng contract từ BE-A; không sửa implementation auth/account.
 
-### BE-2 — Account, Operator, DB Support
+### BE-B — Audit, Test Infrastructure, Data Mocking & Integration Lead
+* **Kỹ thuật làm chủ:** `Immutable Audit Trail`, `Distributed Tracing (Correlation-ID)`, `Resilience & Recovery Harness`, `Financial Invariant SQL Query`.
+* **Phạm vi code:** `audit/**`, `banking-common`, `docker/`, disposable PostgreSQL test support, DB-unavailable/restart test harness, container image scan, script sinh 100 tài khoản mẫu + câu truy vấn bảo toàn số dư ($\sum Balance_{before} = \sum Balance_{after}$), evidence matrix và final acceptance report.
 
-Owns `account/**`, account/operator acceptance, seed concurrency, block/status, DB constraints/indexes, DB metrics, k6 synthetic dataset and invariant SQL. Publishes account lock/status contract for BE-3 before transfer integration tests. Does not edit onboarding controller or transfer implementation.
-
-### BE-3 — Transfer Financial Consistency
-
-Owns `transfer/**`, transfer rollback/timeout, overdraft, transfer idempotency race, opposite lock, duplicate OTP confirm and block-vs-confirm transfer behavior. Owns only transfer regression test files. Uses BE-1 auth/OTP contract and BE-2 account lock/status contract; does not edit their implementation.
-
-### BE-4 — Audit, Risk, Test Support, Resilience Evidence, Integration
-
-Owns `audit/**`, `risk/**`, disposable PostgreSQL test support, DB-unavailable/restart test harness, container image scan, evidence matrix and final acceptance report. Does not fix business code owned by BE-1/2/3; reports failures to that owner.
-
-### FE/BE — Contract, E2E, k6, CI Frontend
-
-Owns frontend API integration, browser 3-role E2E, unknown-outcome UI, `tests/load/banking-mvp.js`, `.github/workflows/frontend-contract.yml` and routing checks. Depends on frozen OpenAPI plus BE-1/2/3 handoff for final end-to-end and load assertions.
+### FE/BE — Contract, E2E, k6, Fraud Flagging & CI Frontend
+* **Kỹ thuật làm chủ:** `Multi-role Web Experience (Customer/Operator/Auditor)`, `Offline Retry UX with Idempotency`, `Load Testing with k6 (50 VUs)`, `Rule-based Anomaly & Fraud Flagging`.
+* **Phạm vi code:** `frontend/**`, browser 3-role E2E, unknown-outcome UI, `tests/load/banking-mvp.js`, `.github/workflows/frontend-contract.yml`, routing checks, và **Rule-based Anomaly/Fraud Detection logic & UI** (>5M hoặc >5 lần/10p).
 
 ## 6. Shared-file ownership and conflict prevention
 
@@ -217,22 +212,20 @@ Only one owner edits each shared file at a time:
 
 | Shared area | Owner |
 |---|---|
-| `contracts/openapi.yaml` | BE-4 merge; module owner proposal |
-| `pom.xml` | BE-4 điều phối + owner liên quan |
-| `application*.yml` | BE-4 |
-| `SecurityConfiguration` | BE-1; đổi cross-role cần BE-4 review |
-| Global error/correlation | BE-4; BE-1 review auth |
-| Flyway numbering | BE-4 |
-| `docker-compose.yml`, `Dockerfile` | BE-4 |
-| `.github/workflows/backend-ci.yml` | BE-1; BE-4 review |
-| `.github/workflows/frontend-contract.yml` | FE/BE; BE-4 review |
-| `be/src/test/java/com/bank/simulator/AccountUiApiRegressionPostgresTest.java` | BE-2 |
-| `be/src/test/java/com/bank/simulator/TransferUiApiRegressionPostgresTest.java` | BE-3 |
-| `be/src/test/java/com/bank/simulator/DisposablePostgresTestSupport.java` | BE-4; BE-1/2/3 consume only |
-| `be/src/test/java/com/bank/simulator/DatabaseFailureRecoveryTest.java` | BE-4 harness; BE-1/3 assertions by contract |
-| `be/src/test/java/com/bank/simulator/UiApiRegressionPostgresTest.java` | Legacy; no new edits after split |
-| Backend roadmap/status | BE-4 |
-| Frontend generated output | FE/BE; không sửa tay |
+| `contracts/openapi.yaml` | BE-B merge; module owner proposal |
+| `pom.xml` | BE-B điều phối + owner liên quan |
+| `application*.yml` | BE-B |
+| `SecurityConfiguration` | BE-A; đổi cross-role cần BE-B review |
+| Global error/correlation | BE-B; BE-A review auth |
+| Flyway numbering | BE-B |
+| `docker-compose.yml`, `Dockerfile` | BE-B |
+| `.github/workflows/backend-ci.yml` | BE-A; BE-B review |
+| `.github/workflows/frontend-contract.yml` | FE/BE; BE-B review |
+| `AccountUiApiRegressionPostgresTest.java` | BE-A |
+| `TransferUiApiRegressionPostgresTest.java` | BE-3 |
+| `DisposablePostgresTestSupport.java` | BE-B; BE-A/3 consume only |
+| `DatabaseFailureRecoveryTest.java` | BE-B harness; BE-A/3 assertions by contract |
+| Team progress tracking | [progress.md](../../progress.md) — Dùng chung cả nhóm |
 
 Rules:
 

@@ -1,8 +1,13 @@
 # BE-3 — Transfer Failure, Concurrency, Idempotency
 
-**Người phụ trách:** BE-3
-**Reviewer:** BE-2 (lock/API), BE-1 (PIN/OTP boundary), BE-4 (evidence)
-**Mục tiêu:** Chứng minh tiền đúng dưới failure/retry/concurrency bằng test PG thật. Scope thu hẹp: không k6/CI/audit.
+**Người phụ trách:** BE-3  
+**Reviewer:** BE-A (Auth/Account boundary), BE-B (Evidence & Integration)  
+**Tiến độ chung:** Cập nhật tại [progress.md](../../progress.md)  
+**Kỹ thuật làm chủ để bảo vệ đồ án:**  
+1. `Idempotency-Key Pattern`: Khóa chống lặp giao dịch (bằng hash payload & redis/db key), mất mạng gửi lại cùng key trả kết quả cũ, không trừ tiền 2 lần.
+2. `Strong Transactional Consistency (ACID Rollback)`: Quản lý giao dịch trừ tiền/cộng tiền trong 1 boundary an toàn, giả lập đứt gánh tự rollback 100%.
+3. `Deadlock Prevention (Sorted Resource Locking)`: Khóa tài khoản theo thứ tự sắp xếp `min(id), max(id)` khi 2 người chuyển tiền chéo nhau đồng thời.
+4. `Non-negative Balance Constraint`: Ngăn chặn rút âm tuyệt đối khi 2 lệnh rút tiền đồng thời vượt quá số dư.
 
 ---
 

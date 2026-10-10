@@ -1,14 +1,21 @@
-# BE-4 — Audit, Risk, Test Support, Resilience Evidence, Integration
+# BE-B — Audit, Test Infrastructure, Data Mocking & Integration Lead (Gộp BE-4 + BE-2 Data)
 
-**Người phụ trách:** BE-4 / Integration Owner
-**Reviewer:** Tất cả module owner review chéo phần mình
-**Mục tiêu:** Giữ audit/risk đúng, biến mọi output thành acceptance package, làm merge gate. Không ôm hết execution (không viết k6/CI/scan/metrics thay người khác).
+**Người phụ trách:** BE-B / Integration Lead  
+**Reviewer:** Tất cả thành viên review chéo phần mình  
+**Tiến độ chung:** Cập nhật tại [progress.md](../../progress.md)  
+**Kỹ thuật làm chủ để bảo vệ đồ án:**  
+1. `Immutable Audit Trail`: Nhật ký kiểm toán bất biến (chỉ `INSERT`, cấm sửa/xóa), che giấu thông tin nhạy cảm (`PII masking`).
+2. `Distributed Tracing (Correlation-ID)`: Sinh và gắn `Correlation-ID / Request-ID` xuyên suốt các service để truy vết log.
+3. `Disaster Recovery & Failure Scenario`: Kịch bản sập Database/Kafka $\rightarrow$ ứng dụng báo lỗi an toàn, khi restart tự hồi phục trạng thái.
+4. `Financial Invariant SQL Query & Data Mocking`: Script sinh 100 tài khoản mẫu và câu truy vấn SQL đo bảo toàn tổng số dư ($\sum Balance_{before} = \sum Balance_{after}$) cho bài test k6.
+
+*(Lưu ý: Logic và UI Rule-based Anomaly/Fraud Detection đã được bàn giao cho **FE/BE** làm chủ).*
 
 ---
 
 ## 1. Vai trò trong team
 
-BE-4 là **Integration Owner** và **owner test support/resilience harness**: merge OpenAPI duy nhất, cấp số migration, điều phối `pom.xml`/`application*.yml`/docker, sở hữu disposable PostgreSQL support, DB-unavailable/restart harness, container image scan, evidence matrix + final report. BE-4 review business PR nhưng không fix hộ logic module khác. Member nộp evidence chậm/fail thì BE-4 mark BLOCKED, gửi lỗi về owner.
+BE-B là **Integration Lead** và **owner test support/resilience harness/data mock**: merge OpenAPI duy nhất, cấp số migration, điều phối `pom.xml`/`application*.yml`/docker, sở hữu disposable PostgreSQL support, DB-unavailable/restart harness, container image scan, script seed 100 account + invariant balance query cho k6, evidence matrix + final report.
 
 ## 2. Phạm vi chi tiết
 
@@ -16,33 +23,31 @@ BE-4 là **Integration Owner** và **owner test support/resilience harness**: me
 
 ```text
 be/src/main/java/com/bank/simulator/audit/**
-be/src/main/java/com/bank/simulator/risk/**
 be/src/test/java/com/bank/simulator/audit/**
-be/src/test/java/com/bank/simulator/risk/**
-be/src/test/java/com/bank/simulator/shared/health/** (test only; production behavior owner routed by module)
+be/src/test/java/com/bank/simulator/shared/health/** (test only)
 be/src/test/java/com/bank/simulator/DisposablePostgresTestSupport.java (tạo mới, infrastructure only)
-be/src/test/java/com/bank/simulator/DatabaseFailureRecoveryTest.java (harness; no business implementation)
+be/src/test/java/com/bank/simulator/DatabaseFailureRecoveryTest.java (harness)
+scripts/seed-k6-accounts.sql (hoặc script mock 100 account)
+queries/verify-financial-invariant.sql
 docs/projects/backend-mvp/evidence/**
 docs/projects/backend-mvp/09-acceptance-gap-and-team-plan.md
 docs/projects/backend-mvp/10-detailed-team-task-handover.md
 contracts/openapi.yaml (merge duy nhất, theo proposal đã approve)
-pom.xml / application*.yml / docker-compose.yml / Dockerfile (điều phối, không tự ý đổi behavior)
+pom.xml / application*.yml / docker-compose.yml / Dockerfile (điều phối)
 ```
 
 ### Không được sửa
 
-- `identity/**`, `account/**`, `transfer/**` implementation (chỉ review; lỗi trả đúng owner).
+- `identity/**`, `customer/**`, `account/**`, `transfer/**` implementation (chỉ review; lỗi trả đúng owner).
 - `frontend/**` business flow (FE/BE own).
 - `tests/load/**` implementation (FE/BE own).
-- Migration V1–V7 đã apply. V8+ chỉ tạo khi có proposal approved.
-- Không sửa production health/transfer/auth behavior dưới danh nghĩa harness; gửi finding đến owner module.
+- Migration cũ đã apply. V mới chỉ tạo khi có proposal approved.
 
 ## 3. Đầu vào
 
 1. `audit/**`: AuditWriter record-only, append-only, actor/type/target/outcome/time/correlation/summary, redaction list.
-2. `risk/**`: RiskEvaluationService + TransferCommittedRiskListener AFTER_COMMIT, rules LARGE_TRANSFER v1 (>5M), HIGH_FREQUENCY v1 (>5 completed outgoing/10p), read-only không block/rollback.
-3. `docs/.../06-history-audit-risk.md` + OpenAPI audit/risk codes.
-4. Evidence thô từ BE-1/2/3/FE: command + output + log, chưa tổng hợp.
+2. Disposable PostgreSQL support `DisposablePostgresTestSupport.java`.
+3. Evidence thô từ BE-A/3/FE: command + output + log, tổng hợp vào report cuối.
 
 ## 4. Quy trình thực hiện
 
