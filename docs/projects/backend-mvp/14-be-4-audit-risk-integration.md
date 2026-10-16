@@ -6,7 +6,7 @@
 **Kỹ thuật làm chủ để bảo vệ đồ án:**  
 1. `Immutable Audit Trail`: Nhật ký kiểm toán bất biến (chỉ `INSERT`, cấm sửa/xóa), che giấu thông tin nhạy cảm (`PII masking`).
 2. `Distributed Tracing (Correlation-ID)`: Sinh và gắn `Correlation-ID / Request-ID` xuyên suốt các service để truy vết log.
-3. `Disaster Recovery & Failure Scenario`: Kịch bản sập Database/Kafka $\rightarrow$ ứng dụng báo lỗi an toàn, khi restart tự hồi phục trạng thái.
+3. `Disaster Recovery & Failure Scenario`: Kịch bản sập Database $\rightarrow$ ứng dụng báo lỗi an toàn, khi restart tự hồi phục trạng thái. Không dùng Kafka/broker trong MVP.
 4. `Financial Invariant SQL Query & Data Mocking`: Script sinh 100 tài khoản mẫu và câu truy vấn SQL đo bảo toàn tổng số dư ($\sum Balance_{before} = \sum Balance_{after}$) cho bài test k6.
 
 *(Lưu ý: Logic và UI Rule-based Anomaly/Fraud Detection đã được bàn giao cho **FE/BE** làm chủ).*

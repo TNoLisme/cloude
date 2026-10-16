@@ -26,6 +26,21 @@ class RiskEvaluationServiceTest {
     }
 
     @Test
+    void doesNotFlagFrequencyAtExactlyFiveCompletedTransfers() {
+        var flags = mock(RiskFlagRepository.class);
+        var counts = mock(TransferCompletedCountRepository.class);
+        when(counts.countSince(any(), any(), any())).thenReturn(5);
+        var service = new RiskEvaluationService(flags,
+                new com.bank.simulator.shared.pagination.CursorCodec(new com.fasterxml.jackson.databind.ObjectMapper()), counts,
+                new com.bank.simulator.risk.config.RiskProperties());
+
+        service.evaluate(new TransferRiskSnapshot(UUID.randomUUID(), UUID.randomUUID(), "2000",
+                Instant.parse("2026-10-03T12:00:00Z"), UUID.randomUUID()));
+
+        verify(flags, never()).insert(any(), eq("HIGH_FREQUENCY"), anyString(), anyString(), any());
+    }
+
+    @Test
     void flagsFrequencyOnlyWhenCountExceedsFive() {
         var flags = mock(RiskFlagRepository.class);
         var counts = mock(TransferCompletedCountRepository.class);
