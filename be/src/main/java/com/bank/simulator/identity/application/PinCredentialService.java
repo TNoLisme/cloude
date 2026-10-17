@@ -34,7 +34,9 @@ public class PinCredentialService {
         if (record == null || record.pinHash() == null) return ChangeResult.NOT_SET;
         if (record.lockedUntil() != null && record.lockedUntil().isAfter(now)) return ChangeResult.LOCKED;
         if (!hashing.matches(currentPin, record.pinHash())) {
-            int attempts = record.failedAttempts() + 1;
+            boolean lockoutExpired = record.lockedUntil() != null && !record.lockedUntil().isAfter(now);
+            int currentAttempts = lockoutExpired ? 0 : record.failedAttempts();
+            int attempts = currentAttempts + 1;
             boolean locked = attempts >= MAX_FAILURES;
             repository.updatePinFailure(customerId, locked ? MAX_FAILURES : attempts,
                     locked ? now.plus(LOCK_DURATION) : null, now);
@@ -51,14 +53,20 @@ public class PinCredentialService {
         if (record == null || record.pinHash() == null) return VerifyResult.NOT_SET;
         if (record.lockedUntil() != null && record.lockedUntil().isAfter(now)) return VerifyResult.LOCKED;
         if (!hashing.matches(pin, record.pinHash())) {
-            int attempts = record.failedAttempts() + 1;
+            boolean lockoutExpired = record.lockedUntil() != null && !record.lockedUntil().isAfter(now);
+            int currentAttempts = lockoutExpired ? 0 : record.failedAttempts();
+            int attempts = currentAttempts + 1;
             boolean locked = attempts >= MAX_FAILURES;
             repository.updatePinFailure(customerId, locked ? MAX_FAILURES : attempts,
                     locked ? now.plus(LOCK_DURATION) : null, now);
             return locked ? VerifyResult.LOCKED : VerifyResult.INVALID;
         }
+        if (record.failedAttempts() > 0 || record.lockedUntil() != null) {
+            repository.resetPinFailure(customerId, now);
+        }
         return VerifyResult.VALID;
     }
+
 
     public enum ChangeResult { CHANGED, INVALID, LOCKED, NOT_SET }
     public enum VerifyResult { VALID, INVALID, LOCKED, NOT_SET }

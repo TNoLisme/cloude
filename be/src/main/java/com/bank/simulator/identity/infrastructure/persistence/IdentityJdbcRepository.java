@@ -103,6 +103,11 @@ public class IdentityJdbcRepository {
                 attempts, lockedUntil == null ? null : Timestamp.from(lockedUntil), Timestamp.from(now), customerId);
     }
 
+    public void resetPinFailure(UUID customerId, Instant now) {
+        jdbc.update("UPDATE customer_pins SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE customer_id = ?",
+                Timestamp.from(now), customerId);
+    }
+
     public List<CustomerRecord> findByPhoneOrEmail(String phone, String email) {
         String where = phone != null ? "u.phone = ?" : "u.email_normalized = ?";
         Object query = phone != null ? phone : email.trim().toLowerCase(Locale.ROOT);
