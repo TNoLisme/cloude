@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 
+.claude/*
 # Build output
 be/target/
 frontend/node_modules/
