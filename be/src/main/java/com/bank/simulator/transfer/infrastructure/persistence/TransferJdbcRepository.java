@@ -95,17 +95,17 @@ public class TransferJdbcRepository {
 
 
     public void complete(UUID transferId, Instant completedAt) {
-        jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?",
+        jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, expires_at = NULL, updated_at = ? WHERE id = ?",
                 Timestamp.from(completedAt), Timestamp.from(completedAt), transferId);
     }
 
     public void expire(UUID transferId, Instant now) {
-        jdbc.update("UPDATE transfers SET status = 'EXPIRED', failure_code = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+        jdbc.update("UPDATE transfers SET status = 'EXPIRED', failure_code = NULL, expires_at = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 Timestamp.from(now), transferId);
     }
 
     public void fail(UUID transferId, String failureCode, Instant now) {
-        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, expires_at = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 failureCode, Timestamp.from(now), transferId);
     }
 

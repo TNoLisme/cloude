@@ -82,7 +82,7 @@ public class TransferController {
     }
 
     public record CreateTransferRequest(@NotNull UUID sourceAccountId, @NotNull UUID destinationAccountId,
-                                        @NotBlank @Pattern(regexp = "(?:[2-9][0-9]{3}|[1-9][0-9]{4,6}|10000000)") String amount,
+                                        @NotBlank String amount,
                                         @Pattern(regexp = "VND") String currency,
                                         @NotBlank @Pattern(regexp = "[0-9]{6}") String pin,
                                         @Size(max = 140) String memo) {}

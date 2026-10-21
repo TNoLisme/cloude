@@ -1,15 +1,14 @@
 package com.bank.simulator.transfer.application;
 
-import com.bank.simulator.account.infrastructure.persistence.AccountJdbcRepository;
 import com.bank.simulator.audit.api.AuditWriter;
-import com.bank.simulator.identity.application.PinCredentialService;
 import com.bank.simulator.identity.domain.AuthenticatedActor;
 import com.bank.simulator.identity.infrastructure.otp.OtpChallengeRepository;
 import com.bank.simulator.identity.infrastructure.otp.OtpHashingService;
 import com.bank.simulator.identity.infrastructure.otp.OtpSender;
-import com.bank.simulator.identity.infrastructure.persistence.IdentityJdbcRepository;
 import com.bank.simulator.shared.error.ApiException;
 import com.bank.simulator.shared.idempotency.IdempotencyJdbcRepository;
+import com.bank.simulator.transfer.api.AccountModuleApi;
+import com.bank.simulator.transfer.api.IdentityModuleApi;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferOtpRepository;
 import org.springframework.context.ApplicationEventPublisher;
@@ -18,14 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -35,36 +30,32 @@ public class TransferService {
     private static final Duration OTP_TTL = Duration.ofSeconds(120);
     private static final int OTP_MAX_ATTEMPTS = 5;
 
-    private final AccountJdbcRepository accounts;
+    private final AccountModuleApi accounts;
     private final TransferJdbcRepository transfers;
     private final IdempotencyJdbcRepository idempotency;
     private final TransferOtpRepository transferOtp;
-    private final IdentityJdbcRepository identities;
     private final OtpHashingService otpHashing;
     private final OtpChallengeRepository otpRepository;
     private final OtpSender sender;
-    private final PinCredentialService pinCredentials;
+    private final IdentityModuleApi identities;
     private final AuditWriter audit;
     private final Clock clock;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transactions;
-    private final SecureRandom secureRandom = new SecureRandom();
 
-    public TransferService(AccountJdbcRepository accounts, TransferJdbcRepository transfers,
+    public TransferService(AccountModuleApi accounts, TransferJdbcRepository transfers,
                            IdempotencyJdbcRepository idempotency, TransferOtpRepository transferOtp,
-                           IdentityJdbcRepository identities, OtpHashingService otpHashing,
-                           OtpChallengeRepository otpRepository, OtpSender sender,
-                           PinCredentialService pinCredentials, AuditWriter audit, Clock clock,
+                           OtpHashingService otpHashing, OtpChallengeRepository otpRepository, OtpSender sender,
+                           IdentityModuleApi identities, AuditWriter audit, Clock clock,
                            ApplicationEventPublisher events, PlatformTransactionManager transactionManager) {
         this.accounts = accounts;
         this.transfers = transfers;
         this.idempotency = idempotency;
         this.transferOtp = transferOtp;
-        this.identities = identities;
         this.otpHashing = otpHashing;
         this.otpRepository = otpRepository;
         this.sender = sender;
-        this.pinCredentials = pinCredentials;
+        this.identities = identities;
         this.audit = audit;
         this.clock = clock;
         this.events = events;
@@ -73,17 +64,16 @@ public class TransferService {
 
     public CreateResult create(AuthenticatedActor actor, CreateCommand command, String idempotencyKey) {
         requireCustomer(actor);
+        IdentityModuleApi.CustomerView customer = customerFor(actor);
         validate(command, idempotencyKey);
-        TransferPolicy.parseAmount(command.amount());
-        PinCredentialService.VerifyResult pin = pinCredentials.verify(customerId(actor), command.pin());
-        if (pin != PinCredentialService.VerifyResult.VALID) {
-            throw new ApiException(HttpStatus.FORBIDDEN,
-                    pin == PinCredentialService.VerifyResult.LOCKED ? "PIN_LOCKED" :
-                            pin == PinCredentialService.VerifyResult.NOT_SET ? "PIN_NOT_SET" : "PIN_INVALID",
-                    "Transaction PIN is invalid, locked, or not configured.");
-        }
+        BigDecimal amount = TransferPolicy.parseAmount(command.amount());
 
-        CreateResult result = transactions.execute(status -> createTransaction(actor, command, idempotencyKey));
+        IdentityModuleApi.PinVerificationResult pin = identities.verifyPin(customer.customerId(), command.pin());
+        if (pin != IdentityModuleApi.PinVerificationResult.VALID) throw pinError(pin);
+
+        String requestHash = TransferPolicy.payloadHash(command.sourceAccountId(), command.destinationAccountId(),
+                amount, command.currency(), command.memo());
+        CreateResult result = transactions.execute(status -> createTransaction(actor, customer, command, amount, requestHash, idempotencyKey));
         if (result.replayed() && result.challengeRequired()) {
             var row = transfers.find(result.transferId());
             int remaining = Math.max(0, (int) Duration.between(clock.instant(), row.expiresAt()).toSeconds());
@@ -107,61 +97,51 @@ public class TransferService {
         }
     }
 
-    private CreateResult createTransaction(AuthenticatedActor actor, CreateCommand command, String key) {
-        long amount = TransferPolicy.parseAmount(command.amount());
-        AccountJdbcRepository.AccountPair pair = accounts.lockPair(command.sourceAccountId(), command.destinationAccountId());
-        if (pair == null) throw unavailableAccount();
+    private CreateResult createTransaction(AuthenticatedActor actor, IdentityModuleApi.CustomerView customer,
+                                           CreateCommand command, BigDecimal amount, String requestHash, String key) {
+        UUID customerId = customer.customerId();
+        Instant now = clock.instant();
+
+        IdempotencyJdbcRepository.IdempotencyRecord existing = idempotency.find(actor.userId(), OPERATION, key);
+        UUID idempotencyId;
+        if (existing != null) {
+            return replayOrConflict(existing, requestHash);
+        }
+        var claim = idempotency.createOrFind(actor.userId(), OPERATION, key, requestHash, now, now.plus(Duration.ofHours(24)));
+        idempotencyId = claim.record().id();
+        if (!claim.created()) {
+            return replayOrConflict(claim.record(), requestHash);
+        }
+
+        AccountModuleApi.LockedAccountPair pair = accounts.lockAccountsAscending(command.sourceAccountId(),
+                command.destinationAccountId());
+        if (pair == null) throw accountNotFound();
         var source = pair.source();
         var destination = pair.destination();
-        UUID customerId = customerId(actor);
-        if (!source.customerId().equals(customerId)) throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Source account access is forbidden.");
-        if (source.id().equals(destination.id())) throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Source and destination accounts must differ.");
-        validateEligible(source);
-        validateEligible(destination);
-
-        String requestHash = hash(command);
-        Instant now = clock.instant();
-        UUID idempotencyId;
-        var existing = idempotency.find(actor.userId(), OPERATION, key);
-        if (existing != null) {
-            idempotencyId = existing.id();
-        } else {
-            var claim = idempotency.createOrFind(actor.userId(), OPERATION, key, requestHash, now, now.plus(Duration.ofHours(24)));
-            var created = claim.record();
-            idempotencyId = created.id();
-            existing = claim.created() ? null : created;
+        if (!source.customerId().equals(customerId)) throw accountNotFound();
+        if (!eligible(source) || !eligible(destination)) {
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_ELIGIBLE", "Source or destination account is not eligible for transfer.");
         }
-        if (existing != null) {
-            if (!existing.requestHash().equals(requestHash)) throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was used with another request.");
-            if (existing.resourceId() == null) throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_IN_PROGRESS", "Request is still in progress.");
-            var prior = transfers.find(existing.resourceId());
-            if (prior != null) {
-                if ("AWAITING_OTP".equals(prior.status())) {
-                    int remaining = Math.max(0, (int) Duration.between(now, prior.expiresAt()).toSeconds());
-                    return CreateResult.challengeReplay(prior, existing.id(), remaining);
-                }
-                return CreateResult.transfer(prior, true);
-            }
-        }
-        if (TransferPolicy.requiresOtp(amount)) {
-            var customer = identities.findCustomerById(source.customerId());
-            if (customer == null) throw unavailableAccount();
-            UUID transferId = transfers.create(source.id(), destination.id(), command.amount(), command.currency(),
-                    "AWAITING_OTP", command.memo(), null, idempotencyId, now, now.plus(OTP_TTL));
-            UUID challengeId = UUID.randomUUID();
-            String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
-            Instant expiresAt = now.plus(OTP_TTL);
-            transferOtp.create(transferId, challengeId, customer.phone(), otpHashing.encode(code), now, expiresAt);
-            return CreateResult.challenge(transferId, idempotencyId, challengeId, customer.phone(), code, expiresAt);
-        }
-
-        if (new BigInteger(source.balance()).compareTo(BigInteger.valueOf(amount)) < 0) {
+        if (new BigDecimal(source.balance()).compareTo(amount) < 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_FUNDS", "Available balance is insufficient.");
         }
-        UUID transferId = transfers.create(source.id(), destination.id(), command.amount(), command.currency(),
+
+        if (TransferPolicy.requiresOtp(amount)) {
+            var owner = identities.findCustomerById(source.customerId());
+            if (owner == null) throw accountNotFound();
+            UUID challengeId = UUID.randomUUID();
+            UUID transferId = transfers.create(source.id(), destination.id(), amount.toPlainString(), command.currency(),
+                    "AWAITING_OTP", command.memo(), challengeId, idempotencyId, now, now.plus(OTP_TTL));
+            String code = String.format(Locale.ROOT, "%06d", new java.security.SecureRandom().nextInt(1_000_000));
+            Instant expiresAt = now.plus(OTP_TTL);
+            transferOtp.create(transferId, challengeId, owner.phone(), otpHashing.encode(code), now, expiresAt);
+            return CreateResult.challenge(transferId, idempotencyId, challengeId, owner.phone(), code, expiresAt);
+        }
+
+        UUID transferId = transfers.create(source.id(), destination.id(), amount.toPlainString(), command.currency(),
                 "COMPLETED", command.memo(), null, idempotencyId, now, null);
-        accounts.debit(source.id(), command.amount());
-        accounts.credit(destination.id(), command.amount());
+        accounts.debit(source.id(), amount);
+        accounts.credit(destination.id(), amount);
         transfers.complete(transferId, now);
         var transfer = transfers.find(transferId);
         idempotency.complete(idempotencyId, 201, transferJson(transfer), transferId);
@@ -169,6 +149,24 @@ public class TransferService {
                 "SUCCESS", null, "Internal transfer completed.");
         publishRiskEvent(transfer, source.id(), now);
         return CreateResult.transfer(transfer, false);
+    }
+
+    private CreateResult replayOrConflict(IdempotencyJdbcRepository.IdempotencyRecord existing, String requestHash) {
+        if (!existing.requestHash().equals(requestHash)) {
+            throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was used with another request.");
+        }
+        if (existing.resourceId() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_IN_PROGRESS", "Request is still in progress.");
+        }
+        var prior = transfers.find(existing.resourceId());
+        if (prior != null) {
+            if ("AWAITING_OTP".equals(prior.status())) {
+                int remaining = Math.max(0, (int) Duration.between(clock.instant(), prior.expiresAt()).toSeconds());
+                return CreateResult.challengeReplay(prior, existing.id(), remaining);
+            }
+            return CreateResult.transfer(prior, true);
+        }
+        throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_IN_PROGRESS", "Request is still in progress.");
     }
 
     private void publishRiskEvent(TransferJdbcRepository.TransferRow transfer, UUID sourceAccountId, Instant completedAt) {
@@ -184,13 +182,16 @@ public class TransferService {
 
     private ConfirmOutcome confirmTransaction(AuthenticatedActor actor, UUID transferId, String otp) {
         var transfer = transfers.lock(transferId);
-        if (transfer == null) return ConfirmOutcome.error(unavailableAccount());
+        if (transfer == null) return ConfirmOutcome.error(transferNotFound());
         if ("COMPLETED".equals(transfer.status())) return ConfirmOutcome.replay();
-        if (!"AWAITING_OTP".equals(transfer.status())) return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "STATE_CONFLICT", "Transfer is not awaiting OTP."));
-        UUID customerId = customerId(actor);
+        if (!"AWAITING_OTP".equals(transfer.status())) {
+            return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "STATE_CONFLICT", "Transfer is not awaiting OTP."));
+        }
+        UUID customerId = customerFor(actor).customerId();
         Instant now = clock.instant();
-        AccountJdbcRepository.AccountPair pair = accounts.lockPair(transfer.sourceAccountId(), transfer.destinationAccountId());
-        if (pair == null || !pair.source().customerId().equals(customerId)) return ConfirmOutcome.error(unavailableAccount());
+        AccountModuleApi.LockedAccountPair pair = accounts.lockAccountsAscending(transfer.sourceAccountId(),
+                transfer.destinationAccountId());
+        if (pair == null || !pair.source().customerId().equals(customerId)) return ConfirmOutcome.error(transferNotFound());
         if (transfer.expiresAt() == null || !transfer.expiresAt().isAfter(now)) {
             transfers.expire(transferId, now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "TRANSFER_EXPIRED", "Transfer OTP expired."));
@@ -208,28 +209,27 @@ public class TransferService {
             int attempts = challenge.attempts() + 1;
             transferOtp.updateAttempts(challenge.id(), attempts, attempts >= OTP_MAX_ATTEMPTS ? now : null);
             if (attempts >= OTP_MAX_ATTEMPTS) {
-                transfers.fail(transferId, "OTP_INVALID", now);
+                transfers.fail(transferId, "OTP_ATTEMPTS_EXCEEDED", now);
                 return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "STATE_CONFLICT", "Transfer OTP attempts exceeded."));
             }
             return ConfirmOutcome.error(new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID", "OTP is invalid."));
         }
         var source = pair.source();
         var destination = pair.destination();
-        if (!source.customerId().equals(customerId)) return ConfirmOutcome.error(unavailableAccount());
-        if (!eligibleForConfirm(source) || !eligibleForConfirm(destination)
-                || !"VND".equals(transfer.currency())) {
+        if (!source.customerId().equals(customerId)) return ConfirmOutcome.error(transferNotFound());
+        if (!eligible(source) || !eligible(destination) || !"VND".equals(transfer.currency())) {
             transfers.fail(transferId, "ACCOUNT_NOT_ELIGIBLE", now);
             transferOtp.invalidate(challenge.id(), now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_ELIGIBLE", "Account is not eligible for transfer."));
         }
-        if (new BigInteger(source.balance()).compareTo(new BigInteger(transfer.amount())) < 0) {
+        if (new BigDecimal(source.balance()).compareTo(new BigDecimal(transfer.amount())) < 0) {
             transfers.fail(transferId, "INSUFFICIENT_FUNDS", now);
             transferOtp.invalidate(challenge.id(), now);
             return ConfirmOutcome.error(new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_FUNDS", "Available balance is insufficient."));
         }
         transferOtp.consume(challenge.id(), now);
-        accounts.debit(source.id(), transfer.amount());
-        accounts.credit(destination.id(), transfer.amount());
+        accounts.debit(source.id(), new BigDecimal(transfer.amount()));
+        accounts.credit(destination.id(), new BigDecimal(transfer.amount()));
         transfers.complete(transferId, now);
         audit.record(actor.userId(), "CUSTOMER", "TRANSFER_COMPLETED", "TRANSFER", transferId,
                 "SUCCESS", null, "Internal transfer completed.");
@@ -246,18 +246,25 @@ public class TransferService {
         }
     }
 
-    private UUID customerId(AuthenticatedActor actor) {
+    private IdentityModuleApi.CustomerView customerFor(AuthenticatedActor actor) {
         var customer = identities.findCustomerByUserId(actor.userId());
-        if (customer == null) throw unavailableAccount();
-        return customer.customerId();
+        if (customer == null) throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Request is forbidden.");
+        return customer;
     }
 
     private void validate(CreateCommand command, String key) {
         if (command == null || command.sourceAccountId() == null || command.destinationAccountId() == null
-                || command.currency() == null || !command.currency().equals("VND") || command.pin() == null
-                || !command.pin().matches("[0-9]{6}") || key == null || key.length() < 16 || key.length() > 128
+                || command.amount() == null || !"VND".equals(command.currency()) || command.pin() == null
+                || !command.pin().matches("[0-9]{6}")
                 || command.memo() != null && command.memo().length() > 140) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Transfer request is invalid.");
+        }
+        if (command.sourceAccountId().equals(command.destinationAccountId())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Source and destination accounts must differ.");
+        }
+        if (key == null || key.length() < 16 || key.length() > 128 || !key.chars().allMatch(c -> c >= 0x21 && c <= 0x7E)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                    "Idempotency-Key must be 16-128 printable ASCII characters.");
         }
     }
 
@@ -265,25 +272,26 @@ public class TransferService {
         if (!actor.hasRole("CUSTOMER")) throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Request is forbidden.");
     }
 
-    private boolean eligibleForConfirm(AccountJdbcRepository.AccountRow account) {
+    private ApiException pinError(IdentityModuleApi.PinVerificationResult pin) {
+        return switch (pin) {
+            case LOCKED -> new ApiException(HttpStatus.FORBIDDEN, "PIN_LOCKED",
+                    "Transaction PIN is locked due to repeated failed attempts.");
+            case INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "PIN_INVALID", "Transaction PIN is invalid.");
+            case NOT_SET -> new ApiException(HttpStatus.BAD_REQUEST, "PIN_NOT_SET", "Transaction PIN is not configured.");
+            case VALID -> throw new IllegalStateException("Valid PIN cannot produce an error");
+        };
+    }
+
+    private boolean eligible(AccountModuleApi.LockedAccount account) {
         return account != null && "ACTIVE".equals(account.status()) && "VND".equals(account.currency());
     }
-    private void validateEligible(AccountJdbcRepository.AccountRow account) {
-        if (!eligibleForConfirm(account)) throw unavailableAccount();
+
+    private ApiException accountNotFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Source or destination account was not found.");
     }
 
-    private ApiException unavailableAccount() {
-        return new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_ELIGIBLE", "Account is not available.");
-    }
-
-    private String hash(CreateCommand command) {
-        try {
-            String payload = OPERATION + "|v1|" + command.sourceAccountId() + "|" + command.destinationAccountId()
-                    + "|" + command.amount() + "|" + command.currency() + "|" + (command.memo() == null ? "<null>" : command.memo());
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is unavailable", exception);
-        }
+    private ApiException transferNotFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "TRANSFER_NOT_FOUND", "Transfer is not available.");
     }
 
     private String transferJson(TransferJdbcRepository.TransferRow row) {

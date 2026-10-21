@@ -85,7 +85,7 @@ class UiApiRegressionPostgresTest {
         UUID source = UUID.randomUUID(), destination = UUID.randomUUID();
         UUID old = transfers.create(source, destination, "2000", "VND", "COMPLETED", null, null, null, now.minusSeconds(1), null);
         UUID recent = transfers.create(source, destination, "2000", "VND", "COMPLETED", null, null, null, now, null);
-        UUID pending = transfers.create(source, destination, "5000001", "VND", "AWAITING_OTP", null, null, null, now.plusSeconds(1), now.plusSeconds(121));
+        UUID pending = transfers.create(source, destination, "5000001", "VND", "AWAITING_OTP", null, UUID.randomUUID(), null, now.plusSeconds(1), now.plusSeconds(121));
         assertThat(transfers.find(pending).completedAt()).isNull();
         assertThat(transfers.findHistory(List.of(source), null, null, null, null, null, 10)).hasSize(3);
         assertThat(transfers.findHistory(List.of(destination), null, null, null, null, null, 10))
