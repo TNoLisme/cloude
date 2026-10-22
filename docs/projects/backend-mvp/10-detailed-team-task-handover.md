@@ -67,7 +67,7 @@ If legacy regression file contains shared fixtures needed by both new files, BE-
 
 ## 6. Per-task handoff format
 
-Each owner creates evidence under `docs/projects/backend-mvp/evidence/` using `BE1-*`, `BE2-*`, `BE3-*`, `BE4-*` or `FEBE-*` prefix.
+Each owner creates evidence under `docs/projects/backend-mvp/evidence/` using `BEA-*`, `BE3-*`, `BE4-*` or `FEBE-*` prefix, based on current ownership. Legacy BE-1/BE-2 labels are historical references only.
 
 ```markdown
 # Task evidence
