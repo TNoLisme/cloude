@@ -11,13 +11,14 @@ Week 1 (Foundation, Recipient Resolve, Small Transfer) **hoàn thành 21/10/2026
 - `Makefile` gốc repo với target `check` (openapi + mvn test + git diff --check)
 
 ## Đang thực hiện
-- W2 (chưa bắt đầu): large path confirm-otp, tách `CreateTransferService`/`ConfirmTransferOtpService` (M01), di chuyển `TransferPolicy` sang `domain/` (M03)
+- W2 bắt đầu thực tế 01/11/2026 (trễ 5 ngày so với lịch 27/10 — re-baseline 01/11–07/11, W3 dịch sang 08/11–14/11): large path confirm-otp, tách `CreateTransferService`/`ConfirmTransferOtpService` (M01), di chuyển `TransferPolicy` sang `domain/` (M03), module boundary OTP (M09–M11), CON-01..03 + FI-01, expiry lazy + history filter. Chi tiết task: [`docs transactions/Work/Week2.md`](docs transactions/Work/Week2.md)
 
 ## Vấn đề đã biết
 - **Java version**: system Java 25 làm Mockito/byte-buddy fail khi chạy test. Bắt buộc dùng JDK 21: `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home` (macOS). `Makefile` tự phát hiện qua `/usr/libexec/java_home -v 21`; máy khác override `JAVA_HOME`.
 - Docker image backend compose (build 19/10) chưa chứa migration V8 — áp dụng ở lần build image tiếp theo; V8 đã được verify qua Testcontainers (Flyway tươi V1–V8).
 
 ## Các bước tiếp theo
-1. W2: confirm-otp lifecycle (SM-06.., CON-*, FI-*) theo `docs transactions/Work/` tuần 2
-2. Tách `CreateTransferService` / `ConfirmTransferOtpService` (M01) khi bắt đầu W2
+1. W2 Task 1.1–1.3 (BE-Core Day 1–2): tách service (M01/M03) → boundary OTP (M09–M11) → verify large create 7 bước + compensation — theo `docs transactions/Work/Week2.md`
+2. W2 Task 2.1–2.2 (BE-Support): dispatch adapter + compensation pairing
 3. Build lại docker image backend để compose local chạy V8
+4. W3 dự kiến 08/11 – 14/11 (dịch lịch do W2 trễ)
