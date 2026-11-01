@@ -224,10 +224,14 @@ class TransferLargeTransferPostgresTest {
         assertThat(challenge(challengeId).invalidatedAt()).isNotNull();
         assertThat(balance(fixture.accountId())).isEqualTo("10000000");
         assertThat(balance(destination)).isEqualTo("0");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM transfers WHERE status='AWAITING_OTP'",
+                Integer.class)).isZero();
 
         var replay = createTransfer.create(fixture.actor(), command, key);
         assertThat(replay.replayed()).isTrue();
         assertThat(replay.status()).isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM transfers WHERE status='AWAITING_OTP'",
+                Integer.class)).isZero();
         verify(sender, times(1)).send(any());
     }
 
