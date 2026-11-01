@@ -110,6 +110,48 @@
 ## 2026-11-01: Mỗi lớp Postgres test tự quản lý Testcontainers (R2)
 
 - **Lý do:** `DisposablePostgresTestSupport` của BE-B chưa có (Week2 §6).
-- **Phương án lựa chọn:** mỗi test class tự `@Testcontainers` + `postgres:16-alpine` + Flyway tươi V1–V8, giống pattern W1; đánh dấu TODO đổi sang shared support khi BE-B xong.
+- **Phương án lựa chọn:** mỗi test class tự `@Testcontainers` + `postgres:16-alpine` + Flyway tươi V1–V8, giống pattern W1; **W3 xác nhận hold** pattern này cho MVP (B4).
 - **Phương án bị loại:** shared static container — container sống qua nhiều class nhưng state rò rỉ giữa test.
 - **Ràng buộc:** không H2 cho lock test; không sleep-sync (CountDownLatch ready/start + `Future.get(20s)`).
+
+## 2026-11-01: Evidence W3 tách 3 file theo nhóm + 1 handover
+
+- **Lý do:** ma trận nghiệm thu Adv §8 trải trên AC/AF/AT/AD; gộp một file sẽ khó đối chiếu và dễ mất fresh output.
+- **Phương án lựa chọn:** `evidence/BE3-otp-race.md` (CON-04/05, FI-04, AT-01..03), `BE3-concurrency.md` (CON-01..03, AC-07, risk AF-06, terminal guard), `BE3-rollback-timeout.md` (FI-01..05, AD-01..03, AF-05), `BE3-handover.md` (FE matrix + BE-A/BE-B + load-test blocked-note). Mỗi file có commit SHA, timestamp, fresh output, balance/row counts.
+- **Phương án bị loại:** một file tổng hợp duy nhất — khó chỉ ra nơi chứng minh từng nhóm.
+- **Ràng buộc:** không ghi PASS không kèm output (Timelines §9).
+
+## 2026-11-01: FI-05 mô phỏng restart bằng Spring context thứ hai
+
+- **Lý do:** cần chứng minh idempotency nằm ở DB, không ở bộ nhớ app; fallback “clear map” không đủ thuyết phục.
+- **Phương án lựa chọn:** `SpringApplicationBuilder(BankingSimulatorApplication.class).web(SERVLET)` trỏ cùng Testcontainers DataSource; truyền `--spring.datasource.*` và `--app.security.jwt-secret` bằng command-line args để thắng `application.yml`; gọi create cùng key qua bean context mới.
+- **Phương án bị loại:** fallback review code/unit test tắt state app — yếu hơn, không chứng minh được context mới thật.
+- **Ràng buộc:** không reuse bean/context cũ; context thật dựng ~1.5s nên không cần fallback.
+
+## 2026-11-01: CON-05 dùng operation thật của account module
+
+- **Lý do:** R4 yêu cầu phối hợp BE-A, không tự UPDATE `accounts.status`; đồng thời kiểm tra semantics block thật.
+- **Phương án lựa chọn:** gọi `AccountStatusService.change(operatorActor, accountId, "BLOCKED", reason)` trong test; assert terminal `FAILED(ACCOUNT_NOT_ELIGIBLE)` hoặc `COMPLETED` giữ nguyên tùy thứ tự race.
+- **Phương án bị loại:** UPDATE SQL trực tiếp — không chứng minh operation chuẩn/audit.
+- **Ràng buộc:** không sửa `account/**`; chỉ dùng API sẵn có.
+
+## 2026-11-01: FI-04 điều khiển OTP sender bằng latch, không sleep
+
+- **Lý do:** cần cố định hai thứ tự confirm-vs-compensation mà không dùng `Thread.sleep`.
+- **Phương án lựa chọn:** Mockito `Answer` cho `OtpSender.send` với `started`/`release` CountDownLatch; thread create bị giữ sau COMMIT, test release confirm/compensation theo kịch bản.
+- **Phương án bị loại:** delay ngẫu nhiên/sleep — flaky và vi phạm Timelines §9.
+- **Ràng buộc:** `Future.get(20s)`; mỗi thứ tự assert outcome tương ứng.
+
+## 2026-11-01: Risk isolation test tách file với mock `RiskEvaluationService`
+
+- **Lý do:** `doThrow` trên risk dùng chung context sẽ ảnh hưởng các fixture terminal/expiry khác; cần chứng minh failure isolation độc lập.
+- **Phương án lựa chọn:** `TransferRiskFailureIsolationPostgresTest` với `@MockBean RiskEvaluationService`; verify `evaluate` được gọi, không flag, response/money nguyên vẹn; test rollback dùng `verify(never())`.
+- **Phương án bị loại:** dùng real risk service + inject lỗi DB — khó kiểm soát và có thể che giấu lỗi khác.
+- **Ràng buộc:** listener AFTER_COMMIT vẫn là code thật; chỉ mock service đánh giá.
+
+## 2026-11-01: Load test R5 ghi blocked-note, không hạ chuẩn
+
+- **Lý do:** k6 chưa cài, `cloude-backend:latest` build 21/10 (trước V8), `.env` không có `DEMO_*`, chưa có kịch bản FE; chạy giả sẽ không đủ evidence.
+- **Phương án lựa chọn:** ghi blocked-note với điều kiện mở lại (k6/Docker, rebuild image, seed data, script 20 RPS × 10 phút, invariant + reconciliation) tại `BE3-handover.md §9`; không ghi PASS.
+- **Phương án bị loại:** hạ xuống smoke test vài request — không chứng minh R5.
+- **Ràng buộc:** Timelines §7/§9 — trượt lịch không cắt chuẩn; D5 cho phép blocked-note có điều kiện.
