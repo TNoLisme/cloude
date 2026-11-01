@@ -14,7 +14,9 @@ Thư mục `plans/` chứa toàn bộ tài liệu thiết kế của module **Tr
 | 2 | [API docs.md](./2.%20API%20docs.md) | Contract HTTP đầy đủ: endpoint, request/response, error codes |
 | 3 | [Architecture.md](./3.%20Architecture.md) | Kiến trúc nội bộ, state machine, concurrency strategy |
 | 4 | [Deployment Infrastructure.md](./4.%20Deployment%20Infrastructure.md) | Infra, observability, CI/CD, security controls |
-| 5 | [Timelines.md](./5.%20Timelines.md) | Kế hoạch 5 tuần với milestone cụ thể |
+| 5 | [Timelines.md](./5.%20Timelines.md) | Kế hoạch 3 tuần (2 backend) với milestone cụ thể |
+| 6 | [Business.md](./6.%20Business.md) | Nghiệp vụ: actor, use cases, business rules, ma trận trạng thái, invariants |
+| 7 | [Advanced Business.md](./7.%20Advanced%20Business.md) | Kịch bản nâng cao: concurrency, race, partial failure, crash, expiry, idempotency nâng cao |
 
 ---
 
@@ -32,8 +34,6 @@ Thư mục `plans/` chứa toàn bộ tài liệu thiết kế của module **Tr
 
 | Tuần | Milestone | Status |
 |---|---|---|
-| 1 | Foundation: schema, state machine, recipient resolve | 🔄 Đang triển khai |
-| 2 | Small transfer path (≤ 5M) end-to-end | ⏳ Kế hoạch |
-| 3 | Large transfer path (> 5M) + OTP confirm | ⏳ Kế hoạch |
-| 4 | Concurrency, idempotency, failure scenarios | ⏳ Kế hoạch |
-| 5 | History/query, risk integration, acceptance | ⏳ Kế hoạch |
+| 1 | Foundation: schema, state machine, recipient resolve, small transfer (≤ 5M) | 🔄 Đang triển khai |
+| 2 | Large transfer (> 5M) + OTP confirm + concurrency CON-01..03 | ⏳ Kế hoạch |
+| 3 | Races CON-04/05, failure injection, risk, acceptance, handover | ⏳ Kế hoạch |

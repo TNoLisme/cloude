@@ -11,3 +11,7 @@ frontend/*.tsbuildinfo
 
 docs_draft
 .obsidian
+
+.qoderian
+.superpowers
+.qoder

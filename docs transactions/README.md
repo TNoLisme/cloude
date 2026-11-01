@@ -18,7 +18,9 @@ docs transactions/
 │   ├── 2. API docs.md        ← Contract HTTP chi tiết cho module transfer
 │   ├── 3. Architecture.md    ← Kiến trúc nội bộ, state machine, concurrency
 │   ├── 4. Deployment Infrastructure.md  ← Infra, observability, CI/CD
-│   └── 5. Timelines.md       ← 5-tuần delivery plan
+│   ├── 5. Timelines.md       ← 3-tuần delivery plan (2 backend)
+│   ├── 6. Business.md       ← Nghiệp vụ: actor, use cases, business rules
+│   └── 7. Advanced Business.md ← Kịch bản nâng cao: concurrency, race, failure
 └── week1/                     ← Artifact và evidence tuần 1 (trống, sẽ bổ sung)
 ```
 
@@ -40,4 +42,6 @@ docs transactions/
 - [API Docs](./plans/2.%20API%20docs.md)
 - [Architecture](./plans/3.%20Architecture.md)
 - [Deployment & Infrastructure](./plans/4.%20Deployment%20Infrastructure.md)
-- [5-Week Timeline](./plans/5.%20Timelines.md)
+- [3-Week Timeline](./plans/5.%20Timelines.md)
+- [Business](./plans/6.%20Business.md)
+- [Advanced Business](./plans/7.%20Advanced%20Business.md)
