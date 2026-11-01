@@ -2,15 +2,12 @@ package com.bank.simulator.transfer.application;
 
 import com.bank.simulator.audit.api.AuditWriter;
 import com.bank.simulator.identity.domain.AuthenticatedActor;
-import com.bank.simulator.identity.infrastructure.otp.OtpChallengeRepository;
-import com.bank.simulator.identity.infrastructure.otp.OtpHashingService;
-import com.bank.simulator.identity.infrastructure.otp.OtpSender;
 import com.bank.simulator.shared.error.ApiException;
 import com.bank.simulator.shared.idempotency.IdempotencyJdbcRepository;
 import com.bank.simulator.transfer.api.AccountModuleApi;
 import com.bank.simulator.transfer.api.IdentityModuleApi;
+import com.bank.simulator.transfer.domain.TransferPolicy;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
-import com.bank.simulator.transfer.infrastructure.persistence.TransferOtpRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -30,16 +27,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-class TransferServiceTest {
-    private static final Instant NOW = Instant.EPOCH;
+class CreateTransferServiceTest {
+    private static final Instant NOW = Instant.parse("2026-11-01T10:00:00Z");
+    private static final String KEY = "abcdefghijklmnop";
 
     @Test
     void nonCanonicalAmountRejectedWithAmountInvalidBeforePinOrMoneyState() {
         var d = dependencies();
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        var command = new TransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "02000", "VND", "001234", null);
-        assertThatThrownBy(() -> d.service.create(actor(userId), command, "abcdefghijklmnop"))
+        var command = new CreateTransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "02000", "VND", "001234", null);
+        assertThatThrownBy(() -> d.service.create(actor(userId), command, KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -47,7 +45,7 @@ class TransferServiceTest {
                     assertThat(api.code()).isEqualTo("AMOUNT_INVALID");
                 });
         verify(d.identities, never()).verifyPin(any(), anyString());
-        verifyNoInteractions(d.accounts, d.transfers, d.idempotency, d.audit);
+        verifyNoInteractions(d.accounts, d.transfers, d.idempotency, d.audit, d.failureInjector);
     }
 
     @Test
@@ -57,8 +55,8 @@ class TransferServiceTest {
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.INVALID);
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null),
+                KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -75,8 +73,8 @@ class TransferServiceTest {
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.LOCKED);
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null),
+                KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -91,8 +89,7 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(accountId, accountId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(accountId, accountId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -108,7 +105,7 @@ class TransferServiceTest {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        var command = new TransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null);
+        var command = new CreateTransferService.CreateCommand(UUID.randomUUID(), UUID.randomUUID(), "2000", "VND", "001234", null);
         assertThatThrownBy(() -> d.service.create(actor(userId), command, "short-key"))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).code()).isEqualTo("VALIDATION_ERROR"));
@@ -124,13 +121,9 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop")).thenReturn(null);
-        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"), anyString(), any(), any()))
-                .thenReturn(claim());
         when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(null);
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -148,16 +141,12 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop")).thenReturn(null);
-        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"), anyString(), any(), any()))
-                .thenReturn(claim());
         when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
                 new AccountModuleApi.LockedAccountPair(
                         locked(sourceId, UUID.randomUUID(), "ACTIVE", "1000000"),
                         locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -174,16 +163,12 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop")).thenReturn(null);
-        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"), anyString(), any(), any()))
-                .thenReturn(claim());
         when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
                 new AccountModuleApi.LockedAccountPair(
                         locked(sourceId, customerId, "BLOCKED", "1000000"),
                         locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -200,16 +185,12 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop")).thenReturn(null);
-        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"), anyString(), any(), any()))
-                .thenReturn(claim());
         when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
                 new AccountModuleApi.LockedAccountPair(
                         locked(sourceId, customerId, "ACTIVE", "1000"),
                         locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> {
                     ApiException api = (ApiException) e;
@@ -220,41 +201,162 @@ class TransferServiceTest {
     }
 
     @Test
-    void smallTransferCompletesNineStepFlowWith201Completion() {
+    void smallTransferCompletesWith201IdempotencyAndRiskEvent() {
         UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
         UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID(), transferId = UUID.randomUUID();
         UUID claimId = UUID.randomUUID();
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop")).thenReturn(null);
-        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq("abcdefghijklmnop"), anyString(), any(), any()))
-                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(
-                        new IdempotencyJdbcRepository.IdempotencyRecord(claimId, "request-hash", null, null, null, Instant.MAX), true));
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq(KEY), anyString(), any(), any()))
+                .thenReturn(createdClaim(claimId));
         when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
                 new AccountModuleApi.LockedAccountPair(
                         locked(sourceId, customerId, "ACTIVE", "1000000"),
                         locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
         when(d.transfers.create(eq(sourceId), eq(destinationId), eq("50000"), eq("VND"), eq("COMPLETED"),
-                isNull(), isNull(), eq(claimId), eq(NOW), isNull())).thenReturn(transferId);
+                any(), isNull(), eq(claimId), eq(NOW), isNull())).thenReturn(transferId);
         var row = new TransferJdbcRepository.TransferRow(transferId, sourceId, destinationId, "50000", "VND",
                 "COMPLETED", null, null, null, NOW, null, NOW);
         when(d.transfers.find(transferId)).thenReturn(row);
 
         var result = d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "50000", "VND", "001234", null),
-                "abcdefghijklmnop");
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "50000", "VND", "001234", null), KEY);
 
         assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.challengeRequired()).isFalse();
         assertThat(result.replayed()).isFalse();
         assertThat(result.transferId()).isEqualTo(transferId);
         verify(d.accounts).debit(sourceId, new BigDecimal("50000"));
+        verify(d.failureInjector).afterDebitBeforeCredit();
         verify(d.accounts).credit(destinationId, new BigDecimal("50000"));
-        verify(d.transfers).complete(transferId, NOW);
+        verify(d.identities, never()).issueOtp(any(), anyString());
         verify(d.audit).record(eq(userId), eq("CUSTOMER"), eq("TRANSFER_COMPLETED"), eq("TRANSFER"), eq(transferId),
                 eq("SUCCESS"), isNull(), anyString());
         verify(d.idempotency).complete(eq(claimId), eq(201), anyString(), eq(transferId));
         verify(d.events).publishEvent(any(TransferCommittedEvent.class));
+    }
+
+    @Test
+    void largeTransferIssuesOtpInsideMoneyTransactionAndDispatchesAfterCommit() {
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        UUID claimId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        Instant expiresAt = NOW.plusSeconds(120);
+        var issue = new IdentityModuleApi.OtpIssue(challengeId, customerId, "0912345678", "123456", expiresAt);
+        var d = dependencies();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq(KEY), anyString(), any(), any()))
+                .thenReturn(createdClaim(claimId));
+        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
+                new AccountModuleApi.LockedAccountPair(
+                        locked(sourceId, customerId, "ACTIVE", "10000000"),
+                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
+        when(d.identities.issueOtp(customerId, "TRANSFER_STEP_UP")).thenReturn(issue);
+        when(d.transfers.create(eq(sourceId), eq(destinationId), eq("5000001"), eq("VND"), eq("AWAITING_OTP"),
+                any(), eq(challengeId), eq(claimId), eq(NOW), eq(expiresAt))).thenReturn(transferId);
+
+        var result = d.service.create(actor(userId),
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "5000001", "VND", "001234", null), KEY);
+
+        assertThat(result.challengeRequired()).isTrue();
+        assertThat(result.status()).isEqualTo("AWAITING_OTP");
+        assertThat(result.expiresInSeconds()).isEqualTo(120);
+        assertThat(result.expiresAt()).isEqualTo(expiresAt);
+        verify(d.accounts, never()).debit(any(), any());
+        verify(d.accounts, never()).credit(any(), any());
+        verify(d.idempotency).complete(eq(claimId), eq(200), anyString(), eq(transferId));
+        verify(d.identities).dispatchOtp(issue);
+        verify(d.audit).record(eq(userId), eq("CUSTOMER"), eq("TRANSFER_OTP_REQUESTED"), eq("TRANSFER"), eq(transferId),
+                eq("SUCCESS"), isNull(), anyString());
+    }
+
+    @Test
+    void dispatchFailureCompensatesTransferAndChallengeThenReturns503() {
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        UUID claimId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        Instant expiresAt = NOW.plusSeconds(120);
+        var issue = new IdentityModuleApi.OtpIssue(challengeId, customerId, "0912345678", "123456", expiresAt);
+        var d = dependencies();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq(KEY), anyString(), any(), any()))
+                .thenReturn(createdClaim(claimId));
+        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
+                new AccountModuleApi.LockedAccountPair(
+                        locked(sourceId, customerId, "ACTIVE", "10000000"),
+                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
+        when(d.identities.issueOtp(customerId, "TRANSFER_STEP_UP")).thenReturn(issue);
+        when(d.transfers.create(eq(sourceId), eq(destinationId), eq("5000001"), eq("VND"), eq("AWAITING_OTP"),
+                any(), eq(challengeId), eq(claimId), eq(NOW), eq(expiresAt))).thenReturn(transferId);
+        doThrow(new IllegalStateException("sender down")).when(d.identities).dispatchOtp(issue);
+        when(d.transfers.lock(transferId)).thenReturn(awaiting(transferId, sourceId, destinationId, challengeId, expiresAt));
+
+        assertThatThrownBy(() -> d.service.create(actor(userId),
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "5000001", "VND", "001234", null), KEY))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    assertThat(((ApiException) error).status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(((ApiException) error).code()).isEqualTo("SERVICE_UNAVAILABLE");
+                });
+        verify(d.transfers).fail(transferId, "OTP_DISPATCH_FAILED", NOW);
+        verify(d.identities).invalidateOtp(challengeId);
+        verify(d.accounts, never()).debit(any(), any());
+    }
+
+    @Test
+    void replayWhileAwaitingOtpReturnsCurrentStateAndRemainingTtlWithoutNewDispatch() {
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        UUID claimId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        Instant expiresAt = NOW.plusSeconds(90);
+        var d = dependencies();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
+        String hash = TransferPolicy.payloadHash(sourceId, destinationId, new BigDecimal("5000001"), "VND", null);
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq(KEY), eq(hash), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(new IdempotencyJdbcRepository.IdempotencyRecord(
+                        claimId, hash, 200, "{}", transferId, NOW.plusSeconds(86400)), false));
+        when(d.transfers.find(transferId)).thenReturn(awaiting(transferId, sourceId, destinationId, challengeId, expiresAt));
+
+        var result = d.service.create(actor(userId),
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "5000001", "VND", "001234", null), KEY);
+
+        assertThat(result.challengeRequired()).isTrue();
+        assertThat(result.replayed()).isTrue();
+        assertThat(result.expiresInSeconds()).isEqualTo(90);
+        assertThat(result.status()).isEqualTo("AWAITING_OTP");
+        verify(d.identities, never()).issueOtp(any(), anyString());
+        verify(d.identities, never()).dispatchOtp(any());
+        verify(d.accounts, never()).debit(any(), any());
+        verify(d.transfers, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void replayAfterExpiryReturnsTerminalExpiredWithoutDispatch() {
+        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID(), transferId = UUID.randomUUID();
+        UUID claimId = UUID.randomUUID(), challengeId = UUID.randomUUID();
+        var d = dependencies();
+        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
+        when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
+        String hash = TransferPolicy.payloadHash(sourceId, destinationId, new BigDecimal("5000001"), "VND", null);
+        when(d.idempotency.createOrFind(eq(userId), eq("createTransfer"), eq(KEY), eq(hash), any(), any()))
+                .thenReturn(new IdempotencyJdbcRepository.IdempotencyClaim(new IdempotencyJdbcRepository.IdempotencyRecord(
+                        claimId, hash, 200, "{}", transferId, NOW.plusSeconds(86400)), false));
+        when(d.transfers.find(transferId)).thenReturn(awaiting(transferId, sourceId, destinationId, challengeId,
+                NOW.minusSeconds(1)));
+
+        var result = d.service.create(actor(userId),
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "5000001", "VND", "001234", null), KEY);
+
+        assertThat(result.status()).isEqualTo("EXPIRED");
+        assertThat(result.challengeRequired()).isFalse();
+        assertThat(result.replayed()).isTrue();
+        verify(d.identities, never()).dispatchOtp(any());
+        verify(d.identities, never()).issueOtp(any(), anyString());
     }
 
     @Test
@@ -264,24 +366,19 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
-                new AccountModuleApi.LockedAccountPair(
-                        locked(sourceId, customerId, "ACTIVE", "10000000"),
-                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
         String requestHash = TransferPolicy.payloadHash(sourceId, destinationId, new BigDecimal("2000"), "VND", null);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop"))
+        when(d.idempotency.find(userId, "createTransfer", KEY))
                 .thenReturn(new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), requestHash, null, null, null, Instant.MAX));
 
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(error -> {
                     assertThat(((ApiException) error).status()).isEqualTo(HttpStatus.CONFLICT);
                     assertThat(((ApiException) error).code()).isEqualTo("IDEMPOTENCY_IN_PROGRESS");
                 });
         verify(d.idempotency, never()).createOrFind(any(), anyString(), anyString(), anyString(), any(), any());
-        verify(d.transfers, never()).create(any(), any(), anyString(), anyString(), anyString(), any(), any(), any(), any(), any());
+        verify(d.transfers, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(d.accounts, never()).debit(any(), any());
     }
 
@@ -292,13 +389,12 @@ class TransferServiceTest {
         var d = dependencies();
         when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
         when(d.identities.verifyPin(customerId, "001234")).thenReturn(IdentityModuleApi.PinVerificationResult.VALID);
-        when(d.idempotency.find(userId, "createTransfer", "abcdefghijklmnop"))
+        when(d.idempotency.find(userId, "createTransfer", KEY))
                 .thenReturn(new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), "different-hash",
                         null, null, null, Instant.MAX));
 
         assertThatThrownBy(() -> d.service.create(actor(userId),
-                new TransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null),
-                "abcdefghijklmnop"))
+                new CreateTransferService.CreateCommand(sourceId, destinationId, "2000", "VND", "001234", null), KEY))
                 .isInstanceOf(ApiException.class)
                 .satisfies(error -> {
                     assertThat(((ApiException) error).status()).isEqualTo(HttpStatus.CONFLICT);
@@ -307,75 +403,9 @@ class TransferServiceTest {
         verifyNoInteractions(d.accounts);
     }
 
-    @Test
-    void invalidOtpIncrementsAttemptBeforeReturningBadRequest() {
-        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
-        UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
-        var d = dependencies();
-        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId, Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
-        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
-                new AccountModuleApi.LockedAccountPair(
-                        locked(sourceId, customerId, "ACTIVE", "10000000"),
-                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
-        when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 0));
-        when(d.otpHashing.matches("000000", "hash")).thenReturn(false);
-        assertThatThrownBy(() -> d.service.confirm(actor(userId), transferId, "000000"))
-                .isInstanceOf(ApiException.class)
-                .satisfies(e -> assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.BAD_REQUEST));
-        verify(d.transferOtp).updateAttempts(challengeId, 1, null);
-        verify(d.accounts, never()).debit(any(), any());
-    }
-
-    @Test
-    void fifthInvalidOtpFailsTransferWithAttemptsExceededCode() {
-        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), sourceId = UUID.randomUUID();
-        UUID destinationId = UUID.randomUUID(), transferId = UUID.randomUUID(), challengeId = UUID.randomUUID();
-        var d = dependencies();
-        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, challengeId, Instant.EPOCH, Instant.EPOCH.plusSeconds(120)));
-        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
-                new AccountModuleApi.LockedAccountPair(
-                        locked(sourceId, customerId, "ACTIVE", "10000000"),
-                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
-        when(d.transferOtp.lock(challengeId, Instant.EPOCH)).thenReturn(otpRecord(challengeId, 4));
-        when(d.otpHashing.matches("000000", "hash")).thenReturn(false);
-        assertThatThrownBy(() -> d.service.confirm(actor(userId), transferId, "000000"))
-                .isInstanceOf(ApiException.class)
-                .satisfies(e -> {
-                    assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(((ApiException) e).code()).isEqualTo("STATE_CONFLICT");
-                });
-        verify(d.transferOtp).updateAttempts(challengeId, 5, Instant.EPOCH);
-        verify(d.transfers).fail(transferId, "OTP_ATTEMPTS_EXCEEDED", Instant.EPOCH);
-    }
-
-    @Test
-    void expiredOtpCommitsExpiredTransferBeforeErrorResponse() {
-        UUID userId = UUID.randomUUID(), customerId = UUID.randomUUID(), transferId = UUID.randomUUID();
-        var d = dependencies();
-        UUID sourceId = UUID.randomUUID(), destinationId = UUID.randomUUID();
-        when(d.identities.findCustomerByUserId(userId)).thenReturn(customer(customerId, userId));
-        when(d.transfers.lock(transferId)).thenReturn(transfer(transferId, sourceId, destinationId, UUID.randomUUID(), Instant.EPOCH.minusSeconds(120), Instant.EPOCH));
-        when(d.accounts.lockAccountsAscending(sourceId, destinationId)).thenReturn(
-                new AccountModuleApi.LockedAccountPair(
-                        locked(sourceId, customerId, "ACTIVE", "10000000"),
-                        locked(destinationId, UUID.randomUUID(), "ACTIVE", "0")));
-        assertThatThrownBy(() -> d.service.confirm(actor(userId), transferId, "000000"))
-                .isInstanceOf(ApiException.class)
-                .satisfies(e -> {
-                    assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(((ApiException) e).code()).isEqualTo("TRANSFER_EXPIRED");
-                });
-        verify(d.accounts).lockAccountsAscending(sourceId, destinationId);
-        verify(d.transfers).expire(transferId, Instant.EPOCH);
-        verifyNoInteractions(d.transferOtp);
-    }
-
-    private IdempotencyJdbcRepository.IdempotencyClaim claim() {
+    private IdempotencyJdbcRepository.IdempotencyClaim createdClaim(UUID claimId) {
         return new IdempotencyJdbcRepository.IdempotencyClaim(
-                new IdempotencyJdbcRepository.IdempotencyRecord(UUID.randomUUID(), "request-hash",
-                        null, null, null, Instant.MAX), true);
+                new IdempotencyJdbcRepository.IdempotencyRecord(claimId, "request-hash", null, null, null, Instant.MAX), true);
     }
 
     private AuthenticatedActor actor(UUID userId) {
@@ -390,34 +420,31 @@ class TransferServiceTest {
         return new AccountModuleApi.LockedAccount(id, customerId, status, balance, "VND");
     }
 
-    private TransferJdbcRepository.TransferRow transfer(UUID id, UUID sourceId, UUID destinationId, UUID challengeId, Instant createdAt, Instant expiresAt) {
-        return new TransferJdbcRepository.TransferRow(id, sourceId, destinationId, "6000000", "VND", "AWAITING_OTP", null, null, challengeId, createdAt, expiresAt, null);
-    }
-
-    private com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord otpRecord(UUID id, int attempts) {
-        return new com.bank.simulator.identity.infrastructure.otp.OtpChallengeRecord(id, "0912345678", "SMS", "TRANSFER_STEP_UP", "hash", attempts, 5, Instant.EPOCH.plusSeconds(120), null, null);
+    private TransferJdbcRepository.TransferRow awaiting(UUID id, UUID sourceId, UUID destinationId, UUID challengeId,
+                                                      Instant expiresAt) {
+        return new TransferJdbcRepository.TransferRow(id, sourceId, destinationId, "5000001", "VND", "AWAITING_OTP",
+                null, null, challengeId, NOW, expiresAt, null);
     }
 
     private Dependencies dependencies() {
         var accounts = mock(AccountModuleApi.class);
         var transfers = mock(TransferJdbcRepository.class);
         var idempotency = mock(IdempotencyJdbcRepository.class);
-        var transferOtp = mock(TransferOtpRepository.class);
-        var otpHashing = mock(OtpHashingService.class);
-        var otpRepository = mock(OtpChallengeRepository.class);
-        var sender = mock(OtpSender.class);
         var identities = mock(IdentityModuleApi.class);
         var audit = mock(AuditWriter.class);
         var events = mock(ApplicationEventPublisher.class);
-        var service = new TransferService(accounts, transfers, idempotency, transferOtp, otpHashing, otpRepository,
-                sender, identities, audit, Clock.fixed(NOW, ZoneOffset.UTC), events, new InlineTransactionManager());
-        return new Dependencies(service, accounts, transfers, idempotency, transferOtp, otpHashing, identities, audit, events);
+        var failureInjector = mock(TransferFailureInjector.class);
+        when(idempotency.createOrFind(any(), anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(createdClaim(UUID.randomUUID()));
+        var service = new CreateTransferService(accounts, transfers, idempotency, identities, audit,
+                Clock.fixed(NOW, ZoneOffset.UTC), events, new InlineTransactionManager(), failureInjector);
+        return new Dependencies(service, accounts, transfers, idempotency, identities, audit, events, failureInjector);
     }
 
-    private record Dependencies(TransferService service, AccountModuleApi accounts, TransferJdbcRepository transfers,
-                                IdempotencyJdbcRepository idempotency, TransferOtpRepository transferOtp,
-                                OtpHashingService otpHashing, IdentityModuleApi identities, AuditWriter audit,
-                                ApplicationEventPublisher events) {}
+    private record Dependencies(CreateTransferService service, AccountModuleApi accounts,
+                                TransferJdbcRepository transfers, IdempotencyJdbcRepository idempotency,
+                                IdentityModuleApi identities, AuditWriter audit, ApplicationEventPublisher events,
+                                TransferFailureInjector failureInjector) {}
 
     private static final class InlineTransactionManager implements PlatformTransactionManager {
         @Override public TransactionStatus getTransaction(TransactionDefinition definition) { return mock(TransactionStatus.class); }

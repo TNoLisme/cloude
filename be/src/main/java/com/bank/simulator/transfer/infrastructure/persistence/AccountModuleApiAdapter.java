@@ -34,6 +34,12 @@ public class AccountModuleApiAdapter implements AccountModuleApi {
     }
 
     @Override
+    public UUID ownerCustomerId(UUID accountId) {
+        AccountJdbcRepository.AccountRow row = accounts.find(accountId);
+        return row == null ? null : row.customerId();
+    }
+
+    @Override
     public LockedAccountPair lockAccountsAscending(UUID accountA, UUID accountB) {
         if (accountA == null || accountB == null || accountA.equals(accountB)) return null;
         List<TransferLockRepository.LockedAccountRow> rows = locks.lockAccountsAscending(accountA, accountB);

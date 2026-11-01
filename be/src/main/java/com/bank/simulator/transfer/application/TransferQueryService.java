@@ -6,11 +6,13 @@ import com.bank.simulator.identity.infrastructure.persistence.IdentityJdbcReposi
 import com.bank.simulator.shared.error.ApiException;
 import com.bank.simulator.shared.pagination.CursorCodec;
 import com.bank.simulator.shared.pagination.CursorPosition;
+import com.bank.simulator.transfer.domain.TransferExpirationPolicy;
+import com.bank.simulator.transfer.domain.TransferStatus;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -21,32 +23,32 @@ public class TransferQueryService {
     private final AccountJdbcRepository accounts;
     private final IdentityJdbcRepository identities;
     private final CursorCodec cursors;
+    private final Clock clock;
 
     public TransferQueryService(TransferJdbcRepository transfers, AccountJdbcRepository accounts,
-                                IdentityJdbcRepository identities) {
-        this(transfers, accounts, identities, new CursorCodec(new ObjectMapper()));
-    }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public TransferQueryService(TransferJdbcRepository transfers, AccountJdbcRepository accounts,
-                                IdentityJdbcRepository identities, CursorCodec cursors) {
+                                IdentityJdbcRepository identities, CursorCodec cursors, Clock clock) {
         this.transfers = transfers;
         this.accounts = accounts;
         this.identities = identities;
         this.cursors = cursors;
+        this.clock = clock;
     }
 
     public TransferView get(AuthenticatedActor actor, UUID transferId) {
         var transfer = transfers.find(transferId);
         if (transfer == null) throw notFound();
+        Instant now = clock.instant();
+        String effectiveStatus = effectiveStatus(transfer, now);
         var source = accounts.find(transfer.sourceAccountId());
         var destination = accounts.find(transfer.destinationAccountId());
         UUID customerId = customerId(actor);
         boolean sourceOwner = source != null && customerId.equals(source.customerId());
         boolean destinationOwner = destination != null && customerId.equals(destination.customerId());
-        if (!sourceOwner && (!destinationOwner || !"COMPLETED".equals(transfer.status()))) throw notFound();
+        if (!sourceOwner && (!destinationOwner || !TransferStatus.COMPLETED.name().equals(effectiveStatus))) {
+            throw notFound();
+        }
         return TransferView.from(transfer, sourceOwner,
-                sourceOwner ? counterparty(destination) : counterparty(source));
+                sourceOwner ? counterparty(destination) : counterparty(source), now);
     }
 
     public HistoryPage list(AuthenticatedActor actor, HistoryQuery query) {
@@ -54,13 +56,15 @@ public class TransferQueryService {
         var customerAccounts = accounts.findByCustomer(customerId);
         var accountIds = customerAccounts.stream().map(AccountJdbcRepository.AccountRow::id).toList();
         CursorPosition cursor = decodeCursor(query.cursor());
-        List<TransferJdbcRepository.TransferRow> rows = transfers.findHistory(accountIds, query.status(), query.from(), query.to(),
-                cursor == null ? null : cursor.createdAt(), cursor == null ? null : cursor.id(), query.limit() + 1);
+        Instant now = clock.instant();
+        List<TransferJdbcRepository.TransferRow> rows = transfers.findHistory(accountIds, query.status(), query.from(),
+                query.to(), cursor == null ? null : cursor.createdAt(), cursor == null ? null : cursor.id(),
+                query.limit() + 1, now);
         boolean hasNext = rows.size() > query.limit();
         List<TransferView> items = rows.stream().limit(query.limit()).map(row -> {
             boolean sourceOwner = accountIds.contains(row.sourceAccountId());
             var otherAccount = accounts.find(sourceOwner ? row.destinationAccountId() : row.sourceAccountId());
-            return TransferView.from(row, sourceOwner, counterparty(otherAccount));
+            return TransferView.from(row, sourceOwner, counterparty(otherAccount), now);
         }).toList();
         String next = hasNext ? cursors.encode(items.getLast().cursorPosition()) : null;
         return new HistoryPage(items, next);
@@ -77,6 +81,11 @@ public class TransferQueryService {
         } catch (IllegalArgumentException error) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Transfer cursor is invalid.");
         }
+    }
+
+    private String effectiveStatus(TransferJdbcRepository.TransferRow row, Instant now) {
+        return TransferExpirationPolicy.resolveEffectiveStatus(TransferStatus.valueOf(row.status()), row.expiresAt(), now)
+                .name();
     }
 
     private Counterparty counterparty(AccountJdbcRepository.AccountRow account) {
@@ -102,6 +111,13 @@ public class TransferQueryService {
             if (limit < 1 || limit > 100) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Transfer limit is invalid.");
             }
+            if (status != null) {
+                try {
+                    TransferStatus.valueOf(status);
+                } catch (IllegalArgumentException error) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Transfer status filter is invalid.");
+                }
+            }
             if (from != null && to != null && !from.isBefore(to)) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "From must be before to.");
             }
@@ -114,8 +130,11 @@ public class TransferQueryService {
                                UUID destinationAccountId, String amount, String currency, String memo,
                                Instant createdAt, Instant expiresAt, Instant completedAt,
                                String direction, String counterpartyAccountMasked, String counterpartyDisplayName) {
-        static TransferView from(TransferJdbcRepository.TransferRow row, boolean sourceOwner, Counterparty counterparty) {
-            return new TransferView(row.id(), row.status(), row.failureCode(), row.sourceAccountId(),
+        static TransferView from(TransferJdbcRepository.TransferRow row, boolean sourceOwner, Counterparty counterparty,
+                                 Instant now) {
+            String status = TransferExpirationPolicy.resolveEffectiveStatus(TransferStatus.valueOf(row.status()),
+                    row.expiresAt(), now).name();
+            return new TransferView(row.id(), status, row.failureCode(), row.sourceAccountId(),
                     row.destinationAccountId(), row.amount(), row.currency(), row.memo(), row.createdAt(),
                     row.expiresAt(), row.completedAt(), sourceOwner ? "OUTGOING" : "INCOMING",
                     counterparty.masked(), counterparty.name());

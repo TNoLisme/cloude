@@ -10,6 +10,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.bank.simulator.transfer.application.TransferFailureInjector;
+import com.bank.simulator.transfer.infrastructure.NoOpTransferFailureInjector;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -32,6 +35,14 @@ class FoundationPostgresTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private TransferFailureInjector failureInjector;
+
+    @Test
+    void defaultProfileWiresNoOpFailureInjector() {
+        assertThat(failureInjector).isInstanceOf(NoOpTransferFailureInjector.class);
+    }
 
     @Test
     void appliesV1SchemaToDisposablePostgres() {

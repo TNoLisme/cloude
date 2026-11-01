@@ -1,8 +1,9 @@
 package com.bank.simulator.transfer.web;
 
 import com.bank.simulator.identity.domain.AuthenticatedActor;
+import com.bank.simulator.transfer.application.ConfirmTransferOtpService;
+import com.bank.simulator.transfer.application.CreateTransferService;
 import com.bank.simulator.transfer.application.TransferQueryService;
-import com.bank.simulator.transfer.application.TransferService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,14 +33,15 @@ class TransferControllerMvcTest {
     void createsImmediateTransferWithContractStatusHeaderAndBody() throws Exception {
         UUID actorId = UUID.randomUUID();
         UUID transferId = UUID.randomUUID();
-        var transfers = mock(TransferService.class);
+        var create = mock(CreateTransferService.class);
+        var confirm = mock(ConfirmTransferOtpService.class);
         var queries = mock(TransferQueryService.class);
         authenticate(actorId);
-        when(transfers.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
-                new TransferService.CreateResult(false, transferId, "COMPLETED", null, null, 0, null, false,
+        when(create.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
+                new CreateTransferService.CreateResult(false, transferId, "COMPLETED", null, null, 0, null, false,
                         null, null, null, null));
         when(queries.get(any(), eq(transferId))).thenReturn(view(transferId, "COMPLETED"));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(create, confirm, queries)).build();
 
         mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
                         .contentType("application/json")
@@ -55,12 +57,13 @@ class TransferControllerMvcTest {
         UUID actorId = UUID.randomUUID();
         UUID transferId = UUID.randomUUID();
         authenticate(actorId);
-        var transfers = mock(TransferService.class);
+        var create = mock(CreateTransferService.class);
+        var confirm = mock(ConfirmTransferOtpService.class);
         var queries = mock(TransferQueryService.class);
-        when(transfers.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
-                new TransferService.CreateResult(true, transferId, "AWAITING_OTP", "OTP sent", Instant.parse("2026-01-01T00:02:00Z"), 120, null, false,
+        when(create.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
+                new CreateTransferService.CreateResult(true, transferId, "AWAITING_OTP", "OTP sent", Instant.parse("2026-01-01T00:02:00Z"), 120, null, false,
                         UUID.randomUUID(), UUID.randomUUID(), null, null));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(create, confirm, queries)).build();
 
         mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
                         .contentType("application/json")
@@ -75,13 +78,14 @@ class TransferControllerMvcTest {
     void returnsOriginalReplayBodyAndHeader() throws Exception {
         UUID actorId = UUID.randomUUID(), transferId = UUID.randomUUID();
         authenticate(actorId);
-        var transfers = mock(TransferService.class);
+        var create = mock(CreateTransferService.class);
+        var confirm = mock(ConfirmTransferOtpService.class);
         var queries = mock(TransferQueryService.class);
-        when(transfers.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
-                new TransferService.CreateResult(false, transferId, "COMPLETED", null, null, 0, null, true,
+        when(create.create(any(), any(), eq("abcdefghijklmnop"))).thenReturn(
+                new CreateTransferService.CreateResult(false, transferId, "COMPLETED", null, null, 0, null, true,
                         null, null, null, null));
         when(queries.get(any(), eq(transferId))).thenReturn(view(transferId, "COMPLETED"));
-        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(create, confirm, queries)).build();
 
         mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
                         .contentType("application/json")
@@ -94,25 +98,28 @@ class TransferControllerMvcTest {
     @Test
     void rejectsInvalidTransferBodyBeforeCallingService() throws Exception {
         authenticate(UUID.randomUUID());
-        var transfers = mock(TransferService.class);
-        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, mock(TransferQueryService.class))).build();
+        var create = mock(CreateTransferService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(create,
+                mock(ConfirmTransferOtpService.class), mock(TransferQueryService.class))).build();
 
         mvc.perform(post("/transfers").header("Idempotency-Key", "abcdefghijklmnop")
                         .contentType("application/json")
                         .content("{\"sourceAccountId\":\"" + UUID.randomUUID() + "\",\"destinationAccountId\":\"" + UUID.randomUUID() + "\",\"amount\":\"1\",\"currency\":\"VND\",\"pin\":\"12\"}"))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(transfers);
+        verifyNoInteractions(create);
     }
 
     @Test
     void confirmReturnsCreatedThenReplayStatusAndHeader() throws Exception {
         UUID actorId = UUID.randomUUID(), transferId = UUID.randomUUID();
         authenticate(actorId);
-        var transfers = mock(TransferService.class);
+        var create = mock(CreateTransferService.class);
+        var confirm = mock(ConfirmTransferOtpService.class);
         var queries = mock(TransferQueryService.class);
-        when(transfers.confirm(any(), eq(transferId), eq("123456"))).thenReturn(false, true);
+        when(confirm.confirm(any(), eq(transferId), eq("123456"))).thenReturn(
+                new ConfirmTransferOtpService.ConfirmResult(false), new ConfirmTransferOtpService.ConfirmResult(true));
         when(queries.get(any(), eq(transferId))).thenReturn(view(transferId, "COMPLETED"));
-        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(create, confirm, queries)).build();
 
         mvc.perform(post("/transfers/{id}/confirm-otp", transferId).contentType("application/json").content("{\"otp\":\"123456\"}"))
                 .andExpect(status().isCreated())
@@ -125,22 +132,23 @@ class TransferControllerMvcTest {
     @Test
     void rejectsMalformedConfirmOtpBeforeCallingService() throws Exception {
         authenticate(UUID.randomUUID());
-        var transfers = mock(TransferService.class);
-        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, mock(TransferQueryService.class))).build();
+        var confirm = mock(ConfirmTransferOtpService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new TransferController(mock(CreateTransferService.class),
+                confirm, mock(TransferQueryService.class))).build();
 
         mvc.perform(post("/transfers/{id}/confirm-otp", UUID.randomUUID()).contentType("application/json").content("{\"otp\":\"abc\"}"))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(transfers);
+        verifyNoInteractions(confirm);
     }
 
     @Test
     void listsTransfersWithQueryFiltersAndCursor() throws Exception {
         UUID actorId = UUID.randomUUID();
         authenticate(actorId);
-        var transfers = mock(TransferService.class);
         var queries = mock(TransferQueryService.class);
         when(queries.list(any(), any())).thenReturn(new TransferQueryService.HistoryPage(List.of(), null));
-        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(transfers, queries)).build();
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new TransferController(mock(CreateTransferService.class),
+                mock(ConfirmTransferOtpService.class), queries)).build();
 
         mvc.perform(get("/transfers?limit=10&status=COMPLETED&cursor=cursor&from=2026-01-01T00:00:00Z&to=2026-01-02T00:00:00Z"))
                 .andExpect(status().isOk())

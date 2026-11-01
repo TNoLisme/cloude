@@ -1,4 +1,4 @@
-package com.bank.simulator.transfer.application;
+package com.bank.simulator.transfer.domain;
 
 import com.bank.simulator.shared.error.ApiException;
 import org.junit.jupiter.api.Test;

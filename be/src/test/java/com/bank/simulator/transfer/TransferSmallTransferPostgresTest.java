@@ -6,7 +6,7 @@ import com.bank.simulator.identity.infrastructure.otp.OtpMessage;
 import com.bank.simulator.identity.infrastructure.otp.OtpSender;
 import com.bank.simulator.identity.infrastructure.persistence.IdentityJdbcRepository;
 import com.bank.simulator.identity.infrastructure.security.PinHashingService;
-import com.bank.simulator.transfer.application.TransferService;
+import com.bank.simulator.transfer.application.CreateTransferService;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,7 @@ class TransferSmallTransferPostgresTest {
     }
 
     @Autowired JdbcTemplate jdbc;
-    @Autowired TransferService service;
+    @Autowired CreateTransferService service;
     @Autowired TransferJdbcRepository transfers;
     @Autowired IdentityJdbcRepository identities;
     @Autowired PinHashingService pins;
@@ -66,7 +66,7 @@ class TransferSmallTransferPostgresTest {
     void fiftyThousandTransferCompletesImmediatelyWithBalancesAuditAndReplay() {
         var fixture = seedCustomer("0912345670", now);
         var destination = identities.createDefaultAccount(UUID.randomUUID(), numbers, now).accountId();
-        var command = new TransferService.CreateCommand(fixture.accountId(), destination, "50000", "VND", "000001", "W1 happy path");
+        var command = new CreateTransferService.CreateCommand(fixture.accountId(), destination, "50000", "VND", "000001", "W1 happy path");
         String key = UUID.randomUUID().toString();
 
         var result = service.create(new AuthenticatedActor(fixture.userId(), Set.of("CUSTOMER")), command, key);
@@ -91,7 +91,7 @@ class TransferSmallTransferPostgresTest {
     void fiveMillionBoundaryStillUsesSmallPathAndCompletesImmediately() {
         var fixture = seedCustomer("0912345671", now);
         var destination = identities.createDefaultAccount(UUID.randomUUID(), numbers, now).accountId();
-        var command = new TransferService.CreateCommand(fixture.accountId(), destination, "5000000", "VND", "000001", "SM-04");
+        var command = new CreateTransferService.CreateCommand(fixture.accountId(), destination, "5000000", "VND", "000001", "SM-04");
 
         var result = service.create(new AuthenticatedActor(fixture.userId(), Set.of("CUSTOMER")), command,
                 UUID.randomUUID().toString());
@@ -106,7 +106,7 @@ class TransferSmallTransferPostgresTest {
     void fiveMillionPlusOneUsesLargePathAwaitingOtpWithoutMovingMoney() {
         var fixture = seedCustomer("0912345672", now);
         var destination = identities.createDefaultAccount(UUID.randomUUID(), numbers, now).accountId();
-        var command = new TransferService.CreateCommand(fixture.accountId(), destination, "5000001", "VND", "000001", "SM-05");
+        var command = new CreateTransferService.CreateCommand(fixture.accountId(), destination, "5000001", "VND", "000001", "SM-05");
 
         var result = service.create(new AuthenticatedActor(fixture.userId(), Set.of("CUSTOMER")), command,
                 UUID.randomUUID().toString());
@@ -138,7 +138,7 @@ class TransferSmallTransferPostgresTest {
                     id, source, destination, Timestamp.from(sameAt), Timestamp.from(sameAt), Timestamp.from(sameAt));
         }
 
-        assertThat(transfers.findHistory(List.of(source), null, null, null, null, null, 10))
+        assertThat(transfers.findHistory(List.of(source), null, null, null, null, null, 10, sameAt))
                 .extracting(TransferJdbcRepository.TransferRow::id)
                 .containsExactly(higherId, lowerId);
     }

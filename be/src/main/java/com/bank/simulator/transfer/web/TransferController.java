@@ -1,8 +1,9 @@
 package com.bank.simulator.transfer.web;
 
 import com.bank.simulator.identity.domain.AuthenticatedActor;
+import com.bank.simulator.transfer.application.ConfirmTransferOtpService;
+import com.bank.simulator.transfer.application.CreateTransferService;
 import com.bank.simulator.transfer.application.TransferQueryService;
-import com.bank.simulator.transfer.application.TransferService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,18 +26,21 @@ import java.util.UUID;
 
 @RestController
 public class TransferController {
-    private final TransferService transfers;
+    private final CreateTransferService createTransfer;
+    private final ConfirmTransferOtpService confirmTransfer;
     private final TransferQueryService queries;
 
-    public TransferController(TransferService transfers, TransferQueryService queries) {
-        this.transfers = transfers;
+    public TransferController(CreateTransferService createTransfer, ConfirmTransferOtpService confirmTransfer,
+                              TransferQueryService queries) {
+        this.createTransfer = createTransfer;
+        this.confirmTransfer = confirmTransfer;
         this.queries = queries;
     }
 
     @PostMapping("/transfers")
     public ResponseEntity<?> create(@RequestHeader("Idempotency-Key") String idempotencyKey,
                                     @Valid @RequestBody CreateTransferRequest request) {
-        var result = transfers.create(actor(), new TransferService.CreateCommand(request.sourceAccountId(),
+        var result = createTransfer.create(actor(), new CreateTransferService.CreateCommand(request.sourceAccountId(),
                 request.destinationAccountId(), request.amount(), request.currency(), request.pin(), request.memo()), idempotencyKey);
         if (result.challengeRequired()) {
             return ResponseEntity.ok()
@@ -68,7 +72,7 @@ public class TransferController {
     @PostMapping("/transfers/{transferId}/confirm-otp")
     public ResponseEntity<TransferQueryService.TransferView> confirm(@PathVariable UUID transferId,
             @Valid @RequestBody ConfirmTransferOtpRequest request) {
-        boolean replay = transfers.confirm(actor(), transferId, request.otp());
+        boolean replay = confirmTransfer.confirm(actor(), transferId, request.otp()).replayed();
         return ResponseEntity.status(replay ? HttpStatus.OK : HttpStatus.CREATED)
                 .header("Idempotency-Replayed", Boolean.toString(replay))
                 .body(queries.get(actor(), transferId));

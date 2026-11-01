@@ -11,6 +11,8 @@ public interface AccountModuleApi {
 
     AccountView findByAccountNumber(String fullAccountNumber);
 
+    UUID ownerCustomerId(UUID accountId);
+
     LockedAccountPair lockAccountsAscending(UUID accountA, UUID accountB);
 
     void debit(UUID accountId, BigDecimal amount);
