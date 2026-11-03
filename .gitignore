@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 
+.claude/
+
 # Build output
 be/target/
 frontend/node_modules/
@@ -18,4 +20,4 @@ frontend/*.tsbuildinfo
 AGENTS.md
 DECISIONS.md
 
-digitalbanking-docs/docs-references 
+digitalbanking-docs/docs-references
