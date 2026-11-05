@@ -61,7 +61,7 @@ public class TransferJdbcRepository {
     }
 
     public List<TransferRow> findHistory(List<UUID> accountIds, String status, Instant from, Instant to,
-                                         Instant cursorCreatedAt, UUID cursorId, int limit) {
+                                         Instant cursorCreatedAt, UUID cursorId, int limit, Instant now) {
         if (accountIds.isEmpty()) return List.of();
         String placeholders = String.join(",", java.util.Collections.nCopies(accountIds.size(), "?"));
         String sql = """
@@ -69,7 +69,9 @@ public class TransferJdbcRepository {
                        status, failure_code, memo, otp_challenge_id, created_at, expires_at, completed_at
                 FROM transfers
                 WHERE (source_account_id IN (%s) OR (destination_account_id IN (%s) AND status = 'COMPLETED'))
-                  AND (CAST(? AS VARCHAR) IS NULL OR status = ?)
+                  AND (CAST(? AS VARCHAR) IS NULL OR
+                       (CASE WHEN status = 'AWAITING_OTP' AND expires_at IS NOT NULL AND expires_at < ?
+                             THEN 'EXPIRED' ELSE status END) = ?)
                   AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at >= ?)
                   AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at < ?)
                   AND (CAST(? AS TIMESTAMPTZ) IS NULL OR created_at < ? OR (created_at = ? AND id < ?))
@@ -79,6 +81,7 @@ public class TransferJdbcRepository {
         java.util.List<Object> args = new java.util.ArrayList<>(accountIds);
         args.addAll(accountIds);
         args.add(status);
+        args.add(now == null ? null : Timestamp.from(now));
         args.add(status);
         args.add(from == null ? null : Timestamp.from(from));
         args.add(from == null ? null : Timestamp.from(from));
@@ -95,17 +98,17 @@ public class TransferJdbcRepository {
 
 
     public void complete(UUID transferId, Instant completedAt) {
-        jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?",
+        jdbc.update("UPDATE transfers SET status = 'COMPLETED', completed_at = ?, expires_at = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 Timestamp.from(completedAt), Timestamp.from(completedAt), transferId);
     }
 
     public void expire(UUID transferId, Instant now) {
-        jdbc.update("UPDATE transfers SET status = 'EXPIRED', failure_code = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+        jdbc.update("UPDATE transfers SET status = 'EXPIRED', failure_code = NULL, expires_at = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 Timestamp.from(now), transferId);
     }
 
     public void fail(UUID transferId, String failureCode, Instant now) {
-        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
+        jdbc.update("UPDATE transfers SET status = 'FAILED', failure_code = ?, expires_at = NULL, updated_at = ? WHERE id = ? AND status = 'AWAITING_OTP'",
                 failureCode, Timestamp.from(now), transferId);
     }
 

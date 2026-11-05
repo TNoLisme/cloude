@@ -10,6 +10,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.bank.simulator.transfer.application.TransferFailureInjector;
+import com.bank.simulator.transfer.infrastructure.NoOpTransferFailureInjector;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -27,11 +30,19 @@ class FoundationPostgresTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("app.security.jwt-secret", () -> DisposablePostgresTestSupport.JWT_TEST_SECRET);
+        registry.add("app.security.jwt-secret", () -> "01234567890123456789012345678901");
     }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private TransferFailureInjector failureInjector;
+
+    @Test
+    void defaultProfileWiresNoOpFailureInjector() {
+        assertThat(failureInjector).isInstanceOf(NoOpTransferFailureInjector.class);
+    }
 
     @Test
     void appliesV1SchemaToDisposablePostgres() {

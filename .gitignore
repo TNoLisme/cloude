@@ -9,3 +9,10 @@ be/target/
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
+
+docs_draft
+.obsidian
+
+.qoderian
+.superpowers
+.qoder

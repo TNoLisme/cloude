@@ -12,7 +12,8 @@ import com.bank.simulator.shared.error.ApiException;
 import com.bank.simulator.risk.application.RiskFlagQuery;
 import com.bank.simulator.risk.application.RiskFlagRepository;
 import com.bank.simulator.shared.pagination.CursorPosition;
-import com.bank.simulator.transfer.application.TransferService;
+import com.bank.simulator.transfer.application.ConfirmTransferOtpService;
+import com.bank.simulator.transfer.application.CreateTransferService;
 import com.bank.simulator.transfer.infrastructure.persistence.TransferJdbcRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,8 @@ class UiApiRegressionPostgresTest {
     }
     @Autowired JdbcTemplate jdbc;
     @Autowired TransferJdbcRepository transfers;
-    @Autowired TransferService service;
+    @Autowired CreateTransferService service;
+    @Autowired ConfirmTransferOtpService confirmation;
     @Autowired IdentityJdbcRepository identities;
     @Autowired PinHashingService pins;
     @Autowired AccountNumberGenerator numbers;
@@ -71,7 +73,7 @@ class UiApiRegressionPostgresTest {
         UUID destination = identities.createDefaultAccount(UUID.randomUUID(), numbers, now).accountId();
         jdbc.update("UPDATE accounts SET balance=10000000 WHERE id=?", source);
         var actor = new AuthenticatedActor(user, Set.of("CUSTOMER"));
-        var command = new TransferService.CreateCommand(source, destination, "5000000", "VND", "000001", "Regression");
+        var command = new CreateTransferService.CreateCommand(source, destination, "5000000", "VND", "000001", "Regression");
         String key = UUID.randomUUID().toString();
         var result = service.create(actor, command, key);
         assertThat(result.status()).isEqualTo("COMPLETED");
@@ -85,14 +87,14 @@ class UiApiRegressionPostgresTest {
         UUID source = UUID.randomUUID(), destination = UUID.randomUUID();
         UUID old = transfers.create(source, destination, "2000", "VND", "COMPLETED", null, null, null, now.minusSeconds(1), null);
         UUID recent = transfers.create(source, destination, "2000", "VND", "COMPLETED", null, null, null, now, null);
-        UUID pending = transfers.create(source, destination, "5000001", "VND", "AWAITING_OTP", null, null, null, now.plusSeconds(1), now.plusSeconds(121));
+        UUID pending = transfers.create(source, destination, "5000001", "VND", "AWAITING_OTP", null, UUID.randomUUID(), null, now.plusSeconds(1), now.plusSeconds(121));
         assertThat(transfers.find(pending).completedAt()).isNull();
-        assertThat(transfers.findHistory(List.of(source), null, null, null, null, null, 10)).hasSize(3);
-        assertThat(transfers.findHistory(List.of(destination), null, null, null, null, null, 10))
+        assertThat(transfers.findHistory(List.of(source), null, null, null, null, null, 10, now)).hasSize(3);
+        assertThat(transfers.findHistory(List.of(destination), null, null, null, null, null, 10, now))
                 .extracting(TransferJdbcRepository.TransferRow::id).containsExactly(recent, old);
-        assertThat(transfers.findHistory(List.of(source), "COMPLETED", now.minusSeconds(2), now.plusSeconds(2), now, recent, 10))
+        assertThat(transfers.findHistory(List.of(source), "COMPLETED", now.minusSeconds(2), now.plusSeconds(2), now, recent, 10, now))
                 .extracting(TransferJdbcRepository.TransferRow::id).containsExactly(old);
-        assertThat(transfers.findHistory(List.of(source), null, now, null, null, null, 10)).hasSize(2);
+        assertThat(transfers.findHistory(List.of(source), null, now, null, null, null, 10, now)).hasSize(2);
     }
     @Test void auditAndRiskHandleAbsentFiltersAndTypedCursorFilters() {
         UUID actor = UUID.randomUUID(), transfer = UUID.randomUUID(), auditOld = UUID.randomUUID(), auditRecent = UUID.randomUUID();
@@ -120,19 +122,19 @@ class UiApiRegressionPostgresTest {
         UUID destination = identities.createDefaultAccount(UUID.randomUUID(), numbers, now).accountId();
         jdbc.update("UPDATE accounts SET balance=10000000 WHERE id=?", source);
         var actor = new AuthenticatedActor(user, Set.of("CUSTOMER"));
-        var command = new TransferService.CreateCommand(source, destination, "5000001", "VND", "000001", "Terminal regression");
+        var command = new CreateTransferService.CreateCommand(source, destination, "5000001", "VND", "000001", "Terminal regression");
         var failed = service.create(actor, command, UUID.randomUUID().toString());
         assertThat(failed.status()).isEqualTo("AWAITING_OTP");
         ArgumentCaptor<OtpMessage> message = ArgumentCaptor.forClass(OtpMessage.class);
         verify(sender).send(message.capture());
         String wrong = "999999".equals(message.getValue().code()) ? "999998" : "999999";
         for (int i = 0; i < 5; i++) {
-            assertThatThrownBy(() -> service.confirm(actor, failed.transferId(), wrong)).isInstanceOf(ApiException.class);
+            assertThatThrownBy(() -> confirmation.confirm(actor, failed.transferId(), wrong)).isInstanceOf(ApiException.class);
         }
         assertThat(transfers.find(failed.transferId()).status()).isEqualTo("FAILED");
         var expired = service.create(actor, command, UUID.randomUUID().toString());
         jdbc.update("UPDATE transfers SET expires_at=? WHERE id=?", Timestamp.from(Instant.now().minusSeconds(1)), expired.transferId());
-        assertThatThrownBy(() -> service.confirm(actor, expired.transferId(), "000000")).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> confirmation.confirm(actor, expired.transferId(), "000000")).isInstanceOf(ApiException.class);
         assertThat(transfers.find(expired.transferId()).status()).isEqualTo("EXPIRED");
         assertThat(jdbc.queryForObject("SELECT balance::text FROM accounts WHERE id=?", String.class, source)).isEqualTo("10000000");
         assertThat(jdbc.queryForObject("SELECT balance::text FROM accounts WHERE id=?", String.class, destination)).isEqualTo("0");
