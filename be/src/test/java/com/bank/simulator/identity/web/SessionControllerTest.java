@@ -137,6 +137,19 @@ class SessionControllerTest {
     }
 
     @Test
+    void refreshReusedTokenReturnsProblemUnauthorizedWithoutIssuingTokens() {
+        when(csrf.isValid("csrf")).thenReturn(true);
+        when(onboarding.refreshSession("reused-token")).thenThrow(new com.bank.simulator.identity.infrastructure.security.RefreshSessionReuseException("Refresh session reuse detected"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        var result = controller.refresh(secureRequest("/api/v1/auth/refresh", "reused-token", "csrf"), response);
+
+        assertProblem((ResponseEntity<?>) result, 401, "SESSION_EXPIRED", "/api/v1/auth/refresh");
+        assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).isNull();
+        verifyNoInteractions(accessTokens);
+    }
+
+    @Test
     void logoutRevokesAndClearsCookieWithSecureFlag() {
         when(csrf.isValid("csrf")).thenReturn(true);
         MockHttpServletRequest request = secureRequest("/api/v1/auth/logout", "old-token", "csrf");

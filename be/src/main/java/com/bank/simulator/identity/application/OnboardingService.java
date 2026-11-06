@@ -8,6 +8,7 @@ import com.bank.simulator.identity.infrastructure.security.JwtAccessTokenCodec;
 import com.bank.simulator.identity.infrastructure.security.PasswordHashingService;
 import com.bank.simulator.identity.infrastructure.security.PinHashingService;
 import com.bank.simulator.identity.infrastructure.security.RefreshSessionService;
+import com.bank.simulator.identity.infrastructure.security.RefreshSessionReuseException;
 import com.bank.simulator.shared.error.ApiException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
@@ -110,7 +111,7 @@ public class OnboardingService {
         return new LoginResult(accessToken, session, userSummary(user, roles));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RefreshSessionReuseException.class)
     public RefreshResult refreshSession(String rawToken) {
         RefreshSessionService.IssuedRefreshSession session = sessions.rotate(rawToken);
         IdentityJdbcRepository.UserRecord user = repository.findByUserId(session.userId());

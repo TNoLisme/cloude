@@ -20,14 +20,23 @@ public class RefreshSessionService {
     private final RefreshTokenGenerator tokenGenerator;
     private final Clock clock;
     private final Duration ttl;
+    private final Duration gracePeriod;
 
     public RefreshSessionService(RefreshSessionRepository repository,
                                  @Value("${app.security.refresh-token-ttl:7d}") Duration ttl,
+                                 Clock clock) {
+        this(repository, ttl, Duration.ofSeconds(10), clock);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public RefreshSessionService(RefreshSessionRepository repository,
+                                 @Value("${app.security.refresh-token-ttl:7d}") Duration ttl,
+                                 @Value("${app.security.refresh-token-grace-period:10s}") Duration gracePeriod,
                                  Clock clock) {
         this.repository = repository;
         this.tokenGenerator = new RefreshTokenGenerator(new java.security.SecureRandom());
         this.clock = clock;
         this.ttl = ttl;
+        this.gracePeriod = gracePeriod;
     }
 
     @Transactional
@@ -39,11 +48,25 @@ public class RefreshSessionService {
         return new IssuedRefreshSession(sessionId, userId, repository.findRoles(userId), rawToken, createdAt.plus(ttl));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RefreshSessionReuseException.class)
     public IssuedRefreshSession rotate(String rawToken) {
         Instant now = clock.instant();
         RefreshSessionRepository.RefreshSessionRecord old = repository.findForUpdate(hash(rawToken));
-        if (old == null || old.revokedAt() != null || !old.expiresAt().isAfter(now)) {
+        if (old == null) {
+            throw new IllegalArgumentException("Refresh session is invalid");
+        }
+        if (old.revokedAt() != null) {
+            if (old.replacedBySessionId() != null) {
+                Duration elapsed = Duration.between(old.revokedAt(), now);
+                if (!elapsed.isNegative() && elapsed.compareTo(gracePeriod) <= 0) {
+                    throw new IllegalArgumentException("Refresh session is invalid");
+                }
+                repository.revokeFamily(old.id(), now);
+                throw new RefreshSessionReuseException("Refresh session reuse detected");
+            }
+            throw new IllegalArgumentException("Refresh session is invalid");
+        }
+        if (!old.expiresAt().isAfter(now)) {
             throw new IllegalArgumentException("Refresh session is invalid");
         }
         IssuedRefreshSession replacement = issue(old.userId());

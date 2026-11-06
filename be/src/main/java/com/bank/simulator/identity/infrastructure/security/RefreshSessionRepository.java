@@ -60,6 +60,28 @@ public class RefreshSessionRepository {
                 """, Timestamp.from(revokedAt), userId);
     }
 
+    public int revokeFamily(UUID sessionId, Instant revokedAt) {
+        return jdbcTemplate.update("""
+                WITH RECURSIVE family AS (
+                    SELECT id, replaced_by_session_id
+                    FROM refresh_sessions
+                    WHERE id = ?
+                    UNION
+                    SELECT s.id, s.replaced_by_session_id
+                    FROM refresh_sessions s
+                    JOIN family f ON (s.id = f.replaced_by_session_id OR s.replaced_by_session_id = f.id)
+                ),
+                targets AS (
+                    SELECT id FROM family
+                    ORDER BY id
+                    FOR UPDATE
+                )
+                UPDATE refresh_sessions
+                SET revoked_at = ?
+                WHERE id IN (SELECT id FROM targets) AND revoked_at IS NULL
+                """, sessionId, Timestamp.from(revokedAt));
+    }
+
     public record RefreshSessionRecord(UUID id, UUID userId, String tokenHash, Instant expiresAt,
                                        Instant revokedAt, UUID replacedBySessionId, Instant createdAt) {
     }

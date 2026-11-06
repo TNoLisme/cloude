@@ -1,0 +1,60 @@
+name: Backend CI (BE-A & Foundation)
+
+on:
+  push:
+    branches: [ main, datht ]
+    paths:
+      - 'be/**'
+      - 'contracts/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'be/**'
+      - 'contracts/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    name: Backend Build & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OpenAPI Validator Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install openapi-spec-validator pyyaml
+
+      - name: Validate OpenAPI Contract
+        run: python be/scripts/validate-openapi.py
+
+      - name: Compile and Package Backend
+        working-directory: be
+        run: mvn -B -q -DskipTests package
+
+      - name: Run Backend Tests (PostgreSQL Testcontainers)
+        working-directory: be
+        run: mvn -B test
+
+      - name: Archive Test Results (Surefire Reports)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: be/target/surefire-reports/*.xml
+          retention-days: 7
