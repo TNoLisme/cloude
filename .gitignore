@@ -4,6 +4,7 @@
 !.env.example
 
 .claude/
+.specify/
 
 # Build output
 be/target/

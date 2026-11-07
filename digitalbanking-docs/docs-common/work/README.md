@@ -106,7 +106,7 @@ Mỗi thư mục tuần có thể chứa:
 | [[digitalbanking-docs/docs-common/02. BRD.md]] | Yêu cầu nghiệp vụ và tiêu chí thành công |
 | [[digitalbanking-docs/docs-common/03. SRS.md]] | Hành vi hệ thống và acceptance criteria |
 | [[digitalbanking-docs/docs-common/design/README.md]] | Thiết kế kỹ thuật chuyên sâu |
-| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược và bằng chứng kiểm thử (đang viết) |
+| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược và bằng chứng kiểm thử (Draft — chờ review) |
 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể và milestone (đang viết) |
 
 ## 7. Liên kết nhanh

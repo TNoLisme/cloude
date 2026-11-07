@@ -101,8 +101,8 @@ digitalbanking-docs/
 | 05 | [[digitalbanking-docs/docs-common/05. Technical stack.md]] | Lựa chọn công nghệ, phiên bản baseline, rủi ro | Hoàn thành |
 | 06 | [[digitalbanking-docs/docs-common/06. System architecture.md]] | Kiến trúc hệ thống, C4, runtime, deployment topology, ADR | Hoàn thành |
 | 07 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | Hợp đồng API ngữ nghĩa, lỗi, idempotency, step-up | Hoàn thành — cần chốt các giá trị "Đề xuất" |
-| 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Đang viết |
-| 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Đang viết |
+| 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Draft — chờ review |
+| 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Draft — chờ review |
 | 10 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Đang viết |
 | — | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
