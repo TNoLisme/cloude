@@ -113,14 +113,14 @@ digitalbanking-docs/
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | Audit trail bất biến, hash chain, correlation ID, retention | Hoàn thành — v1.0 |
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Transaction boundary, idempotency, locking, failure recovery | Draft — chờ review |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Đang viết |
-| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Đang viết |
+| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
 
 ### 4.4. Tài liệu triển khai, hợp đồng và công việc
 
 | Tài liệu | Nội dung | Trạng thái |
 |---|---|---|
 | [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Đã có — v1.0.0; cần đối chiếu `07` |
-| [[digitalbanking-docs/docs-backend/README.md]] | Tài liệu triển khai backend | Đang viết |
+| [[digitalbanking-docs/docs-backend/README.md]] | Tài liệu triển khai backend (15 tài liệu chuyên biệt) | Hoàn thành — v1.0 |
 | [[digitalbanking-docs/docs-frontend/README.md]] | Tài liệu triển khai frontend | Đang viết |
 | [[digitalbanking-docs/docs-common/work/README.md]] | Kế hoạch và nhật ký công việc theo tuần | Đang viết |
 | [[digitalbanking-docs/docs-common/work/week1/README.md]] | Tổng hợp tuần 1 | Đang viết |

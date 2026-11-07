@@ -19,7 +19,7 @@ Thư mục này chứa các thiết kế kỹ thuật chuyên sâu, nối yêu c
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | `DESIGN-AUD-01` | Audit trail bất biến, hash chain, correlation ID, retention, legal hold | Hoàn thành — v1.0 |
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Draft — chờ review |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Đang viết |
-| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | `DESIGN-SEC-04` | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Đang viết |
+| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | `DESIGN-SEC-04` | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
 
 ## 3. Thứ tự đọc và quan hệ
 
@@ -85,8 +85,8 @@ Một tài liệu thiết kế nên có các phần sau (có thể gộp nếu p
 ## 6. Việc đang viết và việc tiếp theo
 
 - `02. Consistency & Concurrency` — đang **Draft — chờ review**; cần chốt các open issue về rule gian lận, lock timeout và retry.
-- `03. Fraud Detection Rules` — **Đang viết**; cần chốt rule semantics, ngưỡng, cách đếm high-frequency và chính sách auto-block.
-- `04. Security` — **Đang viết**; cần hoàn thiện threat model, key management, session security và checklist OWASP.
+- `03. Fraud Detection Rules` — **Đang viết**; cần chốt rule semantics, ngưỡng, cách đếm high-frequency và chính sách auto-block (bản đặc tả thực thi cho backend đã được tổng hợp trước vào `docs-backend/modules/07-fraud-and-notification.md`).
+- `04. Security` — **Hoàn thành — v1.0**; đã hoàn thiện threat model, key management, session security và checklist OWASP (`AC-030`).
 - Khi `03` và `04` hoàn thành, cập nhật liên kết trong `01`, `02` và README gốc.
 
 ## 7. Liên kết nhanh
