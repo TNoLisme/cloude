@@ -56,7 +56,7 @@ Quy ước đọc:
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | Hoàn thành — v1.0 |
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Draft — chờ review |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Đang viết |
-| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Đang viết |
+| 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Hoàn thành — v1.0 |
 
 ### 3.3. Công việc theo tuần
 
