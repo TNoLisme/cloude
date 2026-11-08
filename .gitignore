@@ -3,9 +3,22 @@
 .env.*
 !.env.example
 
-.claude/*
+.claude/
+.specify/
+
 # Build output
 be/target/
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
+
+.obsidian
+
+.qoderian
+.superpowers
+.qoder
+
+AGENTS.md
+DECISIONS.md
+
+digitalbanking-docs/docs-references

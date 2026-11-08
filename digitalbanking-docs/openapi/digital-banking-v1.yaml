@@ -1,0 +1,3191 @@
+openapi: 3.1.0
+info:
+  title: Digital Banking API
+  version: 1.0.0
+  summary: Hợp đồng API MVP cho Digital Banking
+  description: >-
+    Hợp đồng máy đọc được của Digital Banking MVP. Tài liệu ngữ nghĩa và quy tắc
+    chi tiết nằm tại `docs-common/07. API contracts.md`. Mọi response lỗi dùng
+    RFC 9457 Problem Details; tiền và ID là chuỗi; thời gian là ISO 8601 UTC.
+  contact:
+    name: Digital Banking Team
+  license:
+    name: Internal Demo
+servers:
+  - url: https://api.demo.local/api/v1
+    description: Demo environment (Nginx TLS)
+  - url: http://localhost:8080/api/v1
+    description: Local backend
+tags:
+  - name: Auth
+    description: Đăng nhập, session, OTP, FIDO và step-up
+  - name: Customer
+    description: Hồ sơ khách hàng
+  - name: Account
+    description: Tài khoản và số dư
+  - name: Transfer
+    description: Chuyển tiền nội bộ
+  - name: Transaction
+    description: Lịch sử giao dịch read-only
+  - name: Limit
+    description: Hạn mức và approval maker/checker
+  - name: Audit
+    description: Tra cứu và xuất audit
+  - name: Fraud
+    description: Fraud flag và review
+  - name: Role
+    description: Role/privilege maker/checker
+  - name: Approval
+    description: Approval workflow
+  - name: Health
+    description: Health check
+security:
+  - sessionCookie: []
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập bằng password
+      description: >-
+        Xác thực username/password. Thiết bị tin cậy trả session; thiết bị mới
+        trả 202 kèm challenge OTP. Không trả password/token trong body.
+      operationId: login
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              login:
+                summary: Login thiết bị mới
+                value:
+                  username: customer01
+                  password: P@ssw0rd!
+                  deviceRef: 7b5c1a2e-3d4f-4a6b-8c9d-0e1f2a3b4c5d
+                  deviceName: iPhone 15
+                  deviceFingerprint: opaque-device-fingerprint
+      responses:
+        '200':
+          description: Session được tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  $ref: '#/components/examples/LoginSuccessExample'
+        '202':
+          description: Cần OTP cho thiết bị mới
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeRequiredResponse'
+              examples:
+                challenge:
+                  $ref: '#/components/examples/ChallengeRequiredExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/passcode:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập bằng passcode trên thiết bị tin cậy
+      operationId: loginPasscode
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasscodeLoginRequest'
+      responses:
+        '200':
+          description: Session được tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/fido/verify:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập FIDO/WebAuthn (begin/finish)
+      description: >-
+        Begin: gửi username + deviceRef để nhận 202 challenge/WebAuthn options.
+        Finish: gửi challengeId + fido assertion để nhận session.
+      operationId: loginFido
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/FidoBeginRequest'
+                - $ref: '#/components/schemas/FidoVerifyRequest'
+      responses:
+        '200':
+          description: Session được tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '202':
+          description: Cần FIDO/WebAuthn challenge
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeRequiredResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Xác thực OTP thiết bị mới
+      operationId: verifyOtp
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+      responses:
+        '200':
+          description: Session được tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/step-up/verify:
+    post:
+      tags: [Auth]
+      summary: Xác thực step-up cho transfer hoặc hành động nhạy cảm
+      operationId: verifyStepUp
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/StepUpOtpRequest'
+                - $ref: '#/components/schemas/StepUpPasscodeRequest'
+                - $ref: '#/components/schemas/StepUpFidoRequest'
+      responses:
+        '200':
+          description: Challenge đã VERIFIED
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpVerifyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout và vô hiệu hóa session
+      operationId: logout
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Đã logout
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetCookie'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/session:
+    get:
+      tags: [Auth]
+      summary: Lấy session hiện tại
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Session hiện tại
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/challenges/{challengeId}/resend:
+    post:
+      tags: [Auth]
+      summary: Gửi lại OTP cho challenge
+      description: >-
+        Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge
+        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge.
+      operationId: resendChallenge
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ChallengeIdPath'
+      responses:
+        '202':
+          description: OTP đã gửi lại
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeRequiredResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '423':
+          $ref: '#/components/responses/Locked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /customers/me:
+    get:
+      tags: [Customer]
+      summary: Hồ sơ customer hiện tại
+      operationId: getMyProfile
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Hồ sơ customer
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /accounts:
+    get:
+      tags: [Account]
+      summary: Danh sách tài khoản của customer
+      operationId: listAccounts
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountStatus'
+      responses:
+        '200':
+          description: Danh sách tài khoản
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /accounts/{accountId}:
+    get:
+      tags: [Account]
+      summary: Chi tiết tài khoản
+      operationId: getAccount
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: Chi tiết tài khoản
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/customers/{customerId}:
+    get:
+      tags: [Customer]
+      summary: Hồ sơ customer cho Operations/Admin/Auditor
+      operationId: getAdminCustomer
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CustomerIdPath'
+      responses:
+        '200':
+          description: Hồ sơ customer đã mask
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/customers/{customerId}/accounts:
+    get:
+      tags: [Customer, Account]
+      summary: Danh sách tài khoản của customer cho staff
+      operationId: getAdminCustomerAccounts
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CustomerIdPath'
+      responses:
+        '200':
+          description: Danh sách tài khoản
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /transfers:
+    post:
+      tags: [Transfer]
+      summary: Tạo chuyển tiền nội bộ
+      description: >-
+        Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED,
+        428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency.
+      operationId: createTransfer
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferCreateRequest'
+            examples:
+              transfer:
+                summary: Chuyển tiền thường
+                value:
+                  sourceAccountId: '3001'
+                  destination:
+                    accountNumber: '0123456789'
+                  amount: '150000.00'
+                  currency: VND
+                  description: Chuyển tiền tháng 11
+      responses:
+        '200':
+          description: Replay kết quả cũ
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '201':
+          description: Transfer COMPLETED
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+              examples:
+                completed:
+                  $ref: '#/components/examples/TransferCompletedExample'
+        '202':
+          description: Transfer PENDING (đề xuất cho xử lý bất đồng bộ)
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '428':
+          $ref: '#/components/responses/StepUpRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /transfers/{reference}:
+    get:
+      tags: [Transfer]
+      summary: Trạng thái/chi tiết transfer
+      operationId: getTransfer
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ReferencePath'
+      responses:
+        '200':
+          description: Chi tiết transfer
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /transactions:
+    get:
+      tags: [Transaction]
+      summary: Danh sách lịch sử giao dịch
+      operationId: listTransactions
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CustomerIdQuery'
+        - $ref: '#/components/parameters/AccountIdQuery'
+        - $ref: '#/components/parameters/TransferStatusQuery'
+        - $ref: '#/components/parameters/DirectionQuery'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/MinAmountQuery'
+        - $ref: '#/components/parameters/MaxAmountQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Trang lịch sử giao dịch
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /transactions/{reference}:
+    get:
+      tags: [Transaction]
+      summary: Chi tiết giao dịch/biên nhận
+      operationId: getTransaction
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ReferencePath'
+      responses:
+        '200':
+          description: Chi tiết giao dịch
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /limits:
+    get:
+      tags: [Limit]
+      summary: Hạn mức hiện tại và còn lại
+      operationId: getLimits
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/AccountIdQuery'
+      responses:
+        '200':
+          description: Hạn mức của customer
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitsResponse'
+              examples:
+                limits:
+                  $ref: '#/components/examples/LimitsExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/limits:
+    post:
+      tags: [Limit, Approval]
+      summary: Maker tạo yêu cầu thay đổi hạn mức
+      description: >-
+        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
+        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+      operationId: createLimitChange
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/StepUpChallenge'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LimitChangeRequest'
+      responses:
+        '201':
+          description: Approval LIMIT_CHANGE đã tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '428':
+          $ref: '#/components/responses/StepUpRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/limits/{id}/approve:
+    post:
+      tags: [Limit, Approval]
+      summary: Checker duyệt/từ chối yêu cầu hạn mức
+      description: >-
+        Path id là approvalId của LIMIT_CHANGE. Yêu cầu privilege CHECKER,
+        maker khác checker và step-up SENSITIVE_ACTION.
+      operationId: approveLimitChange
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/StepUpChallenge'
+        - $ref: '#/components/parameters/LimitApprovalIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LimitApprovalRequest'
+      responses:
+        '200':
+          description: Approval đã được xử lý
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '428':
+          $ref: '#/components/responses/StepUpRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /audit:
+    get:
+      tags: [Audit]
+      summary: Tra cứu audit
+      operationId: searchAudit
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CorrelationIdQuery'
+        - $ref: '#/components/parameters/ReferenceQuery'
+        - $ref: '#/components/parameters/ActorUserIdQuery'
+        - $ref: '#/components/parameters/ActorTypeQuery'
+        - $ref: '#/components/parameters/ActionQuery'
+        - $ref: '#/components/parameters/EntityTypeQuery'
+        - $ref: '#/components/parameters/EntityIdQuery'
+        - $ref: '#/components/parameters/OutcomeQuery'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Trang audit
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /audit/export:
+    get:
+      tags: [Audit]
+      summary: Xuất bằng chứng audit
+      operationId: exportAudit
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CorrelationIdQuery'
+        - $ref: '#/components/parameters/ReferenceQuery'
+        - $ref: '#/components/parameters/ActorUserIdQuery'
+        - $ref: '#/components/parameters/ActorTypeQuery'
+        - $ref: '#/components/parameters/ActionQuery'
+        - $ref: '#/components/parameters/EntityTypeQuery'
+        - $ref: '#/components/parameters/EntityIdQuery'
+        - $ref: '#/components/parameters/OutcomeQuery'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [CSV, JSONL]
+            default: CSV
+        - name: maxRows
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 10000
+      responses:
+        '200':
+          description: File audit
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Content-Disposition:
+              $ref: '#/components/headers/ContentDisposition'
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/x-ndjson:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /audit/{auditId}:
+    get:
+      tags: [Audit]
+      summary: Chi tiết audit record
+      operationId: getAuditRecord
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/AuditIdPath'
+      responses:
+        '200':
+          description: Chi tiết audit
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /fraud-flags:
+    get:
+      tags: [Fraud]
+      summary: Danh sách fraud flag
+      operationId: listFraudFlags
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/FraudFlagStatusQuery'
+        - $ref: '#/components/parameters/SeverityQuery'
+        - $ref: '#/components/parameters/RuleCodeQuery'
+        - $ref: '#/components/parameters/ReferenceQuery'
+        - $ref: '#/components/parameters/CustomerIdQuery'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Trang fraud flag
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FraudFlagPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /fraud-flags/{id}/review:
+    post:
+      tags: [Fraud]
+      summary: Ghi nhận quyết định review fraud flag
+      operationId: reviewFraudFlag
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/FraudFlagIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FraudReviewRequest'
+      responses:
+        '200':
+          description: Fraud flag đã cập nhật
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FraudFlag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/roles:
+    post:
+      tags: [Role, Approval]
+      summary: Maker tạo yêu cầu role/privilege
+      description: >-
+        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
+        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+      operationId: createRoleChange
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/StepUpChallenge'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleChangeRequest'
+      responses:
+        '201':
+          description: Approval ROLE_CHANGE đã tạo
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '428':
+          $ref: '#/components/responses/StepUpRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/roles/{id}/approve:
+    post:
+      tags: [Role, Approval]
+      summary: Checker duyệt/từ chối yêu cầu role/privilege
+      description: >-
+        Path id là approvalId của ROLE_CHANGE. Yêu cầu privilege CHECKER,
+        maker khác checker và step-up SENSITIVE_ACTION.
+      operationId: approveRoleChange
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/StepUpChallenge'
+        - $ref: '#/components/parameters/RoleApprovalIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleApprovalRequest'
+      responses:
+        '200':
+          description: Approval đã được xử lý
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '428':
+          $ref: '#/components/responses/StepUpRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/approvals:
+    get:
+      tags: [Approval]
+      summary: Danh sách approval
+      operationId: listApprovals
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestTypeQuery'
+        - $ref: '#/components/parameters/ApprovalStatusQuery'
+        - $ref: '#/components/parameters/MakerIdQuery'
+        - $ref: '#/components/parameters/CheckerIdQuery'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Trang approval
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /admin/approvals/{approvalId}:
+    get:
+      tags: [Approval]
+      summary: Chi tiết approval
+      operationId: getApproval
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      responses:
+        '200':
+          description: Chi tiết approval
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Health UP/DEGRADED
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: DB_SESSION
+      description: Opaque session cookie; HttpOnly, Secure, SameSite=Strict
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Cùng token opaque với session cookie, dùng cho API client/test
+  parameters:
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: Trace ID; server sinh mới nếu thiếu
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._:-]{1,64}$'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Bắt buộc cho POST /transfers; 1-255 ký tự, không chứa PII
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: '^[A-Za-z0-9._:~-]{1,255}$'
+    StepUpChallenge:
+      name: X-Step-Up-Challenge
+      in: header
+      required: false
+      description: challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm
+      schema:
+        type: string
+        format: uuid
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: false
+      description: Bắt buộc với cookie session cho request thay đổi dữ liệu
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Trang 0-based
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: 'field,asc|desc; field thuộc whitelist từng endpoint'
+      schema:
+        type: string
+    FromQuery:
+      name: from
+      in: query
+      required: false
+      description: Inclusive; mặc định now-30d
+      schema:
+        $ref: '#/components/schemas/Instant'
+    ToQuery:
+      name: to
+      in: query
+      required: false
+      description: Exclusive; mặc định now
+      schema:
+        $ref: '#/components/schemas/Instant'
+    CustomerIdQuery:
+      name: customerId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ID'
+    AccountIdQuery:
+      name: accountId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ID'
+    TransferStatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/TransferStatus'
+    DirectionQuery:
+      name: direction
+      in: query
+      required: false
+      description: Yêu cầu accountId
+      schema:
+        $ref: '#/components/schemas/Direction'
+    MinAmountQuery:
+      name: minAmount
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Money'
+    MaxAmountQuery:
+      name: maxAmount
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Money'
+    CorrelationIdQuery:
+      name: correlationId
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 64
+    ReferenceQuery:
+      name: reference
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Reference'
+    ActorUserIdQuery:
+      name: actorUserId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ID'
+    ActorTypeQuery:
+      name: actorType
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [USER, SYSTEM]
+    ActionQuery:
+      name: action
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 64
+    EntityTypeQuery:
+      name: entityType
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 32
+    EntityIdQuery:
+      name: entityId
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 64
+    OutcomeQuery:
+      name: outcome
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/AuditOutcome'
+    FraudFlagStatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/FraudFlagStatus'
+    SeverityQuery:
+      name: severity
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/FraudSeverity'
+    RuleCodeQuery:
+      name: ruleCode
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 32
+    RequestTypeQuery:
+      name: requestType
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ApprovalRequestType'
+    ApprovalStatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ApprovalStatus'
+    MakerIdQuery:
+      name: makerId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ID'
+    CheckerIdQuery:
+      name: checkerId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ID'
+    AccountIdPath:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ID'
+    CustomerIdPath:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ID'
+    ReferencePath:
+      name: reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Reference'
+    ChallengeIdPath:
+      name: challengeId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    AuditIdPath:
+      name: auditId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ID'
+    FraudFlagIdPath:
+      name: id
+      in: path
+      required: true
+      description: flagId
+      schema:
+        $ref: '#/components/schemas/ID'
+    LimitApprovalIdPath:
+      name: id
+      in: path
+      required: true
+      description: approvalId của LIMIT_CHANGE
+      schema:
+        $ref: '#/components/schemas/ID'
+    RoleApprovalIdPath:
+      name: id
+      in: path
+      required: true
+      description: approvalId của ROLE_CHANGE
+      schema:
+        $ref: '#/components/schemas/ID'
+    ApprovalIdPath:
+      name: approvalId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ID'
+  headers:
+    XCorrelationId:
+      description: Trace ID của request
+      schema:
+        type: string
+        maxLength: 64
+    SetCookie:
+      description: 'DB_SESSION cookie hoặc xóa cookie khi logout'
+      schema:
+        type: string
+    Location:
+      description: URI của resource vừa tạo
+      schema:
+        type: string
+        format: uri-reference
+    IdempotentReplayed:
+      description: 'true nếu response được replay từ idempotency record'
+      schema:
+        type: string
+        enum: ['true']
+    RetryAfter:
+      description: Số giây chờ trước khi retry
+      schema:
+        type: integer
+        minimum: 0
+    WWWAuthenticate:
+      description: Challenge cho Bearer auth
+      schema:
+        type: string
+    ContentDisposition:
+      description: Tên file export
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Dữ liệu/header/query không hợp lệ
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            validation:
+              $ref: '#/components/examples/ValidationErrorExample'
+    Unauthorized:
+      description: Chưa xác thực hoặc session hết hạn
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            unauthorized:
+              $ref: '#/components/examples/UnauthorizedExample'
+    Forbidden:
+      description: Không đủ quyền/CSRF sai/ngoài scope
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            forbidden:
+              $ref: '#/components/examples/ForbiddenExample'
+    NotFound:
+      description: Resource không tồn tại
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            notFound:
+              $ref: '#/components/examples/NotFoundExample'
+    Conflict:
+      description: Xung đột trạng thái/idempotency/role
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            conflict:
+              $ref: '#/components/examples/ConflictExample'
+    Gone:
+      description: Challenge/OTP đã hết hạn
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            gone:
+              $ref: '#/components/examples/GoneExample'
+    PayloadTooLarge:
+      description: Body/export vượt giới hạn
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Content-Type không hỗ trợ
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: Vi phạm business rule
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            insufficientBalance:
+              $ref: '#/components/examples/InsufficientBalanceExample'
+            transferFailed:
+              $ref: '#/components/examples/TransferFailedExample'
+    Locked:
+      description: Tài khoản/challenge bị khóa
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    StepUpRequired:
+      description: Cần xác thực bổ sung
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/StepUpProblem'
+          examples:
+            stepUp:
+              $ref: '#/components/examples/StepUpRequiredExample'
+    TooManyRequests:
+      description: Vượt rate limit
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            rateLimited:
+              $ref: '#/components/examples/RateLimitedExample'
+    InternalServerError:
+      description: Lỗi nội bộ
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            internal:
+              $ref: '#/components/examples/InternalErrorExample'
+    ServiceUnavailable:
+      description: Dịch vụ tạm thời không khả dụng
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            unavailable:
+              $ref: '#/components/examples/ServiceUnavailableExample'
+    GatewayTimeout:
+      description: Gateway/provider timeout
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/XCorrelationId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    ID:
+      type: string
+      pattern: '^[1-9][0-9]{0,18}$'
+    UUID:
+      type: string
+      format: uuid
+    Money:
+      type: string
+      pattern: '^(0|[1-9][0-9]{0,16})\.[0-9]{2}$'
+    Currency:
+      type: string
+      enum: [VND]
+    Instant:
+      type: string
+      format: date-time
+    LocalDate:
+      type: string
+      format: date
+    Reference:
+      type: string
+      minLength: 16
+      maxLength: 32
+      pattern: '^TXN[0-9]{8}[A-Z0-9]{8,20}$'
+    RoleCode:
+      type: string
+      enum: [CUSTOMER, OPERATIONS, ADMIN, AUDITOR]
+    PrivilegeCode:
+      type: string
+      enum: [CHECKER]
+    UserType:
+      type: string
+      enum: [CUSTOMER, STAFF]
+    AccountStatus:
+      type: string
+      enum: [ACTIVE, LOCKED, CLOSED]
+    CustomerStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+    TransferStatus:
+      type: string
+      enum: [PENDING, COMPLETED, FAILED]
+    Direction:
+      type: string
+      enum: [DEBIT, CREDIT, INTERNAL]
+    TransferFailureCode:
+      type: string
+      enum:
+        - INSUFFICIENT_BALANCE
+        - LIMIT_EXCEEDED
+        - ACCOUNT_INACTIVE
+        - ACCOUNT_NOT_FOUND
+        - FRAUD_BLOCKED
+        - OTP_DISPATCH_FAILED
+        - AUDIT_WRITE_FAILED
+        - INVALID_STATE_TRANSITION
+        - PROCESSING_ERROR
+    ChallengePurpose:
+      type: string
+      enum: [LOGIN_NEW_DEVICE, TRANSFER_STEP_UP, SENSITIVE_ACTION]
+    ChallengeMethod:
+      type: string
+      enum: [OTP, FIDO, PASSCODE]
+    ChallengeChannel:
+      type: [string, 'null']
+      enum: [SMS, EMAIL, IN_APP, null]
+    FraudSeverity:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+    FraudFlagStatus:
+      type: string
+      enum: [OPEN, UNDER_REVIEW, ALLOWED, BLOCKED, CLOSED]
+    FraudDecision:
+      type: string
+      enum: [ALLOW, BLOCK, ESCALATE, CLOSE]
+    ApprovalRequestType:
+      type: string
+      enum: [LIMIT_CHANGE, ROLE_CHANGE]
+    ApprovalStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, APPLIED, CANCELLED]
+    ApprovalTargetType:
+      type: string
+      enum: [CUSTOMER, ACCOUNT, APP_USER]
+    AuditOutcome:
+      type: string
+      enum: [SUCCESS, FAILURE, REJECTED]
+    AuditActorType:
+      type: string
+      enum: [USER, SYSTEM]
+    ErrorCode:
+      type: string
+      enum:
+        - AUTH_INVALID_CREDENTIALS
+        - AUTH_ACCOUNT_LOCKED
+        - AUTH_SESSION_EXPIRED
+        - AUTH_FORBIDDEN
+        - AUTH_DEVICE_NOT_TRUSTED
+        - AUTH_CHALLENGE_NOT_FOUND
+        - AUTH_CHALLENGE_EXPIRED
+        - AUTH_CHALLENGE_LOCKED
+        - AUTH_OTP_INVALID
+        - AUTH_OTP_EXPIRED
+        - STEP_UP_REQUIRED
+        - STEP_UP_CHALLENGE_MISMATCH
+        - OTP_DISPATCH_FAILED
+        - VALIDATION_ERROR
+        - MALFORMED_REQUEST
+        - UNSUPPORTED_MEDIA_TYPE
+        - REQUEST_TOO_LARGE
+        - METHOD_NOT_ALLOWED
+        - NOT_FOUND
+        - RATE_LIMITED
+        - ACCOUNT_NOT_FOUND
+        - ACCOUNT_INACTIVE
+        - INSUFFICIENT_BALANCE
+        - LIMIT_EXCEEDED
+        - LIMIT_OUT_OF_POLICY
+        - TRANSFER_NOT_FOUND
+        - TRANSFER_FAILED
+        - FRAUD_BLOCKED
+        - FRAUD_FLAG_NOT_FOUND
+        - FRAUD_FLAG_ALREADY_CLOSED
+        - INVALID_STATE_TRANSITION
+        - CUSTOMER_NOT_FOUND
+        - AUDIT_NOT_FOUND
+        - EXPORT_TOO_LARGE
+        - IDEMPOTENCY_CONFLICT
+        - IDEMPOTENCY_IN_PROGRESS
+        - APPROVAL_NOT_FOUND
+        - APPROVAL_ALREADY_DECIDED
+        - ROLE_CONFLICT
+        - ROLE_NOT_FOUND
+        - USER_NOT_FOUND
+        - LEGAL_HOLD_ACTIVE
+        - AUDIT_WRITE_FAILED
+        - INTERNAL_ERROR
+        - SERVICE_UNAVAILABLE
+        - GATEWAY_TIMEOUT
+    Problem:
+      type: object
+      additionalProperties: true
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - instance
+        - code
+        - correlationId
+        - timestamp
+        - retryable
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        correlationId:
+          type: string
+        timestamp:
+          $ref: '#/components/schemas/Instant'
+        retryable:
+          type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorItem'
+        challenge:
+          $ref: '#/components/schemas/Challenge'
+        reference:
+          $ref: '#/components/schemas/Reference'
+        transferStatus:
+          $ref: '#/components/schemas/TransferStatus'
+        failureCode:
+          $ref: '#/components/schemas/TransferFailureCode'
+        lockedUntil:
+          $ref: '#/components/schemas/Instant'
+    ValidationErrorItem:
+      type: object
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ValidationErrorItem'
+    StepUpProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [challenge]
+          properties:
+            challenge:
+              $ref: '#/components/schemas/Challenge'
+    Challenge:
+      type: object
+      required: [challengeId, purpose, methods, expiresAt, maxAttempts, remainingAttempts]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        purpose:
+          $ref: '#/components/schemas/ChallengePurpose'
+        methods:
+          type: array
+          minItems: 1
+          description: >-
+            Danh sách phương thức chính sách cho phép. Trong MVP, challengeId
+            gắn với một method cụ thể; methods không ngụ ý nhiều method trên
+            cùng một challenge (OI-API-17).
+          items:
+            $ref: '#/components/schemas/ChallengeMethod'
+        channel:
+          $ref: '#/components/schemas/ChallengeChannel'
+        maskedDestination:
+          type: [string, 'null']
+        expiresAt:
+          $ref: '#/components/schemas/Instant'
+        maxAttempts:
+          type: integer
+          minimum: 1
+        remainingAttempts:
+          type: integer
+          minimum: 0
+        fidoRequestOptions:
+          type: [object, 'null']
+          additionalProperties: true
+          description: WebAuthn request options khi methods có FIDO
+    ChallengeRequiredResponse:
+      type: object
+      required: [code, message, challenge, correlationId]
+      properties:
+        code:
+          type: string
+          const: AUTH_CHALLENGE_REQUIRED
+        message:
+          type: string
+        challenge:
+          $ref: '#/components/schemas/Challenge'
+        correlationId:
+          type: string
+    UserSummary:
+      type: object
+      required: [userId, userType, displayName, roles, privileges]
+      properties:
+        userId:
+          $ref: '#/components/schemas/ID'
+        userType:
+          $ref: '#/components/schemas/UserType'
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleCode'
+        privileges:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivilegeCode'
+        customerId:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]{0,18}$'
+    SessionInfo:
+      type: object
+      required: [idleExpiresAt, absoluteExpiresAt, csrfToken, deviceTrusted]
+      properties:
+        idleExpiresAt:
+          $ref: '#/components/schemas/Instant'
+        absoluteExpiresAt:
+          $ref: '#/components/schemas/Instant'
+        csrfToken:
+          type: string
+        deviceTrusted:
+          type: boolean
+    AuthResponse:
+      type: object
+      required: [user, session, correlationId]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        session:
+          $ref: '#/components/schemas/SessionInfo'
+        correlationId:
+          type: string
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 64
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+        deviceRef:
+          $ref: '#/components/schemas/UUID'
+        deviceName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        deviceFingerprint:
+          type: string
+          minLength: 1
+          maxLength: 512
+    PasscodeLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, passcode, deviceRef, deviceFingerprint]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 64
+        passcode:
+          type: string
+          pattern: '^[0-9]{6,8}$'
+        deviceRef:
+          $ref: '#/components/schemas/UUID'
+        deviceFingerprint:
+          type: string
+          minLength: 1
+          maxLength: 512
+    FidoBeginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, deviceRef]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 64
+        deviceRef:
+          $ref: '#/components/schemas/UUID'
+    FidoVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [username, deviceRef, challengeId, fido]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 64
+        deviceRef:
+          $ref: '#/components/schemas/UUID'
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        fido:
+          $ref: '#/components/schemas/FidoAssertion'
+    FidoAssertion:
+      type: object
+      additionalProperties: false
+      required: [credentialId, clientDataJSON, authenticatorData, signature]
+      properties:
+        credentialId:
+          type: string
+        clientDataJSON:
+          type: string
+        authenticatorData:
+          type: string
+        signature:
+          type: string
+        userHandle:
+          type: string
+    OtpVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, otp]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        otp:
+          type: string
+          pattern: '^[0-9]{6,8}$'
+    StepUpOtpRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, method, otp]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        method:
+          type: string
+          const: OTP
+        otp:
+          type: string
+          pattern: '^[0-9]{6,8}$'
+    StepUpPasscodeRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, method, passcode]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        method:
+          type: string
+          const: PASSCODE
+        passcode:
+          type: string
+          pattern: '^[0-9]{6,8}$'
+    StepUpFidoRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, method, fido]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        method:
+          type: string
+          const: FIDO
+        fido:
+          $ref: '#/components/schemas/FidoAssertion'
+    StepUpVerifyResponse:
+      type: object
+      required: [challengeId, status, purpose, verifiedAt, expiresAt, correlationId]
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/UUID'
+        status:
+          type: string
+          enum: [VERIFIED]
+        purpose:
+          $ref: '#/components/schemas/ChallengePurpose'
+        verifiedAt:
+          $ref: '#/components/schemas/Instant'
+        expiresAt:
+          $ref: '#/components/schemas/Instant'
+        correlationId:
+          type: string
+    CustomerSummary:
+      type: object
+      required: [customerId, fullName, status]
+      properties:
+        customerId:
+          $ref: '#/components/schemas/ID'
+        fullName:
+          type: string
+        status:
+          $ref: '#/components/schemas/CustomerStatus'
+    CustomerProfile:
+      type: object
+      required: [customerId, userId, fullName, status, createdAt, updatedAt]
+      properties:
+        customerId:
+          $ref: '#/components/schemas/ID'
+        userId:
+          $ref: '#/components/schemas/ID'
+        fullName:
+          type: string
+        phoneMasked:
+          type: [string, 'null']
+        emailMasked:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/CustomerStatus'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        updatedAt:
+          $ref: '#/components/schemas/Instant'
+    AccountRef:
+      type: object
+      required: [accountId, accountNumberMasked, accountNumberLast4]
+      properties:
+        accountId:
+          $ref: '#/components/schemas/ID'
+        accountNumberMasked:
+          type: string
+          pattern: '^\*{4} \*{4} [0-9]{4}$'
+        accountNumberLast4:
+          type: string
+          pattern: '^[0-9]{4}$'
+    AccountSummary:
+      type: object
+      required:
+        - accountId
+        - accountNumberMasked
+        - accountNumberLast4
+        - currency
+        - status
+        - availableBalance
+        - ledgerBalance
+        - asOf
+      properties:
+        accountId:
+          $ref: '#/components/schemas/ID'
+        accountNumberMasked:
+          type: string
+          pattern: '^\*{4} \*{4} [0-9]{4}$'
+        accountNumberLast4:
+          type: string
+          pattern: '^[0-9]{4}$'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+        availableBalance:
+          $ref: '#/components/schemas/Money'
+        ledgerBalance:
+          $ref: '#/components/schemas/Money'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    AccountDetail:
+      allOf:
+        - $ref: '#/components/schemas/AccountSummary'
+        - type: object
+          required: [owner, createdAt, updatedAt]
+          properties:
+            owner:
+              $ref: '#/components/schemas/CustomerSummary'
+            createdAt:
+              $ref: '#/components/schemas/Instant'
+            updatedAt:
+              $ref: '#/components/schemas/Instant'
+    AccountsResponse:
+      type: object
+      required: [items, asOf]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountSummary'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    DestinationAccountId:
+      type: object
+      additionalProperties: false
+      required: [accountId]
+      properties:
+        accountId:
+          $ref: '#/components/schemas/ID'
+    DestinationAccountNumber:
+      type: object
+      additionalProperties: false
+      required: [accountNumber]
+      properties:
+        accountNumber:
+          type: string
+          pattern: '^[0-9]{6,20}$'
+    Destination:
+      oneOf:
+        - $ref: '#/components/schemas/DestinationAccountId'
+        - $ref: '#/components/schemas/DestinationAccountNumber'
+    TransferCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [sourceAccountId, destination, amount]
+      properties:
+        sourceAccountId:
+          $ref: '#/components/schemas/ID'
+        destination:
+          $ref: '#/components/schemas/Destination'
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        description:
+          type: [string, 'null']
+          maxLength: 255
+    TransferResponse:
+      type: object
+      required:
+        - reference
+        - status
+        - amount
+        - currency
+        - sourceAccount
+        - destinationAccount
+        - correlationId
+        - createdAt
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        description:
+          type: [string, 'null']
+        sourceAccount:
+          $ref: '#/components/schemas/AccountRef'
+        destinationAccount:
+          $ref: '#/components/schemas/AccountRef'
+        failureCode:
+          type: [string, 'null']
+          enum:
+            - INSUFFICIENT_BALANCE
+            - LIMIT_EXCEEDED
+            - ACCOUNT_INACTIVE
+            - ACCOUNT_NOT_FOUND
+            - FRAUD_BLOCKED
+            - OTP_DISPATCH_FAILED
+            - AUDIT_WRITE_FAILED
+            - INVALID_STATE_TRANSITION
+            - PROCESSING_ERROR
+            - null
+        failureMessage:
+          type: [string, 'null']
+        correlationId:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+        failedAt:
+          type: [string, 'null']
+          format: date-time
+    FraudFlagSummary:
+      type: object
+      required: [flagId, ruleCode, ruleVersion, severity, status]
+      properties:
+        flagId:
+          $ref: '#/components/schemas/ID'
+        ruleCode:
+          type: string
+        ruleVersion:
+          type: integer
+        severity:
+          $ref: '#/components/schemas/FraudSeverity'
+        status:
+          $ref: '#/components/schemas/FraudFlagStatus'
+    TransferDetail:
+      allOf:
+        - $ref: '#/components/schemas/TransferResponse'
+        - type: object
+          properties:
+            fraudFlags:
+              type: array
+              items:
+                $ref: '#/components/schemas/FraudFlagSummary'
+    PageMeta:
+      type: object
+      required: [number, size, totalElements, totalPages, first, last]
+      properties:
+        number:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        first:
+          type: boolean
+        last:
+          type: boolean
+    Counterparty:
+      type: object
+      required: [displayName, accountNumberMasked]
+      properties:
+        displayName:
+          type: string
+        accountNumberMasked:
+          type: string
+          pattern: '^\*{4} \*{4} [0-9]{4}$'
+    TransactionItem:
+      type: object
+      required: [reference, direction, amount, currency, status, counterparty, createdAt]
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        direction:
+          $ref: '#/components/schemas/Direction'
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        counterparty:
+          $ref: '#/components/schemas/Counterparty'
+        description:
+          type: [string, 'null']
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+    TransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/TransferResponse'
+        - type: object
+          required: [direction, counterparty]
+          properties:
+            direction:
+              $ref: '#/components/schemas/Direction'
+            counterparty:
+              $ref: '#/components/schemas/Counterparty'
+    TransactionPage:
+      type: object
+      required: [items, page, asOf]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionItem'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    LimitScope:
+      type: string
+      enum: [CUSTOMER, ACCOUNT]
+    LimitView:
+      type: object
+      required:
+        - limitId
+        - scope
+        - perTransactionLimit
+        - dailyLimit
+        - currency
+        - usedToday
+        - remainingDaily
+        - effectiveFrom
+        - version
+      properties:
+        limitId:
+          $ref: '#/components/schemas/ID'
+        scope:
+          $ref: '#/components/schemas/LimitScope'
+        accountId:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]{0,18}$'
+        perTransactionLimit:
+          $ref: '#/components/schemas/Money'
+        dailyLimit:
+          $ref: '#/components/schemas/Money'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        usedToday:
+          $ref: '#/components/schemas/Money'
+        remainingDaily:
+          $ref: '#/components/schemas/Money'
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        effectiveTo:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        version:
+          type: integer
+          minimum: 1
+    LimitsResponse:
+      type: object
+      required: [customerId, currency, usageDate, items, asOf]
+      properties:
+        customerId:
+          $ref: '#/components/schemas/ID'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        usageDate:
+          $ref: '#/components/schemas/LocalDate'
+        effectivePerTransactionLimit:
+          anyOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        effectiveRemainingDaily:
+          anyOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitView'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    ActorSummary:
+      type: object
+      required: [userId, displayName]
+      properties:
+        userId:
+          $ref: '#/components/schemas/ID'
+        displayName:
+          type: string
+    ApprovalSummary:
+      type: object
+      required:
+        - approvalId
+        - requestType
+        - targetType
+        - targetId
+        - status
+        - maker
+        - createdAt
+        - correlationId
+      properties:
+        approvalId:
+          $ref: '#/components/schemas/ID'
+        requestType:
+          $ref: '#/components/schemas/ApprovalRequestType'
+        targetType:
+          $ref: '#/components/schemas/ApprovalTargetType'
+        targetId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        maker:
+          $ref: '#/components/schemas/ActorSummary'
+        checker:
+          anyOf:
+            - $ref: '#/components/schemas/ActorSummary'
+            - type: 'null'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        decidedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        appliedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        decisionNote:
+          type: [string, 'null']
+        correlationId:
+          type: string
+    ApprovalDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApprovalSummary'
+        - type: object
+          required: [payload]
+          properties:
+            payload:
+              type: object
+              additionalProperties: true
+            result:
+              type: object
+              additionalProperties: true
+    LimitChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [customerId, perTransactionLimit, dailyLimit]
+      properties:
+        customerId:
+          $ref: '#/components/schemas/ID'
+        accountId:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]{0,18}$'
+        perTransactionLimit:
+          $ref: '#/components/schemas/Money'
+        dailyLimit:
+          $ref: '#/components/schemas/Money'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        effectiveFrom:
+          $ref: '#/components/schemas/Instant'
+        reason:
+          type: string
+          maxLength: 500
+    LimitApprovalRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [APPROVE, REJECT]
+        decisionNote:
+          type: string
+          maxLength: 500
+    AssignRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, targetUserId, roleCode]
+      properties:
+        operation:
+          type: string
+          const: ASSIGN_ROLE
+        targetUserId:
+          $ref: '#/components/schemas/ID'
+        roleCode:
+          $ref: '#/components/schemas/RoleCode'
+        reason:
+          type: string
+          maxLength: 500
+    RevokeRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, targetUserId, roleCode]
+      properties:
+        operation:
+          type: string
+          const: REVOKE_ROLE
+        targetUserId:
+          $ref: '#/components/schemas/ID'
+        roleCode:
+          $ref: '#/components/schemas/RoleCode'
+        reason:
+          type: string
+          maxLength: 500
+    GrantPrivilegeRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, targetUserId, privilegeCode]
+      properties:
+        operation:
+          type: string
+          const: GRANT_PRIVILEGE
+        targetUserId:
+          $ref: '#/components/schemas/ID'
+        privilegeCode:
+          $ref: '#/components/schemas/PrivilegeCode'
+        reason:
+          type: string
+          maxLength: 500
+    RevokePrivilegeRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, targetUserId, privilegeCode]
+      properties:
+        operation:
+          type: string
+          const: REVOKE_PRIVILEGE
+        targetUserId:
+          $ref: '#/components/schemas/ID'
+        privilegeCode:
+          $ref: '#/components/schemas/PrivilegeCode'
+        reason:
+          type: string
+          maxLength: 500
+    RoleChangeRequest:
+      oneOf:
+        - $ref: '#/components/schemas/AssignRoleRequest'
+        - $ref: '#/components/schemas/RevokeRoleRequest'
+        - $ref: '#/components/schemas/GrantPrivilegeRequest'
+        - $ref: '#/components/schemas/RevokePrivilegeRequest'
+    RoleApprovalRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [APPROVE, REJECT]
+        decisionNote:
+          type: string
+          maxLength: 500
+    ApprovalPage:
+      type: object
+      required: [items, page, asOf]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalSummary'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    AuditActor:
+      type: object
+      required: [type, role]
+      properties:
+        type:
+          $ref: '#/components/schemas/AuditActorType'
+        userId:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]{0,18}$'
+        role:
+          type: string
+    AuditEntity:
+      type: object
+      required: [type, id]
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+    AuditSummary:
+      type: object
+      required:
+        - auditId
+        - occurredAt
+        - recordedAt
+        - actor
+        - action
+        - entity
+        - correlationId
+        - outcome
+        - recordHash
+        - hashVersion
+      properties:
+        auditId:
+          $ref: '#/components/schemas/ID'
+        occurredAt:
+          $ref: '#/components/schemas/Instant'
+        recordedAt:
+          $ref: '#/components/schemas/Instant'
+        actor:
+          $ref: '#/components/schemas/AuditActor'
+        action:
+          type: string
+        entity:
+          $ref: '#/components/schemas/AuditEntity'
+        amount:
+          anyOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        currency:
+          anyOf:
+            - $ref: '#/components/schemas/Currency'
+            - type: 'null'
+        correlationId:
+          type: string
+        outcome:
+          $ref: '#/components/schemas/AuditOutcome'
+        recordHash:
+          type: string
+        prevHash:
+          type: [string, 'null']
+        hashVersion:
+          type: integer
+          minimum: 1
+    AuditClientInfo:
+      type: object
+      properties:
+        ipMasked:
+          type: string
+        userAgent:
+          type: string
+    AuditDetail:
+      allOf:
+        - $ref: '#/components/schemas/AuditSummary'
+        - type: object
+          properties:
+            requestId:
+              type: [string, 'null']
+            beforeState:
+              type: [object, 'null']
+              additionalProperties: true
+            afterState:
+              type: [object, 'null']
+              additionalProperties: true
+            clientInfo:
+              anyOf:
+                - $ref: '#/components/schemas/AuditClientInfo'
+                - type: 'null'
+    AuditPage:
+      type: object
+      required: [items, page, asOf]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditSummary'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    RuleRef:
+      type: object
+      required: [code, version, type]
+      properties:
+        code:
+          type: string
+        version:
+          type: integer
+        type:
+          type: string
+          enum: [LARGE_VALUE, HIGH_FREQUENCY, UNUSUAL_PATTERN]
+    FraudFlag:
+      type: object
+      required:
+        - flagId
+        - transferReference
+        - customerId
+        - rule
+        - severity
+        - status
+        - correlationId
+        - createdAt
+      properties:
+        flagId:
+          $ref: '#/components/schemas/ID'
+        transferReference:
+          $ref: '#/components/schemas/Reference'
+        customerId:
+          $ref: '#/components/schemas/ID'
+        rule:
+          $ref: '#/components/schemas/RuleRef'
+        severity:
+          $ref: '#/components/schemas/FraudSeverity'
+        status:
+          $ref: '#/components/schemas/FraudFlagStatus'
+        matchedValue:
+          type: [object, 'null']
+          additionalProperties: true
+        decision:
+          type: [string, 'null']
+          enum: [ALLOW, BLOCK, ESCALATE, CLOSE, null]
+        notes:
+          type: [string, 'null']
+        reviewedBy:
+          anyOf:
+            - $ref: '#/components/schemas/ActorSummary'
+            - type: 'null'
+        reviewedAt:
+          type: [string, 'null']
+          format: date-time
+        correlationId:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+    FraudReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          $ref: '#/components/schemas/FraudDecision'
+        notes:
+          type: string
+          maxLength: 500
+    FraudFlagPage:
+      type: object
+      required: [items, page, asOf]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FraudFlag'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+        asOf:
+          $ref: '#/components/schemas/Instant'
+    HealthComponent:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+        latencyMs:
+          type: integer
+          minimum: 0
+        pending:
+          type: integer
+          minimum: 0
+    HealthResponse:
+      type: object
+      required: [status, checkedAt, version, components]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+        checkedAt:
+          $ref: '#/components/schemas/Instant'
+        version:
+          type: string
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/HealthComponent'
+  examples:
+    ValidationErrorExample:
+      summary: Validation error
+      value:
+        type: https://api.demo.local/problems/validation-error
+        title: Validation failed
+        status: 400
+        detail: Dữ liệu yêu cầu không hợp lệ.
+        instance: /api/v1/transfers
+        code: VALIDATION_ERROR
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+        errors:
+          - field: amount
+            code: DECIMAL_SCALE
+            message: Số tiền tối đa 2 chữ số thập phân.
+    UnauthorizedExample:
+      summary: Unauthorized
+      value:
+        type: https://api.demo.local/problems/unauthorized
+        title: Unauthorized
+        status: 401
+        detail: Session không hợp lệ hoặc đã hết hạn.
+        instance: /api/v1/accounts
+        code: AUTH_SESSION_EXPIRED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+    ForbiddenExample:
+      summary: Forbidden
+      value:
+        type: https://api.demo.local/problems/forbidden
+        title: Forbidden
+        status: 403
+        detail: Không đủ quyền truy cập.
+        instance: /api/v1/accounts/3002
+        code: AUTH_FORBIDDEN
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+    NotFoundExample:
+      summary: Not found
+      value:
+        type: https://api.demo.local/problems/not-found
+        title: Not found
+        status: 404
+        detail: Không tìm thấy tài nguyên.
+        instance: /api/v1/transfers/TXN20261103A1B2C3D4
+        code: TRANSFER_NOT_FOUND
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+    ConflictExample:
+      summary: Conflict
+      value:
+        type: https://api.demo.local/problems/idempotency-conflict
+        title: Idempotency conflict
+        status: 409
+        detail: Idempotency-Key đã được dùng với payload khác.
+        instance: /api/v1/transfers
+        code: IDEMPOTENCY_CONFLICT
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+    GoneExample:
+      summary: Gone
+      value:
+        type: https://api.demo.local/problems/otp-expired
+        title: OTP expired
+        status: 410
+        detail: OTP đã hết hạn.
+        instance: /api/v1/auth/otp/verify
+        code: AUTH_OTP_EXPIRED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+    InsufficientBalanceExample:
+      summary: Insufficient balance
+      value:
+        type: https://api.demo.local/problems/insufficient-balance
+        title: Insufficient balance
+        status: 422
+        detail: Số dư khả dụng không đủ cho giao dịch.
+        instance: /api/v1/transfers
+        code: INSUFFICIENT_BALANCE
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+        reference: TXN20261103A1B2C3D4
+        transferStatus: FAILED
+        failureCode: INSUFFICIENT_BALANCE
+    TransferFailedExample:
+      summary: Transfer failed
+      value:
+        type: https://api.demo.local/problems/transfer-failed
+        title: Transfer failed
+        status: 422
+        detail: Giao dịch không hoàn tất.
+        instance: /api/v1/transfers
+        code: TRANSFER_FAILED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: false
+        reference: TXN20261103A1B2C3D4
+        transferStatus: FAILED
+        failureCode: PROCESSING_ERROR
+    StepUpRequiredExample:
+      summary: Step-up required
+      value:
+        type: https://api.demo.local/problems/step-up-required
+        title: Step-up required
+        status: 428
+        detail: Giao dịch cần xác thực bổ sung trước khi xử lý.
+        instance: /api/v1/transfers
+        code: STEP_UP_REQUIRED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+        challenge:
+          challengeId: 11111111-2222-4333-8444-555555555555
+          purpose: TRANSFER_STEP_UP
+          methods: [OTP, FIDO, PASSCODE]
+          channel: SMS
+          maskedDestination: '********123'
+          expiresAt: '2026-11-03T10:20:30Z'
+          maxAttempts: 5
+          remainingAttempts: 5
+    RateLimitedExample:
+      summary: Rate limited
+      value:
+        type: https://api.demo.local/problems/rate-limited
+        title: Rate limited
+        status: 429
+        detail: Quá nhiều yêu cầu; vui lòng thử lại sau.
+        instance: /api/v1/auth/login
+        code: RATE_LIMITED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+    InternalErrorExample:
+      summary: Internal error
+      value:
+        type: https://api.demo.local/problems/internal-error
+        title: Internal error
+        status: 500
+        detail: Lỗi hệ thống; vui lòng thử lại với cùng idempotency key.
+        instance: /api/v1/transfers
+        code: INTERNAL_ERROR
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+    ServiceUnavailableExample:
+      summary: Service unavailable
+      value:
+        type: https://api.demo.local/problems/service-unavailable
+        title: Service unavailable
+        status: 503
+        detail: Dịch vụ tạm thời không khả dụng.
+        instance: /api/v1/transfers
+        code: SERVICE_UNAVAILABLE
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-03T10:15:30Z'
+        retryable: true
+    LoginSuccessExample:
+      summary: Login thành công
+      value:
+        user:
+          userId: '1001'
+          userType: CUSTOMER
+          displayName: Nguyễn Văn A
+          roles: [CUSTOMER]
+          privileges: []
+          customerId: '2001'
+        session:
+          idleExpiresAt: '2026-11-03T10:30:00Z'
+          absoluteExpiresAt: '2026-11-03T18:15:30Z'
+          csrfToken: csrf_opaque_token
+          deviceTrusted: true
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+    ChallengeRequiredExample:
+      summary: Cần OTP thiết bị mới
+      value:
+        code: AUTH_CHALLENGE_REQUIRED
+        message: Thiết bị mới cần xác thực OTP.
+        challenge:
+          challengeId: 11111111-2222-4333-8444-555555555555
+          purpose: LOGIN_NEW_DEVICE
+          methods: [OTP]
+          channel: SMS
+          maskedDestination: '********123'
+          expiresAt: '2026-11-03T10:20:30Z'
+          maxAttempts: 5
+          remainingAttempts: 5
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+    TransferCompletedExample:
+      summary: Transfer COMPLETED
+      value:
+        reference: TXN20261103A1B2C3D4
+        status: COMPLETED
+        amount: '150000.00'
+        currency: VND
+        description: Chuyển tiền tháng 11
+        sourceAccount:
+          accountId: '3001'
+          accountNumberMasked: '**** **** 3001'
+          accountNumberLast4: '3001'
+        destinationAccount:
+          accountId: '3002'
+          accountNumberMasked: '**** **** 6789'
+          accountNumberLast4: '6789'
+        failureCode: null
+        failureMessage: null
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        createdAt: '2026-11-03T10:15:30Z'
+        completedAt: '2026-11-03T10:15:31Z'
+        failedAt: null
+    LimitsExample:
+      summary: Hạn mức customer
+      value:
+        customerId: '2001'
+        currency: VND
+        usageDate: '2026-11-03'
+        effectivePerTransactionLimit: '5000000.00'
+        effectiveRemainingDaily: '17500000.00'
+        items:
+          - limitId: '9001'
+            scope: CUSTOMER
+            accountId: null
+            perTransactionLimit: '5000000.00'
+            dailyLimit: '20000000.00'
+            currency: VND
+            usedToday: '2500000.00'
+            remainingDaily: '17500000.00'
+            effectiveFrom: '2026-11-01T00:00:00Z'
+            effectiveTo: null
+            version: 3
+        asOf: '2026-11-03T10:15:30Z'
