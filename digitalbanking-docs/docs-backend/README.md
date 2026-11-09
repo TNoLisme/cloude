@@ -11,7 +11,9 @@
 
 `docs-backend/` chứa tài liệu **triển khai và thiết kế chi tiết Backend** được trích xuất và chuẩn hóa từ nguồn chính thức `docs-common/` và `openapi/digital-banking-v1.yaml`:
 
-1. **`deployment/` (`BE-DEP-01`):** Tài liệu triển khai, cấu hình runtime (`.env`, `application.yml`), chính sách Flyway migration (`V1..V6`), phân quyền DB (`banking_migrator` vs `banking_app`), sao lưu/phục hồi, observability (Health, JSON Logs, Micrometer Metrics, Alerts) và sổ tay xử lý sự cố (Incident Runbooks) tham chiếu từ [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]].
+1. **`deployment/` (`BE-DEP-01`, `BE-DEP-02`):** Tài liệu triển khai Backend được tách thành hai phần:
+   - **`README.md` (`BE-DEP-01`):** Hướng dẫn triển khai, smoke test, release gate, backup/restore, rollback và incident runbook; tham chiếu [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] và [[digitalbanking-docs/docs-common/10 Master timelines.md]] (W7–W8).
+   - **`configuration.md` (`BE-DEP-02`):** Cấu hình runtime (`.env`, `application.yml`), Spring Profile, Flyway migration, phân quyền DB (`banking_migrator` vs `banking_app`), secret/crypto, observability (Health, JSON Logs, Micrometer Metrics, Alerts) và các ngưỡng nghiệp vụ/vận hành đã đối chiếu `docs-common`.
 2. **`modules/_overview/11-common.md` (`BE-MOD-COMMON`):** Thư mục tham chiếu tổng hợp toàn bộ **11 module backend**, gồm:
    - 1 file chỉ mục chung (`modules/_overview/11-common.md`) quy định cấu trúc package 5 lớp, quy tắc ranh giới dữ liệu (`Single Write-Owner`), thứ tự khóa chống Deadlock và sơ đồ phối hợp xuyên module (`T0 -> T1 -> T2 -> T3`).
    - **11 file tóm tắt riêng biệt (`01` đến `11`)** tóm tắt mục tiêu, bảng DB sở hữu, REST API, Internal Ports và danh sách công việc của từng module theo đúng phân công trong [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]].
@@ -25,7 +27,8 @@
 docs-backend/
 ├── README.md                                   # Chỉ mục tổng thể tài liệu Backend
 ├── deployment/
-│   └── README.md                               # [BE-DEP-01] Triển khai, cấu hình, migration, observability & runbooks
+│   ├── README.md                               # [BE-DEP-01] Hướng dẫn triển khai, release gate, backup/restore, rollback & runbooks
+│   └── configuration.md                        # [BE-DEP-02] Cấu hình môi trường, application.yml, DB/Flyway & observability
 └── modules/
     ├── common/                                 # [BE-MOD-COMMON] Thư mục tham chiếu tổng hợp 11 module
     │   ├── README.md                           # Chỉ mục chung, quy ước kiến trúc & sơ đồ phối hợp T0-T3
