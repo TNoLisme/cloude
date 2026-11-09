@@ -17,7 +17,7 @@ Customer xem lịch sử của mình, staff tra soát trong phạm vi quyền. D
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-023–024/027–030/039–040, UC-008–009, AC-014–016/023–024. Contract 07 §8.4, [[digitalbanking-docs/docs-backend/modules/04-transfer-and-ledger.md]].
+FR-023–024/027–030/039–040, UC-008–009, AC-014–016/023–024. Contract 07 §8.4, [[04-transfer-and-ledger]].
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-PAGE-01 — Filter và phân trang]], [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-DATA-01 — Kiểu dữ liệu và định dạng]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-02 — CSRF và quyền]].
 

@@ -17,7 +17,7 @@ Customer xem hạn mức giao dịch/ngày và phần còn lại. Staff có quy�
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-031–033/035/051, UC-011, AC-017/019/028. Contract 07 §8.5/8.8 và [[digitalbanking-docs/docs-backend/modules/05-limit-and-admin-approval.md]].
+FR-031–033/035/051, UC-011, AC-017/019/028. Contract 07 §8.5/8.8 và [[05-limit-and-admin-approval]].
 
 [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-02 — CSRF và quyền]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-03 — Challenge và step-up dùng chung]], [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-RETRY-01 — Retry và kết quả chưa rõ]].
 

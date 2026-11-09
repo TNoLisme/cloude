@@ -54,13 +54,13 @@ docs-backend/
 | `BE-DB-03` | [[digitalbanking-docs/docs-backend/database/03-flyway-and-seed-strategy.md]] | Thứ tự Flyway `V1..V6`, tách biệt `banking_migrator` vs `banking_app`, dữ liệu Seed tổng hợp cho Demo/Test | **Hoàn thành — v1.0** |
 | `BE-API-01` | [[digitalbanking-docs/docs-backend/api/01-rest-conventions-and-pipelines.md]] | Chuỗi Filter, Request/Response Envelope, Pagination, JCS Idempotency, luồng Step-up `428`, tổng hợp 30 APIs | **Hoàn thành — v1.0** |
 | `BE-API-02` | [[digitalbanking-docs/docs-backend/api/02-error-catalog-and-mapping.md]] | Danh mục chuẩn hóa `ErrorCode`, HTTP Status, `retryable`, và bảng ánh xạ ngoại lệ SQLSTATE (`55P03`, `40P01`) | **Hoàn thành — v1.0** |
-| `BE-MOD-01` | [[digitalbanking-docs/docs-backend/modules/01-common-and-security-core.md]] | Module `common`: `CorrelationAndRequestIdFilter`, `PiiCryptoService` (`AES-256-GCM`), `HmacService`, `GlobalExceptionHandler` | **Hoàn thành — v1.0** |
-| `BE-MOD-02` | [[digitalbanking-docs/docs-backend/modules/02-identity-and-auth.md]] | Module `identity`: `API-AUT-01..06`, Opaque Session + CSRF, Lockout 5 lần/15m, Device MFA, Step-up OTP Port | **Hoàn thành — v1.0** |
-| `BE-MOD-03` | [[digitalbanking-docs/docs-backend/modules/03-customer-and-account.md]] | Module `customer` & `account`: `API-CUS-01`, `API-ACC-01..02`, `API-ADM-01..02`, `AccountBalancePort` (`FOR UPDATE`) | **Hoàn thành — v1.0** |
-| `BE-MOD-04` | [[digitalbanking-docs/docs-backend/modules/04-transfer-and-ledger.md]] | Module `transfer` & `ledger`: `API-TRF-01..02`, `API-TXN-01..02`, điều phối `T0->T1->T2->T3`, Reconciliation Job | **Hoàn thành — v1.0** |
-| `BE-MOD-05` | [[digitalbanking-docs/docs-backend/modules/05-limit-and-admin-approval.md]] | Module `limit` & `admin`: `API-LIM-01..03`, `API-ROL-01..02`, `API-APR-01..02`, khóa `limit_usage`, Maker-Checker | **Hoàn thành — v1.0** |
-| `BE-MOD-06` | [[digitalbanking-docs/docs-backend/modules/06-audit-and-traceability.md]] | Module `audit`: `API-AUD-01..03`, phân loại `C1–C4`, PII Allowlist, chuỗi băm `SHA-256` dưới advisory lock | **Hoàn thành — v1.0** |
-| `BE-MOD-07` | [[digitalbanking-docs/docs-backend/modules/07-fraud-and-notification.md]] | Module `fraud` (`API-FRD-01..02`, 3 rules trong `T2` với Savepoint Fail-open) & `notification` (Outbox Worker `T3`) | **Hoàn thành — v1.0** |
+| `BE-MOD-01` | [[01-common-and-security-core]] | Module `common`: `CorrelationAndRequestIdFilter`, `PiiCryptoService` (`AES-256-GCM`), `HmacService`, `GlobalExceptionHandler` | **Hoàn thành — v1.0** |
+| `BE-MOD-02` | [[02-identity-and-auth]] | Module `identity`: `API-AUT-01..06`, Opaque Session + CSRF, Lockout 5 lần/15m, Device MFA, Step-up OTP Port | **Hoàn thành — v1.0** |
+| `BE-MOD-03` | [[03-customer-and-account]] | Module `customer` & `account`: `API-CUS-01`, `API-ACC-01..02`, `API-ADM-01..02`, `AccountBalancePort` (`FOR UPDATE`) | **Hoàn thành — v1.0** |
+| `BE-MOD-04` | [[04-transfer-and-ledger]] | Module `transfer` & `ledger`: `API-TRF-01..02`, `API-TXN-01..02`, điều phối `T0->T1->T2->T3`, Reconciliation Job | **Hoàn thành — v1.0** |
+| `BE-MOD-05` | [[05-limit-and-admin-approval]] | Module `limit` & `admin`: `API-LIM-01..03`, `API-ROL-01..02`, `API-APR-01..02`, khóa `limit_usage`, Maker-Checker | **Hoàn thành — v1.0** |
+| `BE-MOD-06` | [[06-audit-and-traceability]] | Module `audit`: `API-AUD-01..03`, phân loại `C1–C4`, PII Allowlist, chuỗi băm `SHA-256` dưới advisory lock | **Hoàn thành — v1.0** |
+| `BE-MOD-07` | [[07-fraud-and-notification]] | Module `fraud` (`API-FRD-01..02`, 3 rules trong `T2` với Savepoint Fail-open) & `notification` (Outbox Worker `T3`) | **Hoàn thành — v1.0** |
 | `BE-OPS-01` | [[digitalbanking-docs/docs-backend/operations/01-config-observability-runbook.md]] | Cấu hình `.env`, `application.yml` đầy đủ, JSON Log, Micrometer Metrics, Scheduled Jobs & Runbooks `R-CON`/`R-AUD` | **Hoàn thành — v1.0** |
 | `BE-TST-01` | [[digitalbanking-docs/docs-backend/testing/01-backend-test-matrix.md]] | Testcontainers PostgreSQL 16, `ConcurrentTestHarness`, `FinancialInvariantAssertions` & kịch bản Demo `D1–D5` | **Hoàn thành — v1.0** |
 

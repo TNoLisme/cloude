@@ -17,7 +17,7 @@ Customer xem hồ sơ, danh sách tài khoản, số dư và chi tiết masked. 
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-008–012/039–040/052, UC-004, AC-005/006/023/024/029 trong SRS. Contract 07 §8.2 và [[digitalbanking-docs/docs-backend/modules/03-customer-and-account.md]].
+FR-008–012/039–040/052, UC-004, AC-005/006/023/024/029 trong SRS. Contract 07 §8.2 và [[03-customer-and-account]].
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-DATA-01 — Kiểu dữ liệu và định dạng]], [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-CACHE-01 — Cache và invalidation]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md#FE-UI-03 — Ma trận trạng thái]].
 

@@ -17,7 +17,7 @@ Admin tạo yêu cầu assign/revoke role hoặc grant/revoke CHECKER privilege.
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-035/040/050–052, UC-013, AC-019/024/028–029. Contract 07 §8.8 và [[digitalbanking-docs/docs-backend/modules/05-limit-and-admin-approval.md]].
+FR-035/040/050–052, UC-013, AC-019/024/028–029. Contract 07 §8.8 và [[05-limit-and-admin-approval]].
 
 [[digitalbanking-docs/docs-frontend/features/FE-05-limits-and-approvals.md]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-02 — CSRF và quyền]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-03 — Challenge và step-up dùng chung]].
 

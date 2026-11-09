@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phạm vi:** Tài liệu yêu cầu, kiến trúc và thiết kế chung
-> **Cập nhật:** 03/11/2026
+> **Cập nhật:** 09/11/2026
 
 ## 1. Mục đích
 
@@ -30,6 +30,7 @@ Quy ước đọc:
 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Draft — chờ review |
 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng | Draft — chờ review |
 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Đang viết |
+| [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Draft — chờ review |
 | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
 ## 3. Trạng thái tài liệu
@@ -48,6 +49,7 @@ Quy ước đọc:
 | 08 | Deployment Infrastructure | Draft — chờ review |
 | 09 | Test Plan | Draft — chờ review |
 | 10 | Master Timelines | Đang viết |
+| 11 | Resource & Staffing Plan | Draft — chờ review |
 
 ### 3.2. Thiết kế chuyên sâu
 
@@ -92,6 +94,7 @@ Có thể đọc song song:
 | 08. Deployment infrastructure | 05, 06 | 09, vận hành |
 | 09. Test plan | 02, 03, design/01–04 | Nghiệm thu, 10 |
 | 10. Master timelines | 01, 02, 03 | Điều phối thực thi |
+| 11. Resource & Staffing Plan | 06, 08, 09, 10 | Phân công và theo dõi nguồn lực |
 
 ## 5. Thư mục con
 

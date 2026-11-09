@@ -51,6 +51,7 @@ digitalbanking-docs/
 │   ├── 08. Deployment infrastructure.md
 │   ├── 09. Test plan.md
 │   ├── 10. Master timelines.md
+│   ├── 11. Resource & Staffing Plan.md
 │   ├── Requirement Common.md
 │   ├── design/
 │   │   ├── README.md
@@ -112,6 +113,7 @@ digitalbanking-docs/
 | 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Draft — chờ review |
 | 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Draft — chờ review |
 | 10 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Đang viết |
+| 11 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Draft — chờ review |
 | — | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
 ### 4.3. Thiết kế chuyên sâu (`docs-common/design`)

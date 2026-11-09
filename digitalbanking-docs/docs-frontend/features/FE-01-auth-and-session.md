@@ -17,7 +17,7 @@ Cung cấp password login, challenge thiết bị mới, trusted-device passcode
 
 API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-001–007, FR-026, FR-040, FR-042–043, UC-001–003/015, AC-001–004/019/024/033 trong [[digitalbanking-docs/docs-common/03. SRS.md]]. Contract 07 §3/6/8.1 và [[digitalbanking-docs/docs-backend/modules/02-identity-and-auth.md]].
+FR-001–007, FR-026, FR-040, FR-042–043, UC-001–003/015, AC-001–004/019/024/033 trong [[digitalbanking-docs/docs-common/03. SRS.md]]. Contract 07 §3/6/8.1 và [[02-identity-and-auth]].
 
 Quy tắc dùng chung tại [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-01 — Session lifecycle]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-03 — Challenge và step-up dùng chung]], [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-ERR-01 — Lỗi và thông báo]].
 
