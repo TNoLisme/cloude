@@ -11,7 +11,15 @@
 
 `docs-backend/` chứa tài liệu **triển khai và thiết kế chi tiết Backend** được trích xuất và chuẩn hóa từ nguồn chính thức `docs-common/` và `openapi/digital-banking-v1.yaml`:
 
-1. **`deployment/` (`BE-DEP-01`):** Tài liệu triển khai, cấu hình runtime (`.env`, `application.yml`), chính sách Flyway migration (`V1..V6`), phân quyền DB (`banking_migrator` vs `banking_app`), sao lưu/phục hồi, observability (Health, JSON Logs, Micrometer Metrics, Alerts) và sổ tay xử lý sự cố (Incident Runbooks) tham chiếu từ [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]].
+1. **`deployment/` (`BE-DEP-00` + `BE-DEP-CFG-*`):** `README.md` chỉ là chỉ mục hướng dẫn. Nội dung triển khai/cấu hình được tổ chức trong `deployment/configuration/`:
+   - `01-environment-and-secrets.md`: môi trường, ranh giới mạng, `.env`, khóa mã hóa và tài khoản DB least privilege.
+   - `02-application-config.md`: baseline `application.yml`, giá trị đã đối chiếu `docs-common/` và fail-fast validation.
+   - `03-database-migration-and-backup.md`: chính sách Flyway forward-only, thứ tự migration, phân quyền DB, backup/restore/DR.
+   - `04-observability-and-alerting.md`: health contract, structured JSON logs, metrics và alert.
+   - `05-release-and-rollback.md`: release gates, evidence package và rollback.
+   - `06-incident-runbooks.md`: đầy đủ `R-CON-01..08` và `R-AUD-01..05`.
+
+   Toàn bộ nội dung được đối chiếu với [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]]; các điểm chưa chốt được ghi rõ là **Open/Proposed**, không trình bày như baseline đã xác nhận.
 2. **`modules/_overview/11-common.md` (`BE-MOD-COMMON`):** Thư mục tham chiếu tổng hợp toàn bộ **11 module backend**, gồm:
    - 1 file chỉ mục chung (`modules/_overview/11-common.md`) quy định cấu trúc package 5 lớp, quy tắc ranh giới dữ liệu (`Single Write-Owner`), thứ tự khóa chống Deadlock và sơ đồ phối hợp xuyên module (`T0 -> T1 -> T2 -> T3`).
    - **11 file tóm tắt riêng biệt (`01` đến `11`)** tóm tắt mục tiêu, bảng DB sở hữu, REST API, Internal Ports và danh sách công việc của từng module theo đúng phân công trong [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]].
@@ -25,7 +33,15 @@
 docs-backend/
 ├── README.md                                   # Chỉ mục tổng thể tài liệu Backend
 ├── deployment/
-│   └── README.md                               # [BE-DEP-01] Triển khai, cấu hình, migration, observability & runbooks
+│   ├── README.md                               # [BE-DEP-00] Chỉ mục hướng dẫn triển khai (không chứa cấu hình chi tiết)
+│   └── configuration/
+│       ├── README.md                           # [BE-DEP-CFG-00] Danh mục cấu hình, điểm đã sửa & xung đột nguồn
+│       ├── 01-environment-and-secrets.md       # [BE-DEP-CFG-01] Môi trường, mạng, .env, khóa, DB roles
+│       ├── 02-application-config.md            # [BE-DEP-CFG-02] application.yml & tham số cấu hình
+│       ├── 03-database-migration-and-backup.md # [BE-DEP-CFG-03] Flyway, least privilege, backup/restore/DR
+│       ├── 04-observability-and-alerting.md    # [BE-DEP-CFG-04] Health, logs, metrics, alerts
+│       ├── 05-release-and-rollback.md          # [BE-DEP-CFG-05] Release gates & rollback
+│       └── 06-incident-runbooks.md             # [BE-DEP-CFG-06] R-CON-01..08 & R-AUD-01..05
 └── modules/
     ├── common/                                 # [BE-MOD-COMMON] Thư mục tham chiếu tổng hợp 11 module
     │   ├── README.md                           # Chỉ mục chung, quy ước kiến trúc & sơ đồ phối hợp T0-T3
