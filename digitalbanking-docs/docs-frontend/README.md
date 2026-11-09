@@ -1,64 +1,95 @@
 # Frontend Documentation
 
-> **Dự án:** Digital Banking MVP
-> **Phạm vi:** Tài liệu triển khai frontend
-> **Trạng thái thư mục:** Đang viết
-> **Cập nhật:** 03/11/2026
-
-## 1. Mục đích
-
-`docs-frontend/` chứa tài liệu **triển khai frontend**: kiến trúc ứng dụng, bản đồ màn hình, tích hợp API, xử lý lỗi, bảo mật phía client, kiểm thử và kịch bản demo.
-
-Thư mục này không thay thế các nguồn chính thức:
-
-- Yêu cầu và use case: `docs-common/02–03`.
-- Hợp đồng API: `docs-common/07` và `openapi/`.
-- Kiến trúc tổng thể: `docs-common/06`.
-- Thiết kế bảo mật: `docs-common/design/04`.
-
-## 2. Trạng thái
-
-| Hạng mục | Trạng thái |
+| Thuộc tính | Giá trị |
 |---|---|
-| Tài liệu frontend tổng thể | Đang viết |
-| Kiến trúc và route | Đang viết |
-| Bản đồ màn hình | Đang viết |
-| Tích hợp API | Đang viết |
-| Bảo mật phía client | Đang viết |
-| Kiểm thử và demo | Đang viết |
+| Dự án / mã | Digital Banking MVP / FE-DOCS |
+| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Trạng thái tài liệu | Hoàn thành |
+| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Owner / reviewer | Frontend / FE Lead, Backend, QA, BA |
 
-> Hiện chưa có tài liệu nội dung trong thư mục này. Khi thêm tài liệu, cập nhật bảng trên và README gốc.
+## 1. Baseline và hướng dẫn đọc
 
-## 3. Cấu trúc dự kiến
+Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc tiếp theo và kết quả kiểm chứng. Baseline nguồn là main@f6ae7ec và OpenAPI 1.0.0. Những điều chỉnh sau refactor được chuyển thành đầu việc có đầu ra và tiêu chí hoàn thành trong tracker. Owner/reviewer là vai trò phụ trách, người duyệt và ngày duyệt được ghi khi review.
 
-```text
-docs-frontend/
-├── README.md
-├── architecture/      # Kiến trúc SPA, route, state, API client
-├── screens/           # Bản đồ màn hình và luồng người dùng
-├── api-integration/   # Mapping với 07 và OpenAPI
-├── testing/           # Test plan và bằng chứng
-└── demo/              # Kịch bản demo và walkthrough
-```
-
-Các thư mục con sẽ được tạo khi có tài liệu thực tế; không tạo thư mục rỗng.
-
-## 4. Quy ước viết
-
-1. **Liên kết nguồn:** mỗi màn hình/luồng phải trỏ tới use case (`UC`), yêu cầu (`FR/AC`) và endpoint tương ứng.
-2. **Không sao chép:** mô tả cách triển khai UI/UX và quyết định cục bộ; không chép lại SRS/API spec.
-3. **Xử lý lỗi:** mọi luồng phải nêu cách hiển thị lỗi Problem Details, retry và trạng thái rỗng.
-4. **Bảo mật:** ghi rõ cách lưu session/token, chống XSS/CSRF, masking dữ liệu nhạy cảm và logout.
-5. **Bằng chứng:** ảnh chụp, video demo, test report phải có đường dẫn cụ thể.
-6. **Trạng thái rõ ràng:** `Đang viết`, `Draft — chờ review`, `Hoàn thành`.
-
-## 5. Liên kết nhanh
-
-| Mục đích | Tài liệu |
+| Người đọc | Thứ tự |
 |---|---|
-| Yêu cầu nghiệp vụ | [[digitalbanking-docs/docs-common/02. BRD.md]] |
-| Use case và acceptance | [[digitalbanking-docs/docs-common/03. SRS.md]] |
-| Hợp đồng API | [[digitalbanking-docs/docs-common/07. API contracts.md]] |
-| OpenAPI | [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] |
+| Thành viên mới | Scope → architecture → feature → tracker → local development |
+| Người quản lý | Scope → delivery plan → tracker |
+| Người triển khai | Công việc → đặc tả → quy tắc chung được tham chiếu → API → test |
+| Backend / QA | API và auth → feature → testing → evidence |
+
+## 2. Bản đồ tài liệu
+
+| Nội dung | Nguồn |
+|---|---|
+| Phạm vi và truy vết | [[digitalbanking-docs/docs-frontend/management/01-scope-and-feature-map.md]] |
+| Đợt triển khai và phụ thuộc | [[digitalbanking-docs/docs-frontend/management/02-delivery-plan.md]] |
+| Tiến độ hiện tại và vấn đề mở | [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] |
+| Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
+| UI, form, responsive | [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
+| API, Money, lỗi, retry, cache | [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
+| Session, quyền, step-up | [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md]] |
+| Test và nghiệm thu | [[digitalbanking-docs/docs-frontend/standards/05-testing-and-acceptance.md]] |
+| FE-01 | [[digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md]] |
+| FE-02 | [[digitalbanking-docs/docs-frontend/features/FE-02-customer-and-accounts.md]] |
+| FE-03 | [[digitalbanking-docs/docs-frontend/features/FE-03-transfers.md]] |
+| FE-04 | [[digitalbanking-docs/docs-frontend/features/FE-04-transaction-history.md]] |
+| FE-05 | [[digitalbanking-docs/docs-frontend/features/FE-05-limits-and-approvals.md]] |
+| FE-06 | [[digitalbanking-docs/docs-frontend/features/FE-06-operations-and-fraud.md]] |
+| FE-07 | [[digitalbanking-docs/docs-frontend/features/FE-07-audit.md]] |
+| FE-08 | [[digitalbanking-docs/docs-frontend/features/FE-08-administration.md]] |
+| Chạy và debug | [[digitalbanking-docs/docs-frontend/guides/01-local-development.md]] |
+| Demo và bàn giao | [[digitalbanking-docs/docs-frontend/guides/02-demo-and-handover.md]] |
+| Quyết định | [[digitalbanking-docs/docs-frontend/decisions/README.md]] |
+| Template | [[digitalbanking-docs/docs-frontend/templates/feature-spec-template.md]], [[digitalbanking-docs/docs-frontend/templates/decision-template.md]] |
+| Bằng chứng | [[digitalbanking-docs/docs-frontend/evidence/README.md]] |
+
+## 3. Nguồn chính thức
+
+| Loại thông tin | Nguồn sở hữu |
+|---|---|
+| BR / FR / UC / AC / NFR | [[digitalbanking-docs/docs-common/02. BRD.md]], [[digitalbanking-docs/docs-common/03. SRS.md]] |
+| Công nghệ / kiến trúc tổng thể | [[digitalbanking-docs/docs-common/05. Technical stack.md]], [[digitalbanking-docs/docs-common/06. System architecture.md]] |
+| Ngữ nghĩa / schema API | [[digitalbanking-docs/docs-common/07. API contracts.md]], [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] |
 | Thiết kế bảo mật | [[digitalbanking-docs/docs-common/design/04. security.md]] |
-| README gốc | [[digitalbanking-docs/README.md]] |
+| Triển khai BE | [[digitalbanking-docs/docs-backend/README.md]] |
+| Phạm vi FE | management/01-scope-and-feature-map.md |
+| Quy tắc FE hiện hành | standards/ |
+| Hành vi UI riêng | features/ |
+| Trạng thái triển khai hiện tại | management/03-work-tracker.md |
+| Lý do lựa chọn và lịch sử quyết định | decisions/ |
+| Kết quả đã kiểm chứng | Evidence và test report tại commit cụ thể |
+
+Nếu schema và ngữ nghĩa khác nhau, chốt ở 07 rồi đồng bộ OpenAPI theo [[digitalbanking-docs/openapi/README.md]]. Nếu thiết kế security/BE khác 07, ghi GAP trong tracker và phối hợp owner nguồn trước khi tích hợp.
+
+## 4. FE-DOC-01 — Quy tắc đồng bộ
+
+1. Feature có mã FE-01 đến FE-08. Công việc dùng FE-03-01, nền tảng dùng FE-FND-01, bàn giao dùng FE-REL-01. Giữ ID sau khi đổi tên file.
+2. Quy tắc dùng chung được khai báo ở heading của standards. Feature dẫn tới heading tương ứng và mô tả phần đặc thù.
+3. Tracker giữ trạng thái công việc hiện tại, danh sách điều chỉnh cần làm tiếp theo và liên kết bằng chứng. Đặc tả giữ hành vi đích và liên kết công việc.
+4. Đổi hành vi cần cập nhật nguồn sở hữu, feature/test bị ảnh hưởng và tracker trong cùng PR. Tìm ID quy tắc và đường dẫn bằng rg để kiểm tra phạm vi.
+5. Thay đổi API bắt đầu ở 07 và YAML với BE, sau đó sinh lại DTO, cập nhật client/mock/test.
+6. Vấn đề mở có ID, owner, ảnh hưởng và điều kiện đóng tại tracker. Quyết định dài hạn có ADR và được phản ánh vào standards sau khi duyệt.
+7. Liên kết nội bộ dùng wikilink từ root vault digitalbanking-docs, có heading khi dẫn quy tắc. Source và bằng chứng được dẫn bằng permalink theo commit.
+8. PR ghi mã công việc, tài liệu thay đổi, test và kết quả. Reviewer xác nhận code cùng phiên bản đặc tả.
+9. Khi duyệt tài liệu ghi người duyệt, ngày và commit/PR. Khi đổi nguồn cần đánh dấu các phần liên quan chờ review lại.
+
+## 5. Vòng đời và mức chứng minh
+
+Tài liệu đi từ Đang viết → Draft — chờ review → Hoàn thành. Bộ tài liệu được người phụ trách Frontend chốt ngày 09/11/2026. Trạng thái quyết định kỹ thuật được ghi riêng trong ADR và tracker. Hoàn thành tài liệu nghĩa là nội dung được duyệt theo phạm vi.
+
+Công việc đi từ Chưa bắt đầu → Đang làm → Chờ review → Đang kiểm chứng → Hoàn thành. Bị chặn ghi điều kiện mở lại. Hoãn cần người chấp thuận, lý do và mốc xem xét.
+
+Mức chứng minh ghi riêng thành đọc source, mock, tích hợp API thật hoặc trình duyệt. Mỗi kết quả có commit/môi trường. Điều kiện Hoàn thành tại [[digitalbanking-docs/docs-frontend/standards/05-testing-and-acceptance.md#FE-TEST-03 — Điều kiện hoàn thành]].
+
+## 6. Change log
+
+| Phiên bản | Ngày | Nội dung |
+|---|---|---|
+| 1.0 | 08/11/2026 | Viết phạm vi, kế hoạch/tracker, standards, 8 đặc tả, guides, ADR và templates |
+| 1.1 | 08/11/2026 | Tập trung các điều chỉnh sau refactor vào công việc tiếp theo trong tracker, đồng bộ liên kết và hướng dẫn đọc |
+
+## 7. Phê duyệt baseline tài liệu
+
+Ngày 09/11/2026, người phụ trách Frontend xác nhận chốt bộ tài liệu FE v1.1 trong chat và yêu cầu commit lên main. Các đầu việc implementation, GAP và quyết định kỹ thuật được theo dõi theo trạng thái riêng trong tracker/ADR.
