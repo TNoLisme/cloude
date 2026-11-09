@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-07 |
-| Phiên bản / ngày | 1.0 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Mục tiêu và phạm vi
@@ -23,6 +24,12 @@ FR-034–040/052–053, UC-012, AC-018–024/029. Contract 07 §8.6 và [[digita
 ## 3. Màn hình và điều hướng
 
 STAFF-AUDIT với list/filter và detail panel theo auditId. Deep link chi tiết qua route state/query an toàn được FE-FND-03 chốt. Menu/action theo AUDIT_READ/AUDIT_EXPORT, matrix nguồn theo GAP-07.
+
+### Design UI của màn hình
+
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-AUDIT.md]].
+
+Trạng thái đã có code và các vùng chờ cập nhật được ghi trong từng file. Quy tắc cập nhật tại [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 4. Luồng người dùng
 

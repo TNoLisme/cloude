@@ -3,20 +3,21 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-UI |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Căn cứ
 
-UI tiếng Việt, VND và timezone cấu hình theo NFR-028/029 trong SRS. FE-FND-03 chuẩn hóa tokens, form và responsive layouts theo thư viện được quyết định tại ADR-001. Token/component dưới đây là giao ước đề xuất cho mọi feature.
+UI tiếng Việt, VND và timezone cấu hình theo NFR-028/029 trong SRS. FE-FND-03 chuẩn hóa tokens, form và responsive layouts theo thư viện được quyết định tại ADR-001. Token/component dưới đây là giao ước đề xuất cho mọi feature. Design chi tiết theo source tại [[digitalbanking-docs/docs-frontend/design/shared/01-foundations-and-components.md]] và [[digitalbanking-docs/docs-frontend/design/shared/02-layouts-and-navigation.md]].
 
 ## FE-UI-01 — Token và component
 
 Một nơi khai báo semantic tokens cho primary, background, surface, border, text, success/warning/error, spacing, type scale, radius và focus ring. Token map sang UI library được chọn. Component dùng chung bao gồm AppShell, PageHeader, MoneyText, MaskedIdentity, StatusBadge, ErrorPanel, EmptyState, LoadingState, FormField, ConfirmDialog, DataTable và ChallengeDialog.
 
-Feature dùng semantic token thay vì tự định nghĩa màu/spacing tương đương. StatusBadge có nhãn chữ và icon khi phù hợp. Chốt giá trị token, logo và wireframe có phiên bản với FE/BA tại FE-FND-03.
+Feature dùng semantic token thay vì tự định nghĩa màu/spacing tương đương. StatusBadge có nhãn chữ và icon khi phù hợp. Giá trị theme/CSS đã có được ghi theo source trong shared design. FE-FND-03 chốt giá trị áp dụng khi triển khai và bổ sung wireframe có phiên bản khi cần. Danh mục từng màn tại [[digitalbanking-docs/docs-frontend/design/README.md]].
 
 ## FE-UI-02 — Form và thông báo
 
@@ -58,3 +59,7 @@ PII hiển thị từ field masked do server trả. Cảnh báo fraud mô tả d
 - [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-DATA-01 — Kiểu dữ liệu và định dạng]].
 - [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-SEC-03 — Dữ liệu nhạy cảm và browser storage]].
 - [[digitalbanking-docs/docs-frontend/standards/05-testing-and-acceptance.md]].
+
+## FE-UI-06 — Đồng bộ design với code
+
+Mỗi Screen ID có một file design riêng trong design/screens. Phần đã có UI mô tả component/field/label/layout/CSS/state/responsive theo commit cụ thể. Phần chưa có UI giữ các mục trống và trạng thái chờ cập nhật. Mọi thay đổi UI cập nhật file màn hình cùng PR theo [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]]. Component dùng chung cập nhật shared design và các override của màn liên quan.

@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-03 |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Mục tiêu và phạm vi
@@ -23,6 +24,14 @@ FR-013–026/034/038/041/043–046, UC-005–008/014–015, AC-006–014/018/022
 ## 3. Màn hình và điều hướng
 
 CUST-TRANSFER và CUST-RESULT, policy CUSTOMER/TRANSFER_CREATE. Form có các bước nhập → review → gửi/challenge → kết quả. History/detail liên kết FE-04. Recipient lookup/confirmation UX chờ GAP-02.
+
+### Design UI của màn hình
+
+- [[digitalbanking-docs/docs-frontend/design/screens/CUST-TRANSFER.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/CUST-RESULT.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/CUST-TX.md]].
+
+Trạng thái đã có code và các vùng chờ cập nhật được ghi trong từng file. Quy tắc cập nhật tại [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 4. Luồng người dùng
 

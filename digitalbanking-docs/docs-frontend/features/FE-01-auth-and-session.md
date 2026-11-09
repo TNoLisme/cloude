@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-01 |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Mục tiêu và phạm vi
@@ -23,6 +24,19 @@ Quy tắc dùng chung tại [[digitalbanking-docs/docs-frontend/standards/04-aut
 ## 3. Màn hình và điều hướng
 
 AUTH-LOGIN và AUTH-CHALLENGE theo [[digitalbanking-docs/docs-frontend/standards/01-architecture.md#FE-ARCH-03 — Route và điều hướng]]. Session hiện có đi tới vùng được phép. Multi-role có menu/workspace chỉ chứa capability đã chốt. Challenge route cần memory context, thiếu context quay lại login với thông báo xác minh lại.
+
+### Design UI của màn hình
+
+- [[digitalbanking-docs/docs-frontend/design/screens/AUTH-LOGIN.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/AUTH-REGISTER.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/AUTH-RECOVERY.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/AUTH-WORKSPACE.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/AUTH-CHALLENGE.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/APP-BOOTSTRAP.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/ERROR-FORBIDDEN.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/ERROR-NOT-FOUND.md]].
+
+Trạng thái đã có code và các vùng chờ cập nhật được ghi trong từng file. Quy tắc cập nhật tại [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 4. Luồng người dùng
 

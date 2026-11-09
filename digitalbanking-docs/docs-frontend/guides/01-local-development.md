@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-LOCAL |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, Cloud, QA |
 
 ## 1. Điều kiện chuẩn bị
@@ -76,3 +77,7 @@ SPA build tạo dist theo công cụ đã chốt. Handoff cho Cloud gồm commit
 ## 7. Liên kết
 
 [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] giữ trạng thái. [[digitalbanking-docs/docs-frontend/guides/02-demo-and-handover.md]] giữ checklist bàn giao. Backend đích cần được hiện thực và xác nhận readiness trước chạy integration.
+
+## 8. Cập nhật design khi làm UI
+
+Mở file của Screen ID tại [[digitalbanking-docs/docs-frontend/design/README.md]] trước khi sửa UI. Khi tạo màn chưa có code, điền khung mô tả trong file đã tạo. Khi sửa màn đã có code, cập nhật phần component/style/state/responsive và nguồn commit, ghi PR/evidence theo [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].

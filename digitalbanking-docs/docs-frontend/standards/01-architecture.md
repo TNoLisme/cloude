@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-ARCH |
-| Phiên bản / ngày | 1.0 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Nguồn và ranh giới
@@ -76,6 +77,8 @@ Route sau là đề xuất đích, giữ nguyên mã screen khi thay đường d
 | STAFF-APPROVAL | /staff/approvals và /staff/approvals/:approvalId | Theo quyền loại yêu cầu, FE-05/FE-08 |
 | ADMIN-ROLES | /admin/roles | ADMIN + ROLE_MANAGE, FE-08 |
 | ERROR | /forbidden và wildcard | 403/404 và đường quay lại hợp lệ |
+
+Design của các Screen ID trong bảng tại [[digitalbanking-docs/docs-frontend/design/README.md]]. STAFF-APPROVAL có hai file list/detail. ERROR có hai file 403/404. Các màn có source liên quan GAP-01 và app bootstrap/workspace được đăng ký riêng trong design registry.
 
 Role/permission chính thức theo 07 §3 và GAP-07. Quyền kiểm tra cả menu, direct URL và action. CHECKER là privilege bổ sung. Router chờ bootstrap trước khi quyết định redirect. Return URL chỉ nhận đường dẫn nội bộ trong allowlist.
 

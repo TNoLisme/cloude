@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-SCOPE |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / BA, Backend, QA |
 
 ## 1. Trách nhiệm
@@ -51,3 +52,7 @@ FR thuộc money movement, audit write, fraud engine, retention được truy v�
 ## 5. Nguồn thực thi
 
 [[digitalbanking-docs/docs-frontend/management/02-delivery-plan.md]] xác định thứ tự và cổng chuyển tiếp. [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] giữ trạng thái. Các điều chỉnh sau refactor và điều kiện hoàn thành được ghi trong mục 2.1 của tracker.
+
+## 6. Design UI theo màn hình
+
+[[digitalbanking-docs/docs-frontend/design/README.md]] liên kết 28 màn, shared component/layout và template. 20 màn có nội dung được mô tả từ source tham chiếu, 8 màn đích có file chờ UI. Thiết kế chưa có code được giữ trống và cập nhật khi thực hiện task tương ứng. FE-DOC-02 sở hữu phần tài liệu bổ sung, FE-FND-03 sở hữu chuẩn hóa UI khi triển khai.

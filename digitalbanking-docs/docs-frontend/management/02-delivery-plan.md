@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-PLAN |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA, người điều phối |
 
 ## 1. Căn cứ và lịch
@@ -16,7 +17,7 @@ Kế hoạch theo [[digitalbanking-docs/docs-common/10. Master timelines.md]], p
 
 | Đợt / milestone | Đầu vào | Công việc / đầu ra | Điều kiện qua cổng |
 |---|---|---|---|
-| A / M1 | Phạm vi FE, SRS, API, security | FE-DOC-01, FE-FND-01, review phạm vi/ADR/GAP | Chốt đầu việc tiếp theo và các phụ thuộc contract |
+| A / M1 | Phạm vi FE, SRS, API, security | FE-DOC-01, FE-DOC-02, FE-FND-01, review phạm vi/design/ADR/GAP | Chốt đầu việc tiếp theo và các phụ thuộc contract |
 | B / M2 | A, quyết định UI/toolchain | FE-FND-02, FE-FND-03, FE-01-01, FE-02-01, shared client và app shell | Session/account chạy backend đích, test đạt |
 | C / M2–M3 | B, Money/step-up thống nhất | FE-03-01, FE-03-02, FE-04-01 | Same-key retry, timeout, 428 và số dư được kiểm chứng cùng BE |
 | D / M3 | B, API staff/approval và privilege | FE-05-01, FE-05-02, FE-06-01, FE-06-02, FE-07-01, FE-08-01 | Role/ownership/maker-checker được kiểm chứng |
@@ -52,3 +53,7 @@ Cuối đợt review GAP, evidence và liên kết nguồn. Thay đổi phạm v
 - [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]].
 - [[digitalbanking-docs/docs-frontend/standards/05-testing-and-acceptance.md]].
 - [[digitalbanking-docs/docs-frontend/guides/02-demo-and-handover.md]].
+
+## 6. Cập nhật design trong quá trình triển khai
+
+FE-DOC-02 bổ sung file màn hình trước khi push bộ docs. Khi từng task UI bắt đầu, dùng [[digitalbanking-docs/docs-frontend/design/README.md]] để chọn file. Task tạo UI mới điền phần mô tả đang trống, task sửa UI cập nhật component/CSS/trạng thái/evidence cùng PR. FE-FND-03 và các feature chỉ hoàn thành khi nội dung design tương ứng đã đồng bộ với code được review.

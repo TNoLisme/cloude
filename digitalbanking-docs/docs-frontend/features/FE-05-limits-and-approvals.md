@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-05 |
-| Phiên bản / ngày | 1.0 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Mục tiêu và phạm vi
@@ -23,6 +24,15 @@ FR-031–033/035/051, UC-011, AC-017/019/028. Contract 07 §8.5/8.8 và [[digita
 ## 3. Màn hình và điều hướng
 
 CUST-LIMITS, STAFF-LIMIT, STAFF-APPROVAL. Customer đọc self, limit maker theo permission và approval theo loại request. CHECKER là privilege bổ sung. Route detail dùng approvalId.
+
+### Design UI của màn hình
+
+- [[digitalbanking-docs/docs-frontend/design/screens/CUST-LIMITS.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-LIMIT.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-APPROVAL-LIST.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-APPROVAL-DETAIL.md]].
+
+Trạng thái đã có code và các vùng chờ cập nhật được ghi trong từng file. Quy tắc cập nhật tại [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 4. Luồng người dùng
 

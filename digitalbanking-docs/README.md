@@ -69,6 +69,7 @@ digitalbanking-docs/
 │   ├── management/
 │   ├── standards/
 │   ├── features/
+│   ├── design/
 │   ├── guides/
 │   ├── decisions/
 │   ├── templates/
@@ -128,7 +129,7 @@ digitalbanking-docs/
 |---|---|---|
 | [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Đã có — v1.0.0; cần đối chiếu `07` |
 | [[digitalbanking-docs/docs-backend/README.md]] | Tài liệu triển khai backend (15 tài liệu chuyên biệt) | Hoàn thành — v1.0 |
-| [[digitalbanking-docs/docs-frontend/README.md]] | Phạm vi, công việc tiếp theo/tracker, quy tắc chung, 8 đặc tả, hướng dẫn và bằng chứng FE | Hoàn thành — v1.1, FE xác nhận 09/11/2026 |
+| [[digitalbanking-docs/docs-frontend/README.md]] | Phạm vi, tracker, 8 đặc tả, design theo màn hình, hướng dẫn và bằng chứng FE | Hoàn thành — v1.2, FE xác nhận 09/11/2026 |
 | [[digitalbanking-docs/docs-common/work/README.md]] | Kế hoạch và nhật ký công việc theo tuần | Đang viết |
 | [[digitalbanking-docs/docs-common/work/week1/README.md]] | Tổng hợp tuần 1 | Đang viết |
 | [[digitalbanking-docs/docs-common/work/week2/README.md]] | Tổng hợp tuần 2 | Đang viết |
@@ -209,7 +210,7 @@ Mỗi tài liệu nên có khối metadata ngắn:
 - `design/03. fraud-detection-rules` — rule gian lận và luồng flag/auto-block.
 - `design/04. security` — threat model và các biện pháp bảo mật.
 - `docs-backend/` — tài liệu triển khai backend.
-- [[digitalbanking-docs/docs-frontend/README.md]] — bộ tài liệu FE v1.1 được người phụ trách FE chốt ngày 09/11/2026, công việc tiếp theo và GAP được theo dõi trong tracker.
+- [[digitalbanking-docs/docs-frontend/README.md]] — bộ tài liệu FE v1.2 được người phụ trách FE chốt ngày 09/11/2026, gồm design theo màn hình và file chờ UI.
 - `docs-common/work/week1`, `week2` — kế hoạch và bằng chứng công việc theo tuần.
 - `design/02. consistency-concurrency` — đang ở trạng thái **Draft — chờ review**.
 

@@ -3,14 +3,15 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-DOCS |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / FE Lead, Backend, QA, BA |
 
 ## 1. Baseline và hướng dẫn đọc
 
-Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc tiếp theo và kết quả kiểm chứng. Baseline nguồn là main@f6ae7ec và OpenAPI 1.0.0. Những điều chỉnh sau refactor được chuyển thành đầu việc có đầu ra và tiêu chí hoàn thành trong tracker. Owner/reviewer là vai trò phụ trách, người duyệt và ngày duyệt được ghi khi review.
+Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc tiếp theo và kết quả kiểm chứng. Baseline nguồn là main@f6ae7ec và OpenAPI 1.0.0. Những điều chỉnh sau refactor được chuyển thành đầu việc có đầu ra và tiêu chí hoàn thành trong tracker. Bộ design bổ sung mô tả UI có source theo từng màn và giữ file trống cho màn chưa có UI. Owner/reviewer là vai trò phụ trách, người duyệt và ngày duyệt được ghi khi review.
 
 | Người đọc | Thứ tự |
 |---|---|
@@ -27,6 +28,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Đợt triển khai và phụ thuộc | [[digitalbanking-docs/docs-frontend/management/02-delivery-plan.md]] |
 | Tiến độ hiện tại và vấn đề mở | [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
+| Design UI từng màn hình và shared component | [[digitalbanking-docs/docs-frontend/design/README.md]] |
 | UI, form, responsive | [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
 | API, Money, lỗi, retry, cache | [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
 | Session, quyền, step-up | [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md]] |
@@ -42,6 +44,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Chạy và debug | [[digitalbanking-docs/docs-frontend/guides/01-local-development.md]] |
 | Demo và bàn giao | [[digitalbanking-docs/docs-frontend/guides/02-demo-and-handover.md]] |
 | Quyết định | [[digitalbanking-docs/docs-frontend/decisions/README.md]] |
+| Template design màn hình | [[digitalbanking-docs/docs-frontend/templates/screen-design-template.md]] |
 | Template | [[digitalbanking-docs/docs-frontend/templates/feature-spec-template.md]], [[digitalbanking-docs/docs-frontend/templates/decision-template.md]] |
 | Bằng chứng | [[digitalbanking-docs/docs-frontend/evidence/README.md]] |
 
@@ -57,6 +60,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Phạm vi FE | management/01-scope-and-feature-map.md |
 | Quy tắc FE hiện hành | standards/ |
 | Hành vi UI riêng | features/ |
+| Bố cục/component/style theo từng màn | design/screens/, dùng shared tại design/shared/ |
 | Trạng thái triển khai hiện tại | management/03-work-tracker.md |
 | Lý do lựa chọn và lịch sử quyết định | decisions/ |
 | Kết quả đã kiểm chứng | Evidence và test report tại commit cụ thể |
@@ -74,10 +78,11 @@ Nếu schema và ngữ nghĩa khác nhau, chốt ở 07 rồi đồng bộ OpenA
 7. Liên kết nội bộ dùng wikilink từ root vault digitalbanking-docs, có heading khi dẫn quy tắc. Source và bằng chứng được dẫn bằng permalink theo commit.
 8. PR ghi mã công việc, tài liệu thay đổi, test và kết quả. Reviewer xác nhận code cùng phiên bản đặc tả.
 9. Khi duyệt tài liệu ghi người duyệt, ngày và commit/PR. Khi đổi nguồn cần đánh dấu các phần liên quan chờ review lại.
+10. Thay đổi UI của màn nào cập nhật file design của màn đó cùng code/PR theo [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 5. Vòng đời và mức chứng minh
 
-Tài liệu đi từ Đang viết → Draft — chờ review → Hoàn thành. Bộ tài liệu được người phụ trách Frontend chốt ngày 09/11/2026. Trạng thái quyết định kỹ thuật được ghi riêng trong ADR và tracker. Hoàn thành tài liệu nghĩa là nội dung được duyệt theo phạm vi.
+Tài liệu đi từ Đang viết → Draft — chờ review → Hoàn thành. Bộ tài liệu FE v1.2, gồm phần design, được người phụ trách Frontend chốt ngày 09/11/2026. Trạng thái quyết định kỹ thuật được ghi riêng trong ADR và tracker. Hoàn thành tài liệu nghĩa là nội dung được duyệt theo phạm vi.
 
 Công việc đi từ Chưa bắt đầu → Đang làm → Chờ review → Đang kiểm chứng → Hoàn thành. Bị chặn ghi điều kiện mở lại. Hoãn cần người chấp thuận, lý do và mốc xem xét.
 
@@ -89,7 +94,12 @@ Mức chứng minh ghi riêng thành đọc source, mock, tích hợp API thật
 |---|---|---|
 | 1.0 | 08/11/2026 | Viết phạm vi, kế hoạch/tracker, standards, 8 đặc tả, guides, ADR và templates |
 | 1.1 | 08/11/2026 | Tập trung các điều chỉnh sau refactor vào công việc tiếp theo trong tracker, đồng bộ liên kết và hướng dẫn đọc |
+| 1.2 | 09/11/2026 | Bổ sung design 28 màn, shared foundation/layout, file chờ UI và quy tắc cập nhật design cùng code |
 
 ## 7. Phê duyệt baseline tài liệu
 
 Ngày 09/11/2026, người phụ trách Frontend xác nhận chốt bộ tài liệu FE v1.1 trong chat và yêu cầu commit lên main. Các đầu việc implementation, GAP và quyết định kỹ thuật được theo dõi theo trạng thái riêng trong tracker/ADR.
+
+## 8. Phần bổ sung design v1.2
+
+Người phụ trách Frontend đã chốt phần design v1.2 và yêu cầu commit/push main ngày 09/11/2026. File có source ghi rõ commit và mức đọc code/CSS, file chưa có UI giữ phần mô tả trống. Phê duyệt baseline v1.1 ở mục 7 áp dụng cho nội dung đã chốt trước phần bổ sung này.

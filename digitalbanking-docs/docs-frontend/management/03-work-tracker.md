@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-TRACK |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / FE Lead, BA, Backend, QA |
 
 ## 1. Cách cập nhật
@@ -19,9 +20,10 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 | ID | Đầu ra / đặc tả | Owner | Phụ thuộc | Trạng thái hiện tại | Bằng chứng / nhật ký |
 |---|---|---|---|---|---|
 | FE-DOC-01 | Bộ docs và truy vết theo [[digitalbanking-docs/docs-frontend/README.md]] | FE | Người phụ trách FE chốt tài liệu | Hoàn thành | Bộ docs v1.1 được người phụ trách FE xác nhận ngày 09/11/2026, kiểm tra liên kết/ID đạt |
+| FE-DOC-02 | Design chi tiết theo màn hình, shared component/layout và file chờ UI | FE | Người phụ trách FE chốt v1.2 | Hoàn thành | [[digitalbanking-docs/docs-frontend/design/README.md]], mô tả 20 màn có source và 8 file chờ UI |
 | FE-FND-01 | Đưa source, assets, cấu hình và tests vào digitalbanking-frontend, pin toolchain/lockfile | FE | GAP-01, GAP-06 | Chưa bắt đầu | Thực hiện theo mục 2.1 và [[digitalbanking-docs/docs-frontend/guides/01-local-development.md]] |
 | FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
-| FE-FND-03 | App shell, route policy, UI tokens/form/accessibility | FE | FE-FND-01, ADR-001 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
+| FE-FND-03 | App shell, route policy, UI tokens/form/accessibility và đồng bộ design theo màn | FE | FE-FND-01, ADR-001 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
 | FE-01-01 | Password login, MFA, session/bootstrap/logout | FE + BE | FE-FND-02, GAP-05, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md]] |
 | FE-01-02 | Trusted-device passcode/FIDO và fallback | FE + BE | FE-01-01, GAP-04 | Bị chặn | Chờ enrollment/provider và test runtime WebAuthn |
 | FE-02-01 | Profile, account list/detail, ownership | FE | FE-01-01, FE-FND-03 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-02-customer-and-accounts.md]] |
@@ -97,7 +99,16 @@ ADR đang chờ review tại [[digitalbanking-docs/docs-frontend/decisions/READM
 | 08/11/2026 | FE-DOC-01 | Đồng bộ main từ 8cf9bb5 đến f6ae7ec, viết docs v1.0. Chờ review nội dung |
 | 08/11/2026 | FE-DOC-01 | Cập nhật v1.1, tập trung các điều chỉnh sau refactor vào mục 2.1 và đồng bộ hướng dẫn/đặc tả theo yêu cầu FE |
 | 09/11/2026 | FE-DOC-01 | Người phụ trách Frontend chốt bộ tài liệu v1.1 trong chat, ghi nhận phê duyệt và chuẩn bị commit lên main |
+| 09/11/2026 | FE-DOC-02 | Bổ sung shared design, 20 mô tả màn theo source và 8 file chờ UI. Kiểm tra cấu trúc/liên kết đạt, người phụ trách FE chốt v1.2 ngày 09/11/2026 |
 
 ## 6. Kiểm tra bản tài liệu v1.1
 
-Ngày 08/11/2026 đã kiểm tra 24 file FE, 176 wikilink gồm file và heading, 38 tham chiếu operationId, 19 task ID, 12 GAP ID, 15 FET ID và 25 quy tắc dùng chung. Kết quả đạt. Các bảng và code fence hợp lệ, 8 đặc tả có đủ 12 mục. Nội dung đã chuyển sang tracker và mọi tham chiếu tới tài liệu đã bỏ được gỡ. Nghiệm thu nội dung do reviewer ghi tại FE-DOC-01.
+Ngày 08/11/2026 đã kiểm tra 24 file FE, 176 wikilink gồm file và heading, 38 tham chiếu operationId, 19 task ID, 12 GAP ID, 15 FET ID và 25 quy tắc dùng chung. Kết quả đạt. Các bảng và code fence hợp lệ, 8 đặc tả có đủ 12 mục. Nội dung đã chuyển sang tracker và mọi tham chiếu tới tài liệu đã bỏ được gỡ. Người phụ trách FE đã chốt baseline v1.1 ngày 09/11/2026 theo FE-DOC-01.
+
+## 7. Kiểm tra phần bổ sung design v1.2
+
+Ngày 09/11/2026, kiểm tra 56 file FE gồm 28 screen design, 2 shared design và template màn hình. 353 wikilink và heading, 40 source permalink/path/range, 38 tham chiếu operationId và 20 task ID đạt kiểm tra. Tám file màn chưa có UI giữ body trống theo khung mục. Các liên kết feature/design hai chiều, bảng và code fence hợp lệ. Mô tả UI dựa trên đọc source/CSS, mức kiểm chứng render/browser được bổ sung khi thực hiện FE-FND-03 và task feature.
+
+## 8. Phê duyệt v1.2
+
+Ngày 09/11/2026, người phụ trách Frontend xác nhận chốt v1.2 và yêu cầu commit/push lên main. FE-DOC-02 hoàn thành phần tài liệu. Các task UI/implementation và file chờ UI giữ trạng thái thực hiện riêng theo nội dung tracker và design registry.

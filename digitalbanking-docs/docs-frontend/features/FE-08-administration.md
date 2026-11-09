@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-08 |
-| Phiên bản / ngày | 1.1 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA |
 
 ## 1. Mục tiêu và phạm vi
@@ -23,6 +24,14 @@ FR-035/040/050–052, UC-013, AC-019/024/028–029. Contract 07 §8.8 và [[digi
 ## 3. Màn hình và điều hướng
 
 ADMIN-ROLES và STAFF-APPROVAL theo requestType ROLE_CHANGE. Route/action yêu cầu ROLE_MANAGE theo matrix đã chốt. Checker cần CHECKER và khác maker. Selection targetUserId từ nguồn được duyệt theo GAP-03.
+
+### Design UI của màn hình
+
+- [[digitalbanking-docs/docs-frontend/design/screens/ADMIN-ROLES.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-APPROVAL-LIST.md]].
+- [[digitalbanking-docs/docs-frontend/design/screens/STAFF-APPROVAL-DETAIL.md]].
+
+Trạng thái đã có code và các vùng chờ cập nhật được ghi trong từng file. Quy tắc cập nhật tại [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
 
 ## 4. Luồng người dùng
 

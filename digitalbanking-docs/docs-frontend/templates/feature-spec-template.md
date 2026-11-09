@@ -3,9 +3,10 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-TPL-FEATURE |
-| Phiên bản / ngày | 1.0 / 08/11/2026 |
+| Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
-| Phê duyệt tài liệu | Người phụ trách Frontend xác nhận trong chat ngày 09/11/2026 |
+| Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
+| Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / FE Lead, QA |
 
 Sao chép nội dung dưới cho feature mới, thay các placeholder và ghi FR/UC/AC thực tế. Mọi quy tắc shared được dẫn tới heading standards, trạng thái triển khai tại tracker.
@@ -20,7 +21,7 @@ Sao chép nội dung dưới cho feature mới, thay các placeholder và ghi FR
 
 ## 3. Màn hình và điều hướng
 
-[Screen ID theo FE-ARCH-03, route, menu/direct URL, permission/scope và wireframe có phiên bản.]
+[Screen ID theo FE-ARCH-03, route, menu/direct URL, permission/scope và liên kết file design/screens tương ứng. File design mới theo [[digitalbanking-docs/docs-frontend/templates/screen-design-template.md]].]
 
 ## 4. Luồng người dùng
 
