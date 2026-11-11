@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: digital-banking-backend
+  profiles:
+    default: local
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
+    username: ${DB_APP_USER:banking_app}
+    password: ${DB_APP_PASSWORD:local_app_password}
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
+    user: ${DB_MIGRATION_USER:${DB_APP_USER:banking_app}}
+    password: ${DB_MIGRATION_PASSWORD:${DB_APP_PASSWORD:local_app_password}}
+    schemas: banking
+    default-schema: banking
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    out-of-order: false
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+info:
+  app:
+    version: ${APP_VERSION:dev}

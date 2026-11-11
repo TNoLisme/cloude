@@ -9,15 +9,13 @@
 
 ## 1. Mục đích
 
-`docs-backend/` chứa tài liệu **triển khai và thiết kế chi tiết Backend** được trích xuất và chuẩn hóa từ nguồn chính thức `docs-common/` và `openapi/digital-banking-v1.yaml`:
+`docs-backend/` chứa tài liệu **triển khai và thiết kế chi tiết Backend** được trích xuất và chuẩn hóa từ nguồn chính thức `docs-common/` và `openapi/digital-banking-v1.yaml`.
 
-1. **`deployment/` (`BE-DEP-01`, `BE-DEP-02`):** Tài liệu triển khai Backend được tách thành hai phần:
-   - **`README.md` (`BE-DEP-01`):** Hướng dẫn triển khai, smoke test, release gate, backup/restore, rollback và incident runbook; tham chiếu [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] và [[digitalbanking-docs/docs-common/10 Master timelines.md]] (W7–W8).
-   - **`configuration.md` (`BE-DEP-02`):** Cấu hình runtime (`.env`, `application.yml`), Spring Profile, Flyway migration, phân quyền DB (`banking_migrator` vs `banking_app`), secret/crypto, observability (Health, JSON Logs, Micrometer Metrics, Alerts) và các ngưỡng nghiệp vụ/vận hành đã đối chiếu `docs-common`.
-2. **`modules/_overview/11-common.md` (`BE-MOD-COMMON`):** Thư mục tham chiếu tổng hợp toàn bộ **11 module backend**, gồm:
-   - 1 file chỉ mục chung (`modules/_overview/11-common.md`) quy định cấu trúc package 5 lớp, quy tắc ranh giới dữ liệu (`Single Write-Owner`), thứ tự khóa chống Deadlock và sơ đồ phối hợp xuyên module (`T0 -> T1 -> T2 -> T3`).
-   - **11 file tóm tắt riêng biệt (`01` đến `11`)** tóm tắt mục tiêu, bảng DB sở hữu, REST API, Internal Ports và danh sách công việc của từng module theo đúng phân công trong [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]].
-3. **`modules/<module-name>/`:** 11 thư mục riêng biệt tương ứng với 11 module Java của hệ thống. Mỗi thư mục có file `README.md` mô tả ngắn, ranh giới dữ liệu, liên kết tham chiếu và là nơi từng thành viên phụ trách (**Vũ, Phương, Đạt, Thịnh**) sẽ bổ sung thiết kế chi tiết (class, DTO, SQL, test cases).
+- Java source và runtime project nằm tại `digitalbanking-backend/`.
+- `deployment/README.md` hướng dẫn triển khai/vận hành; `deployment/configuration.md` là nguồn cấu hình tham chiếu.
+- `00. architecture & conventions.md` quy định chuẩn kiến trúc Backend.
+- `modules/_overview/` tóm tắt 11 module; `modules/<module-name>/` chứa tài liệu module, không chứa Java source.
+- `workofteam/` lưu công việc chung Backend và report liên quan.
 
 ---
 

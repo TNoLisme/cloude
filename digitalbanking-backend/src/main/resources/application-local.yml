@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
+  flyway:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
+    user: ${DB_MIGRATION_USER:${DB_APP_USER:banking_app}}
+    password: ${DB_MIGRATION_PASSWORD:${DB_APP_PASSWORD:local_app_password}}
