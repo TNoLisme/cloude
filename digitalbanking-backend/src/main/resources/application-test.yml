@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    hikari:
+      maximum-pool-size: 3
+  flyway:
+    clean-disabled: false
