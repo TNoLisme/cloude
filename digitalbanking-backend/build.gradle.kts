@@ -1,17 +1,28 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.5.7"
-    id("io.spring.dependency-management") version "1.1.7"
+    jacoco
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 group = "com.simulatedbank"
 version = "0.1.0-SNAPSHOT"
-
 description = "Digital Banking modular monolith backend"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInt())
+    }
+}
+
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom(configurations.annotationProcessor.get())
+    }
 }
 
 repositories {
@@ -19,27 +30,70 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-jdbc")
-    implementation("org.flywaydb:flyway-core")
-    implementation("org.flywaydb:flyway-database-postgresql")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.actuator)
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
+    runtimeOnly(libs.postgresql)
+
+    implementation(libs.micrometer.registry.prometheus)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.bouncycastle.prov)
+
+    implementation(libs.mapstruct)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.spring.boot.configuration.processor)
+    annotationProcessor(libs.lombok)
+    annotationProcessor(libs.lombok.mapstruct.binding)
+    annotationProcessor(libs.mapstruct.processor)
+
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)
+    testAnnotationProcessor(libs.lombok.mapstruct.binding)
+    testAnnotationProcessor(libs.mapstruct.processor)
+
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.testcontainers)
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.archunit.junit5)
+    testImplementation(libs.wiremock.standalone)
+}
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(
+        listOf(
+            "-parameters",
+            "-Amapstruct.defaultComponentModel=spring",
+            "-Amapstruct.unmappedTargetPolicy=ERROR"
+        )
+    )
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
     System.getenv("DOCKER_HOST")?.let { systemProperty("docker.host", it) }
-    System.getenv("DOCKER_API_VERSION")?.let {
-        systemProperty("api.version", it)
-        environment("DOCKER_API_VERSION", it)
+    val dockerApiVersion = System.getenv("DOCKER_API_VERSION") ?: "1.44"
+    systemProperty("api.version", dockerApiVersion)
+    environment("DOCKER_API_VERSION", dockerApiVersion)
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
     }
 }
 
 tasks.named("check") {
-    dependsOn(tasks.named("test"))
+    dependsOn(tasks.named("test"), tasks.named("jacocoTestReport"))
 }

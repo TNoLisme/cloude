@@ -28,7 +28,7 @@ docs-backend/
 │   ├── README.md                               # [BE-DEP-01] Hướng dẫn triển khai, release gate, backup/restore, rollback & runbooks
 │   └── configuration.md                        # [BE-DEP-02] Cấu hình môi trường, application.yml, DB/Flyway & observability
 └── modules/
-    ├── common/                                 # [BE-MOD-COMMON] Thư mục tham chiếu tổng hợp 11 module
+    ├── _overview/                              # [BE-MOD-COMMON] Thư mục tham chiếu tổng hợp 11 module
     │   ├── README.md                           # Chỉ mục chung, quy ước kiến trúc & sơ đồ phối hợp T0-T3
     │   ├── 01-identity-auth.md                 # Tóm tắt Module 01: identity / auth (Owner: Đạt)
     │   ├── 02-customer.md                      # Tóm tắt Module 02: customer (Owner: Đạt)
@@ -52,7 +52,7 @@ docs-backend/
     ├── fraud/README.md                         # Thư mục chi tiết Module fraud (Thịnh)
     ├── notification/README.md                  # Thư mục chi tiết Module notification (Thịnh)
     ├── admin/README.md                         # Thư mục chi tiết Module admin (Đạt & Thịnh)
-    └── common-core/README.md                   # Thư mục chi tiết Module common hạ tầng dùng chung (Phương)
+    └── common/README.md                        # Thư mục chi tiết Module common hạ tầng dùng chung (Phương)
 ```
 
 ---
@@ -61,17 +61,17 @@ docs-backend/
 
 | # | Thư mục Module | File Tham chiếu Tóm tắt | Owner chính | Mốc tập trung |
 |---:|---|---|---|---:|
-| 1 | [[digitalbanking-docs/docs-backend/modules/identity/README.md]] | `modules/_overview/11-common.md` | **Đạt** | W3 |
-| 2 | [[digitalbanking-docs/docs-backend/modules/customer/README.md]] | `modules/_overview/11-common.md` | **Đạt** | W3 |
-| 3 | [[digitalbanking-docs/docs-backend/modules/account/README.md]] | `modules/_overview/11-common.md` | **Đạt** | W3–W4 |
-| 4 | [[digitalbanking-docs/docs-backend/modules/transfer/README.md]] | `modules/_overview/11-common.md` | **Vũ** | W4 |
-| 5 | [[digitalbanking-docs/docs-backend/modules/ledger/README.md]] | `modules/_overview/11-common.md` | **Phương** | W4 |
-| 6 | [[digitalbanking-docs/docs-backend/modules/limit/README.md]] | `modules/_overview/11-common.md` | **Vũ** | W4–W5 |
-| 7 | [[digitalbanking-docs/docs-backend/modules/audit/README.md]] | `modules/_overview/11-common.md` | **Thịnh** | W3–W5 |
-| 8 | [[digitalbanking-docs/docs-backend/modules/fraud/README.md]] | `modules/_overview/11-common.md` | **Thịnh** | W5 |
-| 9 | [[digitalbanking-docs/docs-backend/modules/notification/README.md]] | `modules/_overview/11-common.md` | **Thịnh** | W4–W5 |
-| 10 | [[digitalbanking-docs/docs-backend/modules/admin/README.md]] | `modules/_overview/11-common.md` | **Đạt** *(Thịnh đồng phát triển)* | W5 |
-| 11 | [[digitalbanking-docs/docs-backend/modules/_overview-core/README.md]] | `modules/_overview/11-common.md` | **Phương** | W2–W3 (duy trì) |
+| 1 | [[digitalbanking-docs/docs-backend/modules/identity/README.md]] | `modules/_overview/01-identity-auth.md` | **Đạt** | W3 |
+| 2 | [[digitalbanking-docs/docs-backend/modules/customer/README.md]] | `modules/_overview/02-customer.md` | **Đạt** | W3 |
+| 3 | [[digitalbanking-docs/docs-backend/modules/account/README.md]] | `modules/_overview/03-account.md` | **Đạt** | W3–W4 |
+| 4 | [[digitalbanking-docs/docs-backend/modules/transfer/README.md]] | `modules/_overview/04-transfer.md` | **Vũ** | W4 |
+| 5 | [[digitalbanking-docs/docs-backend/modules/ledger/README.md]] | `modules/_overview/05-ledger.md` | **Phương** | W4 |
+| 6 | [[digitalbanking-docs/docs-backend/modules/limit/README.md]] | `modules/_overview/06-limit.md` | **Vũ** | W4–W5 |
+| 7 | [[digitalbanking-docs/docs-backend/modules/audit/README.md]] | `modules/_overview/07-audit.md` | **Thịnh** | W3–W5 |
+| 8 | [[digitalbanking-docs/docs-backend/modules/fraud/README.md]] | `modules/_overview/08-fraud.md` | **Thịnh** | W5 |
+| 9 | [[digitalbanking-docs/docs-backend/modules/notification/README.md]] | `modules/_overview/09-notification.md` | **Thịnh** | W4–W5 |
+| 10 | [[digitalbanking-docs/docs-backend/modules/admin/README.md]] | `modules/_overview/10-admin.md` | **Đạt** *(Thịnh đồng phát triển)* | W5 |
+| 11 | [[digitalbanking-docs/docs-backend/modules/common/README.md]] | `modules/_overview/11-common.md` | **Phương** | W2–W3 (duy trì) |
 
 ---
 
