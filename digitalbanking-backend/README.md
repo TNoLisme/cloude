@@ -51,6 +51,21 @@ api.version=1.44
 - **Health Probes:** `/actuator/health` is the public infrastructure probe (`show-details: never`). `/api/v1/health` business API remains protected.
 - **Migrations:** Forward-only under `src/main/resources/db/migration`. Never edit an applied migration.
 
+### Common configuration and time
+
+`AppProperties` binds `app.*`. Nested groups have defaults even without YAML. Spring Boot profile files override base YAML; environment variables and command-line arguments can override configuration. `local`/`test` include synthetic keys; demo/Cloud require external DB credentials and AES/HMAC keys. Crypto key validation is handed to BE-COM-IMP-04; having properties does not make cryptography or rotation operational. Never log key accessors; `Crypto.toString()` is redacted.
+
+| Property | Environment variable | Default / validation |
+|---|---|---|
+| `app.timezone` | `APP_TIMEZONE` | `Asia/Ho_Chi_Minh`; a valid, nonempty Java `ZoneId` is required at startup |
+| `app.security.lockout.max-failed-attempts` | `APP_LOCKOUT_MAX_FAILED_ATTEMPTS` | 5, positive integer; **Đề xuất** |
+| `app.security.lockout.lock-duration-minutes` | `APP_LOCKOUT_DURATION_MINUTES` | 10, positive integer; **Đề xuất** |
+| `app.security.rate-limit.transfer-per-customer-per-minute` | `APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE` | 30, positive integer; **Đề xuất**, scope is customer |
+
+For example, set `APP_TIMEZONE=America/New_York` or pass `--app.timezone=America/New_York` to the application. Compose forwards the variables in this table from the shell or `.env`. Restart to apply changes. The removed `transfer-per-user-per-minute` and `max-concurrent-sessions-customer/staff` keys have no supported consumer; update deployments to the customer key and remove session caps. Other numeric business thresholds remain existing baselines pending their owners' decisions.
+
+Inject `Clock` and `ZoneId businessZoneId` through the consumer constructor. Use `clock.instant()` for UTC timestamps/TTL, and `LocalDate.now(clock.withZone(businessZoneId))` for a business date. Tests can supply a primary `Clock.fixed(instant, ZoneOffset.UTC)` bean. Do not use the host default timezone or real time in business tests. These beans do not reset limits, expire sessions, execute rate limiting or schedule jobs; identity, transfer, limit, audit and notification own those behaviors. Multiple sessions are allowed per `07 §3.2`; device/user revocation is **Deferred**. Rate/lockout defaults still require policy approval (`07 §11.2–11.3`).
+
 ## Documentation
 
 - Backend conventions: `../digitalbanking-docs/docs-backend/00. architecture & conventions.md`

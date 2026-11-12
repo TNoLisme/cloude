@@ -2,17 +2,21 @@ package com.simulatedbank.banking.common.config;
 
 import java.math.BigDecimal;
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "app")
+@Validated
 public record AppProperties(
         @DefaultValue("Asia/Ho_Chi_Minh") String timezone,
-        Crypto crypto,
-        Security security,
-        Transfer transfer,
-        Fraud fraud,
-        Jobs jobs
+        @DefaultValue Crypto crypto,
+        @DefaultValue @Valid Security security,
+        @DefaultValue Transfer transfer,
+        @DefaultValue Fraud fraud,
+        @DefaultValue Jobs jobs
 ) {
 
     public record Crypto(
@@ -21,16 +25,20 @@ public record AppProperties(
             String hmacKeyBase64,
             @DefaultValue List<String> previousKeys
     ) {
+        @Override
+        public String toString() {
+            return "Crypto[redacted]";
+        }
     }
 
     public record Security(
-            Cookie cookie,
+            @DefaultValue Cookie cookie,
             @DefaultValue("http://localhost:5173") List<String> corsAllowedOrigins,
-            Session session,
-            Lockout lockout,
-            Otp otp,
-            RateLimit rateLimit,
-            StepUp stepUp
+            @DefaultValue Session session,
+            @DefaultValue @Valid Lockout lockout,
+            @DefaultValue Otp otp,
+            @DefaultValue @Valid RateLimit rateLimit,
+            @DefaultValue StepUp stepUp
     ) {
         public record Cookie(
                 @DefaultValue("DB_SESSION") String name,
@@ -43,15 +51,13 @@ public record AppProperties(
 
         public record Session(
                 @DefaultValue("15") int idleTimeoutMinutes,
-                @DefaultValue("8") int absoluteTimeoutHours,
-                @DefaultValue("3") int maxConcurrentSessionsCustomer,
-                @DefaultValue("1") int maxConcurrentSessionsStaff
+                @DefaultValue("8") int absoluteTimeoutHours
         ) {
         }
 
         public record Lockout(
-                @DefaultValue("5") int maxFailedAttempts,
-                @DefaultValue("15") int lockDurationMinutes
+                @DefaultValue("5") @Positive int maxFailedAttempts,
+                @DefaultValue("10") @Positive int lockDurationMinutes
         ) {
         }
 
@@ -69,7 +75,7 @@ public record AppProperties(
                 @DefaultValue("5") int loginPerUsernamePerMinute,
                 @DefaultValue("10") int stepUpPerUserPer5Minutes,
                 @DefaultValue("20") int otpVerifyPerUserPerMinute,
-                @DefaultValue("20") int transferPerUserPerMinute,
+                @DefaultValue("30") @Positive int transferPerCustomerPerMinute,
                 @DefaultValue("5") int auditExportPerUserPerHour,
                 @DefaultValue("120") int readPerUserPerMinute
         ) {

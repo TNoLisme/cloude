@@ -1,0 +1,15 @@
+Final clean build: ./gradlew clean build --console=plain
+Process exit code: 0
+Timestamp zone in XML: UTC; user/report zone: Asia/Ho_Chi_Minh (+07:00)
+suite | tests | failures | errors | skipped | start UTC
+com.simulatedbank.banking.BackendApplicationContextTest | 1 | 0 | 0 | 0 | 2026-11-12T06:49:27.325Z
+com.simulatedbank.banking.architecture.ModuleBoundaryArchTest | 4 | 0 | 0 | 0 | 2026-11-12T06:49:39.921Z
+com.simulatedbank.banking.common.config.AppPropertiesTest | 20 | 0 | 0 | 0 | 2026-11-12T06:49:28.113Z
+com.simulatedbank.banking.health.HealthEndpointTest | 2 | 0 | 0 | 0 | 2026-11-12T06:49:29.474Z
+com.simulatedbank.banking.migration.FlywayMigrationTest | 1 | 0 | 0 | 0 | 2026-11-12T06:49:29.654Z
+com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest | 1 | 0 | 0 | 0 | 2026-11-12T06:49:39.512Z
+TOTAL | 29 | 0 | 0 | 0
+XML system-out preserves output except generated Spring test passwords, which are redacted.
+Initial focused run: 24 checks (20 config/time + 4 ArchUnit); 6 assertion failures, exit 1.
+Cause: assertions searched kebab-case paths, Bean Validation exposes camelCase field paths. Production validation rejected bad values as expected.
+Focused retest: exit 0; see focused-retest.log. Final full run above reran the same corrected tests.

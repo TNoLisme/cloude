@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.1
+> **Phiên bản:** v1.3
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -60,7 +60,7 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context/crypto/error` dưới đây là thiết kế cần triển khai. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
 
-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config đã có; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. Task này không sửa Java, cấu hình hoặc OpenAPI.
+Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config đã có; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). Security/context/crypto/error vẫn cần các task tiếp theo.
 
 ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
 
@@ -79,7 +79,7 @@ Owner đã chốt **cách phân xử tài liệu** theo `01–11`; các quyết 
 
 Kết quả: **7 nhóm đã phân xử, 1 nhóm thiếu thiết kế rotation còn mở**. Các ngưỡng `01–11` ghi “Đề xuất” vẫn là baseline thiết kế/cấu hình tham chiếu, chưa tự trở thành policy release đã phê duyệt; theo SRS §8.5 cần đóng OI tương ứng trước khi coi là policy có hiệu lực. Không còn yêu cầu owner chọn lại giữa các nguồn cho 7 nhóm đã phân xử.
 
-Runtime hiện vẫn có lockout 15 phút, transfer 20 mỗi user và trần session 3/1; đây là các điểm implementation sau phải đối chiếu/sửa, không phải quyết định được kế thừa vào thiết kế. Task này không sửa runtime hoặc nội dung `docs-common/01–11`/`design/`. Chỉ đồng bộ các đoạn backend liên quan đến 8 nhóm trên, không tuyên bố đã audit mọi khác biệt của toàn bộ kho tài liệu.
+Snapshot BE-COM-DOC-02 ghi nhận lockout 15 phút, transfer 20 mỗi user và trần session 3/1. BE-COM-IMP-01 đã sửa thành 5 lần/10 phút, 30/phút/customer (đều Đề xuất) và bỏ keys trần session; đây chỉ là config, chưa enforcement. Không sửa nội dung `docs-common/01–11`/`design/`. Chỉ đồng bộ các đoạn backend liên quan đến 8 nhóm trên, không tuyên bố đã audit mọi khác biệt của toàn bộ kho tài liệu.
 
 ## 2. Thiết kế Class & Hợp đồng Interface
 
@@ -114,9 +114,9 @@ public class SecurityFilterChainConfig {
 
 | Class / accessor | Hợp đồng |
 |---|---|
-| `AppProperties.timezone()` | APP_TIMEZONE, baseline Asia/Ho_Chi_Minh; không đổi UTC timestamp API/DB |
-| `AppProperties.crypto()` | Nested Crypto(aesKeyId, aesKeyBase64, hmacKeyBase64, previousKeys), bind `app.crypto.*`; không xuất khóa qua toString/debug/Actuator |
-| `AppProperties.security()` | Nested Cookie, Session, Lockout, Otp, RateLimit, StepUp và corsAllowedOrigins; hiện trạng chữ ký không phải policy. Baseline đích: lockout 10 phút, rate limit transfer 30/customer/phút (đề xuất theo `07`); nhiều session theo `07`, không tự áp trần 3/1 |
+| `AppProperties.timezone()` | APP_TIMEZONE, baseline Asia/Ho_Chi_Minh; rỗng/ZoneId sai fail startup không echo input; không đổi UTC timestamp API/DB |
+| `AppProperties.crypto()` | Nested Crypto(aesKeyId, aesKeyBase64, hmacKeyBase64, previousKeys), bind `app.crypto.*`; IMP-01 redact toString; không log/serialize accessor khóa. Validation khóa/rotation bàn giao IMP-04 |
+| `AppProperties.security()` | Nested Cookie, Session, Lockout, Otp, RateLimit, StepUp và corsAllowedOrigins; nested defaults sẵn cả khi không có YAML; lockout và transfer rate phải là số nguyên dương. Baseline cấu hình: lockout 10 phút, rate limit transfer 30/customer/phút (đề xuất theo `07`); nhiều session theo `07`, không tự áp trần 3/1 |
 | `transfer()/fraud()/jobs()` | Bind cấu hình để owner dùng, không thực thi rule/job ở common |
 | `TimeConfig.clock()` | Bean Clock.systemUTC(); inject Clock.fixed để kiểm thử TTL/timestamp |
 | `TimeConfig.businessZoneId(...)` | Bean ZoneId từ cấu hình; limit owner dùng tính business day |
@@ -580,9 +580,16 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 - Verification: [[digitalbanking-docs/docs-backend/modules/common/report/BE-COM-DOC-01-verification.md]].
 - Chốt ưu tiên trước implement: [[digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-DOC-02.md]] và [[digitalbanking-docs/docs-backend/modules/common/report/BE-COM-DOC-02-verification.md]].
 
+### 7.5. Task triển khai và mẫu verification
+
+- [[digitalbanking-docs/docs-backend/modules/common/tasks/README.md]] — 8 task BE-COM-IMP-01..08, phụ thuộc, mốc W2–W8 và tiêu chí chấp nhận chung; trạng thái ban đầu Planned.
+- [[digitalbanking-docs/docs-backend/modules/common/report/VERIFICATION-TEMPLATE.md]] — mẫu report cho từng task, ánh xạ AC → kết quả thực tế → evidence; không chứa kết quả runtime có sẵn.
+
 ## Change Log
 
 | Phiên bản | Ngày | Người thực hiện | Thay đổi |
 |---|---|---|---|
 | v1.0 | 12/11/2026 | Codex — theo Task 1 của owner | Hoàn thiện 7 phần, traceability, chữ ký 4 gói, lỗi/SQLSTATE, trace/PII/crypto, tests Planned và issue nguồn; không sửa runtime |
 | v1.1 | 12/11/2026 | Codex — theo quyết định ưu tiên của owner | Phân xử 7 nhóm theo docs-common/01–11, giữ rotation còn mở và nhãn Đề xuất của nguồn; đồng bộ các mục backend liên quan trước implement |
+| v1.2 | 12/11/2026 | Codex — theo yêu cầu chia task của owner | Bổ sung chỉ mục 8 task implementation và mẫu verification; không sửa thiết kế hành vi hoặc xác nhận runtime |
+| v1.3 | 12/11/2026 | Codex — BE-COM-IMP-01 | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |

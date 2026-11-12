@@ -90,11 +90,11 @@ app:
     session:
       idle-timeout-minutes: 15
       absolute-timeout-hours: 8
-      max-concurrent-sessions-customer: 3
-      max-concurrent-sessions-staff: 1
+      # 07 §3.2 allows multiple sessions; device/user revocation is Deferred.
     lockout:
-      max-failed-attempts: 5
-      lock-duration-minutes: 15
+      # Proposed baseline (07 §3.7); configuration only, no enforcement here.
+      max-failed-attempts: ${APP_LOCKOUT_MAX_FAILED_ATTEMPTS:5}
+      lock-duration-minutes: ${APP_LOCKOUT_DURATION_MINUTES:10}
     otp:
       ttl-seconds: 300
       recovery-ttl-seconds: 120
@@ -106,7 +106,8 @@ app:
       login-per-username-per-minute: 5
       step-up-per-user-per-5-minutes: 10
       otp-verify-per-user-per-minute: 20
-      transfer-per-user-per-minute: 20
+      # Proposed baseline (07 §2.8); the consumer must key by customer.
+      transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30}
       audit-export-per-user-per-hour: 5
       read-per-user-per-minute: 120
     step-up:
