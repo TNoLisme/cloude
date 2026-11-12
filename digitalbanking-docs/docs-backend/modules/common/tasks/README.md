@@ -32,8 +32,8 @@
 | [BE-COM-IMP-02](BE-COM-IMP-02.md) | Mô hình lỗi và exception mapping | W3 | 01; wiring trace/security hoàn thiện ở 03/05 | Done — [verification](../report/BE-COM-IMP-02-verification.md); chờ review |
 | [BE-COM-IMP-03](BE-COM-IMP-03.md) | Request context và correlation | W3 | 01–02 | Done — [verification](../report/BE-COM-IMP-03-verification.md); chờ review |
 | [BE-COM-IMP-04](BE-COM-IMP-04.md) | Crypto, JCS và masking | W3 | 01 | Done — [verification](../report/BE-COM-IMP-04-verification.md); chờ review |
-| [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Planned |
-| [BE-COM-IMP-06](BE-COM-IMP-06.md) | Logging, metrics và health | W3–W5 | 02–05 | Planned |
+| [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Blocked — common đã triển khai; thiếu identity thật; [verification](../report/BE-COM-IMP-05-verification.md) |
+| [BE-COM-IMP-06](BE-COM-IMP-06.md) | Logging, metrics và health | W3–W5 | 02–05 | Done — common/local; [verification](../report/BE-COM-IMP-06-verification.md); chờ review, không đóng blocker identity của 05 |
 | [BE-COM-IMP-07](BE-COM-IMP-07.md) | Tích hợp và quality gate common | W3–W6 | 01–06 và các module tham gia từng luồng | Planned |
 | [BE-COM-IMP-08](BE-COM-IMP-08.md) | Readiness, Cloud verification và bàn giao | W6–W8 | Readiness từ W6; deploy sau quality gate, có môi trường/owner hạ tầng | Planned |
 

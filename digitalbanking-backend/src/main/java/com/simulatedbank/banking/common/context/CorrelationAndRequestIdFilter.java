@@ -57,19 +57,24 @@ public class CorrelationAndRequestIdFilter extends OncePerRequestFilter {
         }
         request.setAttribute("correlationId", context.correlationId());
         response.setHeader(HEADER, context.correlationId());
+        var completion = HttpRequestLog.start(request, response, context);
         try (var scope = RequestContextHolder.bind(context)) {
-            if (Boolean.TRUE.equals(request.getAttribute(HANDLED_ATTRIBUTE))) {
-                return;
-            }
-            if (invalid) {
-                fail(request, response, ErrorCode.VALIDATION_ERROR);
-                return;
-            }
             try {
-                chain.doFilter(request, response);
-            } catch (ServletException | IOException | RuntimeException exception) {
-                // No raw exception, metadata or invalid header enters logs/Problem.
-                fail(request, response, ErrorCode.INTERNAL_ERROR);
+                if (Boolean.TRUE.equals(request.getAttribute(HANDLED_ATTRIBUTE))) {
+                    return;
+                }
+                if (invalid) {
+                    fail(request, response, ErrorCode.VALIDATION_ERROR);
+                    return;
+                }
+                try {
+                    chain.doFilter(request, response);
+                } catch (ServletException | IOException | RuntimeException exception) {
+                    // No raw exception, metadata or invalid header enters logs/Problem.
+                    fail(request, response, ErrorCode.INTERNAL_ERROR);
+                }
+            } finally {
+                completion.finishDispatch();
             }
         }
     }

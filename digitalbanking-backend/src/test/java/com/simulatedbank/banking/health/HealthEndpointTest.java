@@ -37,6 +37,6 @@ class HealthEndpointTest {
     @Test
     void protectedEndpointRejectsUnauthenticatedAccess() throws Exception {
         mockMvc.perform(get("/api/v1/health"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

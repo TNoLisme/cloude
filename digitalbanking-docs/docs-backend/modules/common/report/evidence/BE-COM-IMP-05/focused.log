@@ -1,0 +1,28 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources
+> Task :classes
+
+> Task :compileTestJava FAILED
+/home/phuong/workspace/cloude/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/HttpSecurityTest.java:196: error: unreported exception UnsupportedEncodingException; must be caught or declared to be thrown
+        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                                                          ^
+1 error
+
+[Incubating] Problems report is available at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileTestJava'.
+> Compilation failed; see the compiler output below.
+  /home/phuong/workspace/cloude/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/HttpSecurityTest.java:196: error: unreported exception UnsupportedEncodingException; must be caught or declared to be thrown
+          assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                                                            ^
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 2s
+3 actionable tasks: 2 executed, 1 up-to-date

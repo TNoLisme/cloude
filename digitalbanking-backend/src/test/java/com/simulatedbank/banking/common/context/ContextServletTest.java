@@ -46,7 +46,7 @@ class ContextServletTest {
                         .header("X-Forwarded-For", "198.51.100.123").GET().build();
                 var result = client.send(request, HttpResponse.BodyHandlers.ofString());
                 assertThat(result.headers().allValues("X-Correlation-ID")).containsExactly("live:trace");
-                assertThat(result.statusCode()).isEqualTo(route.equals("/actuator/health") ? 200 : 403);
+                assertThat(result.statusCode()).isEqualTo(route.equals("/actuator/health") ? 200 : 401);
             }
         }
     }

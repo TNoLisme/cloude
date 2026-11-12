@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Max;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -38,6 +39,7 @@ public record AppProperties(
             @DefaultValue @Valid Lockout lockout,
             @DefaultValue Otp otp,
             @DefaultValue @Valid RateLimit rateLimit,
+            @DefaultValue @Valid Http http,
             @DefaultValue StepUp stepUp
     ) {
         public record Cookie(
@@ -70,14 +72,20 @@ public record AppProperties(
         ) {
         }
 
+        public record Http(
+                @DefaultValue("65536") @Positive @Max(2147483646) int maxRequestBodyBytes,
+                @DefaultValue("10000") @Positive int maxRateLimitBuckets
+        ) {
+        }
+
         public record RateLimit(
-                @DefaultValue("10") int loginPerIpPerMinute,
-                @DefaultValue("5") int loginPerUsernamePerMinute,
-                @DefaultValue("10") int stepUpPerUserPer5Minutes,
-                @DefaultValue("20") int otpVerifyPerUserPerMinute,
+                @DefaultValue("10") @Positive int loginPerIpPerMinute,
+                @DefaultValue("10") @Positive int loginPerUsernamePerMinute,
+                @DefaultValue("10") @Positive int stepUpPerUserPer5Minutes,
+                @DefaultValue("20") @Positive int otpVerifyPerUserPerMinute,
                 @DefaultValue("30") @Positive int transferPerCustomerPerMinute,
-                @DefaultValue("5") int auditExportPerUserPerHour,
-                @DefaultValue("120") int readPerUserPerMinute
+                @DefaultValue("5") @Positive int auditExportPerUserPerHour,
+                @DefaultValue("120") @Positive int readPerUserPerMinute
         ) {
         }
 

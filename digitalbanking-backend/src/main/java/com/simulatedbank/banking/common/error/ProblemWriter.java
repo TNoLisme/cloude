@@ -36,6 +36,7 @@ public class ProblemWriter {
         String correlationId = attribute instanceof String value && RequestContext.isValidCorrelationId(value)
                 ? value : UUID.randomUUID().toString();
         request.setAttribute("correlationId", correlationId);
+        request.setAttribute(com.simulatedbank.banking.common.context.HttpRequestLog.ERROR_ATTRIBUTE, code.name());
         return new ProblemResponse(code.type(), code.title(), code.httpStatus(), safeDetail,
                 request.getRequestURI(), code.name(), correlationId, clock.instant(), code.retryable(),
                 errors, safeExtensions);
@@ -47,6 +48,14 @@ public class ProblemWriter {
     }
 
     public void write(HttpServletResponse response, ProblemResponse problem) throws IOException {
+        write(response, problem, null);
+    }
+
+    /** Rate limiter supplies the actual remaining window; other errors keep existing defaults. */
+    public void write(HttpServletResponse response, ProblemResponse problem, Long retryAfterSeconds) throws IOException {
+        if (retryAfterSeconds != null && (retryAfterSeconds <= 0 || !problem.code().equals("RATE_LIMITED"))) {
+            throw new IllegalArgumentException("Retry override requires a positive rate-limit window");
+        }
         if (response.isCommitted()) {
             return;
         }
@@ -54,7 +63,11 @@ public class ProblemWriter {
         response.resetBuffer();
         response.setStatus(problem.status());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        headers(problem).forEach((name, values) -> response.setHeader(name, values.getFirst()));
+        HttpHeaders headers = headers(problem);
+        if (retryAfterSeconds != null) {
+            headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString());
+        }
+        headers.forEach((name, values) -> response.setHeader(name, values.getFirst()));
         response.setContentLength(body.length);
         response.getOutputStream().write(body);
         log(problem);

@@ -1,4 +1,6 @@
 spring:
+  main:
+    banner-mode: off
   application:
     name: digital-banking-backend
   profiles:
@@ -49,7 +51,14 @@ server:
   # No trusted proxy boundary is configured; never accept client-supplied forwarding headers.
   forward-headers-strategy: none
 
+logging:
+  environment: ${APP_ENVIRONMENT:${spring.profiles.active:local}}
+
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
   endpoints:
     web:
       base-path: /actuator
@@ -57,6 +66,7 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
+      show-components: never
       show-details: never
       probes:
         enabled: true
@@ -102,15 +112,19 @@ app:
       max-verify-attempts: 5
       resend-cooldown-seconds: 60
       max-resend-count: 3
+    http:
+      # Proposed body-size baseline (07 §2.8); process-local limiter has bounded state.
+      max-request-body-bytes: ${APP_MAX_REQUEST_BODY_BYTES:65536}
+      max-rate-limit-buckets: ${APP_MAX_RATE_LIMIT_BUCKETS:10000}
     rate-limit:
-      login-per-ip-per-minute: 10
-      login-per-username-per-minute: 5
-      step-up-per-user-per-5-minutes: 10
-      otp-verify-per-user-per-minute: 20
+      login-per-ip-per-minute: ${APP_LOGIN_PER_IP_PER_MINUTE:10}
+      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}
+      step-up-per-user-per-5-minutes: ${APP_STEP_UP_PER_USER_PER_5_MINUTES:10}
+      otp-verify-per-user-per-minute: ${APP_OTP_VERIFY_PER_USER_PER_MINUTE:20}
       # Proposed baseline (07 §2.8); the consumer must key by customer.
       transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30}
-      audit-export-per-user-per-hour: 5
-      read-per-user-per-minute: 120
+      audit-export-per-user-per-hour: ${APP_AUDIT_EXPORT_PER_USER_PER_HOUR:5}
+      read-per-user-per-minute: ${APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE:120}
     step-up:
       single-amount-vnd: 10000000
       daily-amount-vnd: 20000000

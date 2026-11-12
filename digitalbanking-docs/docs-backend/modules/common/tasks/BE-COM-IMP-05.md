@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phiên bản / ngày:** v1.0 / 12/11/2026
-> **Trạng thái:** Planned
+> **Trạng thái:** Blocked — phần common đã triển khai/kiểm chứng; thiếu tích hợp identity thật; [verification](../report/BE-COM-IMP-05-verification.md)
 > **Owner / reviewer:** Phương, phối hợp owner identity / Chưa review
 > **Mốc / phụ thuộc:** W3; task 01–03 và contract/code xác thực liên quan
 

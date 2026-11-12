@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.6
+> **Phiên bản:** v1.8
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -58,9 +58,9 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 ### 1.4. Trạng thái so với code
 
-Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` đã triển khai sau BE-COM-IMP-04; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
+Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` đã triển khai sau BE-COM-IMP-04; error layer đã có sau BE-COM-IMP-02. BE-COM-IMP-05 đã nối security chain với Problem/trace, bật CSRF theo credential source, CORS và body/rate limits; identity thật chưa có adapter nên task 05 còn Blocked.
 
-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/crypto/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). BE-COM-IMP-04 đã triển khai crypto/JCS/masking và validation khóa; xem [report](report/BE-COM-IMP-04-verification.md). Security chain thật chưa tích hợp writer; security/DB propagation integration vẫn cần 05/07.
+Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/crypto/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). BE-COM-IMP-04 đã triển khai crypto/JCS/masking và validation khóa; xem [report](report/BE-COM-IMP-04-verification.md). Security chain thật đã tích hợp writer trong IMP-05; session/cookie identity và DB propagation vẫn cần owner tích hợp ở 05/07. Xem [report IMP-05](report/BE-COM-IMP-05-verification.md). BE-COM-IMP-06 đã triển khai logging/HTTP metrics/health; kết quả local và giới hạn theo [report IMP-06](report/BE-COM-IMP-06-verification.md), không đóng blocker identity hoặc xác nhận Cloud.
 
 ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
 
@@ -107,7 +107,8 @@ public class TimeConfig {
     public ZoneId businessZoneId(AppProperties appProperties);
 }
 public class SecurityFilterChainConfig {
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception;
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AppProperties properties,
+            ObjectProvider<SessionAuthenticator> authenticators, RequestRateLimiter limiter, ProblemWriter writer) throws Exception;
     public CorsConfigurationSource corsConfigurationSource(AppProperties appProperties);
 }
 ```
@@ -123,14 +124,14 @@ public class SecurityFilterChainConfig {
 | `securityFilterChain(...)` | Method security, CORS, headers, session/CSRF integration; entry point/access denied handler dùng Problem chung, identity cung cấp xác thực |
 | `corsConfigurationSource(...)` | Explicit origins, credentials true/không wildcard; methods GET/POST/OPTIONS, headers `07` §3.3; expose trace/retry/replay/export theo `design/04` §8.2 |
 
-Đề xuất thêm method trong `SecurityFilterChainConfig`:
+Servlet registration đã nằm trong `RequestContextConfig` sau IMP-03:
 
 ```java
 public FilterRegistrationBean<CorrelationAndRequestIdFilter> correlationAndRequestIdFilter(
         ProblemWriter writer);
 ```
 
-RequestContextConfig đăng ký servlet filter ở `SecurityProperties.DEFAULT_FILTER_ORDER - 1` trước Spring Security (REQUEST/ASYNC/ERROR, async supported), tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. Không xem `csrf.disable()` hiện tại là thiết kế đích.
+RequestContextConfig đăng ký servlet filter ở `SecurityProperties.DEFAULT_FILTER_ORDER - 1` trước Spring Security (REQUEST/ASYNC/ERROR, async supported), tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. IMP-05 dùng native CsrfFilter so SHA-256 header với session hash qua SessionAuthenticator; token lifecycle thuộc identity, không tạo HttpSession. Chưa có adapter thật; không dùng harness để nghiệm thu identity.
 
 APP_PII_AES_KEY_BASE64 → `app.crypto.aes-key-base64`, APP_HMAC_KEY_BASE64 → `app.crypto.hmac-key-base64`: Base64 decode đúng 32 byte, tách khóa AES/HMAC; thiếu/sai phải fail-fast, thông báo không chứa key. Rotation bị ràng buộc OI-COM-05.
 
@@ -245,6 +246,7 @@ public class ProblemWriter {
             List<ProblemResponse.FieldError> errors, Map<String, Object> safeExtensions);
     public ResponseEntity<ProblemResponse> response(ProblemResponse problem);
     public void write(HttpServletResponse response, ProblemResponse problem) throws IOException;
+    public void write(HttpServletResponse response, ProblemResponse problem, Long retryAfterSeconds) throws IOException;
 }
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public GlobalExceptionHandler(ProblemWriter writer);
@@ -260,7 +262,15 @@ Không triển khai ApiResponse/success wrapper (OI-COM-01). `ProblemResponse` f
 
 Advice map MVC validation/JSON/media/method/route và 401/403, giữ Allow cho 405. HandlerMethodValidationException/ConstraintViolationException ở return-value thành INTERNAL_ERROR; input validation dùng errors với field an toàn và thông điệp cố định, không echo annotation/rejected value. Lỗi đã được owner bọc BankingBusinessException được giữ trước generic SQLSTATE, kể cả bọc trong DataAccessException. Mọi handler không query owner, ghi audit hoặc đổi trạng thái transfer.
 
-Filter, AuthenticationEntryPoint và AccessDeniedHandler gọi writer vì lỗi trước MVC không tự vào advice. Writer không ghi lại response đã committed, dùng application/problem+json, X-Correlation-ID, WWW-Authenticate cho 401. Retry-After mặc định 2 giây cho in-progress/rate-limit/service-unavailable đã được chốt cho error layer theo ủy quyền owner ngày 12/11/2026 ([report DEC-02](report/BE-COM-IMP-02-verification.md#51-quyết-định-đã-chốt-theo-ủy-quyền-owner)); khoảng 1–5s trong design/02 §7.10 vẫn mang nhãn đề xuất tại nguồn. IMP-05 phải dùng thời gian còn lại của cửa sổ quota khi tích hợp limiter thật; default 2s không thay phép tính này hoặc chứng minh enforcement đã đạt. Security wiring/body-limit enforcement do IMP-05; hành vi lock/rollback/retry PostgreSQL thật do IMP-07.
+Filter, AuthenticationEntryPoint và AccessDeniedHandler gọi writer vì lỗi trước MVC không tự vào advice. Writer không ghi lại response đã committed, dùng application/problem+json, X-Correlation-ID, WWW-Authenticate cho 401. Retry-After fallback 2 giây cho in-progress/rate-limit/service-unavailable đã được chốt cho error layer theo ủy quyền owner ngày 12/11/2026 ([report DEC-02](report/BE-COM-IMP-02-verification.md#51-quyết-định-đã-chốt-theo-ủy-quyền-owner)); khoảng 1–5s trong design/02 §7.10 vẫn mang nhãn đề xuất tại nguồn. IMP-05 token bucket đã truyền thời gian chờ token thực qua overload write(response, problem, retryAfterSeconds); fallback 2s không chứng minh enforcement owner đã tích hợp. Security wiring/body-limit đã có trong IMP-05; identity/cookie integration còn Blocked; hành vi lock/rollback/retry PostgreSQL thật do IMP-07.
+
+### 2.5. HTTP security đã triển khai, identity còn thiếu
+
+`SessionAuthenticator` là điểm nối common để owner identity triển khai, chưa có adapter production. Snapshot nội bộ gồm `userId`, `customerId`, authorities (permission + `ROLE_*`) và SHA-256 CSRF hash, không raw token. Chain reject duplicate/mixed credentials, không fallback Bearer lỗi sang cookie; cookie inactive chỉ được bỏ qua trên POST auth public để cho phép đăng nhập lại. Valid cookie mutation vẫn yêu cầu CSRF. Method security và permission URL gates không thay ownership/maker-checker ở owner.
+
+Header filter đặt trước correlation; CORS chạy một lần bên trong Spring Security và mọi rejection dùng Problem. Body limit 65536 bytes đề xuất kiểm declared/streamed/chunked. Token buckets có burst bằng quota, refill liên tục, đồng bộ theo Clock UTC; global user/IP, login peer IP, OTP/step-up user, transfer customer, audit export user. Retry-After tính ceil đến token kế tiếp; map bounded 10000 bucket, hết dung lượng trả 503. State chỉ trong một process, không tổng hợp qua replicas. Identity phải gọi limiter cho username chuẩn hóa (10/min theo 07) và quota OTP/challenge trước xác thực; phần này còn Blocked. Sau resolver reject, HTTP post-auth limiter chưa chạy; bảo vệ lookup token cần identity/edge bổ sung. Không trust X-Forwarded-For.
+
+Cấu hình `app.security.http.*`, rate-limit env và contract/case đầy đủ tại [handoff backend](../../../../digitalbanking-backend/README.md#http-security-and-identity-integration), [verification](report/BE-COM-IMP-05-verification.md). Set-Cookie/CSRF persistence chưa có code identity; không tự thêm schema session. Header HSTS chỉ khi request thực secure; TLS/full SPA CSP/proxy cần 08. Không đánh dấu Done cho task 05 chỉ vì harness/build pass.
 
 ## 3. Chi tiết Bảng Dữ liệu & SQL/Locking
 
@@ -507,6 +517,8 @@ JSON log một dòng stdout: UTC timestamp, level, service/environment, correlat
 | Correlation sai/validation/rate limit | HTTP status đủ baseline; chỉ thêm counter khi có nhu cầu và thống nhất tên |
 | Health | App/DB status, không secret; phân biệt infra probe và API Admin/Auditor theo `07` §8.9.1 |
 
+BE-COM-IMP-06 đã triển khai `SafeJsonLogEncoder` (one-line JSON stdout, global allowlist, bỏ free-text message/stack/arguments/unknown MDC), `HttpRequestLog` (một completion trước cleanup, kể cả async; route template/UNMATCHED, status/latency/error code, SHA-256 masked user ID), timer HTTP/histogram Micrometer và safe `HealthController` tại common/config. `/api/v1/health` trả HealthResponse + 503 khi DOWN; missing DB contributor cũng DOWN. Probe anonymous chỉ status/tên nhóm, operational metrics yêu cầu Admin/Auditor. Không tạo business counters/audit hoặc outbox health giả. Generic logger chỉ còn level/logger/exception class; richer owner-coded technical event integration và C3 fallback vẫn thuộc owner. [Hướng dẫn runtime](../../../../digitalbanking-backend/README.md#logs-http-metrics-and-health), [verification](report/BE-COM-IMP-06-verification.md). Task 05 identity thật vẫn Blocked, test 06 chỉ dùng test-only resolver để chứng minh wiring common.
+
 Không dùng accountId/userId/correlationId/requestId/idempotencyKey làm metric label. Tên banking_* trong backend không tự thay tên nguồn; tra configuration backend §9 và thiết kế nguồn. Log không thay audit.
 
 Nguồn: SRS NFR-025; `06` §12; `design/01` §5.2–§5.7/§12; `design/02` §13; BE-ARCH-00 §10 (đọc kèm khác biệt metric).
@@ -515,7 +527,7 @@ Nguồn: SRS NFR-025; `06` §12; `design/01` §5.2–§5.7/§12; `design/02` §1
 
 ### 7.1. Nguyên tắc / trạng thái
 
-Đây là **danh mục thiết kế test, tất cả Planned**, chưa phải kết quả chạy. Giữ mã CT-API-*/T-AUD-*/T-LOCK-* khi cùng behavior; COM-* là ca thành phần bổ sung/phân rã cho common, không thay/định nghĩa lại mã nguồn. Evidence theo `09. Test plan` §2.2/§6/§10.
+Đây là **danh mục thiết kế test**; kết quả thực chạy từng task nằm trong verification report, không suy nghiệm thu toàn bộ từ danh mục này. COM-OBS-01 có verification BE-COM-IMP-06 trong phạm vi common/local; các ca xuyên nghiệp vụ vẫn cần evidence của owner. Giữ mã CT-API-*/T-AUD-*/T-LOCK-* khi cùng behavior; COM-* là ca thành phần bổ sung/phân rã cho common, không thay/định nghĩa lại mã nguồn. Evidence theo `09. Test plan` §2.2/§6/§10.
 
 Lưu ý mã nguồn bị trùng nghĩa: T-AUD-01 của design/01 là canonicalization, của design/02 là audit completion fail; T-AUD-02 cũng khác nhau. Khi viện dẫn dùng cả tên nguồn và ID. Bảng dưới dùng design/01:T-AUD-01 cho JCS, design/01:T-AUD-06/07 cho audit failure; không tự đổi ID trong nguồn.
 
@@ -587,3 +599,5 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 | v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
 | v1.5 | 12/11/2026 | Codex — BE-COM-IMP-03 | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |
 | v1.6 | 12/11/2026 | Codex — BE-COM-IMP-04 | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |
+| v1.7 | 12/11/2026 | Codex — BE-COM-IMP-05 | Triển khai security chain, SPI identity, CSRF/CORS/headers và body/token-bucket limits; report giữ Blocked cho tích hợp session/cookie/username/challenge/proxy chưa có evidence |
+| v1.8 | 12/11/2026 | Codex — BE-COM-IMP-06 | Triển khai JSON log allowlist/completion, HTTP histogram, protected operational metrics và HealthResponse app/DB; kiểm thử local HTTP/PostgreSQL và handoff owner/07/08 trong report, chưa xác nhận Cloud/toàn NFR-025 |

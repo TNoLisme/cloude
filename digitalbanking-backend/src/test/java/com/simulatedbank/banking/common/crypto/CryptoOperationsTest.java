@@ -42,7 +42,7 @@ class CryptoOperationsTest {
                 var response = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + route))
                         .GET().build(), HttpResponse.BodyHandlers.ofString());
                 assertThat(response.statusCode()).isEqualTo(
-                        route.equals("/actuator/health") || route.equals("/actuator/info") ? 200 : 403);
+                        route.equals("/actuator/health") || route.equals("/actuator/info") ? 200 : 401);
                 assertThat(response.body()).doesNotContain(properties.crypto().aesKeyBase64(),
                         properties.crypto().hmacKeyBase64(), "aesKeyBase64", "hmacKeyBase64", "previousKeys");
             }

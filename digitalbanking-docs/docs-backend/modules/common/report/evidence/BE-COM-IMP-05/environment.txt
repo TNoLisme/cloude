@@ -1,0 +1,7 @@
+Verification packaged: 2026-11-12T18:22:09+07:00
+HEAD: b44e927adbe9efad60c4af737b151e2d9e67c7af + uncommitted task 05 source/docs
+Linux; OpenJDK 21.0.13.0.3; Gradle 8.14.3
+Spring Boot 3.5.7; Spring Security 6.5.6
+Profile test; PostgreSQL Testcontainers postgres:16-alpine for regression
+HTTP harness excludes DB/JPA/Flyway; native HTTP runs actual Tomcat
+No identity production adapter; no proxy/TLS/Cloud integration claimed
