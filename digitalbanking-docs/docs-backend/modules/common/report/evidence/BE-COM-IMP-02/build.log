@@ -1,0 +1,22 @@
+> Task :clean
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+> Task :bootJar
+> Task :jar
+> Task :assemble
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-11-12T14:16:21.238+07:00  INFO 65158 --- [digital-banking-backend] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-11-12T14:16:21.240+07:00  INFO 65158 --- [digital-banking-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Shutdown initiated...
+2026-11-12T14:16:21.241+07:00  INFO 65158 --- [digital-banking-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Shutdown completed.
+> Task :test
+> Task :jacocoTestReport
+> Task :check
+> Task :build
+
+BUILD SUCCESSFUL in 19s
+9 actionable tasks: 9 executed

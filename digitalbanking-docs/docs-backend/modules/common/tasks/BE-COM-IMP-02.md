@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phiên bản / ngày:** v1.0 / 12/11/2026
-> **Trạng thái:** Planned
+> **Trạng thái:** Done — implementer verified; [verification](../report/BE-COM-IMP-02-verification.md); chờ review
 > **Owner / reviewer:** Phương / Chưa review
 > **Mốc / phụ thuộc:** W3; task 01; trace filter và security wiring nghiệm thu tiếp ở 03/05
 

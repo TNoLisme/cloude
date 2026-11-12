@@ -66,6 +66,14 @@ For example, set `APP_TIMEZONE=America/New_York` or pass `--app.timezone=America
 
 Inject `Clock` and `ZoneId businessZoneId` through the consumer constructor. Use `clock.instant()` for UTC timestamps/TTL, and `LocalDate.now(clock.withZone(businessZoneId))` for a business date. Tests can supply a primary `Clock.fixed(instant, ZoneOffset.UTC)` bean. Do not use the host default timezone or real time in business tests. These beans do not reset limits, expire sessions, execute rate limiting or schedule jobs; identity, transfer, limit, audit and notification own those behaviors. Multiple sessions are allowed per `07 §3.2`; device/user revocation is **Deferred**. Rate/lockout defaults still require policy approval (`07 §11.2–11.3`).
 
+### Common error handling
+
+`common.error` provides the 46 public `ErrorCode` values, `BankingBusinessException`, RFC 9457 `ProblemResponse`, MVC advice and a shared `ProblemWriter`. Success DTOs remain unchanged. Inject the writer in servlet filters or security handlers; call `create(code, safeDetail, request, errors, safeExtensions)` and `write(response, problem)`. The writer uses the application's UTC Clock and ISO-8601 ObjectMapper. Owner-supplied detail/extension values must already be public-safe; never pass entities, rejected values or raw exception messages. Extensions are allowlisted and cannot overwrite core fields; `STEP_UP_REQUIRED` requires a challenge Map matching the public schema.
+
+MVC advice formats validation/JSON/media/method/route failures and 401/403. It preserves owner-classified business/audit failures before generic database mapping. SQLSTATE alone never identifies an idempotency race; the owner must classify it after rollback/retry. The error layer does not query, retry transactions, write audit or change transfer outcomes.
+
+`ProblemWriter` returns `application/problem+json`, `X-Correlation-ID`, `WWW-Authenticate` for 401 and `Retry-After: 2` for in-progress/429/503, adopted as the current error-layer default under the owner’s 12 November 2026 delegation (common verification report DEC-02). IMP-05 must use the remaining quota-window duration when integrating a real rate limiter; the default does not prove limiter enforcement. IMP-03 must supply validated request attribute `correlationId`; the fallback UUID does not replace request-context wiring. Production security entry points/body limits remain IMP-05 work; PostgreSQL locking/transaction verification remains IMP-07. See the common module verification report for evidence and limits.
+
 ## Documentation
 
 - Backend conventions: `../digitalbanking-docs/docs-backend/00. architecture & conventions.md`

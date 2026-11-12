@@ -1,0 +1,9 @@
+TEST-com.simulatedbank.banking.BackendApplicationContextTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.architecture.ModuleBoundaryArchTest.xml: tests=4, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.config.AppPropertiesTest.xml: tests=20, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.error.ErrorContractTest.xml: tests=4, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.error.ErrorHttpTest.xml: tests=14, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.health.HealthEndpointTest.xml: tests=2, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.migration.FlywayMigrationTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest.xml: tests=1, failures=0, errors=0, skipped=0
+TOTAL: tests=47, failures=0, errors=0, skipped=0

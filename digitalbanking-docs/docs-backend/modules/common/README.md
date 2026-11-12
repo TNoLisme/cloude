@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.3
+> **Phiên bản:** v1.4
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -58,9 +58,9 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 ### 1.4. Trạng thái so với code
 
-Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context/crypto/error` dưới đây là thiết kế cần triển khai. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
+Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context/crypto` dưới đây là thiết kế cần triển khai; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
 
-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config đã có; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). Security/context/crypto/error vẫn cần các task tiếp theo.
+Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/error đã có; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). Security chain thật chưa tích hợp writer; trace/security/DB integration vẫn cần 03/05/07.
 
 ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
 
@@ -88,8 +88,8 @@ com.simulatedbank.banking.common/
 ├── config/   AppProperties, TimeConfig, SecurityFilterChainConfig
 ├── context/  CorrelationAndRequestIdFilter, RequestContext, RequestContextHolder
 ├── crypto/   PiiCryptoService, HmacService, JcsCanonicalizer, PiiMaskingUtils
-└── error/    ErrorCode, BankingBusinessException, ApiResponse,
-              ProblemResponse, GlobalExceptionHandler
+└── error/    ErrorCode, BankingBusinessException, ProblemResponse,
+              ProblemWriter, GlobalExceptionHandler, DatabaseErrorMapper
 ```
 
 Giao tiếp Java in-process; không thêm REST/entity/business port. DTO/extension không chứa entity hoặc class của module nghiệp vụ. Chữ ký minh họa bỏ imports/annotations/thân hàm, không phải code để copy nguyên khối.
@@ -212,64 +212,54 @@ Nguồn: `design/04` §6.2–§6.4/§7.2; `design/01` §7.2–§7.3; `07` §5.2.
 
 ### 2.4. Gói `error`
 
+Chữ ký dưới đây phản ánh implementation BE-COM-IMP-02; nguồn hành vi vẫn là `07` §4, không phải tên class. `DatabaseErrorMapper` package-private, chỉ phân loại lỗi SQLSTATE cho advice, không retry/query/ghi DB.
+
 ```java
 public enum ErrorCode {
-    // Constants theo catalog §4.3; không thêm RESOURCE_LOCKED/CONFLICT.
+    // 46 mã public theo §4.3; không chứa internal codes hoặc alias.
     public int httpStatus();
     public boolean retryable();
     public URI type();
     public String title();
+    public String detail();
 }
 public class BankingBusinessException extends RuntimeException {
+    public BankingBusinessException(ErrorCode code);
     public BankingBusinessException(ErrorCode code, String safeDetail);
+    public BankingBusinessException(ErrorCode code, String safeDetail, Map<String, Object> safeExtensions);
     public BankingBusinessException(ErrorCode code, String safeDetail,
-                                    Map<String, Object> extensions);
+            Map<String, Object> safeExtensions, Throwable cause);
     public ErrorCode code();
     public String safeDetail();
     public Map<String, Object> extensions();
 }
-public record ApiResponse<T>(T data, Map<String, Object> meta) {}
 public record ProblemResponse(URI type, String title, int status, String detail,
         String instance, String code, String correlationId, Instant timestamp,
         boolean retryable, List<FieldError> errors, Map<String, Object> extensions) {
     public record FieldError(String field, String code, String message) {}
 }
-public class GlobalExceptionHandler {
-    public GlobalExceptionHandler(Clock clock, ObjectMapper objectMapper);
-    public ResponseEntity<ProblemResponse> handleBusiness(
-            BankingBusinessException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleValidation(
-            MethodArgumentNotValidException ex, HttpServletRequest request);
+public class ProblemWriter {
+    public ProblemWriter(Clock clock, ObjectMapper objectMapper);
+    public ProblemResponse create(ErrorCode code, String safeDetail, HttpServletRequest request,
+            List<ProblemResponse.FieldError> errors, Map<String, Object> safeExtensions);
+    public ResponseEntity<ProblemResponse> response(ProblemResponse problem);
+    public void write(HttpServletResponse response, ProblemResponse problem) throws IOException;
+}
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+    public GlobalExceptionHandler(ProblemWriter writer);
+    public ResponseEntity<ProblemResponse> handleFailure(Exception ex, HttpServletRequest request);
     public ResponseEntity<ProblemResponse> handleConstraintValidation(
             ConstraintViolationException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleMethodValidation(
-            HandlerMethodValidationException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleAccessDenied(
-            AccessDeniedException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleAuthentication(
-            AuthenticationException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleMalformedRequest(
-            HttpMessageNotReadableException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleUnsupportedMediaType(
-            HttpMediaTypeNotSupportedException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleMethodNotAllowed(
-            HttpRequestMethodNotSupportedException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleNotFound(
-            NoResourceFoundException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleDataAccess(
-            DataAccessException ex, HttpServletRequest request);
-    public ResponseEntity<ProblemResponse> handleUnexpected(
-            Exception ex, HttpServletRequest request);
-    public ProblemResponse createProblem(ErrorCode code, String safeDetail,
-            String instance, Map<String, Object> extensions);
-    public void writeProblem(HttpServletResponse response,
-            ProblemResponse problem, HttpHeaders headers) throws IOException;
 }
 ```
 
-ApiResponse chỉ giữ chữ ký để trace danh mục cũ, **không thuộc phạm vi triển khai hiện tại** (OI-COM-01); không auto wrap bằng ResponseBodyAdvice. Chỉ bổ sung triển khai nếu có contract nguồn yêu cầu. ProblemResponse serialize theo §4.1; extensions flatten ra root bằng allowlist challenge/reference/transferStatus/failureCode/lockedUntil, không field `extensions`, không ghi đè core. `errors` chỉ xuất khi có validation field; requestId trong context/log, không thành field bắt buộc. safeDetail không lấy từ JDBC/crypto/provider ex.getMessage().
+Không triển khai ApiResponse/success wrapper (OI-COM-01). `ProblemResponse` flatten extensions ra root bằng allowlist challenge/reference/transferStatus/failureCode/lockedUntil, không ghi đè core; errors chỉ dùng với VALIDATION_ERROR. Challenge bắt buộc với STEP_UP_REQUIRED, dùng JSON-ready Map theo schema `07` §7.2.4; lockedUntil là Instant chỉ với AUTH_ACCOUNT_LOCKED; transfer outcome phải có reference, status chỉ PENDING/FAILED. Common kiểm ngữ cảnh, reference/failure/status và các trường bắt buộc của challenge; owner vẫn chịu trách nhiệm giá trị extension/detail đã an toàn, maskedDestination đã mask và FIDO options đúng contract. Không truyền entity, Throwable, raw provider message hoặc dữ liệu chưa mask vào các tham số `safe*`.
 
-GlobalExceptionHandler là RestControllerAdvice; factory/writer dùng chung cho servlet filter, AuthenticationEntryPoint và AccessDeniedHandler vì lỗi trước MVC không tự vào advice. Security handlers trả Problem 401/403, không HTML/redirect; AccessDeniedException/AuthenticationException phát sinh trong MVC phải có handler cụ thể, không rơi vào INTERNAL_ERROR. HandlerMethodValidationException chỉ map input violation sang 400, return-value validation là lỗi nội bộ 500. Handler không gọi audit/identity hoặc update trạng thái nghiệp vụ.
+`ProblemWriter` dùng Clock đã inject và ObjectMapper của ứng dụng (ISO-8601). Đọc attribute request `correlationId` đã validate; nếu thiếu/sai thì tạo UUID an toàn và lưu lại attribute. Không tin trực tiếp header client. IMP-03 cần dùng chung attribute này và hoàn thiện header/context/cleanup trên mọi response; fallback của writer không thay pipeline trace thật. Instance lấy request URI, không query string. Log error layer chỉ có code/status/correlationId, không Throwable/detail/path/extensions.
+
+Advice map MVC validation/JSON/media/method/route và 401/403, giữ Allow cho 405. HandlerMethodValidationException/ConstraintViolationException ở return-value thành INTERNAL_ERROR; input validation dùng errors với field an toàn và thông điệp cố định, không echo annotation/rejected value. Lỗi đã được owner bọc BankingBusinessException được giữ trước generic SQLSTATE, kể cả bọc trong DataAccessException. Mọi handler không query owner, ghi audit hoặc đổi trạng thái transfer.
+
+Filter, AuthenticationEntryPoint và AccessDeniedHandler gọi writer vì lỗi trước MVC không tự vào advice. Writer không ghi lại response đã committed, dùng application/problem+json, X-Correlation-ID, WWW-Authenticate cho 401. Retry-After mặc định 2 giây cho in-progress/rate-limit/service-unavailable đã được chốt cho error layer theo ủy quyền owner ngày 12/11/2026 ([report DEC-02](report/BE-COM-IMP-02-verification.md#51-quyết-định-đã-chốt-theo-ủy-quyền-owner)); khoảng 1–5s trong design/02 §7.10 vẫn mang nhãn đề xuất tại nguồn. IMP-05 phải dùng thời gian còn lại của cửa sổ quota khi tích hợp limiter thật; default 2s không thay phép tính này hoặc chứng minh enforcement đã đạt. Security wiring/body-limit enforcement do IMP-05; hành vi lock/rollback/retry PostgreSQL thật do IMP-07.
 
 ## 3. Chi tiết Bảng Dữ liệu & SQL/Locking
 
@@ -593,3 +583,4 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 | v1.1 | 12/11/2026 | Codex — theo quyết định ưu tiên của owner | Phân xử 7 nhóm theo docs-common/01–11, giữ rotation còn mở và nhãn Đề xuất của nguồn; đồng bộ các mục backend liên quan trước implement |
 | v1.2 | 12/11/2026 | Codex — theo yêu cầu chia task của owner | Bổ sung chỉ mục 8 task implementation và mẫu verification; không sửa thiết kế hành vi hoặc xác nhận runtime |
 | v1.3 | 12/11/2026 | Codex — BE-COM-IMP-01 | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |
+| v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
