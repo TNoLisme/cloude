@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Vai trò:** Hướng dẫn đọc, cập nhật và quản lý bộ tài liệu
-> **Cập nhật:** 09/11/2026
+> **Cập nhật:** 12/11/2026
 
 ## 1. Mục đích
 
@@ -27,6 +27,8 @@ README này giúp bạn:
 | `docs-references/` | Tài liệu tham khảo bên ngoài | Không |
 
 Khi tài liệu mâu thuẫn, ưu tiên theo thứ tự:
+
+**Quy tắc owner chốt ngày 12/11/2026:** `docs-common/01–11` ưu tiên hơn `docs-common/design/`; cả hai ưu tiên hơn tài liệu Backend/Frontend. OpenAPI phải đồng bộ theo ngữ nghĩa `07`. Các mục bên dưới chỉ dẫn nguồn theo chủ đề, không nâng `design/` lên trên `01–11`; nhãn Đề xuất/Deferred/Open giữ nguyên theo nguồn.
 
 1. Yêu cầu nghiệp vụ: `02. BRD` và `03. SRS`.
 2. Hành vi API: `07. API contracts` (ngữ nghĩa) và `openapi/digital-banking-v1.yaml` (máy đọc).
@@ -109,11 +111,11 @@ digitalbanking-docs/
 | 04 | [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] | ERD, schema, ràng buộc, indexing, dữ liệu | Hoàn thành |
 | 05 | [[digitalbanking-docs/docs-common/05. Technical stack.md]] | Lựa chọn công nghệ, phiên bản baseline, rủi ro | Hoàn thành |
 | 06 | [[digitalbanking-docs/docs-common/06. System architecture.md]] | Kiến trúc hệ thống, C4, runtime, deployment topology, ADR | Hoàn thành |
-| 07 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | Hợp đồng API ngữ nghĩa, lỗi, idempotency, step-up | Hoàn thành — cần chốt các giá trị "Đề xuất" |
-| 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Draft — chờ review |
-| 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Draft — chờ review |
-| 10 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Đang viết |
-| 11 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Draft — chờ review |
+| 07 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | Hợp đồng API ngữ nghĩa, lỗi, idempotency, step-up | Hoàn thành |
+| 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Hoàn thành |
+| 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Hoàn thành |
+| 10 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Hoàn thành |
+| 11 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Hoàn thành |
 | — | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
 ### 4.3. Thiết kế chuyên sâu (`docs-common/design`)
@@ -121,8 +123,8 @@ digitalbanking-docs/
 | # | Tài liệu | Phạm vi | Trạng thái |
 |---|---|---|---|
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | Audit trail bất biến, hash chain, correlation ID, retention | Hoàn thành — v1.0 |
-| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Transaction boundary, idempotency, locking, failure recovery | Draft — chờ review |
-| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Đang viết |
+| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Transaction boundary, idempotency, locking, failure recovery | Hoàn thành — v1.0 |
+| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
 
 ### 4.4. Tài liệu triển khai, hợp đồng và công việc
@@ -204,17 +206,12 @@ Mỗi tài liệu nên có khối metadata ngắn:
 5. Cập nhật bảng trạng thái trong README này và README của thư mục liên quan.
 6. Kiểm tra lại liên kết, traceability và hợp đồng OpenAPI trước khi kết thúc.
 
-## 8. Tài liệu đang viết và việc tiếp theo
+## 8. Trạng thái tổng thể và việc tiếp theo
 
-- `08. Deployment infrastructure` — hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook.
-- `09. Test plan` — chiến lược kiểm thử và ma trận kiểm chứng `BR/FR/NFR/AC`.
-- `10. Master timelines` — kế hoạch tổng thể, milestone và phân công.
-- `design/03. fraud-detection-rules` — rule gian lận và luồng flag/auto-block.
-- `design/04. security` — threat model và các biện pháp bảo mật.
-- `docs-backend/` — tài liệu triển khai backend.
+- `docs-common/` (`01`–`11` và `design/01`–`04`) — **Hoàn thành**, là nguồn tài liệu chuẩn có trọng số cao nhất của dự án.
+- `docs-backend/` — đã hoàn thành bộ khung và tổng hợp 11 module (`modules/_overview/`); các thành viên mở rộng tài liệu chi tiết từng module tại `docs-backend/modules/<module-name>/` song song với quá trình hiện thực code.
 - [[digitalbanking-docs/docs-frontend/README.md]] — bộ tài liệu FE v1.2 được người phụ trách FE chốt ngày 09/11/2026, gồm design theo màn hình và file chờ UI.
-- `docs-common/work/week1`, `week2` — kế hoạch và bằng chứng công việc theo tuần.
-- `design/02. consistency-concurrency` — đang ở trạng thái **Draft — chờ review**.
+- `docs-common/work/week1`, `week2` — nhật ký kế hoạch và bằng chứng công việc theo tuần.
 
 ## 9. Liên kết nhanh
 

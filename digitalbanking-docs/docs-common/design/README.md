@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phạm vi:** Thiết kế kỹ thuật chuyên sâu
-> **Cập nhật:** 03/11/2026
+> **Cập nhật:** 12/11/2026
 
 ## 1. Mục đích
 
@@ -17,8 +17,8 @@ Thư mục này chứa các thiết kế kỹ thuật chuyên sâu, nối yêu c
 | # | Tài liệu | Mã tài liệu | Phạm vi | Trạng thái |
 |---|---|---|---|---|
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | `DESIGN-AUD-01` | Audit trail bất biến, hash chain, correlation ID, retention, legal hold | Hoàn thành — v1.0 |
-| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Draft — chờ review |
-| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Đang viết |
+| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Hoàn thành — v1.0 |
+| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | `DESIGN-SEC-04` | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
 
 ## 3. Thứ tự đọc và quan hệ
@@ -82,12 +82,9 @@ Một tài liệu thiết kế nên có các phần sau (có thể gộp nếu p
 - **Không trùng lặp:** không sao chép nguyên khối từ SRS/BRD; chỉ giữ phần đặc thù thiết kế và liên kết tới nguồn.
 - **Thay đổi:** cập nhật Change Log ở cuối tài liệu và bảng trạng thái trong README này.
 
-## 6. Việc đang viết và việc tiếp theo
+## 6. Trạng thái hoàn thiện
 
-- `02. Consistency & Concurrency` — đang **Draft — chờ review**; cần chốt các open issue về rule gian lận, lock timeout và retry.
-- `03. Fraud Detection Rules` — **Đang viết**; cần chốt rule semantics, ngưỡng, cách đếm high-frequency và chính sách auto-block (bản đặc tả thực thi cho backend đã được tổng hợp trước vào `docs-backend/modules/07-fraud-and-notification.md`).
-- `04. Security` — **Hoàn thành — v1.0**; đã hoàn thiện threat model, key management, session security và checklist OWASP (`AC-030`).
-- Khi `03` và `04` hoàn thành, cập nhật liên kết trong `01`, `02` và README gốc.
+- Toàn bộ 4 tài liệu thiết kế chuyên sâu (`01` đến `04`) đã **Hoàn thành — v1.0** và đóng vai trò là thiết kế chuẩn cho việc triển khai Backend/Frontend cũng như kiểm thử nghiệm thu.
 
 ## 7. Liên kết nhanh
 

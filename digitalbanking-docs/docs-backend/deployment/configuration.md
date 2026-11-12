@@ -2,8 +2,8 @@
 
 > **Dự án:** Digital Banking MVP (Single-Bank, Core Simulated)
 > **Mã tài liệu:** `BE-DEP-02`
-> **Phiên bản:** v1.0
-> **Ngày cập nhật:** 09/11/2026
+> **Phiên bản:** v1.1
+> **Ngày cập nhật:** 12/11/2026
 > **Trạng thái:** Draft — Cấu hình tham chiếu đã đối chiếu `docs-common`; chưa xác nhận runtime
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§3–§9), [[digitalbanking-docs/docs-common/05. Technical stack.md]] (§5.1.6, §5.2, §5.4, §5.7, §5.8), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§5, §8.8, §9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2.8, §3.2–§3.3, §3.7, §6.1, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] (§3.3, §4–§6, §8–§9), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§7.6, §10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §10.3, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§6, §8–§9)
 > **Tài liệu liên quan:** [[digitalbanking-docs/docs-backend/deployment/README.md]] (hướng dẫn triển khai & vận hành), [[digitalbanking-docs/docs-backend/README.md]] (chỉ mục Backend)
@@ -36,7 +36,7 @@ Tài liệu này là **nguồn cấu hình tham chiếu duy nhất** cho việc 
 
 ### 1.3. Nguyên tắc cấu hình
 
-1. **`docs-common/` là chuẩn gốc.** Tài liệu Backend là tài liệu downstream; khi có khác biệt, ưu tiên tài liệu chuẩn trong `docs-common/` và ghi nhận điểm cần đồng bộ.
+1. **`docs-common/01–11` là ưu tiên cao nhất**, sau đó `docs-common/design/`, cuối cùng Backend. Quyết định owner 12/11/2026 áp dụng trước implement; ngưỡng còn Đề xuất trong nguồn giữ nguyên trạng thái, không tự đóng OI nghiệp vụ.
 2. **Cấu hình nằm ngoài artifact.** Không đóng gói secret, mật khẩu, khóa AES/HMAC vào image hoặc Git (`05` §5.1.6, `08` §5.2).
 3. **Server làm chủ chính sách.** Hạn mức, OTP, lockout, step-up, fraud threshold và retention do server quyết định; client không được ghi đè (`08` §5.2).
 4. **Fail-fast.** Thiếu secret bắt buộc hoặc khóa sai độ dài thì ứng dụng dừng khởi động, đặc biệt trên `demo` (`design/04` §6.4).
@@ -258,11 +258,11 @@ app:
     aes-key-id: ${APP_PII_AES_KEY_ID:k-v1}
     aes-key-base64: ${APP_PII_AES_KEY_BASE64}
     hmac-key-base64: ${APP_HMAC_KEY_BASE64}
-    previous-keys: []                              # Hỗ trợ rotation; có thể để trống ở MVP
+    previous-keys: []                              # Rotation chưa đủ thiết kế: common OI-COM-05; không tự bật
 
   security:
     cookie:
-      name: DB_SESSION                              # Theo 07 §3.2/OpenAPI; design/04 dùng SESSION_TOKEN (GAP-05)
+      name: DB_SESSION                              # Theo 07 §3.2, ưu tiên hơn cookie khác trong design/04
       secure: ${APP_COOKIE_SECURE:false}
       same-site: Strict
       path: /
@@ -271,11 +271,11 @@ app:
     session:
       idle-timeout-minutes: 15                     # design/04 §4.3
       absolute-timeout-hours: 8                    # design/04 §4.3
-      max-concurrent-sessions-customer: 3          # design/04 §4.3
-      max-concurrent-sessions-staff: 1             # design/04 §4.3
+      # Theo 07 §3.2 cho phép nhiều session; không áp trần 3/1 từ design/04.
+      # Thu hồi theo device/user là Deferred; keys hiện có ở runtime cần đối chiếu khi implement.
     lockout:
-      max-failed-attempts: 5                       # design/04 §4.1
-      lock-duration-minutes: 15                    # design/04 §4.1
+      max-failed-attempts: 5                       # 03 §4.5 / 07 §3.7, Đề xuất
+      lock-duration-minutes: 10                    # Theo 03/06/07, Đề xuất; không dùng 15 phút từ design/04
     otp:
       ttl-seconds: 300                             # LOGIN_MFA/TRANSFER_STEP_UP/SENSITIVE_ACTION
       recovery-ttl-seconds: 120                    # Baseline OTP recovery (design/03 §4.1)
@@ -287,7 +287,7 @@ app:
       login-per-username-per-minute: 5             # design/04 §8.3
       step-up-per-user-per-5-minutes: 10            # design/04 §8.3
       otp-verify-per-user-per-minute: 20            # 07 §2.8
-      transfer-per-user-per-minute: 20               # design/04 §8.3
+      transfer-per-customer-per-minute: 30          # 07 §2.8, Đề xuất; đổi cả scope thành customer khi implement
       audit-export-per-user-per-hour: 5              # design/04 §8.3
       read-per-user-per-minute: 120                  # design/04 §8.3
     step-up:
@@ -517,9 +517,10 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 | Framework/build | `05` §4.1/§8.1: Spring Boot 4.x (fallback 3.5.x), Java 21, Gradle Kotlin DSL | Sửa từ Spring Boot 3.3/Maven sang Spring Boot 4.x (fallback 3.5.x), lệnh `./gradlew` |
 | Health công khai | `07` §8.9.1: `/actuator/health` là infra probe; `/api/v1/health` yêu cầu Admin/Auditor | Không mô tả `/api/v1/health` là public; tách hai endpoint |
 | OTP TTL | `design/04` §4.2/§4.4: 5 phút; `design/03` §4.1: recovery OTP 120 giây | Mặc định 300 giây; recovery override 120 giây |
-| Lockout | `design/04` §4.1: 5 lần/15 phút (OI-SEC-01 resolved); `06` §9.2/`07` §3.7: 10 phút (đề xuất); SRS `AUTH-03` còn đề xuất 3 lần khóa/24 giờ → khóa tài khoản | Theo `design/04` 15 phút; ghi nhận cần đồng bộ `06`/`07` và chốt rule 3 lần/24 giờ |
-| Session đồng thời | `design/04` §4.3: Customer 3, Staff 1; `07` §3.2: nhiều session, thu hồi deferred | Theo `design/04` 3/1 |
-| Cookie session | `07` §3.2/OpenAPI: `DB_SESSION`, `Path=/`, `Max-Age=28800`; `design/04` §4.3 và backend module docs: `SESSION_TOKEN`, `Path=/api` | Theo `07`/OpenAPI cho contract client; cần đóng `GAP-05` và đồng bộ `design/04`/module docs |
+| Lockout | `03` §4.5/`06` §9.2/`07` §3.7: 5 lần/10 phút, Đề xuất; design/04 nêu 15 phút | Theo `01–11`: baseline 10 phút, giữ Đề xuất; runtime 15 phút chưa sửa, không coi OI nghiệp vụ đã đóng |
+| Transfer rate | `07` §2.8: 30/phút/customer, Đề xuất; design/04 §8.3: 20/phút/user | Theo `07`: 30/customer/phút, giữ Đề xuất; mẫu key đích là transfer-per-customer-per-minute, runtime per-user/20 chưa sửa |
+| Session đồng thời | `design/04` §4.3: Customer 3, Staff 1; `07` §3.2: nhiều session, thu hồi theo device/user Deferred | Theo `07`; không áp trần 3/1 khi triển khai policy; keys hiện hữu chưa phải policy được chốt |
+| Cookie session | `07` §3.2: `DB_SESSION`, `Path=/`, `Max-Age=28800`; design/04: `SESSION_TOKEN`, `Path=/api` | Đã phân xử theo `07`; không chờ chọn lại tên/path, không tự đóng issue ở tài liệu nguồn |
 | Step-up và PIN+OTP | `design/04` §4.4: step-up khi `>= 10.000.000` hoặc ngày `> 20.000.000`; `design/03` §4.2: `> 5.000.000` cần PIN + OTP | Tách hai khóa: `app.security.step-up.*` và `app.transfer.pin-otp-threshold-vnd` |
 | Fraud velocity | `design/03` §4.2/§5: giao dịch thứ 3 trong 120 giây; `06` §7.6: > 5 giao dịch/10 phút | Theo `design/03` 3/120 giây; cần đồng bộ `06` |
 | Tài khoản DB | `design/04` §6.5: `banking_app`/`banking_migrator`; `04` §9.2: `app_rw`/`audit_writer`/`auditor_ro`/`migration` | Dùng 2 credential theo `design/04`; ánh xạ vai trò logic, tách đầy đủ là mục tiêu |
@@ -532,6 +533,8 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 ---
 
 ## 10. Traceability cấu hình
+
+Các quyết định liên quan `common` được chốt tại [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5. Mẫu cấu hình ở trên là đích tài liệu, chưa đổi file application.yml/AppProperties. Các khác biệt ngoài 8 nhóm common chưa được audit lại trong lần cập nhật này.
 
 | Yêu cầu | Cấu hình liên quan | Mục |
 |---|---|---|
@@ -559,3 +562,9 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 - [[digitalbanking-docs/docs-common/design/04. security.md]]
 - [[digitalbanking-docs/docs-common/04. Database design & analysis.md]]
 - [[digitalbanking-docs/openapi/digital-banking-v1.yaml]]
+
+## Change Log
+
+| Phiên bản | Ngày | Thay đổi |
+|---|---|---|
+| v1.1 | 12/11/2026 | Đồng bộ các mục common về lockout/rate limit scope customer/session/cookie và giới hạn rotation theo ưu tiên 01–11; giữ nhãn Đề xuất, không sửa runtime |
