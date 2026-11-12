@@ -1,0 +1,11 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+> Task :test
+> Task :jacocoTestReport
+
+BUILD SUCCESSFUL in 8s
+5 actionable tasks: 3 executed, 2 up-to-date

@@ -12,7 +12,7 @@ Ghi nhận task nền tảng, tích hợp, review và công việc khác của B
 
 | Task ID | Công việc | Task report | Verification report | Trạng thái |
 |---|---|---|---|---|
-| `BE-FND-01` | Dựng Backend base project theo `00. architecture & conventions.md` và `deployment/configuration.md` | `BE-FND-01-backend-base-project.md` | `BE-FND-01-verification-report.md` | Base project, Compose, PostgreSQL/Flyway, DB roles and Actuator health verified; Testcontainers test not verified |
+| `BE-FND-01` | Dựng Backend base project theo `00. architecture & conventions.md` và `deployment/configuration.md` | `BE-FND-01-backend-base-project.md` | `BE-FND-01-verification-report.md` | Verified (Spring Data JPA, Security, Validation, MapStruct/Lombok, ArchUnit, Flyway V1, Compose & Testcontainers) |
 
 ## Quy ước report
 

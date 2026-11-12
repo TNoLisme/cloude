@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T11:13:08.989Z" hostname="phuong-ASUS-TUF" time="0.173">
+  <properties/>
+  <testcase name="flywayAppliesV1SchemaAndJpaEntityManagerIsOperational()" classname="com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest" time="0.173"/>
+  <system-out><![CDATA[2026-11-12T18:12:49.063+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest]: PostgreSqlFlywayMigrationIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-12T18:12:49.068+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest
+2026-11-12T18:12:49.109+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.images.PullPolicy     : Image pull policy will be performed by: DefaultPullPolicy()
+2026-11-12T18:12:49.112+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.t.utility.ImageNameSubstitutor         : Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2026-11-12T18:12:49.122+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.DockerClientFactory   : Testcontainers version: 1.21.3
+2026-11-12T18:12:49.373+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.t.d.DockerClientProviderStrategy       : Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2026-11-12T18:12:49.799+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.t.d.DockerClientProviderStrategy       : Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+2026-11-12T18:12:49.801+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.DockerClientFactory   : Docker host IP address is localhost
+2026-11-12T18:12:49.818+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.DockerClientFactory   : Connected to docker: 
+  Server Version: 29.8.0
+  API Version: 1.56
+  Operating System: Ubuntu 26.04.1 LTS
+  Total Memory: 15290 MB
+2026-11-12T18:12:49.937+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.testcontainers/ryuk:0.12.0            : Pulling docker image: testcontainers/ryuk:0.12.0. Please be patient; this may take some time but only needs to be done once.
+2026-11-12T18:12:49.946+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.t.utility.RegistryAuthLocator          : Failure when attempting to lookup auth config. Please ignore if you don't have images in an authenticated registry. Details: (dockerImageName: testcontainers/ryuk:latest, configFile: /home/phuong/.docker/config.json, configEnv: DOCKER_AUTH_CONFIG). Falling back to docker-java default behaviour. Exception message: Status 404: No config supplied. Checked in order: /home/phuong/.docker/config.json (file not found), DOCKER_AUTH_CONFIG (not set)
+2026-11-12T18:12:52.136+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Starting to pull image
+2026-11-12T18:12:52.156+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  0 pending,  0 downloaded,  0 extracted, (0 bytes/0 bytes)
+2026-11-12T18:12:54.271+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  2 pending,  1 downloaded,  0 extracted, (1 MB/? MB)
+2026-11-12T18:12:54.571+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  1 pending,  2 downloaded,  0 extracted, (6 MB/? MB)
+2026-11-12T18:12:54.672+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  1 pending,  2 downloaded,  1 extracted, (8 MB/? MB)
+2026-11-12T18:12:54.673+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  1 pending,  2 downloaded,  2 extracted, (8 MB/? MB)
+2026-11-12T18:12:55.041+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  0 pending,  3 downloaded,  2 extracted, (9 MB/10 MB)
+2026-11-12T18:12:55.042+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pulling image layers:  0 pending,  3 downloaded,  3 extracted, (9 MB/10 MB)
+2026-11-12T18:12:55.044+07:00  INFO 224761 --- [digital-banking-backend] [eam--1931961954] tc.testcontainers/ryuk:0.12.0            : Pull complete. 3 layers, pulled in 2s (downloaded 9 MB at 4 MB/s)
+2026-11-12T18:12:55.044+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.testcontainers/ryuk:0.12.0            : Image testcontainers/ryuk:0.12.0 pull took PT5.106631191S
+2026-11-12T18:12:55.084+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.testcontainers/ryuk:0.12.0            : Creating container for image: testcontainers/ryuk:0.12.0
+2026-11-12T18:12:55.247+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.testcontainers/ryuk:0.12.0            : Container testcontainers/ryuk:0.12.0 is starting: 27d913ef3cb2f169422cf20452d65c31e5d5d20bcc195c0359089fcc508013aa
+2026-11-12T18:12:55.569+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.testcontainers/ryuk:0.12.0            : Container testcontainers/ryuk:0.12.0 started in PT0.484154409S
+2026-11-12T18:12:55.572+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.t.utility.RyukResourceReaper           : Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2026-11-12T18:12:55.572+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.DockerClientFactory   : Checking the system...
+2026-11-12T18:12:55.573+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.testcontainers.DockerClientFactory   : ✔︎ Docker server version should be at least 1.6.0
+2026-11-12T18:12:55.575+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Pulling docker image: postgres:16-alpine. Please be patient; this may take some time but only needs to be done once.
+2026-11-12T18:12:57.554+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Starting to pull image
+2026-11-12T18:12:57.555+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending,  0 downloaded,  0 extracted, (0 bytes/0 bytes)
+2026-11-12T18:12:58.982+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  9 pending,  1 downloaded,  0 extracted, (0 bytes/? MB)
+2026-11-12T18:12:58.982+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  8 pending,  2 downloaded,  0 extracted, (0 bytes/? MB)
+2026-11-12T18:12:59.282+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  7 pending,  3 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.282+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  6 pending,  4 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.283+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  5 pending,  5 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.581+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  4 pending,  6 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.582+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  3 pending,  7 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.582+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  2 pending,  8 downloaded,  0 extracted, (9 KB/? MB)
+2026-11-12T18:12:59.881+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending,  9 downloaded,  0 extracted, (2 MB/? MB)
+2026-11-12T18:13:00.183+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending,  9 downloaded,  1 extracted, (10 MB/? MB)
+2026-11-12T18:13:00.185+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending,  9 downloaded,  2 extracted, (10 MB/? MB)
+2026-11-12T18:13:00.186+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending,  9 downloaded,  3 extracted, (10 MB/? MB)
+2026-11-12T18:13:00.188+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending,  9 downloaded,  4 extracted, (10 MB/? MB)
+2026-11-12T18:13:00.682+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 10 downloaded,  4 extracted, (26 MB/? MB)
+2026-11-12T18:13:00.881+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  1 pending, 11 downloaded,  4 extracted, (33 MB/? MB)
+2026-11-12T18:13:03.481+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  4 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.481+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  5 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.482+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  6 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.484+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  7 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.486+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  8 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.532+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded,  9 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.533+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pulling image layers:  0 pending, 12 downloaded, 10 extracted, (104 MB/106 MB)
+2026-11-12T18:13:04.535+07:00  INFO 224761 --- [digital-banking-backend] [ream--212325383] tc.postgres:16-alpine                    : Pull complete. 12 layers, pulled in 6s (downloaded 104 MB at 17 MB/s)
+2026-11-12T18:13:04.535+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Image postgres:16-alpine pull took PT8.95976309S
+2026-11-12T18:13:04.562+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Creating container for image: postgres:16-alpine
+2026-11-12T18:13:04.784+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Container postgres:16-alpine is starting: 99849b99bb9e0c5065eb7b50de72f3b3213a8880b1fa0b6c6e51b20120a9be9a
+2026-11-12T18:13:06.706+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Container postgres:16-alpine started in PT2.144652923S
+2026-11-12T18:13:06.707+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] tc.postgres:16-alpine                    : Container is started (JDBC URL: jdbc:postgresql://localhost:32781/digital_banking?loggerLevel=OFF&currentSchema=banking)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T18:13:06.725+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] PostgreSqlFlywayMigrationIntegrationTest : Starting PostgreSqlFlywayMigrationIntegrationTest using Java 21.0.13.0.3 with PID 224761 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T18:13:06.725+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] PostgreSqlFlywayMigrationIntegrationTest : The following 1 profile is active: "test"
+2026-11-12T18:13:07.035+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-12T18:13:07.060+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 10 ms. Found 0 JPA repository interfaces.
+2026-11-12T18:13:07.528+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32781/digital_banking?loggerLevel=OFF&currentSchema=banking (PostgreSQL 16.15)
+2026-11-12T18:13:07.568+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.f.core.internal.database.base.Schema   : Creating schema "banking" ...
+2026-11-12T18:13:07.573+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "banking"."flyway_schema_history" ...
+2026-11-12T18:13:07.627+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "banking": null
+2026-11-12T18:13:07.632+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "banking" to version "1 - init schema"
+2026-11-12T18:13:07.637+07:00  WARN 224761 --- [digital-banking-backend] [    Test worker] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: schema "banking" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+2026-11-12T18:13:07.646+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 1 migration to schema "banking", now at version v1 (execution time 00:00.006s)
+2026-11-12T18:13:07.727+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-11-12T18:13:07.831+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-11-12T18:13:07.893+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-11-12T18:13:08.115+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-12T18:13:08.152+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Starting...
+2026-11-12T18:13:08.172+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] com.zaxxer.hikari.pool.HikariPool        : BankingHikariPool - Added connection org.postgresql.jdbc.PgConnection@1d3bafaf
+2026-11-12T18:13:08.174+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Start completed.
+2026-11-12T18:13:08.244+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (BankingHikariPool)']
+	Database driver: undefined/unknown
+	Database version: 16.15
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-12T18:13:08.599+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-12T18:13:08.604+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-12T18:13:08.781+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-11-12T18:13:08.795+07:00  WARN 224761 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T18:13:08.796+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T18:13:08.981+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] PostgreSqlFlywayMigrationIntegrationTest : Started PostgreSqlFlywayMigrationIntegrationTest in 2.271 seconds (process running for 33.798)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.error.ErrorHttpTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:16:12.706Z" hostname="phuong-ASUS-TUF" time="0.348">
+  <properties/>
+  <testcase name="mvcAuthenticationAuthorizationAndUnexpectedFailuresAreSafe(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.1"/>
+  <testcase name="frameworkFailuresHaveTheContractFormat(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.095"/>
+  <testcase name="[1] sqlState=55P03, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.03"/>
+  <testcase name="[2] sqlState=40P01, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.006"/>
+  <testcase name="[3] sqlState=40001, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.005"/>
+  <testcase name="[4] sqlState=57014, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.006"/>
+  <testcase name="[5] sqlState=08006, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.007"/>
+  <testcase name="[6] sqlState=08007, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.006"/>
+  <testcase name="[7] sqlState=23505, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.007"/>
+  <testcase name="[8] sqlState=23514, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.006"/>
+  <testcase name="[9] sqlState=XX000, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.007"/>
+  <testcase name="successIsNotWrapped()" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.011"/>
+  <testcase name="filterAndSecurityEntryPointsUseSharedWriter(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.02"/>
+  <testcase name="ownerClassificationWinsOverSqlCause(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.023"/>
+  <system-out><![CDATA[2026-11-12T14:16:12.488+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.error.ErrorHttpTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T14:16:12.509+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Starting ErrorHttpTest using Java 21.0.13.0.3 with PID 65158 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T14:16:12.509+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : No active profile set, falling back to 1 default profile: "local"
+2026-11-12T14:16:12.616+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T14:16:12.616+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T14:16:12.691+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-12T14:16:12.692+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-12T14:16:12.693+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-12T14:16:12.700+07:00  INFO 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Started ErrorHttpTest in 0.206 seconds (process running for 6.689)
+2026-11-12T14:16:12.745+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=harness-trace
+2026-11-12T14:16:12.800+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=harness-trace
+2026-11-12T14:16:12.804+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+2026-11-12T14:16:12.848+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=harness-trace
+2026-11-12T14:16:12.858+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=MALFORMED_REQUEST status=400 correlationId=harness-trace
+2026-11-12T14:16:12.865+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=UNSUPPORTED_MEDIA_TYPE status=415 correlationId=harness-trace
+2026-11-12T14:16:12.869+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] o.s.web.servlet.PageNotFound             : Request method 'GET' is not supported
+2026-11-12T14:16:12.869+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=METHOD_NOT_ALLOWED status=405 correlationId=harness-trace
+2026-11-12T14:16:12.874+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+2026-11-12T14:16:12.879+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=harness-trace
+2026-11-12T14:16:12.882+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=harness-trace
+2026-11-12T14:16:12.893+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=harness-trace
+2026-11-12T14:16:12.899+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+2026-11-12T14:16:12.935+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.944+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.951+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.958+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.965+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.972+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:12.980+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+2026-11-12T14:16:12.987+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+2026-11-12T14:16:12.995+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+2026-11-12T14:16:13.013+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=REQUEST_TOO_LARGE status=413 correlationId=harness-trace
+2026-11-12T14:16:13.019+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=harness-trace
+2026-11-12T14:16:13.028+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=harness-trace
+2026-11-12T14:16:13.035+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=IDEMPOTENCY_IN_PROGRESS status=409 correlationId=harness-trace
+2026-11-12T14:16:13.039+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=IDEMPOTENCY_CONFLICT status=409 correlationId=harness-trace
+2026-11-12T14:16:13.042+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=ROLE_CONFLICT status=409 correlationId=harness-trace
+2026-11-12T14:16:13.045+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUDIT_WRITE_FAILED status=500 correlationId=harness-trace
+2026-11-12T14:16:13.047+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=RATE_LIMITED status=429 correlationId=harness-trace
+2026-11-12T14:16:13.050+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=SERVICE_UNAVAILABLE status=503 correlationId=harness-trace
+2026-11-12T14:16:13.052+07:00  WARN 65158 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=harness-trace
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

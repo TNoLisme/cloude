@@ -1,0 +1,9 @@
+Time: 2026-11-12T13:56:18.797519+07:00
+Initial integrity check: missing integrity.txt self-output; created output then retested.
+PASS: all 25 source/config/test/docs/task hashes match current files.
+PASS: source archive member bytes match current files.
+PASS: final XML totals: 29 tests, 0 failures, 0 errors, 0 skipped.
+PASS: all 4 common and 5 task AC rows copied verbatim and Verified.
+PASS: every local link in verification report resolves.
+PASS: 3 generated test password lines redacted; no private-key blocks. Fixtures/sentinels are synthetic; no .env or environment dump collected.
+PASS: git diff --check exit=0.

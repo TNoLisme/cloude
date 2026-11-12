@@ -1,0 +1,76 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+ErrorContractTest > validationAndContextualExtensionsAreFlattenedWithoutChangingCore() FAILED
+    org.opentest4j.AssertionFailedError at ErrorContractTest.java:91
+
+ErrorContractTest > entireCatalogMatchesSemanticSourceAndOpenApi() FAILED
+    org.opentest4j.AssertionFailedError at ErrorContractTest.java:68
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :test
+
+ErrorHttpTest > mvcAuthenticationAuthorizationAndUnexpectedFailuresAreSafe(CapturedOutput) FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > frameworkFailuresHaveTheContractFormat(CapturedOutput) FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [1] sqlState=55P03, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [2] sqlState=40P01, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [3] sqlState=40001, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [4] sqlState=57014, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [5] sqlState=08006, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [6] sqlState=08007, code=SERVICE_UNAVAILABLE, http=503 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [7] sqlState=23505, code=INTERNAL_ERROR, http=500 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [8] sqlState=23514, code=INTERNAL_ERROR, http=500 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > databaseSqlStateMappingDoesNotInferBusinessRules(String, String, int, CapturedOutput) > [9] sqlState=XX000, code=INTERNAL_ERROR, http=500 FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+ErrorHttpTest > successIsNotWrapped() FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:63
+
+ErrorHttpTest > filterAndSecurityEntryPointsUseSharedWriter(CapturedOutput) FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:155
+
+ErrorHttpTest > ownerClassificationWinsOverSqlCause(CapturedOutput) FAILED
+    java.lang.AssertionError at ErrorHttpTest.java:140
+
+21 tests completed, 16 failed
+
+> Task :test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 8s
+4 actionable tasks: 2 executed, 2 up-to-date

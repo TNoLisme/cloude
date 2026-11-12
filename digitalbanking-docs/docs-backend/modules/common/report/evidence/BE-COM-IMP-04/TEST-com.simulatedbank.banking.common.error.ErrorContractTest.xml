@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.error.ErrorContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:07.672Z" hostname="phuong-ASUS-TUF" time="0.097">
+  <properties/>
+  <testcase name="constraintValidationNeverEchoesCustomMessagesAndReturnViolationsAreInternal()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.023"/>
+  <testcase name="validationAndContextualExtensionsAreFlattenedWithoutChangingCore()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.009"/>
+  <testcase name="entireCatalogMatchesSemanticSourceAndOpenApi()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.058"/>
+  <testcase name="servletWriterWorksWithoutMvcAndDoesNotRewriteCommittedResponse()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.004"/>
+  <system-out><![CDATA[2026-11-12T14:49:07.678+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=contract-trace
+2026-11-12T14:49:07.695+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=contract-trace
+2026-11-12T14:49:07.768+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=1fec5645-e0cd-42b5-a124-450f8fbb52ea
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

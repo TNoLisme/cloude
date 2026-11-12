@@ -1,33 +1,157 @@
 spring:
+  main:
+    banner-mode: off
   application:
     name: digital-banking-backend
   profiles:
     default: local
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
     username: ${DB_APP_USER:banking_app}
-    password: ${DB_APP_PASSWORD:local_app_password}
+    password: ${DB_APP_PASSWORD:}
+    hikari:
+      pool-name: BankingHikariPool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 3000
+      validation-timeout: 1000
+      max-lifetime: 1800000
+      auto-commit: false
+      leak-detection-threshold: 10000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.default_schema: banking
+      hibernate.jdbc.time_zone: UTC
+
   flyway:
     enabled: true
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_banking}?currentSchema=banking
-    user: ${DB_MIGRATION_USER:${DB_APP_USER:banking_app}}
-    password: ${DB_MIGRATION_PASSWORD:${DB_APP_PASSWORD:local_app_password}}
     schemas: banking
     default-schema: banking
+    user: ${DB_MIGRATION_USER:banking_migrator}
+    password: ${DB_MIGRATION_PASSWORD:}
     locations: classpath:db/migration
     validate-on-migrate: true
     out-of-order: false
+
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+    serialization:
+      write-dates-as-timestamps: false
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  # No trusted proxy boundary is configured; never accept client-supplied forwarding headers.
+  forward-headers-strategy: none
+
+logging:
+  environment: ${APP_ENVIRONMENT:${spring.profiles.active:local}}
+
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
   endpoints:
     web:
+      base-path: /actuator
       exposure:
-        include: health
+        include: health,info,prometheus,metrics
   endpoint:
     health:
+      show-components: never
       show-details: never
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 info:
   app:
     version: ${APP_VERSION:dev}
+
+app:
+  timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+
+  crypto:
+    aes-key-id: ${APP_PII_AES_KEY_ID:k-v1}
+    aes-key-base64: ${APP_PII_AES_KEY_BASE64:}
+    hmac-key-base64: ${APP_HMAC_KEY_BASE64:}
+    previous-keys: []
+
+  security:
+    cookie:
+      name: DB_SESSION
+      secure: ${APP_COOKIE_SECURE:false}
+      same-site: Strict
+      path: /
+      max-age-seconds: 28800
+    cors-allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    session:
+      idle-timeout-minutes: 15
+      absolute-timeout-hours: 8
+      # 07 §3.2 allows multiple sessions; device/user revocation is Deferred.
+    lockout:
+      # Proposed baseline (07 §3.7); configuration only, no enforcement here.
+      max-failed-attempts: ${APP_LOCKOUT_MAX_FAILED_ATTEMPTS:5}
+      lock-duration-minutes: ${APP_LOCKOUT_DURATION_MINUTES:10}
+    otp:
+      ttl-seconds: 300
+      recovery-ttl-seconds: 120
+      max-verify-attempts: 5
+      resend-cooldown-seconds: 60
+      max-resend-count: 3
+    http:
+      # Proposed body-size baseline (07 §2.8); process-local limiter has bounded state.
+      max-request-body-bytes: ${APP_MAX_REQUEST_BODY_BYTES:65536}
+      max-rate-limit-buckets: ${APP_MAX_RATE_LIMIT_BUCKETS:10000}
+    rate-limit:
+      login-per-ip-per-minute: ${APP_LOGIN_PER_IP_PER_MINUTE:10}
+      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}
+      step-up-per-user-per-5-minutes: ${APP_STEP_UP_PER_USER_PER_5_MINUTES:10}
+      otp-verify-per-user-per-minute: ${APP_OTP_VERIFY_PER_USER_PER_MINUTE:20}
+      # Proposed baseline (07 §2.8); the consumer must key by customer.
+      transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30}
+      audit-export-per-user-per-hour: ${APP_AUDIT_EXPORT_PER_USER_PER_HOUR:5}
+      read-per-user-per-minute: ${APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE:120}
+    step-up:
+      single-amount-vnd: 10000000
+      daily-amount-vnd: 20000000
+
+  transfer:
+    min-amount-vnd: 2000
+    max-amount-vnd: 10000000
+    pin-otp-threshold-vnd: 5000000
+    daily-cap-vnd: 50000000
+    idempotency-ttl-hours: 24
+    t2-lock-timeout-ms: 2000
+    t2-statement-timeout-ms: 5000
+    fraud-eval-timeout-ms: 1000
+
+  fraud:
+    velocity-count: 3
+    velocity-window-seconds: 120
+    warning-ttl-minutes: 15
+    review-timeout-minutes: 30
+
+  jobs:
+    reconciliation-on-startup: true
+    reconciliation-interval-ms: 60000
+    reconciliation-pending-age-seconds: 300
+    outbox-poll-interval-ms: 2000
+    outbox-batch-size: 50
+    outbox-lease-seconds: 30
+    audit-verify-incremental-cron: "0 */15 * * * *"
+    audit-verify-full-cron: "0 0 2 * * *"
+    retention-cleanup-cron: "0 0 3 * * *"

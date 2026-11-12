@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-12T11:12:48.005Z" hostname="phuong-ASUS-TUF" time="0.028">
+  <properties/>
+  <testcase name="constantTimePrimitiveAcceptsEqualAndRejectsDifferentAndDifferentLengths()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.001"/>
+  <testcase name="primitivesRejectMissingInputAndInvalidKeyLengths()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.001"/>
+  <testcase name="utf8AndEmptyRoundtripWithFreshIvAndCorrectBlobLayout()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.018"/>
+  <testcase name="decryptsIndependentAes256GcmNistVector()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.001"/>
+  <testcase name="knownAnswersPreserveLeadingZerosWhitespaceUtf8AndOtpCallerBinding()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.0"/>
+  <testcase name="rejectsEveryTamperedByteWrongKeyTruncationAndExtensionWithoutProviderDetails()" classname="com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

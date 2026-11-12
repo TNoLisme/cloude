@@ -1,0 +1,591 @@
+diff --git a/digitalbanking-backend/.env.example b/digitalbanking-backend/.env.example
+index 1210aba..3829cc4 100644
+--- a/digitalbanking-backend/.env.example
++++ b/digitalbanking-backend/.env.example
+@@ -46,3 +46,13 @@ APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:8443
+ APP_LOCKOUT_MAX_FAILED_ATTEMPTS=5
+ APP_LOCKOUT_DURATION_MINUTES=10
+ APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE=30
++
++# Proposed HTTP limits (07 §2.8), process-local enforcement; username needs identity integration.
++APP_MAX_REQUEST_BODY_BYTES=65536
++APP_MAX_RATE_LIMIT_BUCKETS=10000
++APP_LOGIN_PER_IP_PER_MINUTE=10
++APP_LOGIN_PER_USERNAME_PER_MINUTE=10
++APP_STEP_UP_PER_USER_PER_5_MINUTES=10
++APP_OTP_VERIFY_PER_USER_PER_MINUTE=20
++APP_AUDIT_EXPORT_PER_USER_PER_HOUR=5
++APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE=120
+diff --git a/digitalbanking-backend/README.md b/digitalbanking-backend/README.md
+index 5e73cf3..f2c4b7b 100644
+--- a/digitalbanking-backend/README.md
++++ b/digitalbanking-backend/README.md
+@@ -84,7 +84,23 @@ Provide separate Base64-encoded 32-byte keys with `APP_PII_AES_KEY_BASE64` and `
+ 
+ MVC advice formats validation/JSON/media/method/route failures and 401/403. It preserves owner-classified business/audit failures before generic database mapping. SQLSTATE alone never identifies an idempotency race; the owner must classify it after rollback/retry. The error layer does not query, retry transactions, write audit or change transfer outcomes.
+ 
+-`ProblemWriter` returns `application/problem+json`, `X-Correlation-ID`, `WWW-Authenticate` for 401 and `Retry-After: 2` for in-progress/429/503, adopted as the current error-layer default under the owner’s 12 November 2026 delegation (common verification report DEC-02). IMP-05 must use the remaining quota-window duration when integrating a real rate limiter; the default does not prove limiter enforcement. The outer correlation filter supplies validated request attribute `correlationId`; standalone writer fallback remains available without the filter. Production security entry points/body limits remain IMP-05 work; PostgreSQL locking/transaction verification remains IMP-07. See the common module verification report for evidence and limits.
++`ProblemWriter` returns `application/problem+json`, `X-Correlation-ID`, `WWW-Authenticate` for 401 and `Retry-After: 2` for in-progress/429/503, adopted as the current error-layer default under the owner’s 12 November 2026 delegation (common verification report DEC-02). IMP-05 HTTP token buckets supply the actual next-token wait via the writer overload; the 2-second fallback does not prove owner-integrated limiter enforcement. The outer correlation filter supplies validated request attribute `correlationId`; standalone writer fallback remains available without the filter. Production security entry points/body limits are implemented by IMP-05; real identity/cookie integration remains blocked; PostgreSQL locking/transaction verification remains IMP-07. See the common module verification report for evidence and limits.
++
++### HTTP security and identity integration
++
++BE-COM-IMP-05 implements the common HTTP layer; real identity integration is **Blocked** until identity supplies a `SessionAuthenticator` bean. That module currently has no authentication/session source. The adapter must validate active user/session, expiry/revocation and current permissions, then return `Session(userId, customerId, authorities, csrfTokenHash)`; inactive/unknown tokens return `Optional.empty()`. `userId`/`customerId` are canonical positive ID strings; authorities contain permission codes and roles prefixed `ROLE_`. CSRF hash is lowercase SHA-256 of the session's raw CSRF token. Identity owns persistence, issuance, activity/expiry, session/OTP/challenge state and cookies. The internal snapshot must never be serialized as an API DTO; its `toString()` is redacted. The shared DB design currently has no CSRF hash field: identity must settle its persistence mapping against the source before integration; common adds no schema.
++
++The production chain resolves an opaque token from a single `DB_SESSION` cookie or a single `Authorization: Bearer` header. It rejects duplicate/ambiguous credentials and never falls back from a failed Bearer to a cookie. Missing/invalid credentials on protected routes return 401 `AUTH_SESSION_EXPIRED` with `WWW-Authenticate: Bearer realm="digital-banking"`; denied permissions and CSRF return 403 `AUTH_FORBIDDEN`, all through ProblemWriter with trace. No adapter means no credentials can authenticate. An inactive ambient cookie is ignored only on the explicitly public POST login/passcode/FIDO/OTP/resend routes, allowing reauthentication after idle expiry; an active cookie still requires CSRF there. Invalid explicit Bearer credentials remain 401. Bootstrap controllers/challenge ownership are identity work, not implemented by permitAll.
++
++Cookie-authenticated POST/PUT/PATCH/DELETE requests use Spring's `CsrfFilter`: the single `X-CSRF-Token` header is hashed and compared to the adapter's session hash by Spring's constant-time primitive. Native token generation/rotation and Servlet HttpSession persistence are not used; no JSESSIONID or token cookie is created by common. Only successfully authenticated Bearer requests are exempt. OPTIONS preflight does not authenticate or require CSRF. The URL gates implement the API permission matrix and CHECKER privilege; method security stays enabled. Ownership, maker != checker, strong verification and immutable permission snapshots must still be enforced by the business owner.
++
++CORS validates explicit HTTP(S) origins without wildcards, paths or credentials. Allowed methods are GET/POST/OPTIONS and headers follow `07 §3.3`, including Authorization; exposed headers include trace, replay, retry, Content-Disposition and the design's optional export headers. Denials are Problem responses. The CORS filter runs once inside security. An outer header filter also covers correlation/body/security errors with no-store, Pragma no-cache, nosniff, DENY, no-referrer and CSP frame-ancestors 'none'. HSTS is one year with includeSubDomains only for actual HTTPS requests. Forwarded headers remain disabled; ingress TLS, full SPA CSP, origin/header stripping and network isolation require task 08 verification. Common does not mint Set-Cookie; identity must verify HttpOnly/Secure/SameSite=Strict/Path=/ and 28800 seconds against `07 §3.2`.
++
++`app.security.http.max-request-body-bytes` (`APP_MAX_REQUEST_BODY_BYTES`, default 65536, **Đề xuất**) limits all `/api/v1/**` bodies before authentication. It checks both declared length and at most limit+1 streamed bytes, including unknown/chunked lengths, then passes a bounded buffered body downstream. It supports the MVP synchronous JSON/body reader, not nonblocking Servlet ReadListener consumers. Oversize bodies return traced 413 without logging/replaying payloads. `max-rate-limit-buckets` (`APP_MAX_RATE_LIMIT_BUCKETS`, 10000) bounds process-local quota state; exhaustion fails closed with 503.
++
++The `RequestRateLimiter` bean uses atomic token buckets with UTC Clock, full initial bursts and continuous refill. HTTP enforces global API 120/min/user or peer IP when anonymous, login 10/min/peer IP, authenticated OTP 20/min/user, step-up 10/5min/user, transfer 30/min/**customer**, audit export 5/hour/user. Multiple sessions/users of one customer share transfer quota; different customers do not. `read-per-user-per-minute` is the existing configuration key used for the global quota. Limits are **Đề xuất**, not approved release policy. Environment variables are forwarded in Compose and listed in `.env.example`; every enforced numeric limit must be positive. 429 Retry-After is ceil(seconds until a token is available), not the error writer's generic fallback of 2 seconds. A full 30/min transfer burst refills one token every 2 seconds; the tested retry after 1.1 seconds is 1 second.
++
++Identity must enforce the normalized username bucket using `limiter.acquire("login-username", normalizedUsername, properties.security().rateLimit().loginPerUsernamePerMinute(), Duration.ofMinutes(1))` before credential verification (10/min per `07`, replacing the old design-derived 5). Return zero means allowed; a positive result is the actual Retry-After. Identity translates it through `writer.write(response, problem, retrySeconds)` with RATE_LIMITED; common does not parse/normalize login payloads. Identity also owns unauthenticated OTP user/challenge quotas, five-attempt locking and resend rules. These integrations are **Blocked**, not implied by properties or tests. Invalid-token lookup protection remains an identity/edge concern: a failed session resolver exits before the post-auth HTTP limiter. The limiter hashes subjects in memory, does not log tokens/PII, and is bounded but process-local; it resets on restart and does not enforce an aggregate quota across replicas. Behind a proxy it uses the socket peer until the ingress trust boundary is configured. Shared edge/distributed quotas and actual session flows need owner integration and task 07/08 evidence.
+ 
+ ### Request context and propagation
+ 
+diff --git a/digitalbanking-backend/compose.yaml b/digitalbanking-backend/compose.yaml
+index d220fdf..f0f4120 100644
+--- a/digitalbanking-backend/compose.yaml
++++ b/digitalbanking-backend/compose.yaml
+@@ -15,6 +15,14 @@ services:
+       APP_LOCKOUT_MAX_FAILED_ATTEMPTS: ${APP_LOCKOUT_MAX_FAILED_ATTEMPTS:-5}
+       APP_LOCKOUT_DURATION_MINUTES: ${APP_LOCKOUT_DURATION_MINUTES:-10}
+       APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:-30}
++      APP_MAX_REQUEST_BODY_BYTES: ${APP_MAX_REQUEST_BODY_BYTES:-65536}
++      APP_MAX_RATE_LIMIT_BUCKETS: ${APP_MAX_RATE_LIMIT_BUCKETS:-10000}
++      APP_LOGIN_PER_IP_PER_MINUTE: ${APP_LOGIN_PER_IP_PER_MINUTE:-10}
++      APP_LOGIN_PER_USERNAME_PER_MINUTE: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:-10}
++      APP_STEP_UP_PER_USER_PER_5_MINUTES: ${APP_STEP_UP_PER_USER_PER_5_MINUTES:-10}
++      APP_OTP_VERIFY_PER_USER_PER_MINUTE: ${APP_OTP_VERIFY_PER_USER_PER_MINUTE:-20}
++      APP_AUDIT_EXPORT_PER_USER_PER_HOUR: ${APP_AUDIT_EXPORT_PER_USER_PER_HOUR:-5}
++      APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE: ${APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE:-120}
+       APP_VERSION: ${APP_VERSION:-dev}
+       DB_HOST: postgres
+       DB_PORT: 5432
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/AppProperties.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/AppProperties.java
+index 2e66531..2916e76 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/AppProperties.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/AppProperties.java
+@@ -4,6 +4,7 @@ import java.math.BigDecimal;
+ import java.util.List;
+ import jakarta.validation.Valid;
+ import jakarta.validation.constraints.Positive;
++import jakarta.validation.constraints.Max;
+ import org.springframework.boot.context.properties.ConfigurationProperties;
+ import org.springframework.boot.context.properties.bind.DefaultValue;
+ import org.springframework.validation.annotation.Validated;
+@@ -38,6 +39,7 @@ public record AppProperties(
+             @DefaultValue @Valid Lockout lockout,
+             @DefaultValue Otp otp,
+             @DefaultValue @Valid RateLimit rateLimit,
++            @DefaultValue @Valid Http http,
+             @DefaultValue StepUp stepUp
+     ) {
+         public record Cookie(
+@@ -70,14 +72,20 @@ public record AppProperties(
+         ) {
+         }
+ 
++        public record Http(
++                @DefaultValue("65536") @Positive @Max(2147483646) int maxRequestBodyBytes,
++                @DefaultValue("10000") @Positive int maxRateLimitBuckets
++        ) {
++        }
++
+         public record RateLimit(
+-                @DefaultValue("10") int loginPerIpPerMinute,
+-                @DefaultValue("5") int loginPerUsernamePerMinute,
+-                @DefaultValue("10") int stepUpPerUserPer5Minutes,
+-                @DefaultValue("20") int otpVerifyPerUserPerMinute,
++                @DefaultValue("10") @Positive int loginPerIpPerMinute,
++                @DefaultValue("10") @Positive int loginPerUsernamePerMinute,
++                @DefaultValue("10") @Positive int stepUpPerUserPer5Minutes,
++                @DefaultValue("20") @Positive int otpVerifyPerUserPerMinute,
+                 @DefaultValue("30") @Positive int transferPerCustomerPerMinute,
+-                @DefaultValue("5") int auditExportPerUserPerHour,
+-                @DefaultValue("120") int readPerUserPerMinute
++                @DefaultValue("5") @Positive int auditExportPerUserPerHour,
++                @DefaultValue("120") @Positive int readPerUserPerMinute
+         ) {
+         }
+ 
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SecurityFilterChainConfig.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SecurityFilterChainConfig.java
+index 5132e56..e81b250 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SecurityFilterChainConfig.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SecurityFilterChainConfig.java
+@@ -1,70 +1,192 @@
+ package com.simulatedbank.banking.common.config;
+ 
++import com.simulatedbank.banking.common.error.ErrorCode;
++import com.simulatedbank.banking.common.error.ProblemWriter;
++import jakarta.servlet.DispatcherType;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import java.io.IOException;
++import java.net.URI;
+ import java.util.List;
++import java.util.Map;
++import org.springframework.beans.factory.ObjectProvider;
++import org.springframework.beans.factory.annotation.Qualifier;
++import org.springframework.boot.autoconfigure.security.SecurityProperties;
++import org.springframework.boot.web.servlet.FilterRegistrationBean;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
++import org.springframework.http.HttpMethod;
++import org.springframework.http.server.ServerHttpResponse;
++import org.springframework.security.authorization.AuthorityAuthorizationManager;
++import org.springframework.security.authorization.AuthorizationManagers;
+ import org.springframework.security.config.Customizer;
+ import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+ import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
++import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+ import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+ import org.springframework.security.config.http.SessionCreationPolicy;
+ import org.springframework.security.web.SecurityFilterChain;
++import org.springframework.security.web.csrf.CsrfFilter;
++import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
++import org.springframework.security.web.context.NullSecurityContextRepository;
+ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+ import org.springframework.web.cors.CorsConfiguration;
+ import org.springframework.web.cors.CorsConfigurationSource;
++import org.springframework.web.cors.DefaultCorsProcessor;
+ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
++import org.springframework.web.filter.CorsFilter;
+ 
+ @Configuration
+ @EnableWebSecurity
+ @EnableMethodSecurity
+ public class SecurityFilterChainConfig {
+-
+     @Bean
+-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+-        http
+-                .cors(Customizer.withDefaults())
+-                .csrf(AbstractHttpConfigurer::disable)
++    public SecurityFilterChain securityFilterChain(HttpSecurity http, AppProperties properties,
++            ObjectProvider<SessionAuthenticator> authenticators, RequestRateLimiter limiter, ProblemWriter writer)
++            throws Exception {
++        var csrfTokens = new SessionCsrfTokens();
++        http.cors(Customizer.withDefaults())
++                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokens).csrfTokenRequestHandler(csrfTokens)
++                        .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy())
++                        .requireCsrfProtectionMatcher(request ->
++                                Boolean.TRUE.equals(request.getAttribute(SessionAuthenticationFilter.COOKIE_AUTH))
++                                        && CsrfFilter.DEFAULT_CSRF_MATCHER.matches(request)))
+                 .formLogin(AbstractHttpConfigurer::disable)
+                 .httpBasic(AbstractHttpConfigurer::disable)
++                .logout(AbstractHttpConfigurer::disable)
++                .requestCache(AbstractHttpConfigurer::disable)
++                .securityContext(context -> context.securityContextRepository(new NullSecurityContextRepository()))
+                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
++                .exceptionHandling(errors -> errors
++                        .authenticationEntryPoint((request, response, exception) -> problem(writer, request, response,
++                                ErrorCode.AUTH_SESSION_EXPIRED))
++                        .accessDeniedHandler((request, response, exception) -> problem(writer, request, response,
++                                ErrorCode.AUTH_FORBIDDEN)))
+                 .headers(headers -> headers
+                         .cacheControl(Customizer.withDefaults())
+                         .contentTypeOptions(Customizer.withDefaults())
+                         .frameOptions(frame -> frame.deny())
+-                        .referrerPolicy(referrer -> referrer
+-                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+-                )
++                        .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
++                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
+                 .authorizeHttpRequests(auth -> auth
+-                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
++                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
++                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
++                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+-                        .anyRequest().authenticated()
+-                );
++                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/passcode",
++                                "/api/v1/auth/fido/verify", "/api/v1/auth/otp/verify",
++                                "/api/v1/auth/challenges/*/resend").permitAll()
++                        .requestMatchers(HttpMethod.GET, "/api/v1/customers/me", "/api/v1/accounts")
++                                .hasAuthority("ACCOUNT_READ_SELF")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/accounts/*").hasAnyAuthority("ACCOUNT_READ_SELF", "ACCOUNT_READ")
++                        .requestMatchers(HttpMethod.POST, "/api/v1/transfers").hasAuthority("TRANSFER_CREATE")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/transfers/*", "/api/v1/transactions", "/api/v1/transactions/*")
++                                .hasAnyAuthority("TRANSACTION_READ_SELF", "TRANSACTION_READ")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/limits").hasAuthority("LIMIT_READ_SELF")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/audit/export").hasAuthority("AUDIT_EXPORT")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/audit", "/api/v1/audit/*").hasAuthority("AUDIT_READ")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/customers/*/accounts").hasAuthority("ACCOUNT_READ")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/customers/*").hasAuthority("CUSTOMER_READ")
++                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/limits/*/approve")
++                                .access(AuthorizationManagers.allOf(AuthorityAuthorizationManager.hasAuthority("CHECKER"),
++                                        AuthorityAuthorizationManager.hasAnyAuthority("LIMIT_MAKER", "LIMIT_MANAGE")))
++                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/limits").hasAnyAuthority("LIMIT_MAKER", "LIMIT_MANAGE")
++                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/roles/*/approve")
++                                .access(AuthorizationManagers.allOf(AuthorityAuthorizationManager.hasAuthority("CHECKER"),
++                                        AuthorityAuthorizationManager.hasAuthority("ROLE_MANAGE")))
++                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/roles").hasAuthority("ROLE_MANAGE")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/approvals", "/api/v1/admin/approvals/*")
++                                .hasAnyRole("OPERATIONS", "ADMIN")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/fraud-flags").hasAnyAuthority("FRAUD_REVIEW", "FRAUD_READ")
++                        .requestMatchers(HttpMethod.POST, "/api/v1/fraud-flags/*/review").hasAuthority("FRAUD_REVIEW")
++                        .requestMatchers(HttpMethod.GET, "/api/v1/health").hasAnyRole("ADMIN", "AUDITOR")
++                        .anyRequest().authenticated());
++        http.addFilterBefore(new SessionAuthenticationFilter(authenticators, writer), CsrfFilter.class)
++                .addFilterBefore(new RequestBodyLimitFilter(properties.security().http().maxRequestBodyBytes(), writer),
++                        SessionAuthenticationFilter.class)
++                .addFilterAfter(new RequestRateLimitFilter(limiter, properties, writer), SessionAuthenticationFilter.class);
+         return http.build();
+     }
+ 
+     @Bean
+-    public CorsConfigurationSource corsConfigurationSource(AppProperties appProperties) {
++    public CorsConfigurationSource corsConfigurationSource(AppProperties properties) {
++        List<String> origins = properties.security().corsAllowedOrigins();
++        if (origins == null || origins.isEmpty()) {
++            throw new IllegalArgumentException("CORS requires explicit HTTP origins");
++        }
++        for (String origin : origins) {
++            try {
++                URI uri = URI.create(origin);
++                if (!("https".equals(uri.getScheme()) || "http".equals(uri.getScheme())) || uri.getHost() == null
++                        || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null
++                        || (uri.getRawPath() != null && !uri.getRawPath().isEmpty()) || origin.contains("*")) {
++                    throw new IllegalArgumentException();
++                }
++            } catch (IllegalArgumentException ex) {
++                throw new IllegalArgumentException("CORS requires explicit HTTP origins");
++            }
++        }
+         CorsConfiguration configuration = new CorsConfiguration();
+-        List<String> origins = appProperties.security() != null
+-                && appProperties.security().corsAllowedOrigins() != null
+-                ? appProperties.security().corsAllowedOrigins()
+-                : List.of("http://localhost:5173");
+         configuration.setAllowedOrigins(origins);
+         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+-        configuration.setAllowedHeaders(List.of(
+-                "Authorization",
+-                "Content-Type",
+-                "X-Correlation-ID",
+-                "Idempotency-Key",
+-                "X-CSRF-Token",
+-                "X-Step-Up-Challenge"
+-        ));
+-        configuration.setExposedHeaders(List.of("X-Correlation-ID", "Idempotent-Replayed", "Retry-After"));
++        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Correlation-ID",
++                "Idempotency-Key", "X-CSRF-Token", "X-Step-Up-Challenge"));
++        configuration.setExposedHeaders(List.of("X-Correlation-ID", "X-Request-ID", "Idempotent-Replayed",
++                "Retry-After", "Content-Disposition", "X-Export-SHA256", "X-Export-Audit-Id"));
+         configuration.setAllowCredentials(true);
+-
+-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
++        var source = new UrlBasedCorsConfigurationSource();
+         source.registerCorsConfiguration("/**", configuration);
+         return source;
+     }
++
++    @Bean
++    public CorsFilter corsFilter(@Qualifier("corsConfigurationSource") CorsConfigurationSource source, ProblemWriter writer) {
++        var filter = new CorsFilter(source);
++        filter.setCorsProcessor(new DefaultCorsProcessor() {
++            @Override
++            protected void rejectRequest(ServerHttpResponse response) {
++                // Replace the default plain-text CORS rejection with the shared Problem writer below.
++            }
++
++            @Override
++            public boolean processRequest(CorsConfiguration configuration, HttpServletRequest request,
++                    HttpServletResponse response) throws IOException {
++                boolean allowed = super.processRequest(configuration, request, response);
++                if (!allowed) {
++                    problem(writer, request, response, ErrorCode.AUTH_FORBIDDEN);
++                }
++                return allowed;
++            }
++        });
++        return filter;
++    }
++
++    @Bean
++    public FilterRegistrationBean<CorsFilter> corsServletRegistration(CorsFilter corsFilter) {
++        var registration = new FilterRegistrationBean<>(corsFilter);
++        registration.setEnabled(false); // Run only once, inside Spring Security after the outer trace filter.
++        return registration;
++    }
++
++    @Bean
++    public FilterRegistrationBean<ApiSecurityHeadersFilter> apiSecurityHeadersFilter() {
++        var registration = new FilterRegistrationBean<>(new ApiSecurityHeadersFilter());
++        registration.setOrder(SecurityProperties.DEFAULT_FILTER_ORDER - 2);
++        registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR);
++        registration.setAsyncSupported(true);
++        registration.addUrlPatterns("/*");
++        return registration;
++    }
++
++    @Bean
++    public WebSecurityCustomizer rejectedRequestHandler(ProblemWriter writer) {
++        return web -> web.requestRejectedHandler((request, response, exception) ->
++                problem(writer, request, response, ErrorCode.MALFORMED_REQUEST));
++    }
++
++    private static void problem(ProblemWriter writer, HttpServletRequest request, HttpServletResponse response,
++            ErrorCode code) throws IOException {
++        writer.write(response, writer.create(code, code.detail(), request, List.of(), Map.of()));
++    }
+ }
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java
+index 0b33c50..6e2b623 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java
+@@ -47,6 +47,14 @@ public class ProblemWriter {
+     }
+ 
+     public void write(HttpServletResponse response, ProblemResponse problem) throws IOException {
++        write(response, problem, null);
++    }
++
++    /** Rate limiter supplies the actual remaining window; other errors keep existing defaults. */
++    public void write(HttpServletResponse response, ProblemResponse problem, Long retryAfterSeconds) throws IOException {
++        if (retryAfterSeconds != null && (retryAfterSeconds <= 0 || !problem.code().equals("RATE_LIMITED"))) {
++            throw new IllegalArgumentException("Retry override requires a positive rate-limit window");
++        }
+         if (response.isCommitted()) {
+             return;
+         }
+@@ -54,7 +62,11 @@ public class ProblemWriter {
+         response.resetBuffer();
+         response.setStatus(problem.status());
+         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+-        headers(problem).forEach((name, values) -> response.setHeader(name, values.getFirst()));
++        HttpHeaders headers = headers(problem);
++        if (retryAfterSeconds != null) {
++            headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString());
++        }
++        headers.forEach((name, values) -> response.setHeader(name, values.getFirst()));
+         response.setContentLength(body.length);
+         response.getOutputStream().write(body);
+         log(problem);
+diff --git a/digitalbanking-backend/src/main/resources/application.yml b/digitalbanking-backend/src/main/resources/application.yml
+index be8c029..ea5c94c 100644
+--- a/digitalbanking-backend/src/main/resources/application.yml
++++ b/digitalbanking-backend/src/main/resources/application.yml
+@@ -102,15 +102,19 @@ app:
+       max-verify-attempts: 5
+       resend-cooldown-seconds: 60
+       max-resend-count: 3
++    http:
++      # Proposed body-size baseline (07 §2.8); process-local limiter has bounded state.
++      max-request-body-bytes: ${APP_MAX_REQUEST_BODY_BYTES:65536}
++      max-rate-limit-buckets: ${APP_MAX_RATE_LIMIT_BUCKETS:10000}
+     rate-limit:
+-      login-per-ip-per-minute: 10
+-      login-per-username-per-minute: 5
+-      step-up-per-user-per-5-minutes: 10
+-      otp-verify-per-user-per-minute: 20
++      login-per-ip-per-minute: ${APP_LOGIN_PER_IP_PER_MINUTE:10}
++      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}
++      step-up-per-user-per-5-minutes: ${APP_STEP_UP_PER_USER_PER_5_MINUTES:10}
++      otp-verify-per-user-per-minute: ${APP_OTP_VERIFY_PER_USER_PER_MINUTE:20}
+       # Proposed baseline (07 §2.8); the consumer must key by customer.
+       transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30}
+-      audit-export-per-user-per-hour: 5
+-      read-per-user-per-minute: 120
++      audit-export-per-user-per-hour: ${APP_AUDIT_EXPORT_PER_USER_PER_HOUR:5}
++      read-per-user-per-minute: ${APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE:120}
+     step-up:
+       single-amount-vnd: 10000000
+       daily-amount-vnd: 20000000
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/context/ContextServletTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/context/ContextServletTest.java
+index eece0fe..d7f5dbd 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/context/ContextServletTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/context/ContextServletTest.java
+@@ -46,7 +46,7 @@ class ContextServletTest {
+                         .header("X-Forwarded-For", "198.51.100.123").GET().build();
+                 var result = client.send(request, HttpResponse.BodyHandlers.ofString());
+                 assertThat(result.headers().allValues("X-Correlation-ID")).containsExactly("live:trace");
+-                assertThat(result.statusCode()).isEqualTo(route.equals("/actuator/health") ? 200 : 403);
++                assertThat(result.statusCode()).isEqualTo(route.equals("/actuator/health") ? 200 : 401);
+             }
+         }
+     }
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/crypto/CryptoOperationsTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/crypto/CryptoOperationsTest.java
+index 746c1b0..13d1424 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/crypto/CryptoOperationsTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/crypto/CryptoOperationsTest.java
+@@ -42,7 +42,7 @@ class CryptoOperationsTest {
+                 var response = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + route))
+                         .GET().build(), HttpResponse.BodyHandlers.ofString());
+                 assertThat(response.statusCode()).isEqualTo(
+-                        route.equals("/actuator/health") || route.equals("/actuator/info") ? 200 : 403);
++                        route.equals("/actuator/health") || route.equals("/actuator/info") ? 200 : 401);
+                 assertThat(response.body()).doesNotContain(properties.crypto().aesKeyBase64(),
+                         properties.crypto().hmacKeyBase64(), "aesKeyBase64", "hmacKeyBase64", "previousKeys");
+             }
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/health/HealthEndpointTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/health/HealthEndpointTest.java
+index 344cb50..b11432f 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/health/HealthEndpointTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/health/HealthEndpointTest.java
+@@ -37,6 +37,6 @@ class HealthEndpointTest {
+     @Test
+     void protectedEndpointRejectsUnauthenticatedAccess() throws Exception {
+         mockMvc.perform(get("/api/v1/health"))
+-                .andExpect(status().isForbidden());
++                .andExpect(status().isUnauthorized());
+     }
+ }
+diff --git a/digitalbanking-docs/docs-backend/deployment/configuration.md b/digitalbanking-docs/docs-backend/deployment/configuration.md
+index 7a6caf6..94f5f41 100644
+--- a/digitalbanking-docs/docs-backend/deployment/configuration.md
++++ b/digitalbanking-docs/docs-backend/deployment/configuration.md
+@@ -289,7 +289,7 @@ app:
+       max-resend-count: 3                          # 07 §8.1.8
+     rate-limit:
+       login-per-ip-per-minute: 10                  # design/04 §8.3
+-      login-per-username-per-minute: 5             # design/04 §8.3
++      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}             # design/04 §8.3
+       step-up-per-user-per-5-minutes: 10            # design/04 §8.3
+       otp-verify-per-user-per-minute: 20            # 07 §2.8
+       transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30} # 07 §2.8, Đề xuất
+@@ -336,11 +336,31 @@ app:
+ - Các giá trị `(đề xuất)` về pool, outbox poll/batch/lease, resend cooldown chỉ là baseline vận hành; phải chốt bằng benchmark/evidence trước khi coi là cam kết.
+ - `app.security.step-up.*` (T0 challenge) **khác** với `app.transfer.pin-otp-threshold-vnd` (yêu cầu PIN + OTP). Hai ngưỡng này không được gộp chung.
+ - `AppProperties` cung cấp nested defaults cả khi không có YAML; profile override base YAML, env/CLI override theo Spring Boot. Ba biến lockout/transfer ở §4.1 và `APP_TIMEZONE` được chuyển tiếp trong Compose. Khởi động lại sau đổi cấu hình. Các trường số vừa nêu phải là số nguyên dương; timezone rỗng/sai làm khởi động thất bại với thông báo không echo giá trị timezone hoặc key.
+-- Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. BE-COM-IMP-04 đã triển khai validation khóa; rotation vẫn Open (OQ-15/OI-COM-05), HTTP security và enforcement thuộc 05/07 cùng identity/transfer; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
++- Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. BE-COM-IMP-04 đã triển khai validation khóa; rotation vẫn Open (OQ-15/OI-COM-05), HTTP layer/enforcement common đã có ở 05; identity/transfer integration còn Blocked trong 05/07; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
+ - Inject `Clock` UTC và `ZoneId businessZoneId`: `clock.instant()` cho timestamp/TTL, `LocalDate.now(clock.withZone(businessZoneId))` cho ngày nghiệp vụ; test inject primary `Clock.fixed`. Hợp đồng và ví dụ override tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
+ 
+ ---
+ 
++### HTTP security — hiện trạng BE-COM-IMP-05
++
++Common đã enforce body/token-bucket limits trong một process; identity thật và luồng cookie/session vẫn **Blocked**. Không xem cấu hình hoặc adapter test là bằng chứng persistence/xác thực thật. Contract/handoff: [backend README](../../../digitalbanking-backend/README.md#http-security-and-identity-integration); [verification](../modules/common/report/BE-COM-IMP-05-verification.md).
++
++| Cấu hình | Env | Baseline / trách nhiệm |
++|---|---|---|
++| `app.security.http.max-request-body-bytes` | `APP_MAX_REQUEST_BODY_BYTES` | 65536 bytes, Đề xuất 07 §2.8; check cả Content-Length và stream/chunked |
++| `app.security.http.max-rate-limit-buckets` | `APP_MAX_RATE_LIMIT_BUCKETS` | 10000, state bounded trong process; hết capacity trả 503 |
++| `login-per-ip-per-minute` | `APP_LOGIN_PER_IP_PER_MINUTE` | 10, Đề xuất, HTTP enforce theo peer socket IP |
++| `login-per-username-per-minute` | `APP_LOGIN_PER_USERNAME_PER_MINUTE` | 10 theo 07, thay baseline design 5; identity normalize và gọi limiter, chưa tích hợp |
++| `step-up-per-user-per-5-minutes` | `APP_STEP_UP_PER_USER_PER_5_MINUTES` | 10, Đề xuất, sau xác thực |
++| `otp-verify-per-user-per-minute` | `APP_OTP_VERIFY_PER_USER_PER_MINUTE` | 20, Đề xuất, HTTP sau xác thực; identity phụ trách user/challenge khi pre-login |
++| `transfer-per-customer-per-minute` | `APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE` | 30, Đề xuất, không tách theo session/user |
++| `audit-export-per-user-per-hour` | `APP_AUDIT_EXPORT_PER_USER_PER_HOUR` | 5, Đề xuất |
++| `read-per-user-per-minute` | `APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE` | 120, Đề xuất; key cũ dùng làm quota global API/user hoặc IP khi anonymous |
++
++Các rate key ở dưới `app.security.rate-limit`. YAML, Compose và `.env.example` đồng bộ; giá trị enforced phải dương. Token bucket khởi đầu đầy, refill liên tục, Retry-After = ceil thời gian chờ token tiếp theo; không phải thời gian còn lại của phút cố định. Process restart reset quotas; triển khai nhiều replica cần edge/shared quota trước release, không claim cluster enforcement từ test local. Không tin Forwarded/X-Forwarded-For; khi sau proxy bucket IP là proxy cho đến task 08 xác minh trust boundary. Session resolver reject trước HTTP limiter; identity/edge cần chống flood lookup token.
++
++CORS fail startup nếu wildcard/origin sai dạng; methods GET/POST/OPTIONS, credentials true, headers theo 07. Security/cache headers cả lỗi; HSTS chỉ request HTTPS thực. SPA CSP đầy đủ, redirect HTTP→HTTPS, proxy stripping, cookie Secure/HttpOnly/SameSite/Path/Max-Age qua identity và Cloud TLS còn cần kiểm chứng owner/08. `SessionCsrfTokens` chỉ đọc hash do identity trả; source schema session chưa có CSRF field, không tự thêm migration trong common.
++
+ ## 6. Cấu hình Database, Flyway và phân quyền
+ 
+ ### 6.1. Schema và nguyên tắc migration
+diff --git a/digitalbanking-docs/docs-backend/modules/common/README.md b/digitalbanking-docs/docs-backend/modules/common/README.md
+index 064a1ce..48fe179 100644
+--- a/digitalbanking-docs/docs-backend/modules/common/README.md
++++ b/digitalbanking-docs/docs-backend/modules/common/README.md
+@@ -2,7 +2,7 @@
+ 
+ > **Dự án:** Digital Banking MVP
+ > **Mã tài liệu:** `BE-MOD-COMMON-01`
+-> **Phiên bản:** v1.6
++> **Phiên bản:** v1.7
+ > **Ngày:** 12/11/2026
+ > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
+ > **Owner:** Phương
+@@ -58,9 +58,9 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
+ 
+ ### 1.4. Trạng thái so với code
+ 
+-Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` đã triển khai sau BE-COM-IMP-04; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
++Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` đã triển khai sau BE-COM-IMP-04; error layer đã có sau BE-COM-IMP-02. BE-COM-IMP-05 đã nối security chain với Problem/trace, bật CSRF theo credential source, CORS và body/rate limits; identity thật chưa có adapter nên task 05 còn Blocked.
+ 
+-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/crypto/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). BE-COM-IMP-04 đã triển khai crypto/JCS/masking và validation khóa; xem [report](report/BE-COM-IMP-04-verification.md). Security chain thật chưa tích hợp writer; security/DB propagation integration vẫn cần 05/07.
++Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/crypto/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). BE-COM-IMP-04 đã triển khai crypto/JCS/masking và validation khóa; xem [report](report/BE-COM-IMP-04-verification.md). Security chain thật đã tích hợp writer trong IMP-05; session/cookie identity và DB propagation vẫn cần owner tích hợp ở 05/07. Xem [report IMP-05](report/BE-COM-IMP-05-verification.md).
+ 
+ ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
+ 
+@@ -107,7 +107,8 @@ public class TimeConfig {
+     public ZoneId businessZoneId(AppProperties appProperties);
+ }
+ public class SecurityFilterChainConfig {
+-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception;
++    public SecurityFilterChain securityFilterChain(HttpSecurity http, AppProperties properties,
++            ObjectProvider<SessionAuthenticator> authenticators, RequestRateLimiter limiter, ProblemWriter writer) throws Exception;
+     public CorsConfigurationSource corsConfigurationSource(AppProperties appProperties);
+ }
+ ```
+@@ -123,14 +124,14 @@ public class SecurityFilterChainConfig {
+ | `securityFilterChain(...)` | Method security, CORS, headers, session/CSRF integration; entry point/access denied handler dùng Problem chung, identity cung cấp xác thực |
+ | `corsConfigurationSource(...)` | Explicit origins, credentials true/không wildcard; methods GET/POST/OPTIONS, headers `07` §3.3; expose trace/retry/replay/export theo `design/04` §8.2 |
+ 
+-Đề xuất thêm method trong `SecurityFilterChainConfig`:
++Servlet registration đã nằm trong `RequestContextConfig` sau IMP-03:
+ 
+ ```java
+ public FilterRegistrationBean<CorrelationAndRequestIdFilter> correlationAndRequestIdFilter(
+         ProblemWriter writer);
+ ```
+ 
+-RequestContextConfig đăng ký servlet filter ở `SecurityProperties.DEFAULT_FILTER_ORDER - 1` trước Spring Security (REQUEST/ASYNC/ERROR, async supported), tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. Không xem `csrf.disable()` hiện tại là thiết kế đích.
++RequestContextConfig đăng ký servlet filter ở `SecurityProperties.DEFAULT_FILTER_ORDER - 1` trước Spring Security (REQUEST/ASYNC/ERROR, async supported), tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. IMP-05 dùng native CsrfFilter so SHA-256 header với session hash qua SessionAuthenticator; token lifecycle thuộc identity, không tạo HttpSession. Chưa có adapter thật; không dùng harness để nghiệm thu identity.
+ 
+ APP_PII_AES_KEY_BASE64 → `app.crypto.aes-key-base64`, APP_HMAC_KEY_BASE64 → `app.crypto.hmac-key-base64`: Base64 decode đúng 32 byte, tách khóa AES/HMAC; thiếu/sai phải fail-fast, thông báo không chứa key. Rotation bị ràng buộc OI-COM-05.
+ 
+@@ -245,6 +246,7 @@ public class ProblemWriter {
+             List<ProblemResponse.FieldError> errors, Map<String, Object> safeExtensions);
+     public ResponseEntity<ProblemResponse> response(ProblemResponse problem);
+     public void write(HttpServletResponse response, ProblemResponse problem) throws IOException;
++    public void write(HttpServletResponse response, ProblemResponse problem, Long retryAfterSeconds) throws IOException;
+ }
+ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+     public GlobalExceptionHandler(ProblemWriter writer);
+@@ -260,7 +262,15 @@ Không triển khai ApiResponse/success wrapper (OI-COM-01). `ProblemResponse` f
+ 
+ Advice map MVC validation/JSON/media/method/route và 401/403, giữ Allow cho 405. HandlerMethodValidationException/ConstraintViolationException ở return-value thành INTERNAL_ERROR; input validation dùng errors với field an toàn và thông điệp cố định, không echo annotation/rejected value. Lỗi đã được owner bọc BankingBusinessException được giữ trước generic SQLSTATE, kể cả bọc trong DataAccessException. Mọi handler không query owner, ghi audit hoặc đổi trạng thái transfer.
+ 
+-Filter, AuthenticationEntryPoint và AccessDeniedHandler gọi writer vì lỗi trước MVC không tự vào advice. Writer không ghi lại response đã committed, dùng application/problem+json, X-Correlation-ID, WWW-Authenticate cho 401. Retry-After mặc định 2 giây cho in-progress/rate-limit/service-unavailable đã được chốt cho error layer theo ủy quyền owner ngày 12/11/2026 ([report DEC-02](report/BE-COM-IMP-02-verification.md#51-quyết-định-đã-chốt-theo-ủy-quyền-owner)); khoảng 1–5s trong design/02 §7.10 vẫn mang nhãn đề xuất tại nguồn. IMP-05 phải dùng thời gian còn lại của cửa sổ quota khi tích hợp limiter thật; default 2s không thay phép tính này hoặc chứng minh enforcement đã đạt. Security wiring/body-limit enforcement do IMP-05; hành vi lock/rollback/retry PostgreSQL thật do IMP-07.
++Filter, AuthenticationEntryPoint và AccessDeniedHandler gọi writer vì lỗi trước MVC không tự vào advice. Writer không ghi lại response đã committed, dùng application/problem+json, X-Correlation-ID, WWW-Authenticate cho 401. Retry-After fallback 2 giây cho in-progress/rate-limit/service-unavailable đã được chốt cho error layer theo ủy quyền owner ngày 12/11/2026 ([report DEC-02](report/BE-COM-IMP-02-verification.md#51-quyết-định-đã-chốt-theo-ủy-quyền-owner)); khoảng 1–5s trong design/02 §7.10 vẫn mang nhãn đề xuất tại nguồn. IMP-05 token bucket đã truyền thời gian chờ token thực qua overload write(response, problem, retryAfterSeconds); fallback 2s không chứng minh enforcement owner đã tích hợp. Security wiring/body-limit đã có trong IMP-05; identity/cookie integration còn Blocked; hành vi lock/rollback/retry PostgreSQL thật do IMP-07.
++
++### 2.5. HTTP security đã triển khai, identity còn thiếu
++
++`SessionAuthenticator` là điểm nối common để owner identity triển khai, chưa có adapter production. Snapshot nội bộ gồm `userId`, `customerId`, authorities (permission + `ROLE_*`) và SHA-256 CSRF hash, không raw token. Chain reject duplicate/mixed credentials, không fallback Bearer lỗi sang cookie; cookie inactive chỉ được bỏ qua trên POST auth public để cho phép đăng nhập lại. Valid cookie mutation vẫn yêu cầu CSRF. Method security và permission URL gates không thay ownership/maker-checker ở owner.
++
++Header filter đặt trước correlation; CORS chạy một lần bên trong Spring Security và mọi rejection dùng Problem. Body limit 65536 bytes đề xuất kiểm declared/streamed/chunked. Token buckets có burst bằng quota, refill liên tục, đồng bộ theo Clock UTC; global user/IP, login peer IP, OTP/step-up user, transfer customer, audit export user. Retry-After tính ceil đến token kế tiếp; map bounded 10000 bucket, hết dung lượng trả 503. State chỉ trong một process, không tổng hợp qua replicas. Identity phải gọi limiter cho username chuẩn hóa (10/min theo 07) và quota OTP/challenge trước xác thực; phần này còn Blocked. Sau resolver reject, HTTP post-auth limiter chưa chạy; bảo vệ lookup token cần identity/edge bổ sung. Không trust X-Forwarded-For.
++
++Cấu hình `app.security.http.*`, rate-limit env và contract/case đầy đủ tại [handoff backend](../../../../digitalbanking-backend/README.md#http-security-and-identity-integration), [verification](report/BE-COM-IMP-05-verification.md). Set-Cookie/CSRF persistence chưa có code identity; không tự thêm schema session. Header HSTS chỉ khi request thực secure; TLS/full SPA CSP/proxy cần 08. Không đánh dấu Done cho task 05 chỉ vì harness/build pass.
+ 
+ ## 3. Chi tiết Bảng Dữ liệu & SQL/Locking
+ 
+@@ -587,3 +597,4 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
+ | v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
+ | v1.5 | 12/11/2026 | Codex — BE-COM-IMP-03 | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |
+ | v1.6 | 12/11/2026 | Codex — BE-COM-IMP-04 | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |
++| v1.7 | 12/11/2026 | Codex — BE-COM-IMP-05 | Triển khai security chain, SPI identity, CSRF/CORS/headers và body/token-bucket limits; report giữ Blocked cho tích hợp session/cookie/username/challenge/proxy chưa có evidence |
+diff --git a/digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-IMP-05.md b/digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-IMP-05.md
+index 7eb0174..3c13d63 100644
+--- a/digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-IMP-05.md
++++ b/digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-IMP-05.md
+@@ -2,7 +2,7 @@
+ 
+ > **Dự án:** Digital Banking MVP
+ > **Phiên bản / ngày:** v1.0 / 12/11/2026
+-> **Trạng thái:** Planned
++> **Trạng thái:** Blocked — phần common đã triển khai/kiểm chứng; thiếu tích hợp identity thật; [verification](../report/BE-COM-IMP-05-verification.md)
+ > **Owner / reviewer:** Phương, phối hợp owner identity / Chưa review
+ > **Mốc / phụ thuộc:** W3; task 01–03 và contract/code xác thực liên quan
+ 
+diff --git a/digitalbanking-docs/docs-backend/modules/common/tasks/README.md b/digitalbanking-docs/docs-backend/modules/common/tasks/README.md
+index 9a4e029..de8915e 100644
+--- a/digitalbanking-docs/docs-backend/modules/common/tasks/README.md
++++ b/digitalbanking-docs/docs-backend/modules/common/tasks/README.md
+@@ -32,7 +32,7 @@
+ | [BE-COM-IMP-02](BE-COM-IMP-02.md) | Mô hình lỗi và exception mapping | W3 | 01; wiring trace/security hoàn thiện ở 03/05 | Done — [verification](../report/BE-COM-IMP-02-verification.md); chờ review |
+ | [BE-COM-IMP-03](BE-COM-IMP-03.md) | Request context và correlation | W3 | 01–02 | Done — [verification](../report/BE-COM-IMP-03-verification.md); chờ review |
+ | [BE-COM-IMP-04](BE-COM-IMP-04.md) | Crypto, JCS và masking | W3 | 01 | Done — [verification](../report/BE-COM-IMP-04-verification.md); chờ review |
+-| [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Planned |
++| [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Blocked — common đã triển khai; thiếu identity thật; [verification](../report/BE-COM-IMP-05-verification.md) |
+ | [BE-COM-IMP-06](BE-COM-IMP-06.md) | Logging, metrics và health | W3–W5 | 02–05 | Planned |
+ | [BE-COM-IMP-07](BE-COM-IMP-07.md) | Tích hợp và quality gate common | W3–W6 | 01–06 và các module tham gia từng luồng | Planned |
+ | [BE-COM-IMP-08](BE-COM-IMP-08.md) | Readiness, Cloud verification và bàn giao | W6–W8 | Readiness từ W6; deploy sau quality gate, có môi trường/owner hạ tầng | Planned |

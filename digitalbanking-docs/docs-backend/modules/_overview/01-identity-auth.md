@@ -34,7 +34,7 @@ Module `identity` là chủ sở hữu ghi duy nhất của nhóm bảng định
 
 | Mã API | Method & Path | Quyền truy cập | Hành vi cốt lõi |
 |---|---|---|---|
-| `API-AUT-01` | `POST /api/v1/auth/login` | Public | Kiểm tra thông tin đăng nhập, chính sách khóa `5 lần sai -> khóa 15 phút` (`423 AUTH_ACCOUNT_LOCKED`). Nếu thiết bị mới $\rightarrow$ tạo challenge `LOGIN_MFA` (`202 Accepted`); nếu đã tin cậy $\rightarrow$ cấp cookie `SESSION_TOKEN` (`HttpOnly, Secure, SameSite=Strict`) + `csrfToken` (`200 OK`). |
+| `API-AUT-01` | `POST /api/v1/auth/login` | Public | Theo `03` §4.5/`07` §3.7: baseline đề xuất `5 lần sai -> khóa 10 phút` (`423 AUTH_ACCOUNT_LOCKED`). Nếu thiết bị mới $\rightarrow$ tạo challenge `LOGIN_MFA` (`202 Accepted`); nếu đã tin cậy $\rightarrow$ cấp cookie `DB_SESSION` (`HttpOnly, Secure, SameSite=Strict, Path=/`) + `csrfToken` (`200 OK`) theo `07` §3.2. |
 | `API-AUT-02` | `POST /api/v1/auth/logout` | Authenticated | Thu hồi phiên hiện tại (`status = REVOKED`, `revoked_at = now()`), xóa cookie phiên. |
 | `API-AUT-03` | `GET /api/v1/auth/session` | Authenticated | Kiểm tra tính hợp lệ của phiên, trả về thông tin `userId`, `userType`, `roles`, `permissions` và gia hạn `idle_expires_at`. |
 | `API-AUT-04` | `POST /api/v1/auth/step-up` | Authenticated | Khởi tạo challenge xác thực tăng cường (`TRANSFER_STEP_UP` hoặc `SENSITIVE_ACTION`). |
@@ -61,7 +61,13 @@ Module `identity` là chủ sở hữu ghi duy nhất của nhóm bảng định
 ## 5. Danh sách Công việc Cần Triển khai & Viết Thiết kế Chi tiết
 
 1. [ ] Thiết kế và hiện thực `OpaqueSessionAuthenticationFilter` và `CsrfTokenValidationFilter` (kết hợp cùng module `common`).
-2. [ ] Hiện thực luồng đăng nhập với `Argon2id`, chống dò tài khoản (timing-safe dummy hash) và bộ đếm khóa tạm thời 15 phút trong transaction độc lập (`REQUIRES_NEW`).
+2. [ ] Hiện thực luồng đăng nhập với `Argon2id`, chống dò tài khoản (timing-safe dummy hash); bộ đếm khóa theo baseline 10 phút còn Đề xuất của `03`/`07`, không kế thừa 15 phút từ design/04; transaction độc lập (`REQUIRES_NEW`).
 3. [ ] Hiện thực nhận diện thiết bị (`device_fingerprint_hash`) và luồng MFA cho thiết bị mới.
 4. [ ] Hiện thực máy trạng thái `auth_challenge` (`PENDING -> VERIFIED -> CONSUMED`) gắn chặt với `payload_hash` để chống đánh tráo nội dung giao dịch sau khi verify OTP.
-5. [ ] Viết bộ test tích hợp cho phiên đăng nhập, giới hạn phiên đồng thời (`Customer = 3`, `Staff = 1`), khóa OTP sau 5 lần sai và chống dùng lại challenge (`T-STEP-01`, `T-STEP-02`, `CT-API-001..005`).
+5. [ ] Viết bộ test tích hợp cho phiên đăng nhập, nhiều session theo `07` §3.2 (không áp trần 3/1 từ design/04), khóa OTP sau 5 lần sai và chống dùng lại challenge (`T-STEP-01`, `T-STEP-02`, `CT-API-001..005`).
+
+## Change Log
+
+| Ngày | Thay đổi |
+|---|---|
+| 12/11/2026 | Theo quyết định owner ưu tiên docs-common/01–11: đồng bộ lockout/cookie/session trong các đoạn liên quan tích hợp common; chưa sửa runtime hoặc rà toàn bộ đặc tả identity |

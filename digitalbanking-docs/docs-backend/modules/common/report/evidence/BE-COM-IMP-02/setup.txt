@@ -1,0 +1,10 @@
+Execution setup record, 2026-11-12 UTC+07:00. Recorded from actual tool output.
+1. backend: ./gradlew compileJava --console=plain (sandbox); exit 1.
+   FileNotFoundException: /home/phuong/.gradle/wrapper/dists/gradle-8.14.3-bin/cv11ve7ro1n3o1j4so8xd9n66/gradle-8.14.3-bin.zip.lck (Read-only file system)
+2. Same compile command retried with cache permission; exit 0.
+   > Task :compileJava
+   BUILD SUCCESSFUL in 1s
+   1 actionable task: 1 executed
+3. workspace root: ./gradlew test --tests '*common.error.*' --console=plain redirected to /tmp/BE-COM-IMP-02-focused.log; exit 127 because no wrapper at root. No tests started. That temporary output was overwritten by the corrected invocation.
+4. Corrected working directory: digitalbanking-backend; focused failures/retest and clean build retained as separate artifacts.
+No environment blocker remains.

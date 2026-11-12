@@ -1,0 +1,18 @@
+Time: 2026-11-12T13:52:25.362531+07:00
+Base revision: 73f190e0a2f34b5f95cc295a90e5fe8a23a4479b
+Working tree is uncommitted; exact sources are in source-snapshot.tar.gz and source.sha256.
+Pre-existing user work: common README v1.2 task index plus untracked IMP-01..08, tasks README and verification template. These were preserved; only IMP-01 status/index and related runtime docs updated.
+Environment: Linux 7.0.0-43-generic; OpenJDK 21.0.13.0.3; Gradle 8.14.3; Spring Boot 3.5.7; Docker Engine 29.8.0; PostgreSQL image postgres:16-alpine.
+$ git diff --check
+exit=0
+
+$ rg -n maxConcurrentSessions|transferPerUserPerMinute|max-concurrent-sessions|transfer-per-user-per-minute digitalbanking-backend/src/main
+exit=1
+
+$ rg -n @Scheduled|@Transactional|@Entity|Repository|com\.simulatedbank\.banking\.(identity|customer|account|transfer|ledger|limit|audit|fraud|notification|admin) digitalbanking-backend/src/main/java/com/simulatedbank/banking/common
+exit=1
+
+Static inspection: common imports JDK/Jakarta/Spring only; no business classes, repositories, scheduled jobs, or transactional orchestration. ArchUnit verifies dependencies (4 rules).
+Usage inspection: current production consumer is SecurityFilterChainConfig (CORS accessor unchanged) and TimeConfig (timezone). No business-module consumers exist yet. Do not infer enforcement from properties.
+Compose: docker compose config --quiet, cwd=digitalbanking-backend, exit=0; schema/interpolation validation only, no service deployment.
+First sandbox-only environment probe: ./gradlew --version could not write ~/.gradle wrapper lock; docker version could not access /var/run/docker.sock. Retried required checks with approved escalation; no remaining blocker.

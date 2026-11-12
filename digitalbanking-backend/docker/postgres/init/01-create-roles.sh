@@ -17,6 +17,8 @@ GRANT CREATE ON DATABASE digital_banking TO banking_migrator;
 CREATE SCHEMA IF NOT EXISTS banking AUTHORIZATION banking_migrator;
 ALTER SCHEMA banking OWNER TO banking_migrator;
 GRANT USAGE ON SCHEMA banking TO banking_app;
+ALTER ROLE banking_app SET search_path TO banking;
+ALTER ROLE banking_migrator SET search_path TO banking;
 ALTER DEFAULT PRIVILEGES FOR ROLE banking_migrator IN SCHEMA banking
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO banking_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE banking_migrator IN SCHEMA banking

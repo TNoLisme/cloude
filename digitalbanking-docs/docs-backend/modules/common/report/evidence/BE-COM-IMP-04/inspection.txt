@@ -1,0 +1,16 @@
+Inspection 2026-11-12 UTC+07:00, after final clean build (151 tests).
+HEAD: 73f190e0a2f34b5f95cc295a90e5fe8a23a4479b + uncommitted source snapshot.
+
+1. git diff --check: exit 0.
+2. Reviewed 5 runtime Java files (crypto package + CryptoConfig): no business-module import, Repository, EntityManager or @Transactional.
+3. JCA: AES/GCM/NoPadding, SecureRandom fresh IV12, GCMParameterSpec tag128, one-shot doFinal on decrypt; authentication failures expose fixed messages without cause. SecretKeySpec copies caller key; decoded temporary arrays cleared.
+4. HMAC/SHA use UTF-8/HexFormat lowercase and fresh Mac/Digest per operation. constantTimeEquals delegates to MessageDigest.isEqual; no timing test is claimed as proof.
+5. JCS strict raw parser: duplicate detection before tree/Map conversion, surrogate pairs checked in keys/strings, finite numbers, exactly one root; library formats UTF-16 keys/ECMAScript numbers. All 24 RFC Appendix B finite vectors and scalar roots verified.
+6. AppProperties.Crypto.toString is redacted (IMP-01); CryptoConfig exceptions never echo keys. Bean default toString contains no key values. Operational HTTP harness checks 6 routes; production YAML does not expose env/configprops. No new crypto endpoint.
+7. Published/uniform-byte development keys allowed only with exclusively local/test profiles. Missing/invalid 32-byte keys and identical AES/HMAC keys rejected everywhere; previousKeys rejected as unsupported. No multi-key rotation claim.
+8. No business-module/schema/docs-common/OpenAPI edits. New runtime files common-only. Backend README/configuration and module README/task/index/report changes concern task 04.
+9. Runtime/test/build configuration unchanged since build-final.log; docs-only edits afterward. Source SHA manifest matches current contents. Snapshot member count matches manifest; no .env or build/cache outputs included.
+10. XML copies retain counts/testcases/assertions and redact generated Spring security passwords. All fixture keys/PII synthetic or published test vectors. Saved log/XML scan has no unredacted generated security password.
+11. Independent Python oracles match (oracles.log). Python sort_keys checks only fixed ASCII-key audit fixture, not general RFC 8785 compliance.
+12. SecurityFilterChainConfig/Actuator existing baseline inspected. Identity/HTTP security integration remains IMP-05, persistence/cross-channel PII IMP-07; no Cloud/rotation/storage-backup claim.
+13. All 24 local report Markdown links resolve.

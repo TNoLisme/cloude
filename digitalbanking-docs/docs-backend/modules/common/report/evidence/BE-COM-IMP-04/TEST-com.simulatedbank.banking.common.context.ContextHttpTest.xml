@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.context.ContextHttpTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:05.254Z" hostname="phuong-ASUS-TUF" time="0.177">
+  <properties/>
+  <testcase name="successValidationMvcAndSecurityFailuresShareTheOuterTrace()" classname="com.simulatedbank.banking.common.context.ContextHttpTest" time="0.151"/>
+  <testcase name="asyncFailureRetainsTraceAndCleansWorkerAndDispatchThread()" classname="com.simulatedbank.banking.common.context.ContextHttpTest" time="0.016"/>
+  <testcase name="realMvcAsyncCompletionRetainsTraceAndCleansTheCallingThread()" classname="com.simulatedbank.banking.common.context.ContextHttpTest" time="0.008"/>
+  <system-out><![CDATA[2026-11-12T14:49:04.963+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.context.ContextHttpTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T14:49:04.991+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] c.s.b.common.context.ContextHttpTest     : Starting ContextHttpTest using Java 21.0.13.0.3 with PID 89339 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T14:49:04.991+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] c.s.b.common.context.ContextHttpTest     : No active profile set, falling back to 1 default profile: "local"
+2026-11-12T14:49:05.143+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T14:49:05.144+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T14:49:05.242+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-12T14:49:05.243+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-12T14:49:05.244+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-12T14:49:05.252+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] c.s.b.common.context.ContextHttpTest     : Started ContextHttpTest in 0.286 seconds (process running for 6.727)
+2026-11-12T14:49:05.345+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=flow:shared
+2026-11-12T14:49:05.382+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=flow:shared
+2026-11-12T14:49:05.389+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=flow:shared
+2026-11-12T14:49:05.398+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=flow:denied
+2026-11-12T14:49:05.403+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=bd4abb35-9b99-4a29-b549-44650e04f92e
+2026-11-12T14:49:05.418+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=flow:async-failure
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

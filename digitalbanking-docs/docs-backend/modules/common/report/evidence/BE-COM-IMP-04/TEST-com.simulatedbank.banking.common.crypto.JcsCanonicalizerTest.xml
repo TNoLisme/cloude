@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" tests="44" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:07.603Z" hostname="phuong-ASUS-TUF" time="0.049">
+  <properties/>
+  <testcase name="rfcUtf16KeyOrderIncludesSupplementaryCodePoints()" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[1] json=" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[2] json={" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[3] json={} {}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[4] json=1 2" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[5] json=NaN" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[6] json=Infinity" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[7] json=[1e400]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[8] json=[01]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[9] json=[+1]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[10] json={&quot;a&quot;:1,&quot;a&quot;:2}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[11] json={&quot;a&quot;:null,&quot;\u0061&quot;:2}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[12] json={&quot;a&quot;:{&quot;b&quot;:1,&quot;b&quot;:2}}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[13] json=[&quot;\ud800&quot;]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[14] json={&quot;\udfff&quot;:0}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[15] json=[&quot;\ud800x&quot;]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[16] json=[1,]" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[17] json=/*secret*/{}" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[1] bits=0000000000000000, expected=0" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[2] bits=8000000000000000, expected=0" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[3] bits=0000000000000001, expected=5e-324" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[4] bits=8000000000000001, expected=-5e-324" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[5] bits=7fefffffffffffff, expected=1.7976931348623157e+308" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[6] bits=ffefffffffffffff, expected=-1.7976931348623157e+308" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[7] bits=4340000000000000, expected=9007199254740992" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[8] bits=c340000000000000, expected=-9007199254740992" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[9] bits=4430000000000000, expected=295147905179352830000" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[10] bits=44b52d02c7e14af5, expected=9.999999999999997e+22" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[11] bits=44b52d02c7e14af6, expected=1e+23" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.002"/>
+  <testcase name="[12] bits=44b52d02c7e14af7, expected=1.0000000000000001e+23" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[13] bits=444b1ae4d6e2ef4e, expected=999999999999999700000" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[14] bits=444b1ae4d6e2ef4f, expected=999999999999999900000" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[15] bits=444b1ae4d6e2ef50, expected=1e+21" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[16] bits=3eb0c6f7a0b5ed8c, expected=9.999999999999997e-7" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[17] bits=3eb0c6f7a0b5ed8d, expected=0.000001" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[18] bits=41b3de4355555553, expected=333333333.3333332" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[19] bits=41b3de4355555554, expected=333333333.33333325" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[20] bits=41b3de4355555555, expected=333333333.3333333" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[21] bits=41b3de4355555556, expected=333333333.3333334" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[22] bits=41b3de4355555557, expected=333333333.33333343" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.0"/>
+  <testcase name="[23] bits=becbf647612f3696, expected=-0.0000033333333333333333" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="[24] bits=43143ff3c1cb0959, expected=1424953923781206.2" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <testcase name="callerOwnedTransferAndAuditPayloadsMatchIndependentHashes()" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.003"/>
+  <testcase name="numbersEscapingNullArrayOrderAndNestedKeysFollowJcs()" classname="com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

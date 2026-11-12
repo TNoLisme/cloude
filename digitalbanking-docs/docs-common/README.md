@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phạm vi:** Tài liệu yêu cầu, kiến trúc và thiết kế chung
-> **Cập nhật:** 09/11/2026
+> **Cập nhật:** 12/11/2026
 
 ## 1. Mục đích
 
@@ -27,10 +27,10 @@ Quy ước đọc:
 | [[digitalbanking-docs/docs-common/05. Technical stack.md]] | Lựa chọn công nghệ, phiên bản baseline, rủi ro | Nguồn công nghệ |
 | [[digitalbanking-docs/docs-common/06. System architecture.md]] | C4, runtime, integration, deployment topology, ADR | Nguồn kiến trúc |
 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | API semantics, error model, idempotency, step-up, traceability | Nguồn ngữ nghĩa API |
-| [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Draft — chờ review |
-| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng | Draft — chờ review |
-| [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Đang viết |
-| [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Draft — chờ review |
+| [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Nguồn hạ tầng & vận hành |
+| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng | Nguồn chiến lược kiểm thử |
+| [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Nguồn kế hoạch tổng thể |
+| [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Nguồn phân công nhân sự |
 | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
 ## 3. Trạng thái tài liệu
@@ -45,19 +45,19 @@ Quy ước đọc:
 | 04 | Database Design & Analysis | Hoàn thành |
 | 05 | Technical Stack | Hoàn thành |
 | 06 | System Architecture | Hoàn thành |
-| 07 | API Contracts | Hoàn thành — cần chốt các giá trị "Đề xuất" |
-| 08 | Deployment Infrastructure | Draft — chờ review |
-| 09 | Test Plan | Draft — chờ review |
-| 10 | Master Timelines | Đang viết |
-| 11 | Resource & Staffing Plan | Draft — chờ review |
+| 07 | API Contracts | Hoàn thành |
+| 08 | Deployment Infrastructure | Hoàn thành |
+| 09 | Test Plan | Hoàn thành |
+| 10 | Master Timelines | Hoàn thành |
+| 11 | Resource & Staffing Plan | Hoàn thành |
 
 ### 3.2. Thiết kế chuyên sâu
 
 | # | Tài liệu | Trạng thái |
 |---|---|---|
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | Hoàn thành — v1.0 |
-| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Draft — chờ review |
-| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Đang viết |
+| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Hoàn thành — v1.0 |
+| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Hoàn thành — v1.0 |
 
 ### 3.3. Công việc theo tuần
@@ -126,9 +126,9 @@ Xem hướng dẫn tại [[digitalbanking-docs/docs-common/work/README.md]].
 
 ## 7. Lưu ý đồng bộ
 
-- Bảng `Document Map` trong `01. Introduction` (mục 7.2) đang hoán đổi thứ tự `05. Technical stack` và `06. System architecture` so với tên tệp thực tế. Khi tra cứu, ưu tiên tên tệp; cần sửa bảng này trong lần rà soát `01` tiếp theo.
-- `08`, `09` đã có bản Draft độc lập cho deployment baseline và test strategy; các phần phụ thuộc vẫn được liệt kê ở đầu từng tài liệu. `10`, `design/03`, `design/04` và tài liệu implementation tiếp tục là dependency cho các chi tiết chưa chốt.
-- Một số tài liệu dùng tên rút gọn khi tham chiếu (ví dụ `04. Database analysis`); tên tệp chính thức là `04. Database design & analysis.md`.
+- Toàn bộ tài liệu chính (`01`–`11`) và thiết kế chuyên sâu (`design/01`–`04`) trong `docs-common/` đã **Hoàn thành** và là nguồn chuẩn (Single Source of Truth) cho toàn dự án.
+- Bảng `Document Map` trong `01. Introduction` (mục 7.2) đang hoán đổi thứ tự `05. Technical stack` và `06. System architecture` so với tên tệp thực tế. Khi tra cứu, ưu tiên tên tệp.
+- Một số tài liệu dùng tên rút gọn khi tham chiếu (ví dụ `04. Database analysis` hoặc `10. Master timelines.md`); tên tệp thực tế trên đĩa là `04. Database design & analysis.md` và `10 Master timelines.md`.
 
 ## 8. Liên kết nhanh
 

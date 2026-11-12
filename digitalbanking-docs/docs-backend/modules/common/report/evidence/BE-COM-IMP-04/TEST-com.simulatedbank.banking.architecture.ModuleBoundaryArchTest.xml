@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:14.168Z" hostname="phuong-ASUS-TUF" time="1.553">
+  <properties/>
+  <testcase name="commonMustNotDependOnBusinessModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="1.518"/>
+  <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.0"/>
+  <testcase name="inboundAdapterMustNotAccessOutboundAdapterDirectly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001"/>
+  <testcase name="modulesMustBeFreeOfCycles" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.034"/>
+  <system-out><![CDATA[2026-11-12T14:49:14.181+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] com.tngtech.archunit.core.PluginLoader   : Detected Java version 21.0.13.0.3
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

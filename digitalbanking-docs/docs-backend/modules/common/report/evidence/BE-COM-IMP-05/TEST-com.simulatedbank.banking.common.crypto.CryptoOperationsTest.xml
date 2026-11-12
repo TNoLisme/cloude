@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.crypto.CryptoOperationsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T11:12:47.948Z" hostname="phuong-ASUS-TUF" time="0.056">
+  <properties/>
+  <testcase name="realOperationalEndpointsDoNotExposeKeysAndBeansWorkTogether()" classname="com.simulatedbank.banking.common.crypto.CryptoOperationsTest" time="0.056"/>
+  <system-out><![CDATA[2026-11-12T18:12:47.938+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.simulatedbank.banking.common.crypto.CryptoOperationsTest]: CryptoOperationsTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-12T18:12:47.945+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.crypto.CryptoOperationsTest
+2026-11-12T18:12:47.980+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-2-exec-6] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=d78c5bd2-4629-4a69-802a-afece9b4fe9d
+2026-11-12T18:12:47.989+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-2-exec-7] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=a7885b34-5379-4751-9d4d-d5cf8396a5e5
+2026-11-12T18:12:47.995+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-2-exec-8] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=349f121b-528d-40ac-8944-2b05841f297e
+2026-11-12T18:12:48.000+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-2-exec-9] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=a19091bd-521f-464f-a5b6-2b50c2687ad5
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
