@@ -1,0 +1,7 @@
+PASS: 95 source hashes match current workspace
+PASS: archive contents/hashes match manifest; no git/env/unsafe paths
+PASS: final XML totals {'tests': 47, 'failures': 0, 'errors': 0, 'skipped': 0}
+PASS: all 9 AC IDs and exact criterion text retained
+PASS: all report artifact/source links resolve
+PASS: generated passwords redacted; negative fixtures remain synthetic
+Exit: 0

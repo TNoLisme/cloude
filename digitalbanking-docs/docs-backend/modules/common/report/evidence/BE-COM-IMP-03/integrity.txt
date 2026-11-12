@@ -1,0 +1,5 @@
+PASS current source and archive hashes: 111 files
+PASS report links and all 9 AC rows
+PASS XML totals tests/failures/errors/skipped=[70, 0, 0, 0]; generated passwords redacted
+PASS git diff --check
+Evidence verification exit=0; no runtime source changed after E04

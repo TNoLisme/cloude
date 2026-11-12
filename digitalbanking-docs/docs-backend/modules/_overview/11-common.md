@@ -2,6 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-SUM-11`
+> **Phiên bản:** v1.2 — cập nhật 12/11/2026
 > **Module:** `com.simulatedbank.banking.common`
 > **Owner chính:** **Phương** (Phối hợp: Vũ, Đạt, Thịnh — cung cấp hạ tầng dùng chung cho cả 10 module nghiệp vụ)
 > **Mốc tập trung:** **Tuần 2 – Tuần 3 (W2–W3)** và duy trì xuyên suốt theo `11. Resource & Staffing Plan.md`
@@ -24,18 +25,18 @@ com.simulatedbank.banking.common/
 │   ├── TimeConfig.java                       // Bean Clock (UTC) & ZoneId (Asia/Ho_Chi_Minh)
 │   └── SecurityFilterChainConfig.java        // Cấu hình thứ tự Filter, CORS, Security Headers
 ├── context/
-│   ├── CorrelationAndRequestIdFilter.java    // Sinh/kiểm tra X-Correlation-ID, X-Request-ID & gắn MDC
+│   ├── CorrelationAndRequestIdFilter.java    // Validate correlation ID; requestId luôn do server sinh; gắn MDC
 │   ├── RequestContext.java                   // Record giữ correlationId, requestId, clientIp, userAgent
 │   └── RequestContextHolder.java             // ThreadLocal truy xuất ngữ cảnh request hiện tại
 ├── crypto/
 │   ├── PiiCryptoService.java                 // Mã hóa/giải mã AES-256-GCM (IV 12B || Ciphertext || Tag 16B)
 │   ├── HmacService.java                      // HMAC-SHA256 cho blind index & SHA-256 cho token/hash chain
 │   ├── JcsCanonicalizer.java                 // Chuẩn hóa JSON theo RFC 8785 (JCS) cho Idempotency & Audit
-│   └── PiiMaskingUtils.java                  // Che dấu số tài khoản (******1234), CCCD (********1234), IP
+│   └── PiiMaskingUtils.java                  // Account: **** **** 1234 theo 03/07; CCCD: ********1234; IP
 └── error/
     ├── ErrorCode.java                        // Enum danh mục mã lỗi chuẩn + HTTP Status + cờ retryable
     ├── BankingBusinessException.java         // Base exception cho các lỗi nghiệp vụ
-    ├── ApiResponse.java                      // Envelope thành công chuẩn (data + meta)
+    ├── ApiResponse.java                      // Danh mục cũ; chưa triển khai khi 07 chưa có contract cần nó
     ├── ProblemResponse.java                  // Envelope lỗi chuẩn theo 07. API contracts.md
     └── GlobalExceptionHandler.java           // @RestControllerAdvice ánh xạ exception & SQLSTATE
 ```
@@ -45,9 +46,9 @@ com.simulatedbank.banking.common/
 ## 3. Đặc tả Các Thành phần Cốt lõi Cần Cung cấp
 
 ### 3.1. Bộ lọc Truy vết `CorrelationAndRequestIdFilter` (`design/01` §4.6)
-- Chạy ở mức ưu tiên cao nhất (`Ordered.HIGHEST_PRECEDENCE`) trước cả Spring Security чтобы mọi lỗi `401`/`403` đều có mã truy vết.
+- Một servlet filter ở SecurityProperties.DEFAULT_FILTER_ORDER - 1 (hiện -101), trước Spring Security; ApiSecurityHeadersFilter ở -102. Xem TKCT/source, không dùng HIGHEST_PRECEDENCE làm chữ ký bắt buộc.
 - Kiểm tra header `X-Correlation-ID` từ client:
-  - Nếu có và khớp biểu thức chính quy `^[A-Za-z0-9._:-]{1,64}$` $\rightarrow$ giữ nguyên.
+  - Nếu có và khớp biểu thức chính quy `^[A-Za-z0-9._:-]{1, 64}$` $\rightarrow$ giữ nguyên.
   - Nếu không gửi $\rightarrow$ tự sinh UUIDv4 mới.
   - Nếu gửi sai định dạng (chứa ký tự xuống dòng hoặc vượt 64 ký tự) $\rightarrow$ từ chối ngay với `400 VALIDATION_ERROR` (chống Log Injection).
 - Luôn sinh mới `requestId` (UUIDv4) cho mỗi HTTP request, đặt `correlationId` và `requestId` vào SLF4J `MDC`, đính kèm header `X-Correlation-ID` vào mọi HTTP response, và dọn sạch `MDC` trong khối `finally`.
@@ -60,20 +61,29 @@ com.simulatedbank.banking.common/
    - Tính `hmacSha256Hex(normalizedInput)` dùng khóa `APP_HMAC_KEY_BASE64` để tạo blind index (`account_no_hash`, `national_id_hash`, `device_fingerprint_hash`, `otp_hash`).
    - Tính `sha256Hex(input)` và so sánh hằng thời gian `MessageDigest.isEqual(...)` cho `session.token_hash`, `csrf_token_hash` và chuỗi băm `audit_log.record_hash`.
 3. **`JcsCanonicalizer` (`RFC 8785`):**
-   - Sắp xếp toàn bộ khóa JSON theo thứ tự từ điển Unicode và loại bỏ khoảng trắng thừa để module `transfer` tính `request_hash` và module `audit` tính `record_hash` hoàn toàn tất định (deterministic).
+   - Canonicalize đầy đủ RFC 8785 mà `07` §5.2 yêu cầu: sort key theo UTF-16 code units, serialize number theo ECMAScript, escape đúng chuẩn, giữ null/array order; không chỉ sort map/bỏ khoảng trắng. `design/01` §7.2 bổ sung chi tiết không trái nguồn.
 
-### 3.3. Mô hình Lỗi & `GlobalExceptionHandler` (`07` §3, `design/02` Phụ lục C)
-- Chuẩn hóa phản hồi lỗi trả về đầy đủ: `code`, `message`, `status`, `retryable`, `correlationId`, `requestId`, `timestamp` và `details`.
+### 3.3. Mô hình Lỗi & `GlobalExceptionHandler` (`07` §4, `design/02` Phụ lục C)
+- Problem theo `07` §4: `type`, `title`, `status`, `detail`, `instance`, `code`, `correlationId`, `timestamp`, `retryable`; validation dùng `errors[]`. `requestId` giữ context/log, không là field body bắt buộc; không đổi thành `message/details`.
+- Success trả đúng DTO/schema endpoint trong `07` §7.2/§8, không auto wrap `data/meta`. Mã security theo catalog `07`, không dùng STEP_UP_INVALID/MAKER_CHECKER_VIOLATION của thiết kế cấp dưới.
 - Ánh xạ chính xác các ngoại lệ cơ sở dữ liệu PostgreSQL (`SQLSTATE`) sang mã lỗi hợp đồng API mà không bao giờ làm lộ câu lệnh SQL hay stack trace:
-  - `55P03` (`lock_not_available` khi `FOR UPDATE NOWAIT` trên `transfer` / `approval_request` hoặc hết `lock_timeout = 2s`): ánh xạ sang `409 IDEMPOTENCY_IN_PROGRESS` hoặc `503 RESOURCE_LOCKED` (`retryable = true`, kèm header `Retry-After: 2`).
+  - `55P03`: owner xác định đúng NOWAIT in-progress → `409 IDEMPOTENCY_IN_PROGRESS`; lock timeout tài nguyên khác → `503 SERVICE_UNAVAILABLE`. Không suy ngữ cảnh chỉ từ SQLSTATE; Retry-After theo policy nguồn.
   - `40P01` (`deadlock_detected`) hoặc `57014` (`query_canceled` do `statement_timeout = 5s`): ánh xạ sang `503 SERVICE_UNAVAILABLE` (`retryable = true`).
-  - `23505` (`unique_violation`): phân loại theo tên constraint để trả về `409 CONFLICT` tương ứng.
+  - `23505`: owner phân loại replay/conflict/in-progress cho idempotency, business error đã có catalog cho unique nghiệp vụ, `500 INTERNAL_ERROR` cho ledger/invariant. Không thêm mã CONFLICT hoặc đổi mọi unique thành lỗi client.
 
 ---
 
-## 4. Danh sách Công việc Cần Triển khai (Ưu tiên Hoàn thành Sớm ở W2–W3)
+## 4. Trạng thái và nơi tra cứu hiện tại
 
-1. [ ] Khởi tạo bộ khung cấu hình `AppProperties`, `TimeConfig` (`Clock` bean) và `SecurityFilterChainConfig` (HTTP Security Headers, CORS, `Cache-Control: no-store`).
-2. [ ] Hiện thực và viết Unit Test cho `CorrelationAndRequestIdFilter` và `RequestContextHolder`.
-3. [ ] Hiện thực và viết Unit Test cho bộ 4 tiện ích bảo mật dữ liệu: `PiiCryptoService`, `HmacService`, `JcsCanonicalizer` (kèm test vector RFC 8785) và `PiiMaskingUtils`.
-4. [ ] Hiện thực `ErrorCode`, `BankingBusinessException`, `ApiResponse`, `ProblemResponse` và `GlobalExceptionHandler` để bàn giao cho Đạt, Vũ, Thịnh sử dụng ngay khi bắt đầu code các module nghiệp vụ ở W3.
+- [README common](../common/README.md): hướng dẫn sử dụng/tra cứu.
+- [TKCT](../common/TKCT.md): class/API/crypto/error/health/logging và test mapping đã đối chiếu code.
+- [Final report](../common/report/BE-COM-FINAL-REPORT.md): tasks, verification, state/dependency và điều kiện tiếp tục.
+
+Nền tảng common đã triển khai;5 task Done trong phạm vi công bố, 05/07/08 Blocked thiếu identity/consumer/Cloud. Bảng class ở §2 là lược đồ thành phần cốt lõi; inventory đầy đủ 28 Java files ở TKCT §2. Không dùng checklist Planned trước code để suy hiện trạng hoặc nghiệm thu toàn module.
+
+## Change Log
+
+| Phiên bản | Ngày | Thay đổi |
+|---|---|---|
+| v1.1 | 12/11/2026 | Đồng bộ mô hình lỗi, success DTO, masking và JCS theo docs-common/01–11; tham chiếu quyết định trước implement, không sửa runtime |
+| v1.2 | 12/11/2026 | Tách README/TKCT/final report; sửa registration order theo code, dẫn trạng thái hiện tại thay checklist Planned cũ |

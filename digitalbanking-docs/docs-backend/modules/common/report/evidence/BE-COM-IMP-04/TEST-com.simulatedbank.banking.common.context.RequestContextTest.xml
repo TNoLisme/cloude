@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.context.RequestContextTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:06.593Z" hostname="phuong-ASUS-TUF" time="0.13">
+  <properties/>
+  <testcase name="asyncErrorAndNestedErrorRedispatchReuseSnapshotAndCleanThreads()" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.012"/>
+  <testcase name="metadataIgnoresUntrustedProxyAndNeverLogsRawIpOrAgent(CapturedOutput)" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.002"/>
+  <testcase name="concurrentRequestsAndReusedWorkersNeverShareContext()" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.003"/>
+  <testcase name="[1] header=" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.002"/>
+  <testcase name="[2] header=x" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.001"/>
+  <testcase name="[3] header=flow:retry_1.0-2" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.001"/>
+  <testcase name="[4] header=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.002"/>
+  <testcase name="explicitHandoffRestoresWorkerMdcEvenOnFailure()" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.005"/>
+  <testcase name="exceptionsBeforeMvcAreSafeAndCommittedResponsesAreNotRewritten(CapturedOutput)" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.01"/>
+  <testcase name="[1] status=401" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.006"/>
+  <testcase name="[2] status=403" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.005"/>
+  <testcase name="[3] status=404" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.005"/>
+  <testcase name="[1] raw=" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.014"/>
+  <testcase name="[2] raw= " classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.006"/>
+  <testcase name="[3] raw=bad&#13;&#10;INJECTED" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.006"/>
+  <testcase name="[4] raw=bad/email@example.test" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.005"/>
+  <testcase name="[5] raw=é" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.005"/>
+  <testcase name="[6] raw=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.004"/>
+  <testcase name="duplicateHeadersAreRejected()" classname="com.simulatedbank.banking.common.context.RequestContextTest" time="0.004"/>
+  <system-out><![CDATA[2026-11-12T14:49:06.603+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=a8d8503d-c2e0-4411-b036-704707acbc2c
+2026-11-12T14:49:06.638+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=02de3f0e-a48c-4fef-bf9b-da8da509acfc
+2026-11-12T14:49:06.640+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=717665d2-967f-4793-9d29-d98bfd56d800
+2026-11-12T14:49:06.640+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=INTERNAL_ERROR status=500 correlationId=6d2d376f-9f43-419c-b24a-8a9dadac04ec
+2026-11-12T14:49:06.652+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=flow:retry
+2026-11-12T14:49:06.658+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=flow:retry
+2026-11-12T14:49:06.666+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=flow:retry
+2026-11-12T14:49:06.674+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=bab99876-75d2-4e94-a10b-cd6a2214aa00
+2026-11-12T14:49:06.689+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=a824164b-64c7-48f1-88fd-f4d1cc312ab9
+2026-11-12T14:49:06.696+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=e5748dfc-70b8-4ebc-8bcb-538e52601014
+2026-11-12T14:49:06.703+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=705995b8-c968-4396-8b2c-67f6f558c51f
+2026-11-12T14:49:06.710+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=744151e7-fda1-4876-8568-290f6a843bcd
+2026-11-12T14:49:06.717+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=e21a7766-e04c-4038-921a-aa5fa221b9c8
+2026-11-12T14:49:06.723+07:00  WARN 89339 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=VALIDATION_ERROR status=400 correlationId=03756af2-fec0-4071-832e-bef6e38cbe10
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

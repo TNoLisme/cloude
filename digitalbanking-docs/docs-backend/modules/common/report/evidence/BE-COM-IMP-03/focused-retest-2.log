@@ -1,0 +1,35 @@
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+ContextHttpTest > successValidationMvcAndSecurityFailuresShareTheOuterTrace() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.support.BeanDefinitionOverrideException at DefaultListableBeanFactory.java:1263
+
+ContextHttpTest > realMvcAsyncCompletionRetainsTraceAndCleansTheCallingThread() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+ContextServletTest > actualServletRegistrationRunsOnceBeforeProductionSecurityAndIgnoresForwardHeaders() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.support.BeanDefinitionOverrideException at DefaultListableBeanFactory.java:1263
+
+26 tests completed, 3 failed
+
+> Task :test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 8s
+4 actionable tasks: 4 executed

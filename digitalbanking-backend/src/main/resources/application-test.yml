@@ -5,5 +5,14 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: 3
+      minimum-idle: 1
   flyway:
     clean-disabled: false
+
+app:
+  crypto:
+    aes-key-base64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    hmac-key-base64: MTEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+
+logging:
+  environment: test

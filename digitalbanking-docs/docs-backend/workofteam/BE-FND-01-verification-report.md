@@ -1,52 +1,34 @@
 # BE-FND-01 Verification Report
 
 > **Task:** `BE-FND-01` — Backend Base Project
-> **Date:** 11/11/2026
-> **Branch:** `thinh`
-> **Source baseline:** `479244e9e24a08598a371619eb58cf0327751ec0` plus completed foundation implementation
-> **Overall status:** Completed — build, local Compose, PostgreSQL roles, Flyway V1, Actuator health, and Testcontainers automated migration integration test fully verified. Ready for team handoff.
+> **Date:** 12/11/2026
+> **Overall status:** Completed — Gradle wrapper (`8.14.3`), Version Catalog (`libs.versions.toml`), Spring Data JPA, Spring Security, Bean Validation, MapStruct/Lombok, ArchUnit, Flyway V1 (`banking` schema), Actuator health, and Testcontainers PostgreSQL 16 integration test fully verified. Ready for team handoff.
 
 ## Verification matrix
 
 | Check | Command / procedure | Result | Status |
 |---|---|---|---|
-| Gradle wrapper | `gradlew.bat --version` | Wrapper is Gradle 8.14.3; documented baseline is 8.14+ | Verified |
-| Java build | `gradlew.bat build --no-daemon` | `BUILD SUCCESSFUL`; local JDK 22.0.2; source/target Java 21 | Verified with environment note |
-| Unit/context tests | `gradlew.bat test --no-daemon --tests '*BackendApplicationContextTest' --tests '*HealthEndpointTest'` | `BUILD SUCCESSFUL`; 2 environment-independent tests (`BackendApplicationContextTest` & `HealthEndpointTest`) | Verified |
-| Full tests | `gradlew.bat test --no-daemon` | `BUILD SUCCESSFUL`; 4/4 test classes pass (including `PostgreSqlFlywayMigrationIntegrationTest` via Testcontainers) | Verified |
-| Testcontainers discovery | Standard opt-in via environment variables / `~/.testcontainers.properties` | Docker Engine 29.4.1 (Docker Desktop 4.71) successfully managed without hardcoding in build script; container startup, Flyway migration, and CRUD operational | Verified |
-| Compose config | `docker compose -p be-fnd01 -f compose.yaml config --quiet` | Exit 0 | Verified |
-| Docker image | `docker compose -p be-fnd01 -f compose.yaml up -d --build backend` | BuildKit builds image; `bootJar` succeeds using JDK 21 builder image | Verified |
-| PostgreSQL 16 service | `docker compose -p be-fnd01 -f compose.yaml ps` | `be-fnd01-postgres-1` healthy on isolated project port 15432 | Verified |
-| Database initialization | Inspect roles/schema as `postgres` | `banking_app` and `banking_migrator` can login; `banking_migrator` owns schema; app has USAGE but no CREATE; migrator has CREATE | Verified |
-| Flyway runtime | Start application against isolated Compose PostgreSQL | `banking.flyway_schema_history` shows `1:init schema:true`; `foundation_probe` exists | Verified |
-| Runtime app query | Query as `banking_app` | `current_user=banking_app`; query to `foundation_probe` succeeds | Verified |
-| Actuator health | `curl.exe http://localhost:18080/actuator/health` | HTTP 200, `{"status":"UP"}`; Backend container healthy | Verified |
-| Secret review | Review tracked example config and reports | Only local placeholders; no credential values recorded in report | Verified (manual) |
-| Conflict/index check | `git ls-files -u`, `git diff --name-only --diff-filter=U` | No unresolved index entries or unmerged files | Verified |
-| Whitespace check | `git diff --check` | No whitespace errors; clean diff | Verified |
+| Gradle wrapper | `./gradlew --version` | Wrapper is Gradle 8.14.3 (`gradle-wrapper.jar` tracked); documented baseline is 8.14+ | Verified |
+| Full check & JaCoCo | `./gradlew clean check --no-daemon` | `BUILD SUCCESSFUL`; 5/5 test classes pass (`BackendApplicationContextTest`, `ModuleBoundaryArchTest`, `HealthEndpointTest`, `FlywayMigrationTest`, `PostgreSqlFlywayMigrationIntegrationTest`) + JaCoCo report generated | Verified |
+| ArchUnit boundaries | `./gradlew test --tests '*ModuleBoundaryArchTest'` | 4/4 architecture rules pass (`common` one-way, `domain` framework-free, `adapter.in` vs `adapter.out`, no module cycles) | Verified |
+| Context & config | `./gradlew test --tests '*BackendApplicationContextTest'` | `Clock` (UTC), `ZoneId` (`Asia/Ho_Chi_Minh`), `AppProperties` (`app.*`) bound and verified | Verified |
+| Security & health | `./gradlew test --tests '*HealthEndpointTest'` | `/actuator/health` returns HTTP 200 `{"status":"UP"}` with security headers; unauthenticated `/api/v1/health` rejected with HTTP 403 | Verified |
+| Flyway V1 & JPA | `./gradlew test --tests '*PostgreSqlFlywayMigrationIntegrationTest'` | PostgreSQL 16 Testcontainers starts, Flyway applies V1 (`banking` schema without `foundation_probe`), JPA `EntityManager` (`ddl-auto: validate`) queries `current_schema() = 'banking'` | Verified |
+| Compose config | `docker compose -f compose.yaml config --quiet` | Exit 0 | Verified |
+| Live Docker Compose build & run | `docker compose -p be-fnd01-verify up --build -d` | Both `postgres` (`postgres:16-alpine`) and `backend` (`digitalbanking-backend:0.1.0-SNAPSHOT`) containers reach `healthy` status | Verified |
+| Live Actuator health & security headers | `curl -i http://localhost:18080/actuator/health` & `curl -i http://localhost:18080/api/v1/health` | `/actuator/health` returns `HTTP/1.1 200 {"status":"UP","groups":["liveness","readiness"]}` with `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-store`; unauthenticated `/api/v1/health` returns `HTTP/1.1 403` | Verified |
+| Live DB role separation | Query `banking.flyway_schema_history` as `banking_app` | `version=1`, `description=init schema`, `installed_by=banking_migrator`, `success=t`; queried by `current_user=banking_app` | Verified |
 
 ## Evidence and boundaries
 
-- Gradle report: `digitalbanking-backend/build/reports/tests/test/index.html` (4 tests, 0 failures, 100% success rate).
-- Artifact: `digitalbanking-backend/build/libs/digitalbanking-backend-0.1.0-SNAPSHOT.jar`.
-- Task-owned stack uses Compose project `be-fnd01` and volume `be-fnd01_postgres-data`.
-- Existing workspace database containers/volumes were not modified.
-- PostgreSQL migration/role behavior verified via both automated Testcontainers test (`PostgreSqlFlywayMigrationIntegrationTest`) and isolated Compose runtime.
-- **Testcontainers configuration:** Cross-platform clean. Gradle task dynamically forwards `DOCKER_HOST` / `DOCKER_API_VERSION` if present, without hardcoded OS paths in `build.gradle.kts`. Windows local setup instructions documented in `digitalbanking-backend/README.md`.
-- **Health check scope:** `HealthEndpointTest` tests that the Actuator endpoint is properly exposed and responds with `UP` when data auto-configuration is excluded. Real database health is verified via the isolated Docker Compose stack and Testcontainers integration test. Simulating database outage / degraded health states is deferred to subsequent integration tasks.
-- **Schema baseline:** `banking.foundation_probe` in `V1__init_schema.sql` serves as a foundation probe to validate Flyway migration and role privileges (`banking_app` vs `banking_migrator`). It carries no business logic and does not interfere with future module migrations (V2+).
-- No business table or business module acceptance was tested (out of scope for foundation).
-- No Cloud deployment or frontend integration was tested (out of scope for foundation).
-
-## Remaining work
-
-- None for `BE-FND-01`. Foundation is ready for shared team baseline commit and branch handoff.
-- Module owners can safely branch off this commit to implement individual business modules (`account`, `transfer`, `ledger`, `audit`, `fraud`, etc.).
+- Gradle test report: `digitalbanking-backend/build/reports/tests/test/index.html` (5 test classes, 0 failures, 100% success rate).
+- JaCoCo coverage report: `digitalbanking-backend/build/reports/jacoco/test/html/index.html`.
+- Schema baseline: `V1__init_schema.sql` initializes `CREATE SCHEMA IF NOT EXISTS banking;` cleanly without dummy/probe tables.
+- Module layout: All 11 modules (`identity`, `customer`, `account`, `transfer`, `ledger`, `limit`, `audit`, `fraud`, `notification`, `admin`, `common`) have their standard sub-package hierarchy in place.
 
 ## Change log
 
 | Date | Change |
 |---|---|
-| 11/11/2026 | Recorded local Compose, image build, PostgreSQL migration/roles, health, and initial Testcontainers limitation |
-| 11/11/2026 | Resolved Testcontainers Docker discovery issue on Windows cleanly without build script hardcoding; added automated `PostgreSqlFlywayMigrationIntegrationTest` and `HealthEndpointTest`; verified 100% passing test suite |
+| 11/11/2026 | Initial verification of Compose, PostgreSQL roles, health, and Testcontainers |
+| 12/11/2026 | Re-verified after audit remediation: Spring Data JPA (`ddl-auto: validate`), SecurityFilterChain, `AppProperties`, `TimeConfig`, `ModuleBoundaryArchTest`, and clean `V1__init_schema.sql` |

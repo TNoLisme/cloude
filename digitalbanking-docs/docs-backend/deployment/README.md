@@ -2,8 +2,8 @@
 
 > **Dự án:** Digital Banking MVP (Single-Bank, Core Simulated)
 > **Mã tài liệu:** `BE-DEP-01`
-> **Phiên bản:** v1.1
-> **Ngày cập nhật:** 09/11/2026
+> **Phiên bản:** v1.2
+> **Ngày cập nhật:** 12/11/2026
 > **Trạng thái:** Draft — Hướng dẫn triển khai & vận hành; cấu hình chi tiết tại [[digitalbanking-docs/docs-backend/deployment/configuration.md]]
 > **Tài liệu cấu hình:** [[digitalbanking-docs/docs-backend/deployment/configuration.md]] (`BE-DEP-02`)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/05. Technical stack.md]], [[digitalbanking-docs/docs-common/06. System architecture.md]] (§9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§3, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]], [[digitalbanking-docs/docs-common/09. Test plan.md]] (§7–§8, §10), [[digitalbanking-docs/docs-common/10 Master timelines.md]] (W7–W8), [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] (§7–§8), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§10, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§9)
@@ -104,14 +104,14 @@ Tài liệu này là **hướng dẫn triển khai và vận hành** Backend Spr
 ### 3.3. Triển khai `local`
 
 ```bash
-# Khởi động các service theo Docker Compose (postgres, backend, nginx; prometheus/grafana tùy chọn)
+# Compose hiện có postgres/backend; Nginx và monitoring chưa nằm trong file local
 docker compose up -d
 
 # Theo dõi log backend (Flyway chạy lúc khởi động bằng DB_MIGRATION_USER)
 docker compose logs -f backend
 
-# Health probe công khai (nếu cổng 8080 được publish ra host)
-curl -fsS http://localhost:8080/actuator/health
+# Port local mặc định trong compose.yaml là 127.0.0.1:18080
+curl -fsS http://localhost:18080/actuator/health
 ```
 
 Kỳ vọng:
@@ -121,6 +121,9 @@ Kỳ vọng:
 - Chỉ dùng dữ liệu synthetic; không dùng PII thật (`NFR-032`).
 
 ### 3.4. Triển khai `demo`/Cloud (W7)
+
+**Gate hiện tại: NO-GO** — [task 07](../modules/common/report/BE-COM-IMP-07-verification.md) còn thiếu consumer thật; owner/URL Cloud chưa được cấp. [Common readiness/runbook](common-readiness.md) và [verification 08](../modules/common/report/BE-COM-IMP-08-verification.md) tách W6 local với W7/W8 chưa chạy. Các bước dưới đây là quy trình sau khi đủ gate, không phải trạng thái đã deploy.
+
 
 1. Provision PostgreSQL 16, private network, Nginx/TLS, secret store và backup storage.
 2. Deploy immutable backend image; nạp biến môi trường/secret theo `configuration.md` §4.

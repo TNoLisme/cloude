@@ -1,3 +1,1 @@
-CREATE TABLE IF NOT EXISTS banking.foundation_probe (
-    id BIGINT PRIMARY KEY
-);
+CREATE SCHEMA IF NOT EXISTS banking;

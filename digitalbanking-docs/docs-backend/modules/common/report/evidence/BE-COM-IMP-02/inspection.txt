@@ -1,0 +1,26 @@
+git diff --check
+command: git diff --check
+exit: 0
+
+common ownership inspection
+command: rg -n import com.simulatedbank.banking.(identity|customer|account|transfer|ledger|limit|audit|fraud|notification|admin)|@Transactional|@Repository|@Scheduled digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error
+exit: 1
+
+revision
+command: git rev-parse HEAD
+exit: 0
+73f190e0a2f34b5f95cc295a90e5fe8a23a4479b
+
+Java
+command: java -version
+exit: 0
+openjdk version "21.0.13.0.3" 2026-10-24
+OpenJDK Runtime Environment (build 21.0.13.0.3+1-1-26.04.1-Ubuntu)
+OpenJDK 64-Bit Server VM (build 21.0.13.0.3+1-1-26.04.1-Ubuntu, mixed mode, sharing)
+
+OS
+command: uname -sr
+exit: 0
+Linux 7.0.0-43-generic
+
+New error source whitespace: PASS

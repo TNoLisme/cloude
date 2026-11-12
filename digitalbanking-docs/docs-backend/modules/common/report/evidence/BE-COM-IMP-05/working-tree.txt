@@ -1,0 +1,29 @@
+ M digitalbanking-backend/.env.example
+ M digitalbanking-backend/README.md
+ M digitalbanking-backend/compose.yaml
+D  digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/.gitkeep
+ M digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/AppProperties.java
+ M digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SecurityFilterChainConfig.java
+D  digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/.gitkeep
+D  digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/.gitkeep
+ M digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java
+ M digitalbanking-backend/src/main/resources/application.yml
+ M digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/context/ContextServletTest.java
+ M digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/crypto/CryptoOperationsTest.java
+ M digitalbanking-backend/src/test/java/com/simulatedbank/banking/health/HealthEndpointTest.java
+ M digitalbanking-docs/docs-backend/deployment/configuration.md
+ M digitalbanking-docs/docs-backend/modules/common/README.md
+ M digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-IMP-05.md
+ M digitalbanking-docs/docs-backend/modules/common/tasks/README.md
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/ApiSecurityHeadersFilter.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/RequestBodyLimitFilter.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/RequestRateLimitFilter.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/RequestRateLimiter.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SessionAuthenticationFilter.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SessionAuthenticator.java
+?? digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SessionCsrfTokens.java
+?? digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/HttpSecurityComponentsTest.java
+?? digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/HttpSecurityServletTest.java
+?? digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/HttpSecurityTest.java
+?? digitalbanking-docs/docs-backend/modules/common/report/BE-COM-IMP-05-verification.md
+?? digitalbanking-docs/docs-backend/modules/common/report/evidence/BE-COM-IMP-05/

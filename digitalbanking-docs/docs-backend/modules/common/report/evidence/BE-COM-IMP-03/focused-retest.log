@@ -1,0 +1,29 @@
+
+> Task :compileJava FAILED
+/home/phuong/workspace/cloude/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/CorrelationAndRequestIdFilter.java:79: error: cannot find symbol
+        writer.write(response, writer.create(code, code.defaultDetail(), request, List.of(), Map.of()));
+                                                       ^
+  symbol:   method defaultDetail()
+  location: variable code of type ErrorCode
+1 error
+
+[Incubating] Problems report is available at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  /home/phuong/workspace/cloude/digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/CorrelationAndRequestIdFilter.java:79: error: cannot find symbol
+          writer.write(response, writer.create(code, code.defaultDetail(), request, List.of(), Map.of()));
+                                                         ^
+    symbol:   method defaultDetail()
+    location: variable code of type ErrorCode
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 2s
+1 actionable task: 1 executed

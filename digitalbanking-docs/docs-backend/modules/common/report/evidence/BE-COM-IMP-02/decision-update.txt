@@ -1,0 +1,7 @@
+Date: 2026-11-12 UTC+07:00
+Owner delegated outstanding task decisions to Codex; recorded as DEC-01..05 in report v1.1.
+PASS: 83 runtime/config/test/build files match the baseline E04 manifest.
+Only report, common README and backend README changed.
+No Gradle rerun: no runtime/test change. Existing E03 result remains 47 pass / 0 failure / 0 error / 0 skipped.
+Baseline E04 manifest/archive/integrity preserved under before-owner-decisions/.
+Current manifest/archive include updated documentation; verify-evidence.py checks current integrity.

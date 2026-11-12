@@ -24,3 +24,6 @@ DECISIONS.md
 digitalbanking-docs/docs-references
 specs/
 docs/
+.agents/
+.idea/
+skills/

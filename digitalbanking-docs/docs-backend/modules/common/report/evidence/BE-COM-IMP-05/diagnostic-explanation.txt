@@ -1,0 +1,8 @@
+During focused-retest.log, 7 authenticated paths returned 500.
+A temporary test-only filter inspected the exception; stdout in the then-current JUnit XML was:
+SECURITY_DIAGNOSTIC java.lang.IllegalStateException: Identity owns CSRF token lifecycle
+Native CsrfAuthenticationStrategy attempted to clear the identity-owned CSRF repository.
+Spring Security 6.5.6 sources expose CsrfConfigurer.sessionAuthenticationStrategy(...).
+Configured NullAuthenticatedSessionStrategy specifically for CSRF; native CsrfFilter remains enabled.
+Temporary diagnostic filter removed. focused-retest-2.log passes; final clean build also passes.
+The original diagnostic.log is retained; this file is an inspection note, not an original XML copy.
