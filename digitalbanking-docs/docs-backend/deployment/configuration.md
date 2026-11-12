@@ -182,6 +182,8 @@ APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:8443
 
 - Không commit `.env`, mật khẩu, khóa AES/HMAC hoặc token vào Git/image (`08` §6.1, `design/04` §6.4).
 - `APP_PII_AES_KEY_BASE64` và `APP_HMAC_KEY_BASE64` phải giải mã Base64 thành đúng **32 byte (256 bit)**; sai độ dài hoặc dùng placeholder trên `demo` phải **fail-fast** (`design/04` §6.4).
+- Runtime `CryptoConfig` (IMP-04) từ chối thiếu/sai Base64/độ dài và hai khóa trùng nhau ở mọi profile. Khóa synthetic công khai và khóa lặp một byte chỉ được dùng khi mọi profile đều là local/test; demo/prod/cloud hoặc profile trộn đều từ chối. Validation không chứng minh entropy; tạo riêng mỗi khóa bằng `openssl rand -base64 32`. Không echo/log/serialize key accessors, không expose actuator env/configprops.
+- `previous-keys` khác rỗng bị fail-fast vì chưa hỗ trợ rotation; `aes-key-id` chỉ là metadata, không thêm vào blob. Xem [verification IMP-04](../modules/common/report/BE-COM-IMP-04-verification.md).
 - `banking_app` và `banking_migrator` phải có mật khẩu khác nhau; không dùng tài khoản migration cho runtime (`design/04` §6.5).
 - Trên `demo`/Cloud, ưu tiên Docker Secret hoặc secret store của nền tảng; không đưa secret vào biến môi trường hiển thị trong log/CI (`08` §6.1).
 - Không ghi secret, cookie, OTP, token hoặc khóa vào log/evidence (`NFR-020`, `design/04` §9).
@@ -334,7 +336,7 @@ app:
 - Các giá trị `(đề xuất)` về pool, outbox poll/batch/lease, resend cooldown chỉ là baseline vận hành; phải chốt bằng benchmark/evidence trước khi coi là cam kết.
 - `app.security.step-up.*` (T0 challenge) **khác** với `app.transfer.pin-otp-threshold-vnd` (yêu cầu PIN + OTP). Hai ngưỡng này không được gộp chung.
 - `AppProperties` cung cấp nested defaults cả khi không có YAML; profile override base YAML, env/CLI override theo Spring Boot. Ba biến lockout/transfer ở §4.1 và `APP_TIMEZONE` được chuyển tiếp trong Compose. Khởi động lại sau đổi cấu hình. Các trường số vừa nêu phải là số nguyên dương; timezone rỗng/sai làm khởi động thất bại với thông báo không echo giá trị timezone hoặc key.
-- Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. Validation khóa/rotation thuộc BE-COM-IMP-04, HTTP security và enforcement thuộc 05/07 cùng identity/transfer; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
+- Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. BE-COM-IMP-04 đã triển khai validation khóa; rotation vẫn Open (OQ-15/OI-COM-05), HTTP security và enforcement thuộc 05/07 cùng identity/transfer; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
 - Inject `Clock` UTC và `ZoneId businessZoneId`: `clock.instant()` cho timestamp/TTL, `LocalDate.now(clock.withZone(businessZoneId))` cho ngày nghiệp vụ; test inject primary `Clock.fixed`. Hợp đồng và ví dụ override tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
 
 ---

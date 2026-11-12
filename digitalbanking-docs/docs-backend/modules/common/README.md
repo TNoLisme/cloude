@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.5
+> **Phiên bản:** v1.6
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -58,9 +58,9 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 ### 1.4. Trạng thái so với code
 
-Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` dưới đây là thiết kế cần triển khai; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
+Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` đã triển khai sau BE-COM-IMP-04; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
 
-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). Security chain thật chưa tích hợp writer; security/DB propagation integration vẫn cần 05/07.
+Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/crypto/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). BE-COM-IMP-04 đã triển khai crypto/JCS/masking và validation khóa; xem [report](report/BE-COM-IMP-04-verification.md). Security chain thật chưa tích hợp writer; security/DB propagation integration vẫn cần 05/07.
 
 ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
 
@@ -115,7 +115,7 @@ public class SecurityFilterChainConfig {
 | Class / accessor | Hợp đồng |
 |---|---|
 | `AppProperties.timezone()` | APP_TIMEZONE, baseline Asia/Ho_Chi_Minh; rỗng/ZoneId sai fail startup không echo input; không đổi UTC timestamp API/DB |
-| `AppProperties.crypto()` | Nested Crypto(aesKeyId, aesKeyBase64, hmacKeyBase64, previousKeys), bind `app.crypto.*`; IMP-01 redact toString; không log/serialize accessor khóa. Validation khóa/rotation bàn giao IMP-04 |
+| `AppProperties.crypto()` | Nested Crypto(aesKeyId, aesKeyBase64, hmacKeyBase64, previousKeys), bind `app.crypto.*`; IMP-01 redact toString; không log/serialize accessor khóa. CryptoConfig kiểm tra khóa Base64 32 byte, AES/HMAC tách biệt; rotation còn mở, previousKeys phải rỗng |
 | `AppProperties.security()` | Nested Cookie, Session, Lockout, Otp, RateLimit, StepUp và corsAllowedOrigins; nested defaults sẵn cả khi không có YAML; lockout và transfer rate phải là số nguyên dương. Baseline cấu hình: lockout 10 phút, rate limit transfer 30/customer/phút (đề xuất theo `07`); nhiều session theo `07`, không tự áp trần 3/1 |
 | `transfer()/fraud()/jobs()` | Bind cấu hình để owner dùng, không thực thi rule/job ở common |
 | `TimeConfig.clock()` | Bean Clock.systemUTC(); inject Clock.fixed để kiểm thử TTL/timestamp |
@@ -166,18 +166,19 @@ Nguồn: `design/01` §4.6/§5.6; `design/04` §8.1; `07` §2.2/§2.7; BE-ARCH-0
 
 ```java
 public class PiiCryptoService {
-    public PiiCryptoService(AppProperties properties);
+    public PiiCryptoService(byte[] key); // Runtime inject bean từ CryptoConfig
     public byte[] encrypt(String plaintext);
     public String decrypt(byte[] ciphertextBlob);
 }
 public class HmacService {
-    public HmacService(AppProperties properties);
+    public HmacService(byte[] key); // Runtime inject bean từ CryptoConfig
     public String hmacSha256Hex(String normalizedInput);
-    public String sha256Hex(String input);
-    public boolean constantTimeEquals(byte[] expected, byte[] actual);
+    public static String sha256Hex(String input);
+    public static String sha256Hex(byte[] input);
+    public static boolean constantTimeEquals(byte[] expected, byte[] actual);
 }
 public class JcsCanonicalizer {
-    public byte[] canonicalize(JsonNode payload);
+    public byte[] canonicalize(String rawJson); // Giữ duplicate keys đến strict parser
 }
 public final class PiiMaskingUtils {
     public static String maskAccountLast4(String last4);
@@ -194,10 +195,10 @@ public final class PiiMaskingUtils {
 | hmacSha256Hex | HMAC-SHA256 UTF-8 → 64 hex lowercase. Caller normalize account/CCCD/fingerprint; không tự trim/chuyển số làm mất leading zero |
 | sha256Hex | SHA-256 UTF-8 → 64 hex lowercase cho token/request/audit input đã chuẩn; không dùng hash password |
 | constantTimeEquals | Dùng MessageDigest.isEqual trên bytes; caller decode hex/Base64 nhất quán, không dùng String.equals cho token/hash |
-| canonicalize | RFC 8785 JCS → canonical UTF-8 bytes: sort UTF-16 code units, number ECMAScript, escape đúng chuẩn, giữ null/array order, không tự normalize Unicode. Reject ngoài miền JCS; parser phải reject duplicate keys trước JsonNode |
+| canonicalize | RFC 8785 JCS → canonical UTF-8 bytes: sort UTF-16 code units, number ECMAScript, escape đúng chuẩn, giữ null/array order, không tự normalize Unicode. Reject ngoài miền JCS; strict streaming parser reject duplicate keys trước mọi tree/Map; dùng thư viện JCS 1.1 và hỗ trợ scalar root bằng singleton-array wrapper |
 | PiiMaskingUtils | Hàm thuần, ưu tiên cột last4 để không decrypt khi hiển thị; account API `**** **** 1234`, CCCD `********1234`, phone last3, email ký tự đầu + domain, IP audit ví dụ `203.0.113.***`. IPv6 cần chốt policy, không trả nguyên địa chỉ khi chưa có policy |
 
-**Đề xuất biên input:** masking trả null khi thiếu dữ liệu; last4 không đúng 4 chữ số/email/IP sai phải fail-closed, không trả input gốc; caller xử lý lỗi nội bộ. Không âm thầm chấp nhận request nghiệp vụ sai. Crypto yêu cầu non-null; lỗi hợp đồng nội bộ không tự thành validation error client. Các biên/chữ ký này cần owner review.
+**Biên input đã triển khai theo ủy quyền owner trong IMP-04:** masking trả null khi thiếu dữ liệu; last4 không đúng 4 chữ số/email/IP sai ném IllegalArgumentException an toàn, không trả input gốc. Phone nhận 4–15 chữ số ASCII, tùy chọn dấu + đầu; email nhận dạng ASCII đơn giản có domain chứa dấu chấm; đây là biên display bảo thủ, không phải validator nghiệp vụ. IPv6 trả null; chưa có thuật toán masking họ tên theo role trong common. Caller xử lý input ngoài biên an toàn, không fallback plaintext. Crypto yêu cầu non-null; lỗi hợp đồng nội bộ không tự thành validation error client. Xem [handoff](../../../../digitalbanking-backend/README.md#crypto-canonicalization-and-masking) và [quyết định](report/BE-COM-IMP-04-verification.md).
 
 Chuẩn hóa nghiệp vụ trước JCS: transfer xây payload theo `07` §5.2 (amount 2 decimals dạng string, description trim/null→empty, không correlation/timestamp); audit xây field set cố định theo hash_version, timestamp UTC 6 fractional digits theo `design/01` §7.2. Common không xây payload nghiệp vụ.
 
@@ -585,3 +586,4 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 | v1.3 | 12/11/2026 | Codex — BE-COM-IMP-01 | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |
 | v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
 | v1.5 | 12/11/2026 | Codex — BE-COM-IMP-03 | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |
+| v1.6 | 12/11/2026 | Codex — BE-COM-IMP-04 | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |

@@ -1,0 +1,9 @@
+Verified 2026-11-12 UTC+07:00
+Linux 7.0.0-43-generic
+OpenJDK 21.0.13.0.3
+Gradle wrapper 8.14.3
+Spring Boot 3.5.7
+JCS io.github.erdtman:java-json-canonicalization:1.1
+Python 3.14.4
+PostgreSQL Testcontainers postgres:16-alpine; real Docker used by escalated Gradle execution
+HEAD 73f190e0a2f34b5f95cc295a90e5fe8a23a4479b + uncommitted working tree (see source manifest/snapshot)

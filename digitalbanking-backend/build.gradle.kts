@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.micrometer.registry.prometheus)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
     implementation(libs.bouncycastle.prov)
+    implementation(libs.jcs)
 
     implementation(libs.mapstruct)
     compileOnly(libs.lombok)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.crypto.CryptoOperationsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:07.508Z" hostname="phuong-ASUS-TUF" time="0.065">
+  <properties/>
+  <testcase name="realOperationalEndpointsDoNotExposeKeysAndBeansWorkTogether()" classname="com.simulatedbank.banking.common.crypto.CryptoOperationsTest" time="0.065"/>
+  <system-out><![CDATA[2026-11-12T14:49:07.488+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.simulatedbank.banking.common.crypto.CryptoOperationsTest]: CryptoOperationsTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-12T14:49:07.504+07:00  INFO 89339 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.crypto.CryptoOperationsTest
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
