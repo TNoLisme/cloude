@@ -72,7 +72,26 @@ Inject `Clock` and `ZoneId businessZoneId` through the consumer constructor. Use
 
 MVC advice formats validation/JSON/media/method/route failures and 401/403. It preserves owner-classified business/audit failures before generic database mapping. SQLSTATE alone never identifies an idempotency race; the owner must classify it after rollback/retry. The error layer does not query, retry transactions, write audit or change transfer outcomes.
 
-`ProblemWriter` returns `application/problem+json`, `X-Correlation-ID`, `WWW-Authenticate` for 401 and `Retry-After: 2` for in-progress/429/503, adopted as the current error-layer default under the owner’s 12 November 2026 delegation (common verification report DEC-02). IMP-05 must use the remaining quota-window duration when integrating a real rate limiter; the default does not prove limiter enforcement. IMP-03 must supply validated request attribute `correlationId`; the fallback UUID does not replace request-context wiring. Production security entry points/body limits remain IMP-05 work; PostgreSQL locking/transaction verification remains IMP-07. See the common module verification report for evidence and limits.
+`ProblemWriter` returns `application/problem+json`, `X-Correlation-ID`, `WWW-Authenticate` for 401 and `Retry-After: 2` for in-progress/429/503, adopted as the current error-layer default under the owner’s 12 November 2026 delegation (common verification report DEC-02). IMP-05 must use the remaining quota-window duration when integrating a real rate limiter; the default does not prove limiter enforcement. The outer correlation filter supplies validated request attribute `correlationId`; standalone writer fallback remains available without the filter. Production security entry points/body limits remain IMP-05 work; PostgreSQL locking/transaction verification remains IMP-07. See the common module verification report for evidence and limits.
+
+### Request context and propagation
+
+`RequestContextConfig` registers `CorrelationAndRequestIdFilter` once as a servlet filter before Spring Security, including REQUEST/ASYNC/ERROR dispatches. Missing correlation headers receive UUIDv4; valid `[A-Za-z0-9._:-]{1,64}` values are preserved; empty, invalid or multiple values return 400 with a fresh safe ID. Every HTTP request receives a new server UUIDv4 requestId; client `X-Request-ID` is ignored. Dispatches reuse the request snapshot. Response correlation, request attribute, holder and MDC use the same IDs. The filter renders unexpected pre-MVC exceptions safely and cleans its binding even after failures; committed responses are preserved.
+
+Read `RequestContextHolder.current()` inside a request. Capture its immutable value **before** scheduling async work, then bind it on the execution thread:
+
+```java
+RequestContext snapshot = RequestContextHolder.current().orElseThrow();
+executor.execute(() -> {
+    try (var scope = RequestContextHolder.bind(snapshot)) {
+        consumer.process();
+    }
+});
+```
+
+Closing the scope restores the previous context and correlation/request MDC keys and preserves other MDC entries. Do not pass a scope between threads or use inheritable thread locals. MVC Callable/DeferredResult and custom executors need explicit binding around worker code; redispatch binding alone does not cover the worker. For a separate job run, create `new RequestContext(originalCorrelationId, UUID.randomUUID().toString(), null, null)`; an independent job uses its run UUID for both IDs. Copy correlation from the original transfer into ledger/audit/notification/challenge, including retries and step-up; do not generate a replacement mid-flow. Persistence propagation remains the owning modules' responsibility (IMP-07).
+
+Forwarded headers are disabled (`server.forward-headers-strategy: none`) until an ingress trust boundary is configured and tested. Peer IP comes from the socket; only masked IPv4 is retained, while IPv6/unknown forms become null. User-Agent has control/format characters removed and is capped at 256 characters. It can still contain client-supplied PII: never log/serialize the context as an API DTO or metadata payload; use the audit allowlist. `toString()` contains IDs only. Do not put PII into correlation IDs. Behind Nginx this baseline identifies the proxy peer and does not trust client headers; validate header stripping/overwriting, direct-backend access restrictions and HTTPS redirect behavior before enabling forwarded headers (IMP-05/08).
 
 ## Documentation
 

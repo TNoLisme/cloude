@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phiên bản / ngày:** v1.0 / 12/11/2026
-> **Trạng thái:** Planned
+> **Trạng thái:** Done — [verification](../report/BE-COM-IMP-03-verification.md); chờ review
 > **Owner / reviewer:** Phương / Chưa review
 > **Mốc / phụ thuộc:** W3; task 01–02
 

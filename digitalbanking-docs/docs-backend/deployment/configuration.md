@@ -237,7 +237,7 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
-  forward-headers-strategy: framework              # Chạy sau Nginx
+  forward-headers-strategy: none                   # IMP-03: chưa cấu hình trusted proxy boundary
 
 management:
   endpoints:
@@ -575,3 +575,7 @@ Các quyết định liên quan `common` được chốt tại [[digitalbanking-
 |---|---|---|
 | v1.1 | 12/11/2026 | Đồng bộ các mục common về lockout/rate limit scope customer/session/cookie và giới hạn rotation theo ưu tiên 01–11; giữ nhãn Đề xuất, không sửa runtime |
 | v1.2 | 12/11/2026 | BE-COM-IMP-01: đồng bộ lockout/transfer/session config, env override, validation/time contract và liên kết verification; giữ Đề xuất và giới hạn runtime |
+
+### Request context / proxy boundary — BE-COM-IMP-03
+
+Runtime bỏ qua Forwarded/X-Forwarded-*; context dùng socket peer, chỉ giữ IPv4 masked; IPv6/unknown là null. Sau Nginx, peer này là proxy, không phải IP end-user để rate-limit/audit. Chỉ bật hỗ trợ forwarded headers sau khi kiểm chứng ingress strip/overwrite header, chặn truy cập backend trực tiếp và HTTPS redirect (IMP-05/08); không dùng metadata masked làm khóa IP limiter. Xem [usage](../../../digitalbanking-backend/README.md#request-context-and-propagation) và [verification](../modules/common/report/BE-COM-IMP-03-verification.md).

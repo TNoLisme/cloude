@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | [BE-COM-IMP-01](BE-COM-IMP-01.md) | Cấu hình nền, thời gian và ranh giới | W2–W3 | Baseline tài liệu đã phân xử | Done — [verification](../report/BE-COM-IMP-01-verification.md); chờ review |
 | [BE-COM-IMP-02](BE-COM-IMP-02.md) | Mô hình lỗi và exception mapping | W3 | 01; wiring trace/security hoàn thiện ở 03/05 | Done — [verification](../report/BE-COM-IMP-02-verification.md); chờ review |
-| [BE-COM-IMP-03](BE-COM-IMP-03.md) | Request context và correlation | W3 | 01–02 | Planned |
+| [BE-COM-IMP-03](BE-COM-IMP-03.md) | Request context và correlation | W3 | 01–02 | Done — [verification](../report/BE-COM-IMP-03-verification.md); chờ review |
 | [BE-COM-IMP-04](BE-COM-IMP-04.md) | Crypto, JCS và masking | W3 | 01 | Planned |
 | [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Planned |
 | [BE-COM-IMP-06](BE-COM-IMP-06.md) | Logging, metrics và health | W3–W5 | 02–05 | Planned |

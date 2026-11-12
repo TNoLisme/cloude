@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.4
+> **Phiên bản:** v1.5
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -58,9 +58,9 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 ### 1.4. Trạng thái so với code
 
-Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context/crypto` dưới đây là thiết kế cần triển khai; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
+Khảo sát 12/11/2026: source có `config/AppProperties`, `TimeConfig`, `SecurityFilterChainConfig`; `context` đã triển khai sau BE-COM-IMP-03; `crypto` dưới đây là thiết kế cần triển khai; error layer đã có sau BE-COM-IMP-02. Security chain hiện tắt CSRF, chưa có pipeline trace/Problem hoàn chỉnh; không xem đó là hành vi đích.
 
-Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/error đã có; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). Security chain thật chưa tích hợp writer; trace/security/DB integration vẫn cần 03/05/07.
+Chữ ký Java mới ở §2 là **đề xuất triển khai**, trừ chữ ký config/context/error đã triển khai; owner review trước tích hợp. Hành vi bắt buộc vẫn theo nguồn chuẩn. BE-COM-DOC-02 không sửa Java, cấu hình hoặc OpenAPI. BE-COM-IMP-01 đã bổ sung nested defaults, validation cho trường thay đổi, đồng bộ lockout/transfer/session và kiểm chứng Clock; xem [report](report/BE-COM-IMP-01-verification.md). BE-COM-IMP-02 đã triển khai catalog/Problem/writer và MVC/DB mapping, kiểm chứng bằng contract/component tests; xem [report](report/BE-COM-IMP-02-verification.md). BE-COM-IMP-03 đã kiểm chứng context/MDC, trace header, servlet registration và lifecycle thành phần; xem [report](report/BE-COM-IMP-03-verification.md). Security chain thật chưa tích hợp writer; security/DB propagation integration vẫn cần 05/07.
 
 ### 1.5. Quyết định trước implement và phần còn thiếu thiết kế
 
@@ -126,11 +126,11 @@ public class SecurityFilterChainConfig {
 Đề xuất thêm method trong `SecurityFilterChainConfig`:
 
 ```java
-public FilterRegistrationBean<CorrelationAndRequestIdFilter> correlationFilterRegistration(
-        CorrelationAndRequestIdFilter filter);
+public FilterRegistrationBean<CorrelationAndRequestIdFilter> correlationAndRequestIdFilter(
+        ProblemWriter writer);
 ```
 
-Đăng ký servlet filter `Ordered.HIGHEST_PRECEDENCE` trước Spring Security, tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. Không xem `csrf.disable()` hiện tại là thiết kế đích.
+RequestContextConfig đăng ký servlet filter ở `SecurityProperties.DEFAULT_FILTER_ORDER - 1` trước Spring Security (REQUEST/ASYNC/ERROR, async supported), tránh đăng ký kép servlet/security chain. Cookie session mutation bắt buộc CSRF, Bearer miễn theo `07` §3.3; preflight không yêu cầu CSRF. Không xem `csrf.disable()` hiện tại là thiết kế đích.
 
 APP_PII_AES_KEY_BASE64 → `app.crypto.aes-key-base64`, APP_HMAC_KEY_BASE64 → `app.crypto.hmac-key-base64`: Base64 decode đúng 32 byte, tách khóa AES/HMAC; thiếu/sai phải fail-fast, thông báo không chứa key. Rotation bị ràng buộc OI-COM-05.
 
@@ -142,12 +142,12 @@ Nguồn: `06` §9/§12; `07` §2.4/§2.9/§3.2–§3.3; `design/04` §6/§8; con
 public record RequestContext(String correlationId, String requestId,
                              String clientIp, String userAgent) {}
 public final class RequestContextHolder {
-    public static void set(RequestContext context);
+    public static Scope bind(RequestContext context); // try-with-resources; restore binding trước đó
     public static Optional<RequestContext> current();
     public static void clear();
 }
 public class CorrelationAndRequestIdFilter extends OncePerRequestFilter {
-    public CorrelationAndRequestIdFilter(GlobalExceptionHandler problemWriter);
+    public CorrelationAndRequestIdFilter(ProblemWriter problemWriter);
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException;
@@ -155,10 +155,10 @@ public class CorrelationAndRequestIdFilter extends OncePerRequestFilter {
 ```
 
 - Context bất biến theo request, holder dùng ThreadLocal, không chia sẻ mutable context. `current()` empty ngoài request/job đã bind.
-- correlationId: giữ header hợp lệ `^[A-Za-z0-9._:-]{1,64}$`, thiếu sinh UUIDv4; header rỗng/sai bị 400. **Đề xuất cho header sai:** sinh ID an toàn để trả lỗi; không log/echo giá trị sai.
+- correlationId: giữ header hợp lệ `^[A-Za-z0-9._:-]{1,64}$`, thiếu sinh UUIDv4; header rỗng/sai bị 400. Header sai hoặc lặp nhiều giá trị: sinh UUID an toàn mới để trả lỗi (quyết định IMP-03); không log/echo giá trị sai.
 - requestId luôn UUIDv4 mới do server sinh, không nhận ID client. Bind holder và MDC correlationId/requestId; set X-Correlation-ID trước downstream và dọn holder/MDC trong `finally` kể cả lỗi.
-- clientIp chỉ lấy từ proxy được tin cậy, không tin tùy ý X-Forwarded-For. Raw IP/UA không tự log/serialize; bỏ control characters trước log, audit truncate userAgent tối đa 256 ký tự.
-- ThreadLocal không tự truyền async/job: caller capture snapshot, bind execution thread và clear finally; phải test error/async redispatch riêng, không thêm executor/job trong task này.
+- Runtime chưa cấu hình trusted proxy: `server.forward-headers-strategy: none`, lấy peer từ `getRemoteAddr()`, bỏ qua Forwarded/X-Forwarded-For. Context chỉ giữ IPv4 đã che octet cuối; IPv6/unknown trả null đến khi có policy. UA bỏ control/format/line-separator characters, tối đa 256 ký tự; không log/serialize metadata, `toString()` chỉ có IDs. Nginx phải strip/overwrite forwarding headers và hạn chế truy cập trực tiếp trước khi bật proxy support; task 05/08 kiểm chứng ranh giới này.
+- ThreadLocal không tự truyền async/job: caller capture `current().orElseThrow()` trước enqueue, `try (var scope = RequestContextHolder.bind(snapshot))` trên worker; đóng scope phục hồi context/MDC cũ, giữ các MDC key khác. ASYNC/ERROR redispatch dùng cùng snapshot trên request; lỗi trước MVC dùng writer an toàn, không viết lại response đã commit/đã xử lý. Không tạo executor/job production trong task này. [Usage](../../../../digitalbanking-backend/README.md#request-context-and-propagation).
 
 Nguồn: `design/01` §4.6/§5.6; `design/04` §8.1; `07` §2.2/§2.7; BE-ARCH-00 §10.4.
 
@@ -584,3 +584,4 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 | v1.2 | 12/11/2026 | Codex — theo yêu cầu chia task của owner | Bổ sung chỉ mục 8 task implementation và mẫu verification; không sửa thiết kế hành vi hoặc xác nhận runtime |
 | v1.3 | 12/11/2026 | Codex — BE-COM-IMP-01 | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |
 | v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
+| v1.5 | 12/11/2026 | Codex — BE-COM-IMP-03 | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |

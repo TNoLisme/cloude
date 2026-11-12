@@ -46,7 +46,8 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
-  forward-headers-strategy: framework
+  # No trusted proxy boundary is configured; never accept client-supplied forwarding headers.
+  forward-headers-strategy: none
 
 management:
   endpoints:

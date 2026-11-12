@@ -1,6 +1,7 @@
 package com.simulatedbank.banking.common.error;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simulatedbank.banking.common.context.RequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -32,7 +33,7 @@ public class ProblemWriter {
     public ProblemResponse create(ErrorCode code, String safeDetail, HttpServletRequest request,
             List<ProblemResponse.FieldError> errors, Map<String, Object> safeExtensions) {
         Object attribute = request.getAttribute("correlationId");
-        String correlationId = attribute instanceof String value && value.matches("[A-Za-z0-9._-]{1,64}")
+        String correlationId = attribute instanceof String value && RequestContext.isValidCorrelationId(value)
                 ? value : UUID.randomUUID().toString();
         request.setAttribute("correlationId", correlationId);
         return new ProblemResponse(code.type(), code.title(), code.httpStatus(), safeDetail,
