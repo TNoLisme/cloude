@@ -14,7 +14,7 @@ Hoàn thiện structured logging, redaction, HTTP metrics và health cho backend
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/03. SRS.md]] NFR-020/025, AC-022/023; [[digitalbanking-docs/docs-common/06. System architecture.md]] §12.
 - [[digitalbanking-docs/docs-common/07. API contracts.md]] §2.6–2.7, §8.9.1; [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] §9.
-- [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §5.6; [[digitalbanking-docs/docs-backend/modules/common/README.md]] §6.2, §7.2 (COM-OBS-01).
+- [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §5.6; [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §6.2, §7.2 (COM-OBS-01).
 
 ## 3. Tiêu chí chấp nhận riêng
 

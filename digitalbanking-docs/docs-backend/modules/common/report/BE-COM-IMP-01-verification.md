@@ -32,7 +32,7 @@ Nguồn chuẩn đã đọc và oracle:
 | `docs-backend/modules/common/README.md` §1.5, §2.1, §7.2 | OI-COM-06/08 đã phân xử nguồn; COM-CFG-01, phần binding COM-CFG-03; NFR-016/025/029 theo bảng test, không tuyên bố hoàn thành toàn NFR |
 | `docs-backend/deployment/configuration.md` §4–§5, §9–§10 | Hợp đồng env/profiles/config tiêu thụ; đã đối chiếu các trường sửa với 01–11 |
 
-Các link nguồn theo cấu trúc kho: [docs-common](../../../../docs-common/README.md), [common](../README.md), [deployment config](../../../deployment/configuration.md). Không phát hiện mâu thuẫn cần quyết định mới giữa 01–11 cho các trường thay đổi. Không thay các ngưỡng transfer/fraud/OTP/step-up khác để tự đóng open issue.
+Các link nguồn theo cấu trúc kho: [docs-common](../../../../docs-common/README.md), [common](../TKCT.md), [deployment config](../../../deployment/configuration.md). Không phát hiện mâu thuẫn cần quyết định mới giữa 01–11 cho các trường thay đổi. Không thay các ngưỡng transfer/fraud/OTP/step-up khác để tự đóng open issue.
 
 ## 2. Thay đổi thực tế
 
@@ -44,7 +44,7 @@ Các link nguồn theo cấu trúc kho: [docs-common](../../../../docs-common/RE
 | [AppPropertiesTest.java](../../../../../digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/config/AppPropertiesTest.java) | 20 ca gồm parameterized cases: binding/override/profiles, startup fail/redaction, UTC/business midnight và injectable fixed Clock | AC01–04 |
 | [.env.example](../../../../../digitalbanking-backend/.env.example), [compose.yaml](../../../../../digitalbanking-backend/compose.yaml) | Ghi/forward ba biến env mới; không đổi service, credential hoặc hạ tầng | AC01/05 |
 | [Backend README](../../../../../digitalbanking-backend/README.md#common-configuration-and-time) | Hướng dẫn ngắn env/CLI/default, startup validation, injected time, config-only và consumer migration | AC05 |
-| [Deployment config](../../../deployment/configuration.md), [common README](../README.md) | Đồng bộ mẫu/hiện trạng cho trường sửa, giữ nhãn và việc bàn giao | AC02/05, G01/04 |
+| [Deployment config](../../../deployment/configuration.md), [common README](../TKCT.md) | Đồng bộ mẫu/hiện trạng cho trường sửa, giữ nhãn và việc bàn giao | AC02/05, G01/04 |
 | [Task](../tasks/BE-COM-IMP-01.md), [task index](../tasks/README.md), report/evidence này | Ghi Done ở mức implementer; giữ reviewer/sign-off chưa review | G04 |
 
 Sửa ngoài common chỉ ở cấu hình dùng chung, wiring env Compose, test và tài liệu bàn giao. Không sửa module nghiệp vụ, migration, build dependencies, security chain hoặc spec nguồn. Lịch sử DOC-02 được giữ là snapshot trước implement.

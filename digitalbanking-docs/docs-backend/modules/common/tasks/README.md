@@ -20,7 +20,7 @@
 
 - Thứ tự: **docs-common/01–11 → docs-common/design → docs-backend**. Đọc hướng dẫn tại [[digitalbanking-docs/docs-common/README.md]]. `07` quyết định ngữ nghĩa API; OpenAPI là bản máy đọc cần đồng bộ. Task/report không phải nguồn đặc tả mới.
 - Không suy thứ tự ưu tiên giữa các file 01–11 từ số hiệu. Nếu chúng mâu thuẫn hoặc thiếu quyết định cần thiết, ghi đúng hai nguồn, tác động và phần bị chặn; tiếp tục phần độc lập, không tự chọn policy hay sửa nguồn để làm test pass.
-- Giữ nhãn **Đề xuất/Deferred/Open**. Bảy nhóm đã phân xử tại [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5 không cần chọn lại nguồn. Rotation nhiều khóa vẫn thiếu thiết kế; không tự bổ sung format/schema hay tuyên bố đã hoàn thành.
+- Giữ nhãn **Đề xuất/Deferred/Open**. Bảy nhóm đã phân xử tại [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5 không cần chọn lại nguồn. Rotation nhiều khóa vẫn thiếu thiết kế; không tự bổ sung format/schema hay tuyên bố đã hoàn thành.
 - `common` không phụ thuộc module nghiệp vụ, không sở hữu bảng/repository nghiệp vụ, không điều phối transaction tiền. Identity sở hữu session/OTP, transfer sở hữu idempotency, audit sở hữu ghi audit/hash chain. Chỉ sửa điểm tích hợp cần thiết trong module khác, ghi rõ trong report.
 - Phân công và mốc theo [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] §2–§8 và [[digitalbanking-docs/docs-common/10 Master timelines.md]] §3–§4: nền common W2–W3; tích hợp W3–W5; quality gate W6; Cloud W7–W8. Đây là mốc kế hoạch, không phải bằng chứng tiến độ.
 

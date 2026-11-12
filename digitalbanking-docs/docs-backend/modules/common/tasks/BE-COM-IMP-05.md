@@ -14,7 +14,7 @@ Hoàn thiện security chain, CORS/CSRF, HTTP headers, giới hạn request và 
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/06. System architecture.md]] §9; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2.8–2.9, §3, §4.
 - [[digitalbanking-docs/docs-common/design/04. security.md]] §6.1, §8, chỉ bổ sung khi không trái `01–11`.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5, §2.1, §4.1, §7.2; [[digitalbanking-docs/docs-backend/modules/identity/README.md]] phần tích hợp security hiện có, đối chiếu nguồn chuẩn.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5, §2.1, §4.1, §7.2; [[digitalbanking-docs/docs-backend/modules/identity/README.md]] phần tích hợp security hiện có, đối chiếu nguồn chuẩn.
 
 ## 3. Tiêu chí chấp nhận riêng
 

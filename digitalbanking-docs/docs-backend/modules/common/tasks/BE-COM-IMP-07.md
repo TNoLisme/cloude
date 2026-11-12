@@ -15,7 +15,7 @@ Chứng minh các năng lực common hoạt động trong luồng ứng dụng t
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/03. SRS.md]] AC-022/023/024/030/032/034; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2–§6, §10.
 - [[digitalbanking-docs/docs-common/09. Test plan.md]] §2–§4, §7–§10; [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] §3–§7.
 - [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §4.6, §5.2, §5.6–5.7; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §7.10, §11, §14 và Appendix C.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §3–§7 và report 01–06; chỉ đọc phần source/module tương ứng luồng đang kiểm tra.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §3–§7 và report 01–06; chỉ đọc phần source/module tương ứng luồng đang kiểm tra.
 
 ## 3. Tiêu chí chấp nhận riêng
 

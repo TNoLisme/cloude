@@ -7,7 +7,7 @@
 > **Trạng thái:** Hoàn thành — công việc tài liệu
 > **Owner:** Phương
 > **Reviewer:** Backend Lead, QA, Security (chờ review)
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-backend/modules/common/README.md]], [[digitalbanking-docs/docs-backend/modules/_overview/11-common.md]], [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]], [[digitalbanking-docs/docs-backend/modules/_overview/11-common.md]], [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.
 
 ## 1. Mục tiêu / phạm vi
 
@@ -30,7 +30,7 @@ Chỉ làm tài liệu; không sửa Java, migration, cấu hình hoặc OpenAPI
 
 ## 3. Bàn giao / ranh giới nghiệm thu
 
-- Thiết kế: [[digitalbanking-docs/docs-backend/modules/common/README.md]].
+- Thiết kế: [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]].
 - Verification: [[digitalbanking-docs/docs-backend/modules/common/report/BE-COM-DOC-01-verification.md]].
 - Chỉ mục: [[digitalbanking-docs/docs-backend/README.md]], [[digitalbanking-docs/docs-backend/modules/_overview/README.md]], [[digitalbanking-docs/README.md]].
 

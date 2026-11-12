@@ -14,7 +14,7 @@ Hoàn thiện cấu hình dùng chung, Clock UTC, timezone nghiệp vụ và h�
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/06. System architecture.md]] §6.1–6.3, §9, §11.2.
 - [[digitalbanking-docs/docs-common/07. API contracts.md]] §2.4, §2.8, §3.2, §3.7; [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] §3–§4, §7.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5, §2.1; [[digitalbanking-docs/docs-backend/deployment/configuration.md]] các mục cấu hình bị sửa, đối chiếu lại nguồn chuẩn.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5, §2.1; [[digitalbanking-docs/docs-backend/deployment/configuration.md]] các mục cấu hình bị sửa, đối chiếu lại nguồn chuẩn.
 
 ## 3. Tiêu chí chấp nhận riêng
 

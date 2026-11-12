@@ -14,7 +14,7 @@ Cung cấp catalog lỗi, exception, Problem và cơ chế tạo/ghi lỗi dùng
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/07. API contracts.md]] §3.2, §4, §7.2, §10; [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] phần ErrorCode/Problem.
 - [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §7.10, §11.5–11.6, Appendix C, chỉ áp dụng khi không trái `07`.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §2.4, §4; [[digitalbanking-docs/docs-common/09. Test plan.md]] §3, §7.7.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §2.4, §4; [[digitalbanking-docs/docs-common/09. Test plan.md]] §3, §7.7.
 
 ## 3. Tiêu chí chấp nhận riêng
 

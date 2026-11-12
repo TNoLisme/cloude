@@ -24,7 +24,7 @@ Triển khai context bất biến, correlation/request ID, MDC, servlet filter t
 | [design/01](../../../../docs-common/design/01.%20audit-traceability.md) | §4.6 server requestId, retry/job propagation; §5.6 masked IP, UA ≤256, audit allowlist |
 | [design/04](../../../../docs-common/design/04.%20security.md) | §8.1 input/log injection; §7.1–7.2 privacy |
 | [09. Test plan](../../../../docs-common/09.%20Test%20plan.md) | §2.2, §6, §8, §10 evidence, exit criteria và giới hạn mock |
-| [common spec](../README.md), [task index](../tasks/README.md), [task](../tasks/BE-COM-IMP-03.md) | §2.2, §5.1–5.2, COM-CTX-01..06; COM-G01..04 và AC01..05 |
+| [common spec](../TKCT.md), [task index](../tasks/README.md), [task](../tasks/BE-COM-IMP-03.md) | §2.2, §5.1–5.2, COM-CTX-01..06; COM-G01..04 và AC01..05 |
 
 ## 2. Thay đổi thực tế
 
@@ -39,7 +39,7 @@ Triển khai context bất biến, correlation/request ID, MDC, servlet filter t
 | `main/java/.../common/error/ProblemWriter.java` | Tái dùng correlation validator đúng contract có dấu `:`; tránh writer thay ID hợp lệ bằng UUID khác | AC01–03 |
 | `main/resources/application.yml` | `forward-headers-strategy: none` vì chưa có proxy trust boundary được enforce | AC05 |
 | `test/java/.../common/context/{RequestContextTest,ContextHttpTest,ContextServletTest}.java` | 23 test cases: biên/cleanup/concurrency/dispatch, MVC async success/failure, 401/403 harness và servlet thật | AC01–05 |
-| [Backend usage](../../../../../digitalbanking-backend/README.md#request-context-and-propagation), [configuration](../../../deployment/configuration.md), [common spec](../README.md), task/index | Đồng bộ API bind, wiring, metadata, proxy và propagation guidance; cập nhật trạng thái và report | G04/AC05 |
+| [Backend usage](../../../../../digitalbanking-backend/README.md#request-context-and-propagation), [configuration](../../../deployment/configuration.md), [common spec](../TKCT.md), task/index | Đồng bộ API bind, wiring, metadata, proxy và propagation guidance; cập nhật trạng thái và report | G04/AC05 |
 
 Không sửa module nghiệp vụ, migrations, dependencies hoặc production SecurityFilterChain. Các thay đổi AppProperties/TimeConfig/.env/Compose và error layer còn lại thuộc baseline trước phiên, giữ nguyên.
 

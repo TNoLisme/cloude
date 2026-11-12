@@ -569,7 +569,7 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 
 ## 10. Traceability cấu hình
 
-Các quyết định liên quan `common` được chốt tại [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5. BE-COM-IMP-01 đã đồng bộ lockout 5/10, transfer 30/customer/phút và bỏ trần session trong application.yml/AppProperties; xem [verification](../modules/common/report/BE-COM-IMP-01-verification.md). Các phần khác của mẫu vẫn cần verification theo task sở hữu, không mặc nhiên là runtime đã hoạt động. Các khác biệt ngoài 8 nhóm common chưa được audit lại trong lần cập nhật này.
+Các quyết định liên quan `common` được chốt tại [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5. BE-COM-IMP-01 đã đồng bộ lockout 5/10, transfer 30/customer/phút và bỏ trần session trong application.yml/AppProperties; xem [verification](../modules/common/report/BE-COM-IMP-01-verification.md). Các phần khác của mẫu vẫn cần verification theo task sở hữu, không mặc nhiên là runtime đã hoạt động. Các khác biệt ngoài 8 nhóm common chưa được audit lại trong lần cập nhật này.
 
 | Yêu cầu | Cấu hình liên quan | Mục |
 |---|---|---|

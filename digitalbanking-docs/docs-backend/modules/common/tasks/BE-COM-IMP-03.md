@@ -14,7 +14,7 @@ Cung cấp context theo request, correlation/request ID và MDC; kết nối v�
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/03. SRS.md]] FR-038, AC-022; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2.2, §2.7.
 - [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §4.6, §5.6; [[digitalbanking-docs/docs-common/design/04. security.md]] §8.1.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §2.2, §5.1, §7.2 (COM-CTX-*).
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §2.2, §5.1, §7.2 (COM-CTX-*).
 
 ## 3. Tiêu chí chấp nhận riêng
 

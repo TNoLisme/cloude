@@ -7,7 +7,7 @@
 > **Trạng thái:** Hoàn thành — quyết định tài liệu, chưa implement
 > **Owner:** Phương
 > **Reviewer:** Backend Lead, QA, Security (review triển khai tiếp theo)
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.2/§1.5, [[digitalbanking-docs/docs-common/03. SRS.md]] §8.5, [[digitalbanking-docs/docs-common/07. API contracts.md]] §2–§5.
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.2/§1.5, [[digitalbanking-docs/docs-common/03. SRS.md]] §8.5, [[digitalbanking-docs/docs-common/07. API contracts.md]] §2–§5.
 
 ## 1. Yêu cầu đã chốt
 
@@ -26,7 +26,7 @@ Theo chỉ đạo owner: ưu tiên `docs-common`; nếu trong docs-common khác 
 
 ## 3. Bàn giao và giới hạn
 
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] v1.1 — căn cứ implement common.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] v1.1 — căn cứ implement common.
 - [[digitalbanking-docs/docs-backend/modules/common/report/BE-COM-DOC-02-verification.md]] — kết quả kiểm tra lần chốt này.
 - Summary/convention/config/identity chỉ sửa các đoạn liên quan 8 nhóm common; không tuyên bố audit toàn bộ khác biệt toàn dự án.
 - Runtime vẫn có baseline cũ 15 phút/20 mỗi user/trần session 3/1; việc code phải được giao và kiểm thử riêng. Rotation chưa được thiết kế/triển khai trong task này.

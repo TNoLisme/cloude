@@ -24,7 +24,7 @@ Triển khai 46 mã public, business exception, RFC 9457 Problem, factory/writer
 | [OpenAPI](../../../../openapi/digital-banking-v1.yaml) ErrorCode/Problem/ValidationProblem/Challenge/Reference/TransferFailureCode | Đối chiếu enum/required fields và các giá trị extension, không nâng YAML cao hơn ngữ nghĩa 07 |
 | [design/02](../../../../docs-common/design/02.%20consistency-concurrency.md) §7.10, §11.5–11.6, Appendix C | SQLSTATE và rollback/retry do owner; audit context ưu tiên; không suy idempotency từ constraint hoặc SQL text |
 | [09. Test plan](../../../../docs-common/09.%20Test%20plan.md) §2.2, §3, §7.7, §8, §10 | Trạng thái evidence, component/contract checks, giới hạn mock so với DB thật; lưu failed run/retest/revision |
-| [common README](../README.md) §1.2–1.5, §2.4, §4, §7; [task index](../tasks/README.md) | Ownership, COM-HTTP-01/02/03 và COM-PII-03 ở mức thành phần; SQLSTATE chỉ mapping, chưa nghiệm thu toàn COM-DB-01..04; NFR-018/020/028, AC-030 theo traceability backend |
+| [common README](../TKCT.md) §1.2–1.5, §2.4, §4, §7; [task index](../tasks/README.md) | Ownership, COM-HTTP-01/02/03 và COM-PII-03 ở mức thành phần; SQLSTATE chỉ mapping, chưa nghiệm thu toàn COM-DB-01..04; NFR-018/020/028, AC-030 theo traceability backend |
 
 ## 2. Thay đổi thực tế
 
@@ -35,7 +35,7 @@ Triển khai 46 mã public, business exception, RFC 9457 Problem, factory/writer
 | [ProblemWriter.java](../../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/ProblemWriter.java) | Clock, trace fallback, content type/401/retry headers; response factory cho MVC, servlet writer cho filter/security; bảo vệ committed response, log code/status/trace | AC02/03/05 |
 | [GlobalExceptionHandler.java](../../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/GlobalExceptionHandler.java), [DatabaseErrorMapper.java](../../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/error/DatabaseErrorMapper.java) | Spring advice cho framework/validation/auth/security/DB/unexpected, owner classification trước SQL cause, không log raw cause | AC03/04/05 |
 | [ErrorContractTest.java](../../../../../digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/error/ErrorContractTest.java), [ErrorHttpTest.java](../../../../../digitalbanking-backend/src/test/java/com/simulatedbank/banking/common/error/ErrorHttpTest.java) | 18 test cases cuối; đầy đủ catalog, serialization/extensions, MockMvc/security/filter, DB table mapping và negative output checks | AC01–05 |
-| [Backend README](../../../../../digitalbanking-backend/README.md), [common README](../README.md), [task](../tasks/BE-COM-IMP-02.md), [task index](../tasks/README.md), report/evidence này | Hướng dẫn sử dụng/trust boundary, current Java API, trạng thái implementer và bàn giao | G01/G02/G04 |
+| [Backend README](../../../../../digitalbanking-backend/README.md), [common README](../TKCT.md), [task](../tasks/BE-COM-IMP-02.md), [task index](../tasks/README.md), report/evidence này | Hướng dẫn sử dụng/trust boundary, current Java API, trạng thái implementer và bàn giao | G01/G02/G04 |
 
 Sửa ngoài common chỉ ở backend README hướng dẫn consumer; không sửa module nghiệp vụ, migration, dependency build, cấu hình hay chain production. Common README v1.4 giữ phần IMP-01; nguồn docs-common/OpenAPI giữ nguyên.
 

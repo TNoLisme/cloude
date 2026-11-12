@@ -14,7 +14,7 @@ Cung cấp primitive AES-GCM, HMAC/SHA, so sánh hằng thời gian, JCS và mas
 
 - [Quy tắc và AC chung](README.md); [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4 (cột enc/hash/last4), §9, §11.2 OQ-15; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2.6, §5.2.
 - [[digitalbanking-docs/docs-common/design/04. security.md]] §6–§7; [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §5.6, §7.2–7.3, Appendix B.
-- [[digitalbanking-docs/docs-backend/modules/common/README.md]] §1.5, §2.3, §7.2 (COM-CRY/JCS/PII); các đề xuất biên input/chữ ký không tự trở thành contract nghiệp vụ.
+- [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5, §2.3, §7.2 (COM-CRY/JCS/PII); các đề xuất biên input/chữ ký không tự trở thành contract nghiệp vụ.
 
 ## 3. Tiêu chí chấp nhận riêng
 

@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-SUM-11`
-> **Phiên bản:** v1.1 — cập nhật 12/11/2026
+> **Phiên bản:** v1.2 — cập nhật 12/11/2026
 > **Module:** `com.simulatedbank.banking.common`
 > **Owner chính:** **Phương** (Phối hợp: Vũ, Đạt, Thịnh — cung cấp hạ tầng dùng chung cho cả 10 module nghiệp vụ)
 > **Mốc tập trung:** **Tuần 2 – Tuần 3 (W2–W3)** và duy trì xuyên suốt theo `11. Resource & Staffing Plan.md`
@@ -46,9 +46,9 @@ com.simulatedbank.banking.common/
 ## 3. Đặc tả Các Thành phần Cốt lõi Cần Cung cấp
 
 ### 3.1. Bộ lọc Truy vết `CorrelationAndRequestIdFilter` (`design/01` §4.6)
-- Chạy ở mức ưu tiên cao nhất (`Ordered.HIGHEST_PRECEDENCE`) trước cả Spring Security чтобы mọi lỗi `401`/`403` đều có mã truy vết.
+- Một servlet filter ở SecurityProperties.DEFAULT_FILTER_ORDER - 1 (hiện -101), trước Spring Security; ApiSecurityHeadersFilter ở -102. Xem TKCT/source, không dùng HIGHEST_PRECEDENCE làm chữ ký bắt buộc.
 - Kiểm tra header `X-Correlation-ID` từ client:
-  - Nếu có và khớp biểu thức chính quy `^[A-Za-z0-9._:-]{1,64}$` $\rightarrow$ giữ nguyên.
+  - Nếu có và khớp biểu thức chính quy `^[A-Za-z0-9._:-]{1, 64}$` $\rightarrow$ giữ nguyên.
   - Nếu không gửi $\rightarrow$ tự sinh UUIDv4 mới.
   - Nếu gửi sai định dạng (chứa ký tự xuống dòng hoặc vượt 64 ký tự) $\rightarrow$ từ chối ngay với `400 VALIDATION_ERROR` (chống Log Injection).
 - Luôn sinh mới `requestId` (UUIDv4) cho mỗi HTTP request, đặt `correlationId` và `requestId` vào SLF4J `MDC`, đính kèm header `X-Correlation-ID` vào mọi HTTP response, và dọn sạch `MDC` trong khối `finally`.
@@ -73,15 +73,17 @@ com.simulatedbank.banking.common/
 
 ---
 
-## 4. Danh sách Công việc Cần Triển khai (Ưu tiên Hoàn thành Sớm ở W2–W3)
+## 4. Trạng thái và nơi tra cứu hiện tại
 
-1. [ ] Khởi tạo bộ khung cấu hình `AppProperties`, `TimeConfig` (`Clock` bean) và `SecurityFilterChainConfig` (HTTP Security Headers, CORS, `Cache-Control: no-store`).
-2. [ ] Hiện thực và viết Unit Test cho `CorrelationAndRequestIdFilter` và `RequestContextHolder`.
-3. [ ] Hiện thực và viết Unit Test cho bộ 4 tiện ích bảo mật dữ liệu: `PiiCryptoService`, `HmacService`, `JcsCanonicalizer` (kèm test vector RFC 8785) và `PiiMaskingUtils`.
-4. [ ] Hiện thực `ErrorCode`, `BankingBusinessException`, `ProblemResponse` và `GlobalExceptionHandler` theo `07` để bàn giao cho các module. Không triển khai ApiResponse khi chưa có contract nguồn yêu cầu envelope.
+- [README common](../common/README.md): hướng dẫn sử dụng/tra cứu.
+- [TKCT](../common/TKCT.md): class/API/crypto/error/health/logging và test mapping đã đối chiếu code.
+- [Final report](../common/report/BE-COM-FINAL-REPORT.md): tasks, verification, state/dependency và điều kiện tiếp tục.
+
+Nền tảng common đã triển khai;5 task Done trong phạm vi công bố, 05/07/08 Blocked thiếu identity/consumer/Cloud. Bảng class ở §2 là lược đồ thành phần cốt lõi; inventory đầy đủ 28 Java files ở TKCT §2. Không dùng checklist Planned trước code để suy hiện trạng hoặc nghiệm thu toàn module.
 
 ## Change Log
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
 | v1.1 | 12/11/2026 | Đồng bộ mô hình lỗi, success DTO, masking và JCS theo docs-common/01–11; tham chiếu quyết định trước implement, không sửa runtime |
+| v1.2 | 12/11/2026 | Tách README/TKCT/final report; sửa registration order theo code, dẫn trạng thái hiện tại thay checklist Planned cũ |
