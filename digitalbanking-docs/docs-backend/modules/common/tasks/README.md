@@ -34,8 +34,8 @@
 | [BE-COM-IMP-04](BE-COM-IMP-04.md) | Crypto, JCS và masking | W3 | 01 | Done — [verification](../report/BE-COM-IMP-04-verification.md); chờ review |
 | [BE-COM-IMP-05](BE-COM-IMP-05.md) | HTTP security và tích hợp identity | W3 | 01–03; contract/code identity liên quan | Blocked — common đã triển khai; thiếu identity thật; [verification](../report/BE-COM-IMP-05-verification.md) |
 | [BE-COM-IMP-06](BE-COM-IMP-06.md) | Logging, metrics và health | W3–W5 | 02–05 | Done — common/local; [verification](../report/BE-COM-IMP-06-verification.md); chờ review, không đóng blocker identity của 05 |
-| [BE-COM-IMP-07](BE-COM-IMP-07.md) | Tích hợp và quality gate common | W3–W6 | 01–06 và các module tham gia từng luồng | Planned |
-| [BE-COM-IMP-08](BE-COM-IMP-08.md) | Readiness, Cloud verification và bàn giao | W6–W8 | Readiness từ W6; deploy sau quality gate, có môi trường/owner hạ tầng | Planned |
+| [BE-COM-IMP-07](BE-COM-IMP-07.md) | Tích hợp và quality gate common | W3–W6 | 01–06 và các module tham gia từng luồng | Blocked — common/PG quality gate đạt; thiếu consumer thật; [verification](../report/BE-COM-IMP-07-verification.md) |
+| [BE-COM-IMP-08](BE-COM-IMP-08.md) | Readiness, Cloud verification và bàn giao | W6–W8 | Readiness từ W6; deploy sau quality gate, có môi trường/owner hạ tầng | Blocked — W6 readiness local đạt; thiếu RC/Cloud/owner; [verification](../report/BE-COM-IMP-08-verification.md) |
 
 Thứ tự thực hiện gợi ý: 01 → 02 → 03 → 04 → 05 → 06; tích hợp 07 theo từng module sẵn sàng, không dồn đến W6. Chuẩn bị tài liệu 08 từ W6; chỉ đóng task sau bằng chứng W7–W8. Nếu dependency chưa có, có thể làm phần độc lập và ghi Blocked cho tiêu chí phụ thuộc; không tạo nghiệp vụ giả trong production để đạt tiêu chí.
 

@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phiên bản / ngày:** v1.0 / 12/11/2026
-> **Trạng thái:** Planned
+> **Trạng thái:** Blocked — phần common/quality gate đã kiểm; thiếu consumer nghiệp vụ W3/W4/W5; xem [verification](../report/BE-COM-IMP-07-verification.md)
 > **Owner / reviewer:** Phương, phối hợp owner module liên quan / Chưa review
 > **Mốc / phụ thuộc:** W3–W6; 01–06 và implementation các module tham gia từng luồng
 

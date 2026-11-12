@@ -112,6 +112,9 @@ Nguồn: `05` §3.1, `06` §11.1, `08` §3.2.
 
 ### 4.1. Danh mục biến môi trường
 
+BE-COM-IMP-08 bổ sung `application-demo.yml`: cookie Secure=true và CORS origin bắt buộc cấp tường minh; nhãn log mặc định demo. Base YAML bên dưới vẫn là cấu hình chung/local, không phải bản deploy Cloud hoàn chỉnh. Chỉ profile demo, không kết hợp local/test; không dùng Compose local với secret mẫu cho Cloud. [Readiness/runbook ứng dụng](common-readiness.md) ghi artifact, secret references, restart/rollback và gate chưa đạt; [report 08](../modules/common/report/BE-COM-IMP-08-verification.md) giữ kết quả thực chạy.
+
+
 | Biến | Bắt buộc | Giá trị mặc định | Ý nghĩa |
 |---|---|---|---|
 | `SPRING_PROFILES_ACTIVE` | Có | `local` | Profile `local`, `test` hoặc `demo` |
@@ -132,8 +135,8 @@ Nguồn: `05` §3.1, `06` §11.1, `08` §3.2.
 | `APP_PII_AES_KEY_ID` | Không | `k-v1` | Key version đang dùng để mã hóa PII |
 | `APP_PII_AES_KEY_BASE64` | Có | — | Khóa AES-256-GCM, Base64 của đúng 32 byte |
 | `APP_HMAC_KEY_BASE64` | Có | — | Khóa HMAC-SHA-256, Base64 của đúng 32 byte |
-| `APP_COOKIE_SECURE` | Không | `false` ở `local`; `true` ở `demo` | Bật cờ `Secure` cho cookie session |
-| `APP_CORS_ALLOWED_ORIGINS` | Không | `http://localhost:5173` | Danh sách origin SPA, phân tách bằng dấu phẩy |
+| `APP_COOKIE_SECURE` | Không | `false` ở base/local; profile demo đặt property secure=true | Identity đọc cấu hình cookie; actual Set-Cookie cần identity/HTTPS verification |
+| `APP_CORS_ALLOWED_ORIGINS` | Có trên demo | local: `http://localhost:5173`; demo: không fallback | Origin SPA tường minh; thiếu/wildcard fail startup demo |
 
 ### 4.2. Mẫu `.env.example`
 

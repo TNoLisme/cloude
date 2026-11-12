@@ -135,6 +135,22 @@ Actuator/Micrometer owns the single `http.server.requests` timer. Prometheus exp
 
 Common supplies HTTP signals only. Transfer owns transfer success/failure/latency, pending and idempotency metrics; identity owns auth/lockout/step-up; audit owns write/gap/tamper signals and durable records; fraud, notification and job owners emit their respective signals after the appropriate state/transaction boundary. Generic exception mapping does not increment their counters. Prometheus/Grafana deployment, alerts, retention/rotation, Cloud verification and full NFR-025 coverage remain owner/task 07/08 work. The observability integration test uses a test-only session resolver and controllers; it does not certify identity sessions or transfer execution.
 
+### Common integration quality gate
+
+Run `./gradlew clean check --offline --console=plain` with Java 21 and Docker available (omit `--offline` when dependencies are not cached). The task runs common regression, PostgreSQL integration and ArchUnit; it does not certify business flows that have no implementation.
+
+`PostgreSqlErrorPipelineIntegrationTest` exercises real PostgreSQL 16 NOWAIT/lock timeout (`55P03`), statement timeout (`57014`), deadlock (`40P01`), serialization failure (`40001`), unique/check violations (`23505`/`23514`) and a real closed JDBC connection (`08003`). Independent transactions produce failures before the production error handler formats them. Test-only probe state verifies rollback and that the generic HTTP layer does not retry. The tests also check existing health/early security responses against required OpenAPI fields. `quality_gate.probe`, its JDBC transaction coordinator, HTTP route and session resolver exist only under `src/test`; they are not transfer, audit or identity implementations.
+
+ArchUnit additionally prohibits common from depending on JDBC/repository/JPA/DataSource/transaction infrastructure; SQLException classification and Actuator health integration remain allowed. Production transactions and persistence belong to business application services.
+
+BE-COM-IMP-07 remains **Blocked** until real W3 identity/customer/account, W4 transfer/ledger/limit and W5 audit/fraud/notification/admin consumers and their migrations exist. Consumer-level correlation/crypto/JCS/PII, real session/CSRF/customer quotas, replay/idempotency and C1/C2 rollback/C3 security audit must be verified through their owners. The report contains the complete integration matrix, existing test mappings and reopen conditions. Green common tests do not close D1–D5, the source policy issues, or the Cloud release gate.
+
+### Demo readiness and application handoff
+
+`application-demo.yml` sets cookie Secure=true and removes the local CORS-origin fallback. Supply explicit origins and external DB/AES/HMAC secrets; missing/wildcard origins or invalid keys fail startup. Use only the demo profile for a demo deployment. The local Compose file and `.env.example` contain development defaults and are not a Cloud release configuration. No trust in forwarded headers is enabled by this task.
+
+`./gradlew clean check --offline --console=plain` now packages bootJar before tests. `PackagedApplicationReadinessIntegrationTest` launches that exact JAR in child JVMs with a minimal synthetic environment and PostgreSQL 16 using separate app/migration roles. It tests startup/restart, public health/protected endpoints, origin/body/trace rejection and missing/invalid configuration. This is isolated local verification; it does not prove Cloud TLS, real identity cookies/CSRF, business journeys or rollback to an accepted prior release. Read the [common readiness runbook](../digitalbanking-docs/docs-backend/deployment/common-readiness.md) and task 08 report for artifact checksums, secret reference names, owner gaps and W7/W8 checks. Task 08 remains Blocked until the task 07/release, Cloud and infrastructure-owner gates are met.
+
 ## Documentation
 
 - Backend conventions: `../digitalbanking-docs/docs-backend/00. architecture & conventions.md`

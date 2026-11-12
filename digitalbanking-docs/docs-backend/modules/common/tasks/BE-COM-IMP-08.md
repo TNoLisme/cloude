@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phiên bản / ngày:** v1.0 / 12/11/2026
-> **Trạng thái:** Planned
+> **Trạng thái:** Blocked — W6 readiness local đã kiểm; thiếu release candidate qua 07, Cloud và owner hạ tầng; xem [verification](../report/BE-COM-IMP-08-verification.md)
 > **Owner / reviewer:** Phương phối hợp owner hạ tầng (chưa phân công trong tài liệu 11) / Chưa review
 > **Mốc / phụ thuộc:** Chuẩn bị W6; Cloud W7; kiểm chứng/bàn giao W8; release candidate qua quality gate, có môi trường và đầu mối hạ tầng
 

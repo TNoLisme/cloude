@@ -59,7 +59,7 @@ class AppPropertiesTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"local", "test", "demo"})
-    void yamlAndRecordDefaultsAgreeAcrossProfiles(String profile) {
+    void yamlDefaultsAndDemoTransportOverridesFollowEnvironmentContract(String profile) {
         runner.run(defaultContext -> configDataRunner
                 .withPropertyValues("spring.profiles.active=" + profile)
                 .run(context -> {
@@ -67,7 +67,15 @@ class AppPropertiesTest {
                     AppProperties defaults = defaultContext.getBean(AppProperties.class);
                     AppProperties actual = context.getBean(AppProperties.class);
                     assertThat(actual.timezone()).isEqualTo(defaults.timezone());
-                    assertThat(actual.security()).isEqualTo(defaults.security());
+                    if (profile.equals("demo")) {
+                        assertThat(actual.security()).usingRecursiveComparison()
+                                .ignoringFields("cookie.secure", "corsAllowedOrigins")
+                                .isEqualTo(defaults.security());
+                        assertThat(actual.security().cookie().secure()).isTrue();
+                        assertThat(actual.security().corsAllowedOrigins()).isEmpty();
+                    } else {
+                        assertThat(actual.security()).isEqualTo(defaults.security());
+                    }
                     assertThat(actual.transfer()).isEqualTo(defaults.transfer());
                     assertThat(actual.fraud()).isEqualTo(defaults.fraud());
                     assertThat(actual.jobs()).isEqualTo(defaults.jobs());

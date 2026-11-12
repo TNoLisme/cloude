@@ -34,6 +34,20 @@ class ModuleBoundaryArchTest {
                     .because("BE-CON-08 / BE-CON-18: common module must not depend on any business module");
 
     @ArchTest
+    static final ArchRule commonMustNotOwnPersistenceOrTransactionBoundaries =
+            noClasses()
+                    .that().resideInAPackage("..banking.common..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "org.springframework.jdbc..",
+                            "org.springframework.data.repository..",
+                            "org.springframework.data.jpa..",
+                            "org.springframework.transaction..",
+                            "jakarta.persistence..",
+                            "javax.sql.."
+                    )
+                    .because("06 §6.2–6.3: common owns no persistence or business transaction boundary");
+
+    @ArchTest
     static final ArchRule domainMustRemainFrameworkFree =
             noClasses()
                     .that().resideInAPackage("..domain..")

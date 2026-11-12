@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.8
+> **Phiên bản:** v1.10
 > **Ngày:** 12/11/2026
 > **Trạng thái:** Hoàn thành — nội dung thiết kế; chưa sign-off hoặc xác nhận triển khai
 > **Owner:** Phương
@@ -577,6 +577,16 @@ Known-answer JCS/hash tra design/01 Appendix B và RFC8785 vectors khi triển k
 
 Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/§10; `07` §10; BE-ARCH-00 §11–§13.
 
+### 7.3.1. Quality gate và integration task 07
+
+BE-COM-IMP-07 đã bổ sung PostgreSqlErrorPipelineIntegrationTest: lỗi NOWAIT/lock timeout/deadlock/serialization/statement timeout/unique/check/closed connection thật qua production error pipeline; probe transaction rollback và không HTTP retry. Required fields của health/Problem được đối chiếu OpenAPI; đây không phải full OpenAPI validator. ArchUnit cấm common sở hữu JDBC/repository/JPA/DataSource hoặc transaction boundary. Tất cả probe schema/table/route/session resolver chỉ ở test, không phải nghiệp vụ của owner.
+
+Task 07 **Blocked**: 10 module nghiệp vụ chưa có Java source/migration nên chưa có consumer thật để kiểm AC02..06 đầy đủ. Ma trận W3/W4/W5, nguồn/test hiện có, dependency và điều kiện tiếp tục nằm trong [verification 07](report/BE-COM-IMP-07-verification.md); [cách chạy](../../../../digitalbanking-backend/README.md#common-integration-quality-gate). Không chuyển D1–D5 hoặc task05 sang Done từ common regression.
+
+### 7.3.2. Readiness và bàn giao task 08
+
+BE-COM-IMP-08 bổ sung profile demo (Secure cookie config, CORS explicit), test chạy JAR đóng gói với PostgreSQL/roles thật và negative config trong môi trường cô lập. [Runbook](../../deployment/common-readiness.md) và [report 08](report/BE-COM-IMP-08-verification.md) ghi artifact/source hash, secret references, NO-GO decision, restart/rollback và ma trận W7/W8. Task08 Blocked vì task07 chưa đủ consumer/quality gate, chưa có Cloud URL/evidence và owner hạ tầng; không đóng bằng local readiness.
+
 ### 7.4. Hồ sơ Task 1
 
 - Công việc: [[digitalbanking-docs/docs-backend/modules/common/tasks/BE-COM-DOC-01.md]].
@@ -601,3 +611,5 @@ Nguồn: [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2/§4/§6/§8/
 | v1.6 | 12/11/2026 | Codex — BE-COM-IMP-04 | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |
 | v1.7 | 12/11/2026 | Codex — BE-COM-IMP-05 | Triển khai security chain, SPI identity, CSRF/CORS/headers và body/token-bucket limits; report giữ Blocked cho tích hợp session/cookie/username/challenge/proxy chưa có evidence |
 | v1.8 | 12/11/2026 | Codex — BE-COM-IMP-06 | Triển khai JSON log allowlist/completion, HTTP histogram, protected operational metrics và HealthResponse app/DB; kiểm thử local HTTP/PostgreSQL và handoff owner/07/08 trong report, chưa xác nhận Cloud/toàn NFR-025 |
+| v1.9 | 12/11/2026 | Codex — BE-COM-IMP-07 | PostgreSQL error pipeline/rollback và architecture quality gate; ma trận tích hợp với task07 Blocked do thiếu consumer nghiệp vụ thật, không thay nghiệp vụ bằng test probe |
+| v1.10 | 12/11/2026 | Codex — BE-COM-IMP-08 | Profile demo/CORS/cookie config; packaged JAR readiness/negative tests và runbook ứng dụng; giữ Cloud/release/owner gates Blocked, không nhận nghiệm thu từ local |
