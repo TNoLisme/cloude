@@ -81,3 +81,11 @@ SPA build tạo dist theo công cụ đã chốt. Handoff cho Cloud gồm commit
 ## 8. Cập nhật design khi làm UI
 
 Mở file của Screen ID tại [[digitalbanking-docs/docs-frontend/design/README.md]] trước khi sửa UI. Khi tạo màn chưa có code, điền khung mô tả trong file đã tạo. Khi sửa màn đã có code, cập nhật phần component/style/state/responsive và nguồn commit, ghi PR/evidence theo [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]].
+
+## 9. Preview mock được cung cấp ngày 13/11/2026
+
+Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, Ant Design 5.26.7; các dependency được pin trong package/lockfile của digitalbanking-frontend. Chạy `pnpm install --frozen-lockfile`, sau đó `pnpm dev:mock --port 5174`; mở http://127.0.0.1:5174/customer và dùng thanh chọn màn/trạng thái. `pnpm dev` cũng mặc định mock. `pnpm dev:api` là đường legacy riêng, chưa nghiệm thu backend đích.
+
+Người dùng đã duyệt fixture chỉ xem và khóa thao tác thiếu contract. MSW đáp ứng auth/account theo YAML mới; adapter UI tách biệt cho source cũ chưa đồng bộ, không bổ sung contract BE. Không cần đăng nhập; persona tổng hợp chỉ phục vụ xem bố cục. Form legacy bị khóa, không nhập thông tin thật. Staff lookup có fixture sau khi nhập 0900000123; các nút ghi bị khóa.
+
+Scripts hiện có: typecheck, test, api:generate/check, format/check, build/preview. Chưa có lint/test:e2e, RHF/Zod mới dùng cho thanh preview; không coi các task cha đã hoàn thành. Xem README package và [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].

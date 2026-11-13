@@ -5,6 +5,7 @@
 | Dự án / mã | Digital Banking MVP / FE-TRACK |
 | Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
+| Bổ sung 13/11/2026 | FE-DOC-03 và UI/mock FE-FND-02-MOCK được người phụ trách FE duyệt ngày 14/11/2026; không mở rộng nghiệm thu sang API thật |
 | Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
 | Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / FE Lead, BA, Backend, QA |
@@ -21,7 +22,9 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 |---|---|---|---|---|---|
 | FE-DOC-01 | Bộ docs và truy vết theo [[digitalbanking-docs/docs-frontend/README.md]] | FE | Người phụ trách FE chốt tài liệu | Hoàn thành | Bộ docs v1.1 được người phụ trách FE xác nhận ngày 09/11/2026, kiểm tra liên kết/ID đạt |
 | FE-DOC-02 | Design chi tiết theo màn hình, shared component/layout và file chờ UI | FE | Người phụ trách FE chốt v1.2 | Hoàn thành | [[digitalbanking-docs/docs-frontend/design/README.md]], mô tả 20 màn có source và 8 file chờ UI |
-| FE-FND-01 | Đưa source, assets, cấu hình và tests vào digitalbanking-frontend, pin toolchain/lockfile | FE | GAP-01, GAP-06 | Chưa bắt đầu | Thực hiện theo mục 2.1 và [[digitalbanking-docs/docs-frontend/guides/01-local-development.md]] |
+| FE-DOC-03 | Lộ trình mock trước, phiếu kiểm tra mỗi lần chạy task, gate duyệt UI/tích hợp/merge | FE | Yêu cầu trong chat ngày 13/11/2026 | Hoàn thành | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]], [[digitalbanking-docs/docs-frontend/evidence/FE-DOC-03/2026-11-14-c1760f1/run-02.md]] |
+| FE-FND-02-MOCK | Task con FE-FND-02: MSW/fixture bám OpenAPI, bật mock để review UI và hướng dẫn preview | FE | FE-FND-01, GAP-06/ADR-001, Q-01/02/03 trong lộ trình bổ sung | UI/mock được duyệt | Đã chốt Q-01/02/03; mock và fixture adapter chỉ xem cho 20 màn source cũ đã chạy, thao tác thiếu contract bị khóa. 19 tests/typecheck/API check/format/build đạt; browser smoke đã có; người dùng duyệt UI/mock ngày 14/11/2026, task tích hợp còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-14-c1760f1/run-02.md]] |
+| FE-FND-01 | Đưa source, assets, cấu hình và tests vào digitalbanking-frontend, pin toolchain/lockfile | FE | GAP-01, GAP-06 | Đang làm | Thực hiện theo mục 2.1 và [[digitalbanking-docs/docs-frontend/guides/01-local-development.md]] |
 | FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
 | FE-FND-03 | App shell, route policy, UI tokens/form/accessibility và đồng bộ design theo màn | FE | FE-FND-01, ADR-001 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
 | FE-01-01 | Password login, MFA, session/bootstrap/logout | FE + BE | FE-FND-02, GAP-05, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md]] |
@@ -63,6 +66,8 @@ Thực hiện theo thứ tự ưu tiên dưới đây và phụ thuộc trong b�
 
 ### 2.2. Tham chiếu khi nhận việc
 
+Yêu cầu ngày 13/11/2026: dùng [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] để chia nhỏ mock/UI và tích hợp từng phần. Mỗi lần chạy dùng [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] và tạo phiếu evidence. Gặp điều chưa rõ phải hỏi người dùng, chờ chốt trước phần phụ thuộc. Mốc UI/mock được duyệt không đóng task tích hợp API thật.
+
 FE-FND-01 lấy source từ nhánh frontend tại commit 9e09a71fd2c79c0486c4ee958e02fa2ef884314e để chuyển vào cấu trúc đích. Đường dẫn triển khai là digitalbanking-frontend, contract sinh types là digitalbanking-docs/openapi/digital-banking-v1.yaml.
 
 [Source tham chiếu cho FE-FND-01](https://github.com/TNoLisme/cloude/tree/9e09a71fd2c79c0486c4ee958e02fa2ef884314e/frontend).
@@ -80,7 +85,7 @@ Tất cả GAP dưới đây đang Mở. Owner ghi quyết định, ngày, link 
 | GAP-03 | Chưa có search customer/user và user listing cho staff/admin, OI-API-08/18 | BA + BE | Chốt tìm kiếm hoặc nguồn ID được phép từ fixture/approval, cập nhật 07/YAML |
 | GAP-04 | YAML đã có begin/finish tại loginFido, còn provider, enrollment và khả năng thực thi WebAuthn cần xác nhận, OI-API-13/17 | BE + Security | Chốt enrollment/provider, ceremony/options runtime và fallback, có test tích hợp begin/finish theo YAML |
 | GAP-05 | 07/YAML dùng DB_SESSION, security dùng SESSION_TOKEN và Path khác. FE-FND-02 cần chuyển client sang cookie session/getSession | BE + Security | Thống nhất 07/YAML/security/BE docs và runtime session/CSRF, kiểm chứng reload/logout |
-| GAP-06 | Cần chốt Vite 7/pnpm/RHF+Zod và lựa chọn UI library cho source chuyển vào cấu trúc mới | FE + kiến trúc | Duyệt ADR-001, chốt package versions/lockfile/runtime và lệnh CI. Đồng bộ 05 nếu giữ Ant Design |
+| GAP-06 | Người phụ trách FE đã chọn Ant Design + Vite 7/pnpm/RHF+Zod ngày 13/11/2026; package/lockfile đã kiểm chứng cho preview. Xác nhận liên vai trò và gate đầy đủ của task cha còn mở | FE + kiến trúc | Duyệt ADR-001, chốt package versions/lockfile/runtime và lệnh CI. Đồng bộ 05 nếu giữ Ant Design |
 | GAP-07 | UserSummary chỉ có roles/privileges trong YAML, seed quyền khác nhau ở SRS/API/security, ví dụ quyền export ADMIN | BE + Security + BA | Một permission matrix thống nhất, chốt session capability hoặc mapping FE theo matrix |
 | GAP-08 | Step-up transfer gắn request/key và sensitive action gắn approval/decision, create approval chưa có approvalId. 07 còn OI-API-19 về retry trùng | BE + Security | Chốt binding/create approval, challenge header/payload và quy tắc retry, có test contract |
 | GAP-09 | Reload mất transfer intent/key memory khi chưa có reference, contract chưa có lookup by idempotency key | BE + FE + BA | Chốt recovery theo history/reference hoặc endpoint lookup được bảo vệ. Chốt retention nếu lưu key cục bộ |
@@ -100,6 +105,7 @@ ADR đang chờ review tại [[digitalbanking-docs/docs-frontend/decisions/READM
 | 08/11/2026 | FE-DOC-01 | Cập nhật v1.1, tập trung các điều chỉnh sau refactor vào mục 2.1 và đồng bộ hướng dẫn/đặc tả theo yêu cầu FE |
 | 09/11/2026 | FE-DOC-01 | Người phụ trách Frontend chốt bộ tài liệu v1.1 trong chat, ghi nhận phê duyệt và chuẩn bị commit lên main |
 | 09/11/2026 | FE-DOC-02 | Bổ sung shared design, 20 mô tả màn theo source và 8 file chờ UI. Kiểm tra cấu trúc/liên kết đạt, người phụ trách FE chốt v1.2 ngày 09/11/2026 |
+| 13/11/2026 | FE-DOC-03, FE-FND-02-MOCK | Soạn lộ trình mock trước và vòng đời kiểm tra task theo yêu cầu người dùng. Đã hỏi lựa chọn UI/toolchain và phạm vi đợt đầu; chưa có câu trả lời, mock runtime chưa được triển khai. Evidence tại phiếu FE-DOC-03 |
 
 ## 6. Kiểm tra bản tài liệu v1.1
 
@@ -112,3 +118,11 @@ Ngày 09/11/2026, kiểm tra 56 file FE gồm 28 screen design, 2 shared design 
 ## 8. Phê duyệt v1.2
 
 Ngày 09/11/2026, người phụ trách Frontend xác nhận chốt v1.2 và yêu cầu commit/push lên main. FE-DOC-02 hoàn thành phần tài liệu. Các task UI/implementation và file chờ UI giữ trạng thái thực hiện riêng theo nội dung tracker và design registry.
+
+## 9. Quyết định triển khai ngày 13/11/2026
+
+Người phụ trách FE chọn Ant Design + pnpm/Vite 7/RHF/Zod (ADR-001), preview toàn bộ màn có source cũ trước rồi đồng bộ contract mới và bổ sung màn thiếu. GAP-06 có lựa chọn FE; kiểm chứng package/lockfile và xác nhận liên vai trò còn mở. Q-03 được chốt: chỉ xem UI bằng fixture và khóa thao tác chưa có contract rõ ràng. Các GAP-01/02/05/07/08 và task tích hợp không được tự đóng bởi quyết định preview.
+
+## 10. Phê duyệt và yêu cầu push ngày 14/11/2026
+
+Người phụ trách FE chốt FE-DOC-03 và FE-FND-02-MOCK trong chat: tài liệu được duyệt, UI/mock được duyệt trong phạm vi fixture chỉ xem; yêu cầu push lên frontend. Các task cha/integration/GAP chưa đủ điều kiện tiếp tục mở. Chưa có phê duyệt merge main. Chi tiết source/checks/remote ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-14-c1760f1/run-02.md]].

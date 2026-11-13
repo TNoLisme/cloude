@@ -86,3 +86,7 @@ Screen docs dẫn file này cho layout và chỉ mô tả phần nội dung tron
 | Ngày | Thay đổi | Kiểm chứng |
 |---|---|---|
 | 09/11/2026 | Mô tả AuthLayout/BankingLayout và CSS responsive | Đọc source theo metadata |
+
+## Preview UI ngày 13/11/2026
+
+PreviewShell bổ sung thanh chọn màn/trạng thái bằng AntD Select/Button và RHF/Zod ở ngoài app; styles .preview-toolbar/.preview-content trong digitalbanking-frontend/src/styles.css. Fieldset disabled khóa form legacy chưa chốt contract; trạng thái khóa được cập nhật khi route SPA đổi. Main chỉ nạp mock khi DEV và VITE_ENABLE_MOCKS=true. Bố cục source và tokens được giữ để review ban đầu; không thay policy/quyền đích. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].

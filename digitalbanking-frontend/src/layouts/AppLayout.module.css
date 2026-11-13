@@ -1,0 +1,251 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+}
+.sidebar {
+  width: 224px;
+  flex: 0 0 224px;
+  background: #173b5e;
+  color: white;
+  padding: 28px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+.sidebar :global(.brand) {
+  margin-bottom: 36px;
+  padding: 0 12px;
+}
+.sidebar :global(.brand-mark) {
+  background: white;
+  color: #173b5e;
+}
+.sidebar :global(.brand small) {
+  color: #bfd0e0;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+}
+.sidebar :global(.brand strong) {
+  font-size: 15px;
+}
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.nav a {
+  padding: 13px 14px;
+  border-radius: 8px;
+  color: #cad8e6;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  min-height: 46px;
+}
+.nav a:hover {
+  background: #204868;
+  color: white;
+}
+.nav :global(a.active) {
+  background: #2868b2;
+  color: white;
+  box-shadow: inset 3px 0 0 #84b7f1;
+}
+.nav :global(.anticon) {
+  font-size: 18px;
+}
+.sidebarFooter {
+  margin-top: auto;
+  border-top: 1px solid #31516f;
+  padding: 20px 12px 0;
+  color: #bfd0e0;
+  font-size: 11px;
+}
+.workspace {
+  flex: 1;
+  min-width: 0;
+}
+.topbar {
+  min-height: 80px;
+  background: white;
+  border-bottom: 1px solid #e1e7ef;
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.person {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.person strong {
+  font-size: 12px;
+  display: block;
+}
+.person small {
+  display: block;
+  color: #65768a;
+  font-size: 10px;
+}
+.topActions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.main {
+  padding: 32px 40px 40px;
+  margin: 0 auto;
+  max-width: 1200px;
+}
+.bottomNav {
+  display: none;
+}
+.menuButton {
+  display: none;
+}
+.mobileSimulation {
+  display: none;
+}
+.auth {
+  min-height: 100dvh;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.auth :global(.brand) {
+  margin-bottom: 28px;
+}
+.authCard {
+  width: 460px;
+  max-width: 100%;
+  background: white;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 5px 22px #173b5e0a;
+}
+.auth > :global(.simulation) {
+  margin-top: 24px;
+  background: transparent;
+  border: 0;
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .staff .sidebar {
+    width: 76px;
+    flex-basis: 76px;
+    padding: 24px 10px;
+  }
+  .staff .sidebar :global(.brand) {
+    padding: 0 8px;
+  }
+  .staff .sidebar :global(.brand > span:last-child),
+  .staff .navLabel,
+  .staff .sidebarFooter {
+    display: none;
+  }
+  .staff .nav a {
+    justify-content: center;
+    padding: 14px;
+  }
+  .staff .sidebar :global(.brand-mark) {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 1023px) {
+  .topbar {
+    padding: 16px 28px;
+  }
+  .main {
+    padding: 28px;
+  }
+  .topActions {
+    gap: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .customer .sidebar {
+    display: none;
+  }
+  .customer .topbar {
+    min-height: 64px;
+    padding: 14px 20px;
+  }
+  .topActions > :global(.simulation),
+  .person > span:last-child {
+    display: none;
+  }
+  .customer .main {
+    padding: 24px 18px 100px;
+  }
+  .customer .bottomNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: white;
+    border-top: 1px solid #e1e7ef;
+    padding: 10px 8px max(10px, env(safe-area-inset-bottom));
+    justify-content: space-around;
+  }
+  .bottomNav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 8px;
+    color: #65768a;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+  .bottomNav :global(a.active) {
+    background: #eaf2fc;
+    color: #2868b2;
+  }
+  .bottomNav :global(.anticon) {
+    font-size: 20px;
+  }
+  .mobileSimulation {
+    display: block;
+    margin-bottom: 20px;
+  }
+  .auth {
+    padding: 32px 20px;
+    justify-content: flex-start;
+  }
+  .authCard {
+    padding: 24px 22px;
+  }
+  .auth :global(.brand) {
+    margin-top: 20px;
+  }
+  .auth :global(.brand small) {
+    font-size: 10px;
+  }
+}
+@media (max-width: 639px) {
+  .staff .sidebar {
+    display: none;
+  }
+  .staff .menuButton {
+    display: inline-flex;
+  }
+  .staff .main {
+    padding: 24px 18px;
+  }
+  .staff .topbar {
+    padding: 12px 18px;
+  }
+  .staff .mobileSimulation {
+    display: block;
+  }
+}

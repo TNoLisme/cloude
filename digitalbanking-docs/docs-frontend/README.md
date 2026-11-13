@@ -5,6 +5,7 @@
 | Dự án / mã | Digital Banking MVP / FE-DOCS |
 | Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
+| Bổ sung 13/11/2026 | Lộ trình/vòng đời task FE-DOC-03 được người phụ trách FE duyệt ngày 14/11/2026; UI/mock được duyệt riêng, không thay nghiệm thu tích hợp |
 | Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
 | Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / FE Lead, Backend, QA, BA |
@@ -27,6 +28,12 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Phạm vi và truy vết | [[digitalbanking-docs/docs-frontend/management/01-scope-and-feature-map.md]] |
 | Đợt triển khai và phụ thuộc | [[digitalbanking-docs/docs-frontend/management/02-delivery-plan.md]] |
 | Tiến độ hiện tại và vấn đề mở | [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] |
+| Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
+| Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
+| Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
+| Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
+| Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
+| Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
 | Design UI từng màn hình và shared component | [[digitalbanking-docs/docs-frontend/design/README.md]] |
 | UI, form, responsive | [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |

@@ -10,7 +10,7 @@
 
 ## 1. Trạng thái quyết định
 
-Đề xuất, ngày 08/11/2026. Người chấp thuận Chờ phân công. Công việc liên quan FE-FND-01/02/03 và GAP-06. Nội dung sau là đề xuất để review, package mới chưa được tạo.
+Ngày 13/11/2026, người phụ trách FE chọn phương án A trong chat: “Giữ Ant Design; chuyển sang pnpm, Vite 7 và React Hook Form/Zod theo stack đích (đề xuất trong ADR-001).” Phạm vi đợt đầu: xem toàn bộ màn có source cũ trước, sau đó đồng bộ contract mới và bổ sung màn thiếu. Package đang được chuẩn bị; build/test và đồng bộ contract vẫn là đầu ra riêng. Không ghi nhận thay cho phê duyệt của kiến trúc/BE/Security.
 
 ## 2. Bối cảnh
 
@@ -44,7 +44,11 @@ Chọn A cho đợt migration protocol nhằm giữ phần UI đã có kiểm ch
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Quyết định cuối | Chờ review |
-| Người/ngày duyệt | Chờ phân công |
+| Quyết định cuối | Người phụ trách FE chọn A: Ant Design + pnpm 10 + Vite 7 + RHF/Zod |
+| Người/ngày duyệt | Người phụ trách FE, chat ngày 13/11/2026; xác nhận liên vai trò theo GAP-06 còn mở |
 | PR nguồn chung và standards | Bổ sung khi chấp thuận |
 | Trigger xem xét lại | UI library cản requirement, dependency/security issue hoặc thay đổi phạm vi |
+
+## 7. Package preview đang kiểm chứng
+
+Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, plugin-react 5.2.0, MSW 2.15.0, RHF 7.92.0, Zod 4.6.7, resolvers 7.0.6. Các version chính xác được tra npm registry trong lần triển khai và pin trong package/lockfile. Ant Design và React/Router/Query giữ version của source tham chiếu. Form legacy chưa được coi đã chuyển RHF/Zod chỉ vì dependency đã cài.

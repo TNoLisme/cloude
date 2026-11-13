@@ -1,0 +1,12 @@
+# Quy tắc thực hiện công việc frontend
+
+Áp dụng khi thay đổi frontend, mock API hoặc tài liệu FE trong repo này. Yêu cầu người phụ trách FE trong chat ngày 13/11/2026 là căn cứ cho quy trình dưới đây.
+
+1. Trước mỗi task, đọc `digitalbanking-docs/docs-frontend/README.md`, dòng task/GAP trong `management/03-work-tracker.md`, đặc tả feature, standards và design liên quan. Đối chiếu tài liệu gốc trong `docs-common`, security và `openapi/digital-banking-v1.yaml`; không dùng code legacy làm quyết định nghiệp vụ đích.
+2. Theo lộ trình `digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md` và vòng đời `digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md`. Mỗi lần chạy phải có phiếu theo `templates/task-run-template.md` trong evidence, kể cả khi bị chặn hoặc chưa có code.
+3. Không tự đoán yêu cầu, endpoint, payload, permission, trạng thái, phạm vi hay quyết định kỹ thuật đang mở. Ghi câu hỏi cụ thể, nguồn mâu thuẫn/thiếu và task bị ảnh hưởng, hỏi người phụ trách FE và chờ chốt trước khi làm phần phụ thuộc. Có thể tiếp tục phần độc lập đã rõ và được phép. Không dùng mặc định của công cụ hay dữ liệu mock để ngầm chốt GAP.
+4. Ghi nguyên ý quyết định của người dùng cùng ngày và nguồn chat trong phiếu; đồng bộ ADR/GAP/nguồn liên quan trong phạm vi được phép. Không tự ghi quyết định chuyên môn của BE/BA/Security là đã duyệt; nếu cần owner đó xác nhận thì giữ việc xác nhận mở.
+5. Giai đoạn hiện tại ưu tiên UI với mock API bằng MSW, bám OpenAPI và dùng dữ liệu tổng hợp. Mock chỉ được bật rõ ràng ở môi trường phát triển/test; API không có handler phải báo lỗi, không tự gọi BE. Không bổ sung handler nghiệp vụ còn mơ hồ. Mock không chứng minh cookie/security/ledger/invariant của BE.
+6. Sau mỗi thay đổi cập nhật design/feature/guide liên quan, phiếu evidence và tracker. Ghi đúng lệnh/kết quả thực tế, commit nền và trạng thái working tree; không tạo bằng chứng, screenshot hay phê duyệt giả.
+7. UI/mock đạt và chờ người dùng duyệt là mốc riêng của task con. Task cha chỉ Hoàn thành theo FE-TEST-03; phần integration còn mở cho tới khi API thật và browser critical flow được kiểm chứng, docs/review/checks đạt.
+8. Tích hợp BE theo từng phần FE đã được người dùng duyệt. Trước tích hợp đối chiếu readiness và contract; trước merge ghi kết quả kiểm tra và có xác nhận cho mốc merge cụ thể. Không tự merge/push/đánh dấu nghiệm thu toàn bộ khi chỉ chạy mock.
