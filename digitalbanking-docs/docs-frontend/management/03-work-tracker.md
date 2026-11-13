@@ -126,3 +126,5 @@ Người phụ trách FE chọn Ant Design + pnpm/Vite 7/RHF/Zod (ADR-001), prev
 ## 10. Phê duyệt và yêu cầu push ngày 14/11/2026
 
 Người phụ trách FE chốt FE-DOC-03 và FE-FND-02-MOCK trong chat: tài liệu được duyệt, UI/mock được duyệt trong phạm vi fixture chỉ xem; yêu cầu push lên frontend. Các task cha/integration/GAP chưa đủ điều kiện tiếp tục mở. Chưa có phê duyệt merge main. Chi tiết source/checks/remote ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-14-c1760f1/run-02.md]].
+
+Ngày 14/11/2026 đã commit source/tài liệu được duyệt tại [d8fdb7e07d382288a0e620b73a06f8b4baf771d1](https://github.com/TNoLisme/cloude/commit/d8fdb7e07d382288a0e620b73a06f8b4baf771d1) và push origin/frontend thành công. Checks hiện có đạt: 19 tests, typecheck, API check, format và build; giữ các giới hạn lint/E2E/bundle đã ghi ở evidence. Main chưa merge; bước quyết định merge chờ người phụ trách FE.

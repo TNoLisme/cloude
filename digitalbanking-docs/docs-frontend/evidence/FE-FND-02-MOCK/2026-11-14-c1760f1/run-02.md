@@ -22,4 +22,8 @@ Checks trước commit/push đã đạt: Prettier, tsc -b, API generated types c
 
 ## 5. Kết quả
 
-Trạng thái UI/mock được người dùng duyệt; commit/push đang thực hiện. Commit bản source được kiểm chứng và kết quả remote sẽ bổ sung sau khi thao tác thành công. Chưa merge main.
+Trạng thái UI/mock được người dùng duyệt. Source/docs preview đã commit tại [d8fdb7e07d382288a0e620b73a06f8b4baf771d1](https://github.com/TNoLisme/cloude/commit/d8fdb7e07d382288a0e620b73a06f8b4baf771d1), nhánh frontend được cập nhật fast-forward từ 9e09a71. `git push origin frontend` thành công (9e09a71..d8fdb7e). Các checks ở mục 4 áp dụng cho source ứng dụng của commit này. Bản bổ sung phiếu sau commit chỉ sửa tài liệu, không sửa code đã kiểm chứng. Chưa merge main.
+
+## 6. Truy vết phiên bản
+
+Commit source đã kiểm chứng/push: [d8fdb7e07d382288a0e620b73a06f8b4baf771d1](https://github.com/TNoLisme/cloude/commit/d8fdb7e07d382288a0e620b73a06f8b4baf771d1). Browser smoke/screenshot là bằng chứng từ run-01 ngày 13/11, source ứng dụng giữ nguyên trong lần duyệt này. Local main giữ c1760f1, origin/main đã fetch trước thao tác là 479244e; không push main. Không tạo PR hoặc tự ghi phê duyệt merge main.
