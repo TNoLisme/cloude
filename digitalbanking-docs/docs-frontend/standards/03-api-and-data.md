@@ -82,3 +82,11 @@ Thông tin tài chính lấy authoritative server, stale data có asOf và actio
 ## 2. Phụ thuộc
 
 [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] giữ GAP-05/08/09 và task FE-FND-02. Session/step-up tại [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md]].
+
+## 3. Hiện thực Money/ID ngày 14/11/2026 — được FE duyệt
+
+FE-FND-02-DATA cung cấp `digitalbanking-frontend/src/shared/lib/money.ts` và `id.ts`. Các type Money/ApiId tham chiếu types sinh từ YAML mới, không dùng schema legacy. `moneyToMinorUnits(unknown)` nhận đúng Money wire format và trả BigInt minor units; `minorUnitsToMoney(bigint)` serialize đúng hai decimals, từ chối kết quả âm/vượt precision. `formatMoney(Money)` dùng Intl trên phần nguyên BigInt, ghép hai số thập phân và đơn vị VND để không mất precision. Input sai scale/kiểu/leading zero/whitespace không được tự sửa hoặc làm tròn.
+
+`isApiId/parseApiId` chỉ nhận string theo pattern ID, không đi qua Number hoặc tự thêm giới hạn số nguyên DB ngoài schema. Đây là kiểm tra định dạng; không xác nhận ID tồn tại hay quyền sở hữu. Money 0.00 hợp lệ ở cấp schema; rule amount chuyển tiền >0 thuộc feature/BE, không áp cho số dư hoặc hạn mức nullable. Caller phải phân biệt null/missing trước khi gọi formatter; helper không tự thay chúng bằng 0.
+
+Các utility chưa thay renderer/DTO/client cũ của preview. Unit tests tại shared/lib kiểm tra biên schema, cộng decimal, overflow, format và ID vượt MAX_SAFE_INTEGER. Bằng chứng/thực trạng task tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]]. Đây không phải kết quả tích hợp API hoặc nghiệm thu toàn bộ FE-FND-02.

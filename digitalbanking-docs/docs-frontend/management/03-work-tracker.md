@@ -26,7 +26,8 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 | FE-FND-02-MOCK | Task con FE-FND-02: MSW/fixture bám OpenAPI, bật mock để review UI và hướng dẫn preview | FE | FE-FND-01, GAP-06/ADR-001, Q-01/02/03 trong lộ trình bổ sung | UI/mock được duyệt | Đã chốt Q-01/02/03; mock và fixture adapter chỉ xem cho 20 màn source cũ đã chạy, thao tác thiếu contract bị khóa. 19 tests/typecheck/API check/format/build đạt; browser smoke đã có; người dùng duyệt UI/mock ngày 14/11/2026, task tích hợp còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-14-c1760f1/run-02.md]] |
 | FE-FND-01 | Đưa source, assets, cấu hình và tests vào digitalbanking-frontend, pin toolchain/lockfile | FE | GAP-01, GAP-06 | Đang làm | Lint/CI config và clean install đã có kết quả local đạt, task con được FE duyệt ngày 14/11; xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]]. Phạm vi tích hợp legacy và xác nhận kiến trúc còn mở |
 | FE-FND-01-TOOLING | Task con FE-FND-01: lint, scripts kiểm tra, CI và cài sạch theo lockfile | FE | Stack/ADR-001 đã chốt phía FE | Đã duyệt — tooling local | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]] |
-| FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
+| FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Đang làm | Money/ID đã được FE duyệt ngày 14/11/2026; session/quyền/step-up/integration còn mở. [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
+| FE-FND-02-DATA | Task con FE-FND-02: Money/ID utilities theo schema hiện hành, unit boundary/precision | FE | API-DATA-01 và schema ID/Money đã rõ; độc lập GAP session/step-up | Đã duyệt — unit/schema | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]] |
 | FE-FND-03 | App shell, route policy, UI tokens/form/accessibility và đồng bộ design theo màn | FE | FE-FND-01, ADR-001 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
 | FE-01-01 | Password login, MFA, session/bootstrap/logout | FE + BE | FE-FND-02, GAP-05, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md]] |
 | FE-01-02 | Trusted-device passcode/FIDO và fallback | FE + BE | FE-01-01, GAP-04 | Bị chặn | Chờ enrollment/provider và test runtime WebAuthn |
@@ -138,6 +139,12 @@ Quyết định GAP-01 ngày 14/11/2026 trong lần FE-FND-01: giữ các luồn
 
 Kết quả FE-FND-01-TOOLING: cài sạch frozen lockfile trên bản sao mới đạt; pnpm check gồm lint/typecheck/API/format/19 tests/build đạt. Đã sửa tương thích CRLF/LF cho API check và format khi checkout Windows. Workflow đã tạo và kiểm tra YAML, chưa chạy CI GitHub; task con Chờ review, task cha vẫn Đang làm.
 
+## 12. Phần dữ liệu độc lập FE-FND-02-DATA ngày 14/11/2026
+
+Theo yêu cầu tiếp tục, triển khai phần Money/ID đã rõ theo 07/YAML và API-DATA-01. Không coi lời yêu cầu tiếp tục là phê duyệt FE-FND-01-TOOLING hoặc đóng dependency/task cha. Tiền được parse/serialize bằng BigInt, ID giữ nguyên string; chưa nối vào UI/transport legacy, chưa làm API thật. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-01.md]].
+
+FE-FND-02-DATA: 47 tests Money/ID mới và full gate 66 tests đạt; task con Chờ review, task cha tiếp tục mở client/session/query keys. Baseline GAP-05 cho FE/mock đã được hỏi, chưa được tự chốt theo tài liệu đang mâu thuẫn.
+
 ## 15. Phê duyệt và commit theo task ngày 14/11/2026
 
 Người phụ trách FE chốt trong chat: “chốt các task đang cần review, push nhánh frontend với mỗi commit là mỗi task riêng chứ không commit riêng”. Ghi nhận duyệt bốn task con đang chờ review; mỗi task có một commit chứa source/tài liệu/evidence của chính task đó, không tạo commit phê duyệt tổng hợp.
@@ -145,5 +152,6 @@ Người phụ trách FE chốt trong chat: “chốt các task đang cần revi
 | Task | Mốc được người phụ trách FE duyệt | Phiếu mới |
 |---|---|---|
 | FE-FND-01-TOOLING | Tooling/checks local; CI remote và xác nhận liên vai trò còn mở | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]] |
+| FE-FND-02-DATA | Money/ID utility, unit/schema; chưa nối UI/transport | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]] |
 
 Phê duyệt task con không đóng FE-FND-01/02, GAP hoặc integration. Được phép push frontend; main chưa được duyệt merge. SHA thực tế của từng task tra từ commit chứa phiếu run-02; push chỉ được báo thành công sau khi kiểm remote.

@@ -36,3 +36,7 @@ Evidence: ../digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-1
 ## CI nền tảng
 
 .github/workflows/frontend.yml chạy frozen install và pnpm check cho thay đổi FE/OpenAPI/workflow, với Node từ .node-version, pnpm từ packageManager và Actions pin SHA. Lần bổ sung này mới kiểm chứng local; không tuyên bố CI remote đạt trước khi có run trên GitHub. Cài đặt sạch và pnpm check đã đạt trong task FE-FND-01-TOOLING; task con được người phụ trách FE duyệt ngày 14/11/2026. .gitattributes giữ LF cho source frontend, API drift check chuẩn hóa CRLF/LF khi so sánh.
+
+## Data utilities theo contract mới
+
+Task FE-FND-02-DATA bổ sung src/shared/lib/money.ts và id.ts, dùng type sinh từ OpenAPI mới. Parse/serialize tiền bằng BigInt minor units và giữ ID dạng string; formatter mới giữ đủ hai decimals. Module này chưa được nối vào renderer legacy/adapter preview, nên hạn chế chỉ hiển thị số nguyên VND của preview vẫn còn cho đến task migration riêng. Session/quyền/transport và tích hợp BE vẫn mở. Phần utility được người phụ trách FE duyệt ngày 14/11/2026.
