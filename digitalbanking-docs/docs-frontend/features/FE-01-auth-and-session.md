@@ -101,3 +101,7 @@ FE-01-01 và FE-01-02 tại [[digitalbanking-docs/docs-frontend/management/03-wo
 ## 12. Vấn đề cần chốt
 
 GAP-04 về enrollment/provider, GAP-05 về session/cookie và tên login challenge purpose, GAP-07 về capability. GAP-01 cho register/recovery/PIN. Tracker sở hữu quyết định và trạng thái các GAP.
+
+## 13. Quyết định baseline FE/mock ngày 14/11/2026
+
+Người phụ trách FE chọn SESSION_TOKEN/Path=/api/LOGIN_MFA theo Security. Đã chốt giữ v1 và tạo v2 riêng; triển khai mới theo v2 Draft FE/mock, session client/UI tiếp tục ở task riêng theo [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]]. Không tự coi login/session tích hợp đã được nghiệm thu hoặc đóng GAP-05 từ lựa chọn này.

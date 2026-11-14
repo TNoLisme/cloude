@@ -1,0 +1,117 @@
+Staged snapshot 3; Node v22.14.0; pnpm 10.34.9
+Start 2026-11-14T10:40:46.846Z
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run lint
+
+> digitalbanking-frontend@0.1.0 lint C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> eslint . --max-warnings=0
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run typecheck
+
+> digitalbanking-frontend@0.1.0 typecheck C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> tsc -b
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run api:check
+
+> digitalbanking-frontend@0.1.0 api:check C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> node scripts/check-api.mjs
+
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v1.yaml → src/shared/api/generated/openapi.check.d.ts [115.4ms]
+OpenAPI v1 generated types match the contract.
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v2.yaml → src/shared/api/generated/v2/openapi.check.d.ts [121.4ms]
+OpenAPI v2 generated types match the contract.
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run format:check
+
+> digitalbanking-frontend@0.1.0 format:check C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> prettier --check src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js
+
+Checking formatting...
+All matched files use Prettier code style!
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run test
+
+> digitalbanking-frontend@0.1.0 test C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> vitest run
+
+
+ RUN  v3.2.4 C:/project/cloude/.tmp/fe-fnd-01-review-20261114/verify-3-01/digitalbanking-frontend
+
+ ✓ src/shared/lib/money.test.ts (29 tests) 10ms
+ ✓ src/shared/lib/id.test.ts (18 tests) 8ms
+ ✓ src/api/client.test.ts (8 tests) 240ms
+ ✓ src/shared/api/contracts.test.mjs (2 tests) 50ms
+ ✓ src/stores/session.test.ts (3 tests) 7ms
+ ✓ src/mocks/handlers.test.ts (3 tests) 208ms
+ ✓ src/mocks/v2-auth.test.ts (4 tests) 213ms
+ ✓ src/mocks/legacy-preview.test.ts (2 tests) 12ms
+ ✓ src/features/transfers/TransferPage.test.tsx (1 test) 5803ms
+   ✓ blocks a new transfer after an unknown response and manually reconciles with the original key and payload  5800ms
+ ✓ src/features/auth/AuthPages.test.tsx (2 tests) 12379ms
+   ✓ recovery never opens password form before server verification; confirmation mismatch never sends reset  8885ms
+   ✓ registration verifies OTP through the new API before displaying profile and sends proof without OTP  3491ms
+
+ Test Files  10 passed (10)
+      Tests  72 passed (72)
+   Start at  17:41:05
+   Duration  33.74s (transform 1.54s, setup 0ms, collect 41.47s, tests 18.93s, environment 3.74s, prepare 3.04s)
+
+stderr | src/mocks/handlers.test.ts > target-contract mock API > fails closed for an unimplemented API instead of reaching backend
+[MSW] Error: intercepted a request without a matching request handler:
+
+  • GET http://localhost/api/v1/not-in-contract
+
+If you still wish to intercept this unhandled request, please create a request handler for it.
+Read more: https://mswjs.io/docs/http/intercepting-requests
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run build
+
+> digitalbanking-frontend@0.1.0 build C:\project\cloude\.tmp\fe-fnd-01-review-20261114\verify-3-01\digitalbanking-frontend
+> tsc -b && vite build
+
+vite v7.3.8 building client environment for production...
+transforming...
+✓ 3431 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            0.46 kB │ gzip:   0.30 kB
+dist/assets/index-ULIuWFX6.css            12.45 kB │ gzip:   3.24 kB
+dist/assets/ReadOnlyPages-BvJJU9gs.js      4.59 kB │ gzip:   2.20 kB
+dist/assets/OperatorPages-C1F5nfPf.js     38.20 kB │ gzip:  13.00 kB
+dist/assets/index-D-fAAve8.js          1,198.34 kB │ gzip: 374.29 kB
+✓ built in 18.07s
+../../../../digitalbanking-frontend/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "../../../../digitalbanking-frontend/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+../../../../digitalbanking-frontend/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "../../../../digitalbanking-frontend/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+EXIT 0
+Finished 2026-11-14T10:42:06.188Z

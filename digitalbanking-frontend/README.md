@@ -40,3 +40,9 @@ Evidence: ../digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-1
 ## Data utilities theo contract mới
 
 Task FE-FND-02-DATA bổ sung src/shared/lib/money.ts và id.ts, dùng type sinh từ OpenAPI mới. Parse/serialize tiền bằng BigInt minor units và giữ ID dạng string; formatter mới giữ đủ hai decimals. Module này chưa được nối vào renderer legacy/adapter preview, nên hạn chế chỉ hiển thị số nguyên VND của preview vẫn còn cho đến task migration riêng. Session/quyền/transport và tích hợp BE vẫn mở. Phần utility được người phụ trách FE duyệt ngày 14/11/2026.
+
+## Contract và mock v2 riêng
+
+V1 tiếp tục giữ nguyên. Contract/types/mock v2 đã được người phụ trách FE duyệt ngày 14/11/2026; runtime BE/Security chưa xác nhận. Contract v2 Draft FE/mock có tại ../digitalbanking-docs/openapi/digital-banking-v2.yaml, ngữ nghĩa 07a; types tại src/shared/api/generated/v2/openapi.d.ts. pnpm api:generate sinh cả hai; api:generate:v1/v2 sinh riêng, api:check kiểm tra cả hai (node scripts/check-api.mjs v1 hoặc v2 để kiểm tra riêng).
+
+Worker có thêm handler /api/v2/auth/login/session/logout; username fixture-mfa chọn kịch bản 202 LOGIN_MFA, username fixture khác chọn 200 (không xác minh mật khẩu thật). Response header mô phỏng SESSION_TOKEN, HttpOnly/Secure/SameSite/Path=/api; logout kiểm tra CSRF fixture. State mock v1 và v2 độc lập chỉ để kiểm tra fixture, không phải chính sách coexistence BE. OTP verify/resend/FIDO v2 chưa có handler, sẽ fail closed. Các màn UI/client legacy vẫn gọi v1 qua adapter chỉ xem; chưa chuyển app sang v2 và không nhập credential thật vào fixture.

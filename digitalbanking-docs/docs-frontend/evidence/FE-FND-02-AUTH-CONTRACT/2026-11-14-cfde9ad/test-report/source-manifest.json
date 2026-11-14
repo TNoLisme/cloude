@@ -1,0 +1,47 @@
+{
+  "baseline": "cfde9ad205f4bc341d979f58b28bc2a065438fe2",
+  "timestamp": "2026-11-13T21:04:54.153Z",
+  "state": "uncommitted working tree; v1 preserved, v2 draft for FE/mock",
+  "files": [
+    {
+      "file": "digitalbanking-docs/openapi/digital-banking-v1.yaml",
+      "sha256": "71efc546fb6645be128ec83d391706343a6ff6b1fa6991910e42770d62ef796a"
+    },
+    {
+      "file": "digitalbanking-docs/openapi/digital-banking-v2.yaml",
+      "sha256": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4"
+    },
+    {
+      "file": "digitalbanking-frontend/package.json",
+      "sha256": "393a7d159fc82419b96e80966d430abbe9cfdca2ef7254f4855b319167956e70"
+    },
+    {
+      "file": "digitalbanking-frontend/pnpm-lock.yaml",
+      "sha256": "d790e7358f1777c88ce2598ecb7565bd4fe79f273e309ccbfa134ba8a3857a6e"
+    },
+    {
+      "file": "digitalbanking-frontend/scripts/check-api.mjs",
+      "sha256": "cc06354bd62c20fc46dea36d47df780446e43f3ed4fc0e2f7d883fec0c3a9ff2"
+    },
+    {
+      "file": "digitalbanking-frontend/src/mocks/browser.ts",
+      "sha256": "f2ec5aeb512d29ae858b1db37f1741dbeff1b6ef906724fc22e4e5c4e0d17ffc"
+    },
+    {
+      "file": "digitalbanking-frontend/src/mocks/v2-auth.ts",
+      "sha256": "66459540e29d81efd009d4878e8c69a1fe433b94e3915b133caa40b0d1924722"
+    },
+    {
+      "file": "digitalbanking-frontend/src/mocks/v2-auth.test.ts",
+      "sha256": "17aebbcb503d5d4187bcbfb3c85fc3a1b51799f608aa97c875843e25e971ff86"
+    },
+    {
+      "file": "digitalbanking-frontend/src/shared/api/contracts.test.mjs",
+      "sha256": "4b150d7f4c64b582d07198f9b7aa5ac9ba4c479a2f738c7766b913c712850ac7"
+    },
+    {
+      "file": "digitalbanking-frontend/src/shared/api/generated/v2/openapi.d.ts",
+      "sha256": "9461672c572fda8cac10769ef77b10cb806cf365f509131e8510830cbe50a9c5"
+    }
+  ]
+}

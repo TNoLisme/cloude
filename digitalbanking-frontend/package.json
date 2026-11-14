@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "api:generate": "openapi-typescript ../digitalbanking-docs/openapi/digital-banking-v1.yaml -o src/shared/api/generated/openapi.d.ts",
+    "api:generate": "pnpm api:generate:v1 && pnpm api:generate:v2",
     "api:check": "node scripts/check-api.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "format": "prettier --write src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js",
@@ -17,7 +17,9 @@
     "api:smoke:legacy": "node scripts/api-smoke.mjs",
     "dev:api": "vite --mode development --host 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
-    "check": "pnpm lint && pnpm typecheck && pnpm api:check && pnpm format:check && pnpm test && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm api:check && pnpm format:check && pnpm test && pnpm build",
+    "api:generate:v1": "openapi-typescript ../digitalbanking-docs/openapi/digital-banking-v1.yaml -o src/shared/api/generated/openapi.d.ts",
+    "api:generate:v2": "openapi-typescript ../digitalbanking-docs/openapi/digital-banking-v2.yaml -o src/shared/api/generated/v2/openapi.d.ts"
   },
   "dependencies": {
     "@ant-design/icons": "5.6.1",
@@ -42,6 +44,7 @@
     "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "16.5.0",
+    "js-yaml": "4.3.2",
     "jsdom": "26.1.0",
     "msw": "2.15.0",
     "openapi-typescript": "7.6.1",

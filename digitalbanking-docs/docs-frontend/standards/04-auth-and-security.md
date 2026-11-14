@@ -66,3 +66,7 @@ FE-REL-01 kiểm tra direct URL, action theo quyền, cross-user cache, session 
 ## 2. Quy tắc liên quan
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] và [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]]. Mọi khác biệt protocol ghi trong [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]].
+
+## 3. Baseline Security phía FE/mock ngày 14/11/2026
+
+Người phụ trách FE chọn SESSION_TOKEN, Path=/api và LOGIN_MFA theo Security. Đây là mục tiêu đồng bộ API semantics/YAML trước implementation phụ thuộc; các mô tả baseline cũ ở trên chưa được coi đã sửa chỉ từ quyết định. [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]] ghi quyết định giữ v1, tạo v2 riêng theo quy tắc breaking của 07. Ngữ nghĩa v2 ở [[digitalbanking-docs/docs-common/07a. API contracts v2.md]], YAML ở [[digitalbanking-docs/openapi/digital-banking-v2.yaml]]; preview/client v1 hiện tại không tự chuyển version. GAP-05 vẫn mở cho đồng bộ nguồn, DB mapping/migration và xác nhận BE/Security/runtime. Không tự chuyển UI hoặc client theo contract chưa đồng bộ.

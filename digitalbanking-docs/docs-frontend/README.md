@@ -107,3 +107,9 @@ Ngày 09/11/2026, người phụ trách Frontend xác nhận chốt bộ tài li
 ## 8. Phần bổ sung design v1.2
 
 Người phụ trách Frontend đã chốt phần design v1.2 và yêu cầu commit/push main ngày 09/11/2026. File có source ghi rõ commit và mức đọc code/CSS, file chưa có UI giữ phần mô tả trống. Phê duyệt baseline v1.1 ở mục 7 áp dụng cho nội dung đã chốt trước phần bổ sung này.
+
+## 9. Contract session v2 theo Security
+
+Ngày 14/11/2026 người phụ trách FE chọn giữ /api/v1 và tạo /api/v2 riêng dùng SESSION_TOKEN/Path=/api/LOGIN_MFA. [[digitalbanking-docs/docs-common/07a. API contracts v2.md]] và [[digitalbanking-docs/openapi/digital-banking-v2.yaml]] là bản Draft FE/mock, chưa có xác nhận runtime. V1/preview cũ vẫn giữ nguyên; client/UI migration v2 theo task tiếp theo, không đổi baseline v1 đã duyệt.
+
+Contract/types/mock v2 được người phụ trách FE duyệt ngày 14/11/2026 trong phạm vi FE/mock. Trạng thái Draft BE/Security/runtime giữ nguyên; xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-AUTH-CONTRACT/2026-11-14-cfde9ad/run-02.md]].

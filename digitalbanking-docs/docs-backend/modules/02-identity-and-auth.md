@@ -147,3 +147,7 @@ stateDiagram-v2
 - [ ] **Integration Test (`AC-002`):** Passcode / FIDO thành công trên thiết bị `trusted = true`; trả `403 AUTH_DEVICE_NOT_TRUSTED` nếu thiết bị chưa trusted.
 - [ ] **Concurrency Test (`T-STEP-02`):** 5 luồng gửi OTP sai đồng thời vào cùng 1 `challengeId` -> nhờ `SELECT ... FOR UPDATE`, `attempt_count` tăng chính xác lên 5 và chuyển sang `LOCKED`.
 - [ ] **Integration Test (`AC-004`):** Gọi `POST /auth/logout` xóa hiệu lực session; gọi lại API bằng token cũ nhận `401 AUTH_SESSION_EXPIRED`.
+
+## Ghi chú contract v2 cho FE/mock ngày 14/11/2026
+
+Phần cookie/purpose/endpoint ở trên là baseline v1 và được giữ nguyên. Người phụ trách FE đã chọn contract v2 riêng dùng SESSION_TOKEN/Path=/api/LOGIN_MFA tại [[digitalbanking-docs/docs-common/07a. API contracts v2.md]]. Đây chưa phải thay đổi code/runtime BE. BE/Security/DB cần xác nhận routing, coexistence hai phiên bản và mapping/migration purpose hiện tại trước tích hợp. Không tự sửa constraint DB từ ghi chú này.

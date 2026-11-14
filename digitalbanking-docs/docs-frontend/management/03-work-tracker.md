@@ -26,8 +26,9 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 | FE-FND-02-MOCK | Task con FE-FND-02: MSW/fixture bám OpenAPI, bật mock để review UI và hướng dẫn preview | FE | FE-FND-01, GAP-06/ADR-001, Q-01/02/03 trong lộ trình bổ sung | UI/mock được duyệt | Đã chốt Q-01/02/03; mock và fixture adapter chỉ xem cho 20 màn source cũ đã chạy, thao tác thiếu contract bị khóa. 19 tests/typecheck/API check/format/build đạt; browser smoke đã có; người dùng duyệt UI/mock ngày 14/11/2026, task tích hợp còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-14-c1760f1/run-02.md]] |
 | FE-FND-01 | Đưa source, assets, cấu hình và tests vào digitalbanking-frontend, pin toolchain/lockfile | FE | GAP-01, GAP-06 | Đang làm | Lint/CI config và clean install đã có kết quả local đạt, task con được FE duyệt ngày 14/11; xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]]. Phạm vi tích hợp legacy và xác nhận kiến trúc còn mở |
 | FE-FND-01-TOOLING | Task con FE-FND-01: lint, scripts kiểm tra, CI và cài sạch theo lockfile | FE | Stack/ADR-001 đã chốt phía FE | Đã duyệt — tooling local | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]] |
-| FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Đang làm | Money/ID đã được FE duyệt ngày 14/11/2026; session/quyền/step-up/integration còn mở. [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
+| FE-FND-02 | Shared API/DTO/Money/session/query keys | FE + BE | FE-FND-01, GAP-05, GAP-08 | Đang làm | Money/ID và contract/mock v2 đã được FE duyệt ngày 14/11/2026; session/quyền/step-up/integration còn mở. [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] |
 | FE-FND-02-DATA | Task con FE-FND-02: Money/ID utilities theo schema hiện hành, unit boundary/precision | FE | API-DATA-01 và schema ID/Money đã rõ; độc lập GAP session/step-up | Đã duyệt — unit/schema | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]] |
+| FE-FND-02-AUTH-CONTRACT | Task con FE-FND-02: đồng bộ session contract theo Security trước implementation phụ thuộc | FE + BE + Security | GAP-05, versioning 07 mục 1.4/2.1 | FE/mock được duyệt | Đã chọn v2 riêng; contract/types/mock v2 và 72 tests/full gate đạt. Giữ nguyên v1; client/UI migration và runtime còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-AUTH-CONTRACT/2026-11-14-cfde9ad/run-02.md]] |
 | FE-FND-03 | App shell, route policy, UI tokens/form/accessibility và đồng bộ design theo màn | FE | FE-FND-01, ADR-001 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]], [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
 | FE-01-01 | Password login, MFA, session/bootstrap/logout | FE + BE | FE-FND-02, GAP-05, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md]] |
 | FE-01-02 | Trusted-device passcode/FIDO và fallback | FE + BE | FE-01-01, GAP-04 | Bị chặn | Chờ enrollment/provider và test runtime WebAuthn |
@@ -86,7 +87,7 @@ Tất cả GAP dưới đây đang Mở. Owner ghi quyết định, ngày, link 
 | GAP-02 | API resolve người nhận cũ chưa có trong contract đích | BA + BE | Chốt có endpoint masked lookup hoặc UX nhập destination rồi xác nhận ở server, cập nhật FE-03 |
 | GAP-03 | Chưa có search customer/user và user listing cho staff/admin, OI-API-08/18 | BA + BE | Chốt tìm kiếm hoặc nguồn ID được phép từ fixture/approval, cập nhật 07/YAML |
 | GAP-04 | YAML đã có begin/finish tại loginFido, còn provider, enrollment và khả năng thực thi WebAuthn cần xác nhận, OI-API-13/17 | BE + Security | Chốt enrollment/provider, ceremony/options runtime và fallback, có test tích hợp begin/finish theo YAML |
-| GAP-05 | 07/YAML dùng DB_SESSION, security dùng SESSION_TOKEN và Path khác. FE-FND-02 cần chuyển client sang cookie session/getSession | BE + Security | Thống nhất 07/YAML/security/BE docs và runtime session/CSRF, kiểm chứng reload/logout |
+| GAP-05 | Ngày 14/11/2026 người dùng chọn baseline FE/mock theo Security: SESSION_TOKEN, Path=/api, LOGIN_MFA. Đã chốt giữ v1 và tạo v2 riêng; contract/types/mock v2 đã được người phụ trách FE duyệt ngày 14/11/2026. BE/Security/DB runtime và migration vẫn chờ xác nhận | BE + Security | Thống nhất 07/YAML/security/BE docs và runtime session/CSRF, kiểm chứng reload/logout |
 | GAP-06 | Người phụ trách FE đã chọn Ant Design + Vite 7/pnpm/RHF+Zod ngày 13/11/2026; package/lockfile đã kiểm chứng cho preview. Xác nhận liên vai trò và gate đầy đủ của task cha còn mở | FE + kiến trúc | Duyệt ADR-001, chốt package versions/lockfile/runtime và lệnh CI. Đồng bộ 05 nếu giữ Ant Design |
 | GAP-07 | UserSummary chỉ có roles/privileges trong YAML, seed quyền khác nhau ở SRS/API/security, ví dụ quyền export ADMIN | BE + Security + BA | Một permission matrix thống nhất, chốt session capability hoặc mapping FE theo matrix |
 | GAP-08 | Step-up transfer gắn request/key và sensitive action gắn approval/decision, create approval chưa có approvalId. 07 còn OI-API-19 về retry trùng | BE + Security | Chốt binding/create approval, challenge header/payload và quy tắc retry, có test contract |
@@ -145,6 +146,14 @@ Theo yêu cầu tiếp tục, triển khai phần Money/ID đã rõ theo 07/YAML
 
 FE-FND-02-DATA: 47 tests Money/ID mới và full gate 66 tests đạt; task con Chờ review, task cha tiếp tục mở client/session/query keys. Baseline GAP-05 cho FE/mock đã được hỏi, chưa được tự chốt theo tài liệu đang mâu thuẫn.
 
+## 13. Quyết định Security cho FE/mock ngày 14/11/2026
+
+Người phụ trách FE chọn SESSION_TOKEN, Path=/api, LOGIN_MFA và yêu cầu đồng bộ API/YAML trước phần phụ thuộc. Đã lập [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]]. API Contracts yêu cầu breaking sang /v2; vì vậy đang hỏi giữ v1 dạng draft với ngoại lệ rõ ràng hay tạo v2. Chưa tự đổi canonical contract/DB/client, chưa đóng GAP-05 hoặc ghi nhận BE/Security đã phê duyệt.
+
+Người phụ trách FE đã chốt version: giữ nguyên /api/v1, tạo /api/v2 theo Security. Đã thêm ngữ nghĩa 07a và YAML v2 2.0.0 dạng Draft FE/mock; generated types và mock v2 riêng. Không đổi API/YAML v1 hoặc DDL. GAP-05 chưa đóng runtime; các mục V2-01..05 trong 07a chờ BE/Security/DB xác nhận.
+
+FE-FND-02-AUTH-CONTRACT đã hoàn tất bản nháp v2/types/mock theo lựa chọn người dùng; 72 tests và toàn bộ pnpm check đạt. Task con Chờ review. Không có diff v1; API/DB thật và client/UI v2 chưa nghiệm thu, GAP-05 vẫn mở.
+
 ## 15. Phê duyệt và commit theo task ngày 14/11/2026
 
 Người phụ trách FE chốt trong chat: “chốt các task đang cần review, push nhánh frontend với mỗi commit là mỗi task riêng chứ không commit riêng”. Ghi nhận duyệt bốn task con đang chờ review; mỗi task có một commit chứa source/tài liệu/evidence của chính task đó, không tạo commit phê duyệt tổng hợp.
@@ -153,5 +162,6 @@ Người phụ trách FE chốt trong chat: “chốt các task đang cần revi
 |---|---|---|
 | FE-FND-01-TOOLING | Tooling/checks local; CI remote và xác nhận liên vai trò còn mở | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-02.md]] |
 | FE-FND-02-DATA | Money/ID utility, unit/schema; chưa nối UI/transport | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]] |
+| FE-FND-02-AUTH-CONTRACT | Ngữ nghĩa/YAML/types/mock v2 phía FE; vẫn Draft chờ runtime BE/Security | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-AUTH-CONTRACT/2026-11-14-cfde9ad/run-02.md]] |
 
 Phê duyệt task con không đóng FE-FND-01/02, GAP hoặc integration. Được phép push frontend; main chưa được duyệt merge. SHA thực tế của từng task tra từ commit chứa phiếu run-02; push chỉ được báo thành công sau khi kiểm remote.
