@@ -1,0 +1,40 @@
+name: Frontend checks
+
+on:
+  pull_request:
+    paths:
+      - "digitalbanking-frontend/**"
+      - "digitalbanking-docs/openapi/**"
+      - ".github/workflows/frontend.yml"
+  push:
+    branches: [frontend, main]
+    paths:
+      - "digitalbanking-frontend/**"
+      - "digitalbanking-docs/openapi/**"
+      - ".github/workflows/frontend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: digitalbanking-frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@f53f5227a9e83886ab598c617f3c170fab62f0d3 # v6
+        with:
+          package_json_file: digitalbanking-frontend/package.json
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: digitalbanking-frontend/.node-version
+          cache: pnpm
+          cache-dependency-path: digitalbanking-frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check

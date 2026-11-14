@@ -1,0 +1,191 @@
+{
+  "timestamp": "2026-11-13T20:36:02.461Z",
+  "baseline": "cfde9ad205f4bc341d979f58b28bc2a065438fe2",
+  "state": "uncommitted working tree; all tested input bytes matched the source after restoring intentional drift",
+  "files": [
+    {
+      "file": "package.json",
+      "sha256": "f98f60cda106f0e1afaca455362bfccec3831a65ac754e90e7d3cf93cc0554d1"
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "sha256": "6f41424144055b2709b77deb5a0f4fb856289c36cd5987b7dbede2e3028bd89a"
+    },
+    {
+      "file": ".npmrc",
+      "sha256": "18ff90ebcdc5c4c1af67b715d042ecbfbc4e14b887ff92367a9088f202e7ff0c"
+    },
+    {
+      "file": ".node-version",
+      "sha256": "2ab7d67ba0a98d02af23e12c4db4e6e7be500f9fa3064d91a34acfa27d4d70a8"
+    },
+    {
+      "file": ".prettierignore",
+      "sha256": "e5db7996f3b98ea61c8db7d7bbba0dcfda12d25267daeef1cf5adcdf23c087ae"
+    },
+    {
+      "file": ".env.mock",
+      "sha256": "fc5ddc2cfbb5c2bba00812031387c5f01390fdaa088f4e78a1c15a0903c3f319"
+    },
+    {
+      "file": ".env.example",
+      "sha256": "4673e4b73d9fe77e4f6bf712a7cc8515a177aca35b2255bf302c438a36712a26"
+    },
+    {
+      "file": "eslint.config.js",
+      "sha256": "d7a31ece155b33b9ea1b00e9b97269fc98237e79232c067303d83cd05669b41a"
+    },
+    {
+      "file": "tsconfig.json",
+      "sha256": "b463ec5615e5fdf503ae558385c63571b373e8c7995a29a2c21fee34f4e61716"
+    },
+    {
+      "file": "vite.config.ts",
+      "sha256": "987f9b939dec5b250aba73b774e4b67a9d86e260f933c348d886c2471372afb6"
+    },
+    {
+      "file": "index.html",
+      "sha256": "94e47c6a4f4cb68743ce945b7767c578868d91456651ecde20ed1da50500cc28"
+    },
+    {
+      "file": "src/api/client.test.ts",
+      "sha256": "665c6465492997cadc5240d796b7c1abd88437db57b9dbe6eee5ea68b4064dd8"
+    },
+    {
+      "file": "src/api/client.ts",
+      "sha256": "366941d76bba3ce6ed79fb48eada2f1f0acc78dfc487b1529e12e6153d99f0d8"
+    },
+    {
+      "file": "src/api/generated/openapi.d.ts",
+      "sha256": "38b787efaf2e89e5159238c2ec179efdd69e306e2750c214f208a7c28b60d222"
+    },
+    {
+      "file": "src/app/App.tsx",
+      "sha256": "52318e4498761376ca5fbcd3e697a1b30449852771fbc931569fd4a4443d6906"
+    },
+    {
+      "file": "src/app/query.ts",
+      "sha256": "6b9b3d2377a2629939664bebce70db841a5f6a6ee48b37b4a3fa7cf8f162ea38"
+    },
+    {
+      "file": "src/components/shared.tsx",
+      "sha256": "d9599340356717b403da097d0115c10e37b49ef1f3dc2af9ad1e18f5270fb01e"
+    },
+    {
+      "file": "src/features/accounts/AccountPages.tsx",
+      "sha256": "746baaaee0ee5f45b4d0f103120acddaa858736ecde3e1a12a4a5cc82b396896"
+    },
+    {
+      "file": "src/features/auth/AuthPages.test.tsx",
+      "sha256": "c2b999434d6cc010f7413d57a75eb61be2727da2ce7778b7ef7b5f9bc8aa47cd"
+    },
+    {
+      "file": "src/features/auth/AuthPages.tsx",
+      "sha256": "2a756436367588a5508dd63a0ac53912b4d728ea18092a58e06d60215cc24414"
+    },
+    {
+      "file": "src/features/staff/OperatorPages.tsx",
+      "sha256": "cba0ac9f7c13be6a68911fb465eb4429f22908015e36078b8e9b281c4f7652fb"
+    },
+    {
+      "file": "src/features/staff/ReadOnlyPages.tsx",
+      "sha256": "0e8dc69c6946fe71c48f60ec75a1b93dfdb7f0ba9b1b3419b069cffd5d437062"
+    },
+    {
+      "file": "src/features/transfers/HistoryPages.tsx",
+      "sha256": "e21dc73b85e363bb6a708c1084fc559cecd60eec248baa6327772ad3377fdd41"
+    },
+    {
+      "file": "src/features/transfers/TransferPage.test.tsx",
+      "sha256": "bc9a0490302b1b388f65a7dd0149733f00c2e947bb8b154479c8d37395014f55"
+    },
+    {
+      "file": "src/features/transfers/TransferPage.tsx",
+      "sha256": "28cb3070691cc566f20208ff59317cf75d7e94531508b80f86b23bba2302c4c6"
+    },
+    {
+      "file": "src/layouts/AppLayout.module.css",
+      "sha256": "1f23ea11b35a6fb8c2fbcd1d357dc5111df4251c062e197397fd34bd477fab94"
+    },
+    {
+      "file": "src/layouts/Layouts.tsx",
+      "sha256": "dd0762718152cfbe3e4e28abcf3d6f7349c203f6d2384780c5a7335f57423992"
+    },
+    {
+      "file": "src/main.tsx",
+      "sha256": "d3da9b68bacc81a73936a1fd9a338c5c579e3c4d9c9a44c8e02bba3cddfd93dc"
+    },
+    {
+      "file": "src/mocks/browser.ts",
+      "sha256": "71fcdd636b0779e77d30d171ef3ad046ea6f155ad4776481c28bf183385cf6b5"
+    },
+    {
+      "file": "src/mocks/fixtures.ts",
+      "sha256": "82f9984189d9f17801848b90aa18b92ae7057eecaff619c633cf2dafec83bfd0"
+    },
+    {
+      "file": "src/mocks/handlers.test.ts",
+      "sha256": "a165def547d9a15bbb982cd1189cf34188f96c2fa1dddcb4465f1c15146fdd13"
+    },
+    {
+      "file": "src/mocks/handlers.ts",
+      "sha256": "b9556a35348da289324a0ef22e026cbd4b608a3aa71d4ced730f143411197fe2"
+    },
+    {
+      "file": "src/mocks/legacy-preview.test.ts",
+      "sha256": "1344005bba0b2722eab94cfa875f0bd7efd7b94e3b968b504692674b69b7d827"
+    },
+    {
+      "file": "src/mocks/legacy-preview.ts",
+      "sha256": "89ecbe6e08798f8da450a0f4878973c85a8770df58d691f017ab7e2ecbc63e4f"
+    },
+    {
+      "file": "src/mocks/PreviewShell.tsx",
+      "sha256": "94c2d52dafe00b6bf2da5b2671df5cf9e2f1d88c1d2ff49aadf2a1868a6f2cc7"
+    },
+    {
+      "file": "src/shared/api/generated/openapi.d.ts",
+      "sha256": "696a5cc4e983b90b25c089e14cb040fb06aa5e08da89d3767eef8082b1ab2f4e"
+    },
+    {
+      "file": "src/stores/notice.ts",
+      "sha256": "ecfab51b7918c41ab64fb231a6a1a3b6b9014ba820db4069339b2933880eb94d"
+    },
+    {
+      "file": "src/stores/operator.ts",
+      "sha256": "b8a7310c50f1793e5cd2cfac1c26d699b8b500f9a7978661a5f84f2fa212ad2f"
+    },
+    {
+      "file": "src/stores/session.test.ts",
+      "sha256": "5c124e6f2f943b96362f146edc3e9261fb8327cfbd7615ad71ab7bca7c8caef0"
+    },
+    {
+      "file": "src/stores/session.ts",
+      "sha256": "c9758590afedff72efdbf328404574699a81ddd765c140441b66986c836a503c"
+    },
+    {
+      "file": "src/stores/transfer.ts",
+      "sha256": "db67afaebf2f981038cea11963dbfb921ca9ea5b0a7fa812492b540e02873018"
+    },
+    {
+      "file": "src/styles.css",
+      "sha256": "ca7db39b7461241e8890ec534faeb3f20669fb863a447560ef01ab38eba9fb8a"
+    },
+    {
+      "file": "src/test/setup-dom.ts",
+      "sha256": "341d13aeef026c992e526727c6b8fe00c1f0dbb9989e371d4a34c2596b6cedeb"
+    },
+    {
+      "file": "public/mockServiceWorker.js",
+      "sha256": "b2b0049f0e51b706f3e67d9385f389bfaec18f645d33ccb6aba61a55cdf9f676"
+    },
+    {
+      "file": "scripts/api-smoke.mjs",
+      "sha256": "adb88db8cf71c421352b66d609f07c3135f0a2c17671d1ad5a4f2e1926abddf3"
+    },
+    {
+      "file": "scripts/check-api.mjs",
+      "sha256": "0656e55b8c5a2cdc70f550433fb7f10824c8165f1ab59fad9081d6f13a328da6"
+    }
+  ]
+}

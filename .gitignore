@@ -17,6 +17,7 @@ digitalbanking-frontend/dist/
 digitalbanking-frontend/*.tsbuildinfo
 digitalbanking-frontend/test-results/
 digitalbanking-frontend/playwright-report/
+.tmp/fe-fnd-01-*/
 
 .obsidian
 

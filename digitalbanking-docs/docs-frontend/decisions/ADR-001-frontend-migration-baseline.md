@@ -52,3 +52,9 @@ Chọn A cho đợt migration protocol nhằm giữ phần UI đã có kiểm ch
 ## 7. Package preview đang kiểm chứng
 
 Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, plugin-react 5.2.0, MSW 2.15.0, RHF 7.92.0, Zod 4.6.7, resolvers 7.0.6. Các version chính xác được tra npm registry trong lần triển khai và pin trong package/lockfile. Ant Design và React/Router/Query giữ version của source tham chiếu. Form legacy chưa được coi đã chuyển RHF/Zod chỉ vì dependency đã cài.
+
+## 8. Cấu hình lint nền tảng ngày 14/11/2026
+
+FE-FND-01-TOOLING bổ sung ESLint 10.14.0, @eslint/js 10.0.1, typescript-eslint 8.72.2, eslint-plugin-react-hooks 7.1.1, globals 16.5.0 với lockfile exact. Đã kiểm tra peer dependencies phù hợp TypeScript 5.8.3 và Node 22.14.0; ESLint 9 ban đầu được tra nhưng registry báo hết hỗ trợ nên không dùng trong kết quả cuối. Cấu hình theo recommended JS/TypeScript và hai rule React Hooks truyền thống; không thay quyết định UI/toolchain đã chốt. Nguồn tham khảo: [ESLint support](https://eslint.org/version-support/), [typescript-eslint](https://typescript-eslint.io/getting-started/). Kết quả local/CI thực tế theo evidence FE-FND-01, không gán phê duyệt kiến trúc.
+
+Người phụ trách FE đã duyệt task FE-FND-01-TOOLING trong chat ngày 14/11/2026; phạm vi checks local theo phiếu run-02. Không thay xác nhận liên vai trò hoặc ghi CI remote đã đạt.

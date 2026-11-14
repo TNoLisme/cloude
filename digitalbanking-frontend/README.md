@@ -27,8 +27,12 @@ MSW auth/account dùng response contract mới. Adapter src/mocks/legacy-preview
 
 pnpm dev và dev:mock đều chạy mock; dev:api là đường tích hợp legacy riêng, chỉ sử dụng sau khi readiness/contract được review. Production build không bật mock; worker chỉ được khởi động khi DEV và VITE_ENABLE_MOCKS=true. Chế độ mock tắt proxy và báo lỗi API thiếu handler.
 
-Scripts: pnpm typecheck, pnpm test, pnpm api:check, pnpm format:check, pnpm build. API types mới tại src/shared/api/generated/openapi.d.ts sinh từ ../digitalbanking-docs/openapi/digital-banking-v1.yaml qua pnpm api:generate. Types src/api/generated/openapi.d.ts vẫn là legacy.
+Scripts: pnpm lint, pnpm typecheck, pnpm test, pnpm api:check, pnpm format:check, pnpm build. Chạy toàn bộ gate local bằng pnpm check. API types mới tại src/shared/api/generated/openapi.d.ts sinh từ ../digitalbanking-docs/openapi/digital-banking-v1.yaml qua pnpm api:generate. Types src/api/generated/openapi.d.ts vẫn là legacy.
 
-Thanh preview sử dụng RHF/Zod. Các form AntD legacy chưa được chuyển toàn bộ; feature/shared/session/permissions và tích hợp thật còn theo FE-FND-02/03. Chưa hiện thực ESLint/test:e2e script trong task cha. Build còn cảnh báo bundle lớn và annotation Zod; không đánh dấu release gate hoàn thành.
+Thanh preview sử dụng RHF/Zod. Các form AntD legacy chưa được chuyển toàn bộ; feature/shared/session/permissions và tích hợp thật còn theo FE-FND-02/03. ESLint 10 đã được cấu hình với recommended JS/TypeScript và hai rule React Hooks; generated files/worker/vendor output được loại khỏi lint. Chưa có test:e2e script trong task cha. Build còn cảnh báo bundle lớn và annotation Zod; không đánh dấu release gate hoàn thành.
 
 Evidence: ../digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md. Người phụ trách FE duyệt UI/mock ngày 14/11/2026 và yêu cầu push frontend. API thật/task cha vẫn mở; chưa có quyết định merge main.
+
+## CI nền tảng
+
+.github/workflows/frontend.yml chạy frozen install và pnpm check cho thay đổi FE/OpenAPI/workflow, với Node từ .node-version, pnpm từ packageManager và Actions pin SHA. Lần bổ sung này mới kiểm chứng local; không tuyên bố CI remote đạt trước khi có run trên GitHub. Cài đặt sạch và pnpm check đã đạt trong task FE-FND-01-TOOLING; task con được người phụ trách FE duyệt ngày 14/11/2026. .gitattributes giữ LF cho source frontend, API drift check chuẩn hóa CRLF/LF khi so sánh.

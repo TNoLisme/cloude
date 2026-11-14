@@ -53,3 +53,7 @@ Theo [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]]
 ## 6. Phê duyệt ngày 14/11/2026
 
 Người phụ trách FE đã duyệt FE-DOC-03 và UI/mock FE-FND-02-MOCK, cho phép push lên frontend trong chat ngày 14/11/2026. Phê duyệt này không đóng task cha, không nghiệm thu API thật và chưa cho phép merge main. [[digitalbanking-docs/docs-frontend/evidence/FE-DOC-03/2026-11-14-c1760f1/run-02.md]].
+
+## 7. Phạm vi tích hợp legacy được người dùng chốt ngày 14/11/2026
+
+Giữ đăng ký/recovery/PIN/tạo khách tại quầy/nạp số dư/khóa và mở khóa tài khoản trong đợt tích hợp đầu. Chờ BE/BA bổ sung contract trước khi làm phần tương ứng; không tự mô phỏng mutation hoặc hoãn khỏi phạm vi. GAP-01 tiếp tục mở cho phần API/ngữ nghĩa/AC. Xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-01.md]].

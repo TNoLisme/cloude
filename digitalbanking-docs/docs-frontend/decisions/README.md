@@ -12,7 +12,7 @@
 
 | ID | Nội dung | Trạng thái quyết định | Quy tắc bị ảnh hưởng |
 |---|---|---|---|
-| ADR-001 | [[digitalbanking-docs/docs-frontend/decisions/ADR-001-frontend-migration-baseline.md]] | Đề xuất, chờ FE/kiến trúc/BA review | FE-ARCH-01/02, FE-UI-01, API-CLIENT-01 |
+| ADR-001 | [[digitalbanking-docs/docs-frontend/decisions/ADR-001-frontend-migration-baseline.md]] | FE đã chọn A ngày 13/11/2026, preview được duyệt 14/11; xác nhận liên vai trò còn mở | FE-ARCH-01/02, FE-UI-01, API-CLIENT-01 |
 
 ## 2. Quy trình
 

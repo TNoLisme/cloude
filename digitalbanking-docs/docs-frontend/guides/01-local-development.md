@@ -88,4 +88,10 @@ Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, Ant Design 5.26.7; các dependency đư�
 
 Người dùng đã duyệt fixture chỉ xem và khóa thao tác thiếu contract. MSW đáp ứng auth/account theo YAML mới; adapter UI tách biệt cho source cũ chưa đồng bộ, không bổ sung contract BE. Không cần đăng nhập; persona tổng hợp chỉ phục vụ xem bố cục. Form legacy bị khóa, không nhập thông tin thật. Staff lookup có fixture sau khi nhập 0900000123; các nút ghi bị khóa.
 
-Scripts hiện có: typecheck, test, api:generate/check, format/check, build/preview. Chưa có lint/test:e2e, RHF/Zod mới dùng cho thanh preview; không coi các task cha đã hoàn thành. Xem README package và [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+Scripts hiện có: typecheck, test, api:generate/check, format/check, build/preview. Đã bổ sung lint/check trong FE-FND-01-TOOLING; chưa có test:e2e, RHF/Zod mới dùng cho thanh preview; không coi các task cha đã hoàn thành. Xem README package và [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+## 10. Gate nền tảng FE-FND-01-TOOLING
+
+`pnpm lint` chạy ESLint 10.14.0 với recommended JS/TypeScript, rules-of-hooks và exhaustive-deps, zero warnings. Generated types và MSW worker không được lint thủ công. `pnpm check` chạy lần lượt lint → typecheck → api:check → format:check → test → build và dừng nếu có lỗi. Các script format bao gồm eslint.config.js. Node engine yêu cầu tối thiểu 22.14.0 và dưới 23, khớp .node-version/CI.
+
+Workflow `.github/workflows/frontend.yml` dùng Actions pin SHA, Node từ .node-version, pnpm từ packageManager, `pnpm install --frozen-lockfile` và `pnpm check`; trigger PR hoặc push frontend/main có thay đổi FE/OpenAPI/workflow. Chưa chạy trên GitHub trong lần này. Browser E2E/API thật và các GAP scope/security vẫn là gate riêng. Chi tiết clean install ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-01.md]].

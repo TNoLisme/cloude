@@ -21,7 +21,8 @@ try {
     { stdio: "inherit" },
   );
   if (
-    (await readFile(generated, "utf8")) !== (await readFile(temporary, "utf8"))
+    (await readFile(generated, "utf8")).replace(/\r\n/g, "\n") !==
+    (await readFile(temporary, "utf8")).replace(/\r\n/g, "\n")
   )
     throw new Error("Generated API types differ. Run pnpm api:generate.");
   console.log("OpenAPI generated types match the contract.");

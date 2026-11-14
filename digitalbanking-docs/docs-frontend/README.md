@@ -31,9 +31,6 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
 | Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
 | Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
-| Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
-| Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
-| Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
 | Design UI từng màn hình và shared component | [[digitalbanking-docs/docs-frontend/design/README.md]] |
 | UI, form, responsive | [[digitalbanking-docs/docs-frontend/standards/02-ui-and-design-system.md]] |
