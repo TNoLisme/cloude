@@ -18,9 +18,6 @@ frontend/*.tsbuildinfo
 .superpowers
 .qoder
 
-AGENTS.md
-DECISIONS.md
-
 digitalbanking-docs/docs-references
 specs/
 docs/

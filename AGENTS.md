@@ -1,0 +1,2 @@
+- Đọc các tài liệu cần thiết trong digitalbanking-docs lấy đủ context trước khi thực hiện bất kì các task nào, không thực hiện khi mơ hồ. Nếu chưa rõ phải hỏi người điều hành ngay và ghi lại quyết định vào DECISIONS.md. 
+- Cách các module giao tiếp với nhau ở trong digitalbanking-docs/docs-common/design/05. Modules contract. Nếu khi có dependency mà chưa có trong tài liệu, hãy nêu phương án thay thế sau đó ghi phương án vào lại 05. Modules contract. Khi thực hiện kiểm thử, nếu module phụ thuộc chưa có thì hãy mock test theo tài liệu giao tiếp.
