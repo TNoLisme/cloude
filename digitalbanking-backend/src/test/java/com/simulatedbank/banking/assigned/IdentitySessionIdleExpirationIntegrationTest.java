@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -81,10 +82,19 @@ class IdentitySessionIdleExpirationIntegrationTest {
 
     @TestConfiguration
     static class MutableClockConfig {
+        /**
+         * Starts from the real wall clock instead of a hardcoded instant. The
+         * database fills auth_challenge.created_at with now() while challenge
+         * expiry is derived from this clock, so a frozen past instant
+         * eventually violates chk_auth_challenge_expiry
+         * (expires_at &gt; created_at) once the wall clock passes
+         * clock_start + otp ttl. All assertions are relative to the clock, so
+         * the absolute start value is irrelevant to the test outcome.
+         */
         @Bean
         @Primary
         MutableClock mutableClock() {
-            return new MutableClock(Instant.parse("2026-11-15T12:00:00Z"));
+            return new MutableClock(Instant.now().truncatedTo(ChronoUnit.SECONDS));
         }
     }
 
