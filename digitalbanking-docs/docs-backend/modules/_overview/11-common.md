@@ -77,7 +77,7 @@ com.simulatedbank.banking.common/
 
 - [README common](../common/README.md): hướng dẫn sử dụng/tra cứu.
 - [TKCT](../common/TKCT.md): class/API/crypto/error/health/logging và test mapping đã đối chiếu code.
-- [Final report](../common/report/BE-COM-FINAL-REPORT.md): tasks, verification, state/dependency và điều kiện tiếp tục.
+- [Final report](../common/CURRENT-STATE.md): tasks, verification, state/dependency và điều kiện tiếp tục.
 
 Nền tảng common đã triển khai;5 task Done trong phạm vi công bố, 05/07/08 Blocked thiếu identity/consumer/Cloud. Bảng class ở §2 là lược đồ thành phần cốt lõi; inventory đầy đủ 28 Java files ở TKCT §2. Không dùng checklist Planned trước code để suy hiện trạng hoặc nghiệm thu toàn module.
 

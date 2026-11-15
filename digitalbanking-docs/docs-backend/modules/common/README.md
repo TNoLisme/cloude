@@ -12,7 +12,7 @@
 
 | Bạn cần | Đọc tại |
 |---|---|
-| Biết việc đã làm, việc còn thiếu và owner tiếp tục | [Final report — trạng thái module](report/BE-COM-FINAL-REPORT.md) |
+| Biết việc đã làm, việc còn thiếu và owner tiếp tục | [Final report — trạng thái module](CURRENT-STATE.md) |
 | Class/API hiện có, ranh giới, HTTP/SQLSTATE, luồng xử lý, test mapping | [TKCT](TKCT.md) |
 | Nhận task, xem AC/dependency và quy tắc đóng việc | [Task tracker](tasks/README.md) |
 | Bằng chứng runtime theo task/revision/môi trường | Các verification report được liên kết trong tracker/final report |
