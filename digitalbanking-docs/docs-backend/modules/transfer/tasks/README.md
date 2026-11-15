@@ -13,23 +13,23 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 
 ## 1. Checklist và thứ tự phụ thuộc
 
-| Trạng thái | ID / ưu tiên / mốc | Task | Phụ thuộc |
-|---|---|---|---|
-| [ ] | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module | API, BA, Identity, Limit, Ledger, Audit, QA, Security |
-| [ ] | **BE-TRF-02 / P0 / W4** | Schema, migration và state domain | 01 (schema/key); migration Account/Identity và FK |
-| [ ] | **BE-TRF-03 / P0 / W4** | API, validation, authorization và query/receipt | 01; identity/account thật; 02 cho persistence |
-| [ ] | **BE-TRF-04 / P0 / W4** | Idempotency, canonical hash, T1 và step-up | 01–03; identity challenge, audit C1, common crypto |
-| [ ] | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
-| [ ] | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL |
-| [ ] | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification | 03–06; identity/audit/notification/common và Ops |
-| [ ] | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure | 02–07; PostgreSQL và module thật |
-| [ ] | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần |
+| Trạng thái | ID / ưu tiên / mốc         | Task                                                     | Phụ thuộc                                                           |
+| ---------- | -------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| [ ]        | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module                  | API, BA, Identity, Limit, Ledger, Audit, QA, Security               |
+| [ ]        | **BE-TRF-02 / P0 / W4**    | Schema, migration và state domain                        | 01 (schema/key); migration Account/Identity và FK                   |
+| [ ]        | **BE-TRF-03 / P0 / W4**    | API, validation, authorization và query/receipt          | 01; identity/account thật; 02 cho persistence                       |
+| [ ]        | **BE-TRF-04 / P0 / W4**    | Idempotency, canonical hash, T1 và step-up               | 01–03; identity challenge, audit C1, common crypto                  |
+| [ ]        | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
+| [ ]        | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge                        | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL             |
+| [ ]        | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification              | 03–06; identity/audit/notification/common và Ops                    |
+| [ ]        | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure         | 02–07; PostgreSQL và module thật                                    |
+| [ ]        | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao                   | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần    |
 
 Đường găng: 01 → 02/03 → 04 → 05 → 06/07 → 08 → 09. Contract tests và thiết kế test chuẩn bị song song từ 01; test cụ thể viết cùng mỗi task, không đợi 08. Thiếu dependency ghi **Blocked** cho AC bị ảnh hưởng, không thay production module bằng stub để tuyên bố tích hợp xong.
 
 ## 2. Chi tiết công việc và tiêu chí nghiệm thu
 
-### BE-TRF-01 — Chốt hợp đồng và rủi ro liên module
+### [BE-TRF-01 — Chốt hợp đồng và rủi ro liên module](BE-TRF-01.md)
 
 **Mô tả:** Đối chiếu `03/04/06/07/09`, thiết kế concurrency và OpenAPI; thống nhất contract, phạm vi write-owner, T1/T2, chính sách và kế hoạch integration. Tạo decision record theo quy trình nhóm, liên kết owner và cập nhật nguồn có thẩm quyền khi được giao.
 

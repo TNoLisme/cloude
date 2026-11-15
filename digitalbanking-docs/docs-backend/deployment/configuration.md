@@ -2,8 +2,8 @@
 
 > **Dự án:** Digital Banking MVP (Single-Bank, Core Simulated)
 > **Mã tài liệu:** `BE-DEP-02`
-> **Phiên bản:** v1.2
-> **Ngày cập nhật:** 12/11/2026
+> **Phiên bản:** v1.3 — dự thảo review
+> **Ngày cập nhật:** 15/11/2026
 > **Trạng thái:** Draft — Cấu hình nền/thời gian đã verified tại BE-COM-IMP-01; phần triển khai khác chưa xác nhận runtime
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§3–§9), [[digitalbanking-docs/docs-common/05. Technical stack.md]] (§5.1.6, §5.2, §5.4, §5.7, §5.8), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§5, §8.8, §9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2.8, §3.2–§3.3, §3.7, §6.1, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] (§3.3, §4–§6, §8–§9), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§7.6, §10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §10.3, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§6, §8–§9)
 > **Tài liệu liên quan:** [[digitalbanking-docs/docs-backend/deployment/README.md]] (hướng dẫn triển khai & vận hành), [[digitalbanking-docs/docs-backend/README.md]] (chỉ mục Backend)
@@ -299,14 +299,14 @@ app:
       audit-export-per-user-per-hour: 5              # design/04 §8.3
       read-per-user-per-minute: 120                  # design/04 §8.3
     step-up:
-      single-amount-vnd: 10000000                  # >= 10.000.000 VND (design/04 §4.4)
-      daily-amount-vnd: 20000000                   # > 20.000.000 VND/ngày (design/04 §4.4)
+      single-amount-vnd: 10000000                  # T0: amount >= 10.000.000 VND (DEC-TRF-002)
+      daily-amount-vnd: 20000000                   # T0: tổng dự kiến > 20.000.000 VND (DEC-TRF-001/002)
 
   transfer:
-    min-amount-vnd: 2000                           # design/03 §4.1
-    max-amount-vnd: 10000000                       # design/03 §4.1
-    pin-otp-threshold-vnd: 5000000                 # > 5.000.000 VND cần PIN + OTP (design/03 §4.2)
-    daily-cap-vnd: 50000000                        # > 50.000.000 VND/ngày bị từ chối (design/03 §4.2)
+    min-amount-vnd: 2000                           # Default hiện có; policy chưa duyệt
+    max-amount-vnd: 10000000                       # Default hiện có; policy chưa duyệt
+    pin-otp-threshold-vnd: 5000000                 # Legacy trong source hiện tại; không dùng để kích hoạt OTP
+    daily-cap-vnd: 50000000                        # Default hiện có; policy chưa duyệt
     idempotency-ttl-hours: 24
     t2-lock-timeout-ms: 2000                       # SET LOCAL lock_timeout = '2s'
     t2-statement-timeout-ms: 5000                  # SET LOCAL statement_timeout = '5s'
@@ -337,7 +337,8 @@ app:
 - `spring.jackson.deserialization.fail-on-unknown-properties=true` chống Mass Assignment (`design/04` §8.1).
 - `management.endpoint.health.show-details=never` và chỉ public `/actuator/health`; không public metrics/prometheus (`06` §12.3, `08` §3.3).
 - Các giá trị `(đề xuất)` về pool, outbox poll/batch/lease, resend cooldown chỉ là baseline vận hành; phải chốt bằng benchmark/evidence trước khi coi là cam kết.
-- `app.security.step-up.*` (T0 challenge) **khác** với `app.transfer.pin-otp-threshold-vnd` (yêu cầu PIN + OTP). Hai ngưỡng này không được gộp chung.
+- Theo DEC-TRF-002, nguồn ngưỡng tiền dự kiến duy nhất cho step-up Transfer là `app.security.step-up.single-amount-vnd` (`>= 10.000.000 VND`) và `app.security.step-up.daily-amount-vnd` (`> 20.000.000 VND`), đánh giá T0 trước T1. Tổng ngày theo DEC-TRF-001, không tính trùng; các tín hiệu rủi ro khác vẫn theo policy được duyệt. Hai property là cấu hình dự kiến, việc bind property không chứng minh decision engine hoặc challenge đã hoạt động.
+- `app.transfer.pin-otp-threshold-vnd=5000000` còn tồn tại trong YAML và `AppProperties` tại thời điểm rà soát; đây là **legacy**, không phải ngưỡng OTP thứ hai. Không dùng nó làm điều kiện challenge hay tự suy ra PIN + OTP là policy đã duyệt. Trước khi tích hợp Transfer phải thống nhất loại bỏ/deprecate property, kiểm tra profile/env/consumer và compatibility; nếu source chưa được đồng bộ thì ghi blocker, không tuyên bố runtime đã thực thi quyết định. Các default `min-amount-vnd`, `max-amount-vnd`, `daily-cap-vnd` và policy PIN riêng cũng chưa được DEC-TRF-002 phê duyệt.
 - `AppProperties` cung cấp nested defaults cả khi không có YAML; profile override base YAML, env/CLI override theo Spring Boot. Ba biến lockout/transfer ở §4.1 và `APP_TIMEZONE` được chuyển tiếp trong Compose. Khởi động lại sau đổi cấu hình. Các trường số vừa nêu phải là số nguyên dương; timezone rỗng/sai làm khởi động thất bại với thông báo không echo giá trị timezone hoặc key.
 - Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. BE-COM-IMP-04 đã triển khai validation khóa; rotation vẫn Open (OQ-15/OI-COM-05), HTTP layer/enforcement common đã có ở 05; identity/transfer integration còn Blocked trong 05/07; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
 - Inject `Clock` UTC và `ZoneId businessZoneId`: `clock.instant()` cho timestamp/TTL, `LocalDate.now(clock.withZone(businessZoneId))` cho ngày nghiệp vụ; test inject primary `Clock.fixed`. Hợp đồng và ví dụ override tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
@@ -556,7 +557,7 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 | Transfer rate | `07` §2.8: 30/phút/customer, Đề xuất; design/04 §8.3: 20/phút/user | Theo `07`: 30/customer/phút, giữ Đề xuất; IMP-01 đã đổi key/accessor thành transfer-per-customer-per-minute/30, chưa enforcement |
 | Session đồng thời | `design/04` §4.3: Customer 3, Staff 1; `07` §3.2: nhiều session, thu hồi theo device/user Deferred | Theo `07`; IMP-01 bỏ keys trần 3/1 trong Java/YAML, không triển khai session/revocation |
 | Cookie session | `07` §3.2: `DB_SESSION`, `Path=/`, `Max-Age=28800`; design/04: `SESSION_TOKEN`, `Path=/api` | Đã phân xử theo `07`; không chờ chọn lại tên/path, không tự đóng issue ở tài liệu nguồn |
-| Step-up và PIN+OTP | `design/04` §4.4: step-up khi `>= 10.000.000` hoặc ngày `> 20.000.000`; `design/03` §4.2: `> 5.000.000` cần PIN + OTP | Tách hai khóa: `app.security.step-up.*` và `app.transfer.pin-otp-threshold-vnd` |
+| Step-up theo số tiền | DEC-TRF-002 chọn `>= 10.000.000` mỗi lệnh hoặc tổng ngày dự kiến `> 20.000.000`; thành phần tổng theo DEC-TRF-001. `design/03` trước đây nêu `> 5.000.000` với PIN+OTP. | `app.security.step-up.*` là cấu hình mục tiêu duy nhất cho hai ngưỡng tiền; property `app.transfer.pin-otp-threshold-vnd` còn là legacy trong source cần xử lý. Chưa có Transfer/Identity runtime để chứng minh enforcement hay protocol concurrency; PIN policy riêng chưa chốt. |
 | Fraud velocity | `design/03` §4.2/§5: giao dịch thứ 3 trong 120 giây; `06` §7.6: > 5 giao dịch/10 phút | Theo `design/03` 3/120 giây; cần đồng bộ `06` |
 | Tài khoản DB | `design/04` §6.5: `banking_app`/`banking_migrator`; `04` §9.2: `app_rw`/`audit_writer`/`auditor_ro`/`migration` | Dùng 2 credential theo `design/04`; ánh xạ vai trò logic, tách đầy đủ là mục tiêu |
 | Tên bảng | `04`/`06`: `app_user`, `device`; `design/04`: `users`, `user_device` | Theo `04`/`06` cho schema vật lý; cần đồng bộ `design/04` |
@@ -604,6 +605,7 @@ Các quyết định liên quan `common` được chốt tại [[digitalbanking-
 |---|---|---|
 | v1.1 | 12/11/2026 | Đồng bộ các mục common về lockout/rate limit scope customer/session/cookie và giới hạn rotation theo ưu tiên 01–11; giữ nhãn Đề xuất, không sửa runtime |
 | v1.2 | 12/11/2026 | BE-COM-IMP-01: đồng bộ lockout/transfer/session config, env override, validation/time contract và liên kết verification; giữ Đề xuất và giới hạn runtime |
+| v1.3 draft | 15/11/2026 | Đồng bộ ngưỡng tiền theo DEC-TRF-001/002; đánh dấu cấu hình OTP legacy, các giá trị min/max/cap và khoảng cách đến runtime cần review. |
 
 ### Request context / proxy boundary — BE-COM-IMP-03
 

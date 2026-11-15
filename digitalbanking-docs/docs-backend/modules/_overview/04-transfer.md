@@ -42,7 +42,7 @@ Module `transfer` sở hữu độc quyền 2 bảng:
    - Kiểm tra bảng `idempotency_record`:
      - Nếu `request_hash` khác với bản ghi đã lưu của cùng `Idempotency-Key` $\rightarrow$ ghi audit `SECURITY_IDEMPOTENCY_CONFLICT` (`C3`) và trả về `409 IDEMPOTENCY_KEY_CONFLICT`.
      - Nếu bản ghi đã ở `COMPLETED` hoặc `FAILED` với cùng `request_hash` $\rightarrow$ phát lại ngay `response_body` đã lưu kèm header `Idempotent-Replayed: true`.
-   - Kiểm tra ngưỡng Step-up (`amount` vượt ngưỡng đơn lẻ hoặc luỹ kế ngày vượt ngưỡng `20,000,000 VND`): Nếu chưa có challenge đã `VERIFIED` $\rightarrow$ gọi `StepUpChallengePort` tạo challenge và trả về `428 STEP_UP_REQUIRED` (**tuyệt đối không** tạo dòng `transfer` hay `ledger_entry` nào ở bước này — `AC-033`).
+   - Kiểm tra ngưỡng Step-up mặc định (`amount >= 10,000,000 VND` hoặc tổng chuyển dự kiến ngày `> 20,000,000 VND`, theo DEC-TRF-001/002; các trigger rủi ro khác vẫn độc lập): nếu chưa có challenge `VERIFIED` $\rightarrow$ yêu cầu challenge và trả `428 STEP_UP_REQUIRED` trước T1 theo `AC-033`. Scope/ngày, race và interface còn chờ review/kiểm chứng tại `design/05` §10.1; không coi các port đã tồn tại.
 2. **Pha `T1` — Ghi nhận Ý định Giao dịch (Short Transaction):**
    - Tiêu thụ Step-up challenge (`VERIFIED -> CONSUMED`).
    - Chèn `idempotency_record (status = 'RECEIVED')` (`ON CONFLICT DO NOTHING`) và chèn `transfer (status = 'PENDING')`.
