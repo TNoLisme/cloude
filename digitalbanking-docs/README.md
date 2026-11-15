@@ -60,7 +60,8 @@ digitalbanking-docs/
 │   │   ├── 01. audit-traceability.md
 │   │   ├── 02. consistency-concurrency.md
 │   │   ├── 03. fraud-detection-rules.md
-│   │   └── 04. security.md
+│   │   ├── 04. security.md
+│   │   └── 05. Modules contract.md
 │   └── work/
 │       ├── README.md
 │       ├── week1/README.md
@@ -114,7 +115,7 @@ digitalbanking-docs/
 | 07 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | Hợp đồng API ngữ nghĩa, lỗi, idempotency, step-up | Hoàn thành |
 | 08 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Hoàn thành |
 | 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng nghiệm thu | Hoàn thành |
-| 10 | [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Hoàn thành |
+| 10 | [[digitalbanking-docs/docs-common/10 Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Hoàn thành |
 | 11 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Hoàn thành |
 | — | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
@@ -126,6 +127,7 @@ digitalbanking-docs/
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Transaction boundary, idempotency, locking, failure recovery | Hoàn thành — v1.0 |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
+| 05 | [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] | Hợp đồng giao tiếp nội bộ giữa 11 module | Draft — chờ review |
 
 ### 4.4. Tài liệu triển khai, hợp đồng và công việc
 
@@ -208,7 +210,7 @@ Mỗi tài liệu nên có khối metadata ngắn:
 
 ## 8. Trạng thái tổng thể và việc tiếp theo
 
-- `docs-common/` (`01`–`11` và `design/01`–`04`) — **Hoàn thành**, là nguồn tài liệu chuẩn có trọng số cao nhất của dự án.
+- `docs-common/` (`01`–`11` và `design/01`–`04`) được chỉ mục ghi **Hoàn thành**; `design/05` là **Draft — chờ review**. Thứ tự ưu tiên nguồn tại §2 vẫn áp dụng.
 - `docs-backend/` — đã hoàn thành bộ khung và tổng hợp 11 module (`modules/_overview/`); các thành viên mở rộng tài liệu chi tiết từng module tại `docs-backend/modules/<module-name>/` song song với quá trình hiện thực code.
 - [[digitalbanking-docs/docs-frontend/README.md]] — bộ tài liệu FE v1.2 được người phụ trách FE chốt ngày 09/11/2026, gồm design theo màn hình và file chờ UI.
 - `docs-common/work/week1`, `week2` — nhật ký kế hoạch và bằng chứng công việc theo tuần.

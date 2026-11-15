@@ -29,7 +29,7 @@ Quy ước đọc:
 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | API semantics, error model, idempotency, step-up, traceability | Nguồn ngữ nghĩa API |
 | [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] | Hạ tầng triển khai, CI/CD, môi trường, backup/DR, runbook | Nguồn hạ tầng & vận hành |
 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản, dữ liệu, bằng chứng | Nguồn chiến lược kiểm thử |
-| [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Nguồn kế hoạch tổng thể |
+| [[digitalbanking-docs/docs-common/10 Master timelines.md]] | Kế hoạch tổng thể, milestone, phân công, tiến độ | Nguồn kế hoạch tổng thể |
 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Nhân sự, owner 11 module, phối hợp và kế hoạch hạ tầng | Nguồn phân công nhân sự |
 | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài/yêu cầu tóm tắt ban đầu | Tham khảo |
 
@@ -59,6 +59,7 @@ Quy ước đọc:
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | Hoàn thành — v1.0 |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | Hoàn thành — v1.0 |
+| 05 | [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] | Draft — chờ review |
 
 ### 3.3. Công việc theo tuần
 
@@ -106,6 +107,7 @@ Chứa các thiết kế kỹ thuật chuyên sâu, nối yêu cầu trong `03. 
 - Consistency & Concurrency.
 - Fraud Detection Rules.
 - Security.
+- Hợp đồng giao tiếp nội bộ giữa các module (Draft — chờ review).
 
 Xem hướng dẫn chi tiết tại [[digitalbanking-docs/docs-common/design/README.md]].
 
@@ -126,7 +128,7 @@ Xem hướng dẫn tại [[digitalbanking-docs/docs-common/work/README.md]].
 
 ## 7. Lưu ý đồng bộ
 
-- Toàn bộ tài liệu chính (`01`–`11`) và thiết kế chuyên sâu (`design/01`–`04`) trong `docs-common/` đã **Hoàn thành** và là nguồn chuẩn (Single Source of Truth) cho toàn dự án.
+- Tài liệu chính `01`–`11` và thiết kế `design/01`–`04` được chỉ mục ghi **Hoàn thành**; `design/05` là **Draft — chờ review**. Thứ tự nguồn và các vấn đề chưa chốt vẫn áp dụng.
 - Bảng `Document Map` trong `01. Introduction` (mục 7.2) đang hoán đổi thứ tự `05. Technical stack` và `06. System architecture` so với tên tệp thực tế. Khi tra cứu, ưu tiên tên tệp.
 - Một số tài liệu dùng tên rút gọn khi tham chiếu (ví dụ `04. Database analysis` hoặc `10. Master timelines.md`); tên tệp thực tế trên đĩa là `04. Database design & analysis.md` và `10 Master timelines.md`.
 

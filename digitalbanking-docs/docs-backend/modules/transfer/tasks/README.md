@@ -1,0 +1,134 @@
+# Kế hoạch triển khai module `transfer`
+
+> **Dự án:** Digital Banking MVP
+> **Mã tài liệu:** `BE-MOD-TRANSFER-02`
+> **Phiên bản:** v1.0
+> **Ngày cập nhật:** 15/11/2026
+> **Trạng thái:** Draft — chờ review; tất cả implementation task chưa xác minh
+> **Owner:** Vũ
+> **Reviewer:** Backend Lead, các owner phụ thuộc, QA, Security — chờ review
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7–§10; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §11–§13; [thiết kế module](design.md).
+
+Các task là kế hoạch, không yêu cầu thực hiện trong lần viết tài liệu này. Ưu tiên **P0** là điều kiện cho money path/release an toàn; **P1** hoàn thiện trải nghiệm, vận hành và hardening trong phạm vi MVP, không tự hạ bất kỳ yêu cầu Must. Mốc W3–W8 là dự kiến theo `10`, phụ thuộc lịch và năng lực của các owner. Trước mỗi task kiểm tra code hiện tại, hợp đồng và quyết định mới; tái sử dụng common, không sao chép tính năng đã có. Mỗi task có thể làm phần độc lập trước khi dependency sẵn sàng nhưng chỉ đánh dấu hoàn thành khi toàn bộ AC và bằng chứng đạt.
+
+## 1. Checklist và thứ tự phụ thuộc
+
+| Trạng thái | ID / ưu tiên / mốc | Task | Phụ thuộc |
+|---|---|---|---|
+| [ ] | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module | API, BA, Identity, Limit, Ledger, Audit, QA, Security |
+| [ ] | **BE-TRF-02 / P0 / W4** | Schema, migration và state domain | 01 (schema/key); migration Account/Identity và FK |
+| [ ] | **BE-TRF-03 / P0 / W4** | API, validation, authorization và query/receipt | 01; identity/account thật; 02 cho persistence |
+| [ ] | **BE-TRF-04 / P0 / W4** | Idempotency, canonical hash, T1 và step-up | 01–03; identity challenge, audit C1, common crypto |
+| [ ] | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
+| [ ] | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL |
+| [ ] | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification | 03–06; identity/audit/notification/common và Ops |
+| [ ] | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure | 02–07; PostgreSQL và module thật |
+| [ ] | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần |
+
+Đường găng: 01 → 02/03 → 04 → 05 → 06/07 → 08 → 09. Contract tests và thiết kế test chuẩn bị song song từ 01; test cụ thể viết cùng mỗi task, không đợi 08. Thiếu dependency ghi **Blocked** cho AC bị ảnh hưởng, không thay production module bằng stub để tuyên bố tích hợp xong.
+
+## 2. Chi tiết công việc và tiêu chí nghiệm thu
+
+### BE-TRF-01 — Chốt hợp đồng và rủi ro liên module
+
+**Mô tả:** Đối chiếu `03/04/06/07/09`, thiết kế concurrency và OpenAPI; thống nhất contract, phạm vi write-owner, T1/T2, chính sách và kế hoạch integration. Tạo decision record theo quy trình nhóm, liên kết owner và cập nhật nguồn có thẩm quyền khi được giao.
+
+**AC:**
+
+- Ghi nhận key global, `IDEMPOTENCY_CONFLICT`, replay HTTP/body gốc theo `04/07`; tạo việc đồng bộ overview và YAML 200 replay với API/FE/QA. Xác định `202` là tùy chọn async, không ngầm thay MVP synchronous.
+- Identity/Limit/Architect/BA chốt protocol chống race khi step-up theo tổng ngày, bao gồm hành vi 428 trước T1, expiry và retry. Có test oracle hai key đồng thời quanh ngưỡng; nếu chưa chốt thì release money path **Blocked**.
+- BA/QA/Architect phân xử AC-006 so với nhánh FAILED sau T1 trong `design/02`; chốt và kiểm thử riêng lỗi phát hiện trước T1 và điều kiện thay đổi sau T1, đồng bộ nguồn trước nghiệm thu.
+- BA/Product/BE chốt retention/purge và hướng dẫn retry sau TTL; Backend/Ops/Ledger/Audit chốt xử lý PENDING có ledger/audit, retry/escalation. `09` T-REC-02 yêu cầu hoàn tất không duplicate khi đủ bằng chứng; chỉ làm theo protocol đã chứng minh và thống nhất tính nhất quán response/idempotency; thiếu/chênh bằng chứng giữ nguyên, cảnh báo.
+- Liệt kê owner/trạng thái/ảnh hưởng của `OI-CON-02–13`, gồm business date/timezone, config version, fraud count, audit throughput, multi-instance, notification duplicate và replay correlation; điểm chưa quyết định chặn AC tương ứng. Phân công contract API cùng transaction cho từng owner; ngưỡng đề xuất không mặc định là policy đã duyệt.
+
+**Evidence:** decision log, liên kết nguồn và owner/reviewer, matrix dependency, contract/test oracle đã thống nhất.
+
+### BE-TRF-02 — Schema, migration và domain
+
+**Mô tả:** Thiết kế rồi tạo migration forward-only cho `transfer` và `idempotency_record` theo `04`, cùng state/value objects. Phối hợp owner migrations theo thứ tự FK; không sửa V1 hay tạo bảng owner khác trong module này.
+
+**AC:**
+
+- Schema khớp tên/kiểu/constraint/index nguồn; key global, reference unique, FK, amount dương, hai tài khoản khác nhau, trạng thái hợp lệ, challenge unique khi có, response/expiry đúng lifecycle. Có index lookup reference và quét PENDING theo workload.
+- Terminal bất biến; không có orphan trong T1 race; JPA không xuất entity ra API. Migration sạch và nâng cấp chạy được trên PostgreSQL, schema validation và rollback/recovery plan migration được review.
+- Test constraint, unique race, FK và state transition trên DB thật; các thay đổi schema đề xuất chưa được chốt không tự thêm.
+
+### BE-TRF-03 — API, validation, quyền và tra cứu
+
+**Mô tả:** Xây controller/DTO và query service cho POST/GET theo `07`, tích hợp session/CSRF và service authorization; hỗ trợ masked receipt.
+
+**AC:**
+
+- Schema, header, 201/Location, Problem và GET đúng `07`/OpenAPI sau đồng bộ; amount decimal string, một destination, VND, description và key validation đúng biên; actor từ session.
+- Chỉ CUSTOMER có permission và sở hữu nguồn được tạo; GET chỉ participant hoặc staff đúng permission/scope; test IDOR và cross-customer; staff-only fraud flags không lộ customer. CSRF, `no-store`, masking và lỗi an toàn được xác nhận.
+- Test controller/contract và session thật; kiểm tra nguồn/đích bằng account API. Không dùng rate limiter local làm bằng chứng quota toàn cụm.
+
+### BE-TRF-04 — Idempotency, step-up và T1
+
+**Mô tả:** Chuẩn hóa payload, dùng common JCS/SHA, kiểm tra key/replay; điều phối challenge và tạo intent bền vững trong transaction riêng.
+
+**AC:**
+
+- Hash có test vector theo `07 §5.2`, kể cả scale amount, null/rỗng, field order và destination type; không log raw key/body/PII. Cùng key/hash terminal replay status/body gốc với header; khác hash/actor conflict + C3, không lộ dữ liệu; live → 409 `Retry-After`, stale → resume sau recheck.
+- T0 challenge bind user/hash/key, không có transfer/idempotency/ledger khi 428; T1 consume VERIFIED chưa hết hạn đúng binding, một lần; rollback T1 hoàn lại consume. Chính sách step-up race từ 01 được áp dụng và test.
+- T1 insert transfer rồi insert key `ON CONFLICT`; request thua rollback toàn bộ trước khi đọc lại, không orphan. Audit CREATED fail rollback T1; T1 commit để lại PENDING/RECEIVED khi T2 chưa chạy. Test cùng key nhiều connection, challenge race/expiry và crash sau T1.
+
+### BE-TRF-05 — T2 money transaction
+
+**Mô tả:** Điều phối owner APIs trong một PostgreSQL transaction, với lock order và invariant theo thiết kế; không HTTP/broker trong T2.
+
+**AC:**
+
+- Lock transfer NOWAIT → account ID tăng dần → usage customer/account → audit cuối; revalidate ownership/status/balance/limit trong lock, debit có điều kiện, credit và hai entry ledger cân bằng; usage chỉ tăng khi COMPLETED. Không balance âm, không double debit, không ledger cho FAILED/PENDING bình thường.
+- Fraud engine lỗi fail-open có savepoint thực sự; auto-block commit FAILED trước money. Audit `FRAUD_FLAG_CREATED` C2 và audit C1 vẫn fail-closed; lỗi audit rollback T2 về PENDING, không bị savepoint nuốt. Outcome nghiệp vụ FAILED commit audit/outbox/response, không ledger/usage; lỗi hệ thống hoặc audit rollback toàn T2, để PENDING/RECEIVED, không false success.
+- Status/idempotency response/outbox và audit completion cùng commit; không terminal state transition sai; retry deadlock/lock timeout bounded trên toàn transaction mới. Test PostgreSQL với failure injection và các owner thật, xác nhận transaction propagation.
+
+### BE-TRF-06 — Recovery, reconciliation và purge
+
+**Mô tả:** Job startup/định kỳ claim PENDING quá ngưỡng, đối soát và dùng lại T2; phối hợp runbook với Ops, ledger và audit.
+
+**AC:**
+
+- Claim một transfer `FOR UPDATE SKIP LOCKED` và execute trong cùng transaction; hai instance không xử lý trùng; resume khi không có ledger và an toàn; retry/backoff/alert có giới hạn theo policy đã duyệt.
+- T-REC-01–04 đạt, bao gồm hoàn tất PENDING có đủ ledger/audit khi protocol kiểm chứng từ 01 cho phép và đồng bộ idempotency/response không tạo ledger kép. Thiếu audit, partial/unbalanced ledger hoặc bằng chứng mâu thuẫn giữ nguyên và alert/manual, không sửa ledger tùy tiện; terminal không bị ghi đè.
+- Purge chỉ record terminal đủ điều kiện, không purge PENDING kể cả quá TTL; test ranh giới TTL và minh họa key sau purge có thể thành yêu cầu mới. Cung cấp runbook và evidence crash/restart, audit failure, nhiều worker.
+
+### BE-TRF-07 — Security, observability và notification
+
+**Mô tả:** Kết nối common context, audit, outbox và metrics; chốt vận hành liên module.
+
+**AC:**
+
+- Correlation liên kết request/challenge/transfer/ledger/audit/outbox; audit C1 fail-closed và C3 fallback/alert theo catalog. Logs, errors, audit và outbox không lộ credential, key, OTP hoặc PII đầy đủ; test leak và log injection.
+- Metric outcome, pending age, idempotency, lock và latency dùng label bounded; alert audit/PENDING/deadlock/backlog có owner/runbook. Không dùng reference/account/user làm label.
+- Outbox tạo atomically với terminal; worker delivery sau commit có lease/retry/backoff, dedupe theo thỏa thuận; gateway lỗi hoặc crash không đổi transfer và không mất event. Test gửi lại/multi-instance.
+
+### BE-TRF-08 — Kiểm thử tích hợp và hồi quy
+
+**Mô tả:** Thực thi các test quy định tại [TKCT §7](design.md), bổ sung test độc lập cho các task; không chứng minh invariant bằng mock/H2.
+
+**AC:**
+
+- D1 `T-CON-01–04` và limit race; D2 `T-IDEM-01–06`; D3 `T-REC-01–04`, `T-AUD-06/07`, `T-OUT-01/02` có evidence PostgreSQL, nhiều connection và assert cả balance/ledger/usage/audit/outbox/response.
+- Step-up single-use, ngưỡng lũy kế đồng thời, ownership/IDOR/CSRF, fraud fail-open/auto-block và lỗi audit C2 khi ghi fraud flag, schema/contract và masking đạt; audit C2 lỗi phải rollback T2. Test terminal replay của cả 201 và 422; crash ở các cửa sổ T1/T2/T3.
+- `./gradlew check` và ArchUnit đạt; test ID, revision, lệnh, môi trường, output và artifact không chứa PII/secret được lưu theo `09 §10`; bất kỳ phần thiếu dependency ghi Blocked.
+
+### BE-TRF-09 — Nghiệm thu, vận hành và bàn giao
+
+**Mô tả:** Tập hợp evidence liên module, chạy D1–D5, kiểm tra readiness và bàn giao cho QA/Security/Ops/FE.
+
+**AC:**
+
+- D1–D4 có report, D5 load theo `09` với mục tiêu 20 RPS × 10 phút, p95/p99 và kiểm invariant; không đánh dấu pass nếu chưa có môi trường/evidence. Regression sau fix và môi trường triển khai theo kế hoạch W6–W8 được ghi riêng.
+- Mọi Must AC, sự khác biệt contract, policy §1.4 của TKCT, runbook PENDING/audit/DB/outbox, retention và ownership được xử lý hoặc ghi blocker release có owner; review bởi các bên liên quan, không tự sign-off.
+- Bàn giao client retry/step-up/receipt, support tra reference và giới hạn TTL; cập nhật tài liệu module và index liên quan theo phạm vi được giao, lưu test report và bằng chứng không chứa dữ liệu thật.
+
+## 3. Quy tắc cập nhật tiến độ
+
+Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidence có thể tái lập và dependency liên module được kiểm chứng. Ghi link report, revision, lệnh, kết quả, blocker và người review bên cạnh task khi thực hiện; chưa review không đồng nghĩa sign-off. Lỗi hoặc thiếu môi trường ghi `Blocked`, không xóa tiêu chí để đóng task. Tham chiếu trạng thái/evidence [[digitalbanking-docs/docs-common/09. Test plan.md]] §2.2, §8, §10.
+
+## Change Log
+
+| Version | Ngày | Người cập nhật | Mô tả |
+|---|---|---|---|
+| 1.0 | 15/11/2026 | Codex | Tạo backlog, phụ thuộc, AC và quy tắc theo dõi implementation. |

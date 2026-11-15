@@ -20,12 +20,13 @@ Thư mục này chứa các thiết kế kỹ thuật chuyên sâu, nối yêu c
 | 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Hoàn thành — v1.0 |
 | 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | `DESIGN-SEC-04` | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
+| 05 | [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] | `DESIGN-MOD-05` | Hợp đồng nội bộ, ranh giới, tích hợp và kiểm thử 11 module | Draft — chờ review |
 
 ## 3. Thứ tự đọc và quan hệ
 
 ### 3.1. Thứ tự đọc
 
-`01. Audit & Traceability → 02. Consistency & Concurrency → 03. Fraud Detection Rules → 04. Security`
+`01. Audit & Traceability → 02. Consistency & Concurrency → 03. Fraud Detection Rules → 04. Security → 05. Modules contract`
 
 Có thể đọc `01` và `02` song song; `03` và `04` nên đọc sau `02` vì đều tham chiếu transaction boundary và money path.
 
@@ -53,6 +54,7 @@ flowchart LR
 - **02 Consistency & Concurrency** là thiết kế lõi của money path; các thiết kế khác tham chiếu transaction T1/T2/T3.
 - **03 Fraud Detection Rules** bổ sung rule và ngưỡng cho bước đánh giá gian lận trong T2.
 - **04 Security** là thiết kế xuyên suốt cho authn/authz, mã hóa, bảo mật dữ liệu và vận hành.
+- **05 Modules contract** là bản Draft về giao tiếp nội bộ giữa các module; tên interface và các quyết định mở cần owner review trước khi chốt.
 
 ## 4. Cấu trúc chuẩn của một tài liệu thiết kế
 
@@ -84,7 +86,7 @@ Một tài liệu thiết kế nên có các phần sau (có thể gộp nếu p
 
 ## 6. Trạng thái hoàn thiện
 
-- Toàn bộ 4 tài liệu thiết kế chuyên sâu (`01` đến `04`) đã **Hoàn thành — v1.0** và đóng vai trò là thiết kế chuẩn cho việc triển khai Backend/Frontend cũng như kiểm thử nghiệm thu.
+- Các tài liệu `01` đến `04` được chỉ mục ghi **Hoàn thành — v1.0**. Tài liệu `05` là **Draft — chờ review**, chưa phải sign-off hoặc bằng chứng implementation.
 
 ## 7. Liên kết nhanh
 
