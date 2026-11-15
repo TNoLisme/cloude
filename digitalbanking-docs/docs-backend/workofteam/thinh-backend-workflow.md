@@ -121,6 +121,34 @@ Fresh test command scope: `AuditQueryContractTest`, `AuditQuerySqlTest`, `AuditQ
 
 Kết luận: AUD-02 **Component Verified / Integration Blocked**, không phải `Done`. Commit component có thể chuẩn bị độc lập sau diff review và test evidence; release/merge acceptance vẫn cần owner review.
 
+### 4.9. BE-NOT-01 checkpoint — 15/11/2026
+
+| Gate | Hiện trạng | Còn thiếu trước Done |
+|---|---|---|
+| Discovery/contract | Spec BE-NOT-01, docs-04 baseline, DTO `TransferNotice` độc lập, bất biến sâu | Vũ (Transfer) duyệt shape DTO và thứ tự gọi trong T2 |
+| Independent component | Domain `TransferNotice`, `NotificationPayloadValidator` (chặn unmasked PII, khoảng trắng/gạch ngang, nested structures, ràng buộc per-field type 42 unit tests), `NotificationRetryPolicy` (deterministic exponential backoff), repository, outbox service (`@Transactional(MANDATORY)`), T3 worker (transaction isolation & suspension, conditional on gateway bean), simulator gateway (chỉ bật khi có explicit opt-in profile/property) đầy đủ | Real provider HTTP adapters (SMS/Email) |
+| Verification report | Report đã hoàn thiện ma trận và evidence Testcontainers PostgreSQL (63 tests pass) | Ký nhận từ Transfer owner và Architecture owner |
+| DB integration | `NotificationTransactionalOutboxIT` (13 tests pass trên Testcontainers PG): T2 rollback không để lại row, SKIP LOCKED phân batch, lease expiry reclaim, stale worker rejection, SENT transition, retry scheduling, terminal FAILED, duplicate-send window, T3 failure isolation, worker transaction fail-fast rejection, crash/reclaim beyond maxAttempts terminal state | Phương điều phối migration đưa lease columns (`claim_token`, `locked_until`, `claim_version`) vào Flyway production |
+| Integration | `NotificationOutboxPort.enqueueTransferNotificationsInT2` sẵn sàng | Transfer module inject port và gọi trong T2; Đạt tích hợp OTP delivery |
+| Delivery operations | Worker claim theo lease, exponential backoff deterministic, duplicate-send window trong giới hạn at-least-once, suspension đảm bảo gateway không chạy trong tx, fail-fast nếu caller gọi trong active transaction, crash/reclaim guard bảo đảm terminal `FAILED` khi vượt `maxAttempts`. Simulator gateway loại bỏ khỏi default profile, chỉ kích hoạt khi opt-in rõ ràng; worker không khởi tạo nếu thiếu gateway (fail-closed). Polling latency: Not measured / Planned (cần benchmark chính thức) | Chốt polling interval, batch size và retry max attempts với team |
+| Commit preparation | 12 source files và 5 test files thuộc `com.simulatedbank.banking.notification` độc lập; không đụng chạm AUD-02 | Chờ lệnh commit từ người dùng |
+
+Kết luận: BE-NOT-01 **Component Verified / Integration Blocked**, không phải `Done`.
+
+### 4.10. BE-FRD-01 checkpoint — 15/11/2026
+
+| Gate | Hiện trạng | Còn thiếu trước Done |
+|---|---|---|
+| Discovery/contract | Spec BE-FRD-01, DTO `FraudTransferSnapshot` (10 trường chuẩn), `FraudEvaluationResult`, rules proposal | Vũ chốt comparator `HIGH_FREQUENCY` (`>` vs `>=`) và replay exclusion |
+| Independent component | Pure `FraudRuleEvaluator` (`LARGE_VALUE`, `HIGH_FREQUENCY`; `UNUSUAL_PATTERN` disabled by default trong MVP), `FraudMatchedValueValidator` (loại bỏ PII/secrets, per-field type validation, fix false-positive amount, deep validation fractional/overflow/comparator/currency, no-raw-echo), `ReviewStateTransition` (state machine, terminal status protection 409 Conflict, notes validator), repository (chuẩn baseline 04, validation tại persistence boundary), `FraudReviewService` (xác thực reviewerId hợp lệ > 0) đầy đủ | Tích hợp RBAC thực tế với Identity |
+| Verification report | Report đã hoàn thiện ma trận và evidence Testcontainers PostgreSQL (32 tests pass) | Ký nhận từ Transfer, Identity và Architecture owners |
+| DB integration | `FraudFlagIT` (6 tests pass trên Testcontainers PG): insert flag trong T2, rollback làm mất flag, unique constraint, concurrent review row locking (`FOR UPDATE NOWAIT` + status check), savepoint rollback DB primitive, direct insertFlag persistence boundary safety (12 kịch bản), reviewerId guard | Phương điều phối migration chính thức cho `fraud_rule_config` và `fraud_flag` |
+| Integration | Evaluator và Review Service sẵn sàng | Vũ gọi evaluator trong T2 trước debit/credit; Đạt gắn API endpoints với quyền `FRAUD_REVIEW`/`FRAUD_READ` |
+| Review operations | Review state transition bảo đảm terminal flag (`ALLOWED`, `BLOCKED`, `CLOSED`) không bị ghi đè, ghi nhận reviewer và validate note <= 500 chars | Identity token injection cho `reviewed_by` |
+| Commit preparation | 13 source files và 3 test files thuộc `com.simulatedbank.banking.fraud` độc lập; không đụng chạm AUD-02 | Chờ lệnh commit từ người dùng |
+
+Kết luận: BE-FRD-01 **Component Verified / Integration Blocked**, không phải `Done`.
+
 ## 5. Mapping Common reuse
 
 | Need | Reuse | Không làm lại |
@@ -170,3 +198,9 @@ If `git stash pop` conflicts after Common merge:
 | 0.3 | 11/11/2026 | Core/API flexibility before owner review |
 | 0.4 | 12/11/2026 | Aligned all task flow with merged Common implementation |
 | 0.5 | 15/11/2026 | Added discovery/decision/independent-component/integration/commit/status/parallel-agent gates and evidence-first handoff rules |
+| 0.6 | 15/11/2026 | Added BE-NOT-01 and BE-FRD-01 checkpoints with Testcontainers evidence (88 tests passed); marked Component Verified / Integration Blocked |
+| 0.7 | 15/11/2026 | Independent Review: sửa lỗi unmasked account & nested structures; đính chính fraud_flag baseline 04 (không có cột version); xác nhận UNUSUAL_PATTERN disabled; cập nhật fresh 74 tests pass |
+| 0.8 | 15/11/2026 | Hoàn thiện độc lập: worker transaction suspension & isolation (`REQUIRES_NEW` + `NOT_SUPPORTED`); matched-value safety tại persistence boundary `FraudJdbcRepository.insertFlag`; fix false-positive amount; 83 fresh tests pass |
+| 0.9 | 15/11/2026 | Bổ sung xử lý crash/reclaim vượt quá maxAttempts bảo đảm terminal `FAILED` và chặn gọi gateway; log warning khi caller gọi worker trong active transaction; xác thực reviewerId hợp lệ; 85 fresh tests pass |
+| 1.0 | 15/11/2026 | Hoàn thiện Notification per-field validation (42 tests), default gateway profile safety & context test (2 tests), Fraud persistence boundary deep check (12 assertions, zero rows on failure, no-raw-echo); 97 fresh tests pass |
+| 1.1 | 15/11/2026 | Loại bỏ hoàn toàn simulator khỏi default/local profile; bổ sung explicit opt-in (profile simulator / property enabled); worker conditional on gateway bean (fail-closed); 5 configuration tests pass; fresh 100 tests pass |
