@@ -79,7 +79,6 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<Test> {
-    // Readiness tests launch the exact packaged application, not the test classpath.
     dependsOn(tasks.named("bootJar"))
     systemProperty("readiness.jar", layout.buildDirectory.file("libs/${project.name}-${project.version}.jar").get().asFile.absolutePath)
     useJUnitPlatform()

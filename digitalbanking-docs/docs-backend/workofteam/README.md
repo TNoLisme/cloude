@@ -8,6 +8,10 @@
 
 Ghi nhận task nền tảng, tích hợp, review và công việc khác của Backend team. Mỗi task có task report và verification report; module-specific work được ghi trong thư mục module tương ứng.
 
+## Hướng dẫn công việc của Thịnh
+
+Đọc [quy trình docs-first và thứ tự task](thinh-backend-workflow.md) để điều hướng các spec và report trong `modules/audit/`, `modules/notification/`, `modules/fraud/` và `modules/admin/`. Mã task là thứ tự đầu việc, không gắn tuần. Tài liệu hiện là đề xuất; report ghi riêng phần chưa triển khai/chưa kiểm chứng.
+
 ## Report index
 
 | Task ID | Công việc | Task report | Verification report | Trạng thái |

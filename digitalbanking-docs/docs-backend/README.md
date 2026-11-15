@@ -90,3 +90,16 @@ docs-backend/
 | Phân công nhân sự 11 module | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] |
 | Thiết kế chuyên sâu (`Audit`, `Concurrency`, `Fraud`, `Security`) | [[digitalbanking-docs/docs-common/design/README.md]] |
 | Hợp đồng OpenAPI 3.1 (Máy đọc) | [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] |
+
+---
+
+## 5. Bổ sung — task docs của Thịnh
+
+Đọc [quy trình docs-first và thứ tự task](workofteam/thinh-backend-workflow.md). Thịnh đề xuất spec trước và có thể code độc lập; review hợp đồng trước khi tích hợp, không chờ owner khác hoàn thành mới bắt đầu. Thứ tự riêng này không thay mốc staffing hoặc phân công chung ở trên.
+
+- [Audit](modules/audit/README.md): writer; query/export/verification; retention/legal hold.
+- [Notification](modules/notification/README.md): outbox, retry/recovery và simulator.
+- [Fraud](modules/fraud/README.md): rule-based và review flag; AI feasibility có task riêng.
+- [Admin](modules/admin/README.md): phần Thịnh phối hợp fraud/audit; Đạt giữ owner chính.
+
+Mỗi task có spec và verification report cạnh nhau. Các spec hiện là Draft — chờ review; report hiện ghi rõ chưa triển khai/chưa chạy. README chỉ điều hướng; cấu hình tham chiếu vẫn nằm tại `deployment/configuration.md`.
