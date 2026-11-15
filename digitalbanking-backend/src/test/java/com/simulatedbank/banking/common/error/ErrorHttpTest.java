@@ -191,9 +191,11 @@ class ErrorHttpTest {
         @Bean SecurityFilterChain harnessSecurity(HttpSecurity http, ProblemWriter writer) throws Exception {
             Filter filter = (request, response, chain) -> {
                 var servletRequest = (jakarta.servlet.http.HttpServletRequest) request;
+                var servletResponse = (jakarta.servlet.http.HttpServletResponse) response;
                 servletRequest.setAttribute("correlationId", "harness-trace");
+                servletResponse.setHeader("X-Correlation-ID", "harness-trace");
                 if (servletRequest.getRequestURI().equals("/harness/filter")) {
-                    writer.write((jakarta.servlet.http.HttpServletResponse) response, writer.create(
+                    writer.write(servletResponse, writer.create(
                             ErrorCode.REQUEST_TOO_LARGE, ErrorCode.REQUEST_TOO_LARGE.detail(), servletRequest,
                             List.of(), Map.of()));
                     return;

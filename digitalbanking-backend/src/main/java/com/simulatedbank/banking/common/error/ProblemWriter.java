@@ -44,6 +44,8 @@ public class ProblemWriter {
 
     public ResponseEntity<ProblemResponse> response(ProblemResponse problem) {
         log(problem);
+        // The outer correlation filter owns the MVC response header. Adding it to this
+        // ResponseEntity would make the servlet container append a duplicate value.
         return ResponseEntity.status(problem.status()).headers(headers(problem)).body(problem);
     }
 
@@ -64,6 +66,7 @@ public class ProblemWriter {
         response.setStatus(problem.status());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         HttpHeaders headers = headers(problem);
+        headers.set("X-Correlation-ID", problem.correlationId());
         if (retryAfterSeconds != null) {
             headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString());
         }
@@ -76,7 +79,6 @@ public class ProblemWriter {
     private HttpHeaders headers(ProblemResponse problem) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PROBLEM_JSON);
-        headers.set("X-Correlation-ID", problem.correlationId());
         if (problem.status() == 401) {
             headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"digital-banking\"");
         }

@@ -103,7 +103,8 @@ public class SecurityFilterChainConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/fraud-flags/*/review").hasAuthority("FRAUD_REVIEW")
                         .requestMatchers(HttpMethod.GET, "/api/v1/health").hasAnyRole("ADMIN", "AUDITOR")
                         .anyRequest().authenticated());
-        http.addFilterBefore(new SessionAuthenticationFilter(authenticators, writer), CsrfFilter.class)
+        http.addFilterBefore(new SessionAuthenticationFilter(authenticators, writer,
+                        properties.security().cookie().name()), CsrfFilter.class)
                 .addFilterBefore(new RequestBodyLimitFilter(properties.security().http().maxRequestBodyBytes(), writer),
                         SessionAuthenticationFilter.class)
                 .addFilterAfter(new RequestRateLimitFilter(limiter, properties, writer), SessionAuthenticationFilter.class);

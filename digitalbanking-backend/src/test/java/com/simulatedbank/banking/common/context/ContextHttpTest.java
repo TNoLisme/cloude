@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.simulatedbank.banking.common.config.RequestContextConfig;
+import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.common.error.GlobalExceptionHandler;
 import com.simulatedbank.banking.common.error.ProblemWriter;
@@ -35,12 +36,14 @@ class ContextHttpTest {
     @Autowired MockMvc mvc;
 
     @Test
-    void successValidationMvcAndSecurityFailuresShareTheOuterTrace() throws Exception {
-        for (String route : List.of("/fixture/ok", "/fixture/throw", "/fixture/missing", "/fixture/private")) {
+    void successMvcBusinessErrorAndSecurityFailuresReturnExactlyOneOuterTrace() throws Exception {
+        for (String route : List.of("/fixture/ok", "/fixture/business", "/fixture/throw",
+                "/fixture/missing", "/fixture/private")) {
             var result = mvc.perform(get(route).header("X-Correlation-ID", "flow:shared")).andReturn();
-            assertThat(result.getResponse().getHeader("X-Correlation-ID")).isEqualTo("flow:shared");
+            assertThat(result.getResponse().getHeaders("X-Correlation-ID")).containsExactly("flow:shared");
             assertThat(result.getResponse().getStatus()).isEqualTo(switch (route) {
                 case "/fixture/ok" -> 200;
+                case "/fixture/business" -> 409;
                 case "/fixture/throw" -> 500;
                 case "/fixture/missing" -> 404;
                 default -> 401;
@@ -88,6 +91,11 @@ class ContextHttpTest {
             assertThat(MDC.get("correlationId")).isEqualTo(context.correlationId());
             assertThat(MDC.get("requestId")).isEqualTo(context.requestId());
             return Map.of("correlationId", context.correlationId(), "requestId", context.requestId());
+        }
+
+        @GetMapping("/fixture/business")
+        void businessFailure() {
+            throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
         }
 
         @GetMapping("/fixture/async")

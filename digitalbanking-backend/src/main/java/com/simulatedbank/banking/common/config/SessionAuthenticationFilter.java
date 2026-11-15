@@ -24,10 +24,13 @@ final class SessionAuthenticationFilter extends OncePerRequestFilter {
     static final String COOKIE_AUTH = SessionAuthenticationFilter.class.getName() + ".cookie";
     private final ObjectProvider<SessionAuthenticator> authenticators;
     private final ProblemWriter writer;
+    private final String cookieName;
 
-    SessionAuthenticationFilter(ObjectProvider<SessionAuthenticator> authenticators, ProblemWriter writer) {
+    SessionAuthenticationFilter(ObjectProvider<SessionAuthenticator> authenticators, ProblemWriter writer,
+            String cookieName) {
         this.authenticators = authenticators;
         this.writer = writer;
+        this.cookieName = cookieName;
     }
 
     @Override
@@ -39,7 +42,7 @@ final class SessionAuthenticationFilter extends OncePerRequestFilter {
         }
         var headers = Collections.list(request.getHeaders("Authorization"));
         var cookies = request.getCookies() == null ? List.<Cookie>of() : Arrays.stream(request.getCookies())
-                .filter(cookie -> cookie.getName().equals("DB_SESSION")).toList();
+                .filter(cookie -> cookie.getName().equals(cookieName)).toList();
         if (headers.isEmpty() && cookies.isEmpty()) {
             chain.doFilter(request, response);
             return;
