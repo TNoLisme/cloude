@@ -62,7 +62,7 @@ class LimitPersistenceIT {
     }
 
     @Test
-    void upgradeFromV2PreservesExistingAuditAndInstallsV3() throws Exception {
+    void upgradeFromV2PreservesExistingAuditAndInstallsLimitMigrations() throws Exception {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              var statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE limit_upgrade");
@@ -75,7 +75,7 @@ class LimitPersistenceIT {
         upgradeJdbc.execute("COMMENT ON TABLE banking.audit_log IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
         assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking.audit_log'::regclass)", String.class))
                 .isEqualTo("preexisting baseline");

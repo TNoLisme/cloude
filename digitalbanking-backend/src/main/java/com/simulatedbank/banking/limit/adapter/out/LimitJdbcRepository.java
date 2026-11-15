@@ -3,6 +3,7 @@ package com.simulatedbank.banking.limit.adapter.out;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitUsage;
 import com.simulatedbank.banking.limit.domain.LimitAmounts;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -81,6 +82,54 @@ public class LimitJdbcRepository {
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY account_id NULLS FIRST
                 """, this::configuration, customerId, sourceAccountId, queryTime, queryTime);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Instant transactionStart() {
+        if (!"read committed".equals(jdbc.queryForObject("SHOW transaction_isolation", String.class))) {
+            throw new IllegalArgumentException("Limit enforcement requires READ COMMITTED isolation");
+        }
+        return jdbc.queryForObject("SELECT transaction_timestamp()", (rs, row) -> rs.getTimestamp(1).toInstant());
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public LimitUsage lockUsage(long customerId, Long accountId, LocalDate date) {
+        if (accountId == null) {
+            jdbc.update("""
+                    INSERT INTO banking.limit_usage(customer_id, account_id, usage_date)
+                    VALUES (?, NULL, ?)
+                    ON CONFLICT (customer_id, usage_date) WHERE account_id IS NULL DO NOTHING
+                    """, customerId, date);
+        } else {
+            jdbc.update("""
+                    INSERT INTO banking.limit_usage(customer_id, account_id, usage_date)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (account_id, usage_date) WHERE account_id IS NOT NULL DO NOTHING
+                    """, customerId, accountId, date);
+        }
+        var rows = jdbc.query("""
+                SELECT * FROM banking.limit_usage
+                WHERE customer_id = ? AND account_id IS NOT DISTINCT FROM ?::bigint AND usage_date = ?
+                FOR UPDATE
+                """, this::usage, customerId, accountId, date);
+        if (rows.size() != 1) {
+            throw new IllegalStateException("Usage scope does not match caller customer/account");
+        }
+        return rows.getFirst();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void incrementUsage(LimitUsage usage, BigDecimal amount, BigDecimal dailyLimit) {
+        int updated = jdbc.update("""
+                UPDATE banking.limit_usage
+                SET used_amount = used_amount + ?, transfer_count = transfer_count + 1, updated_at = now()
+                WHERE usage_id = ? AND customer_id = ? AND account_id IS NOT DISTINCT FROM ?::bigint
+                  AND usage_date = ? AND (?::numeric IS NULL OR used_amount + ? <= ?)
+                """, amount, usage.usageId(), usage.customerId(), usage.accountId(), usage.usageDate(),
+                dailyLimit, amount, dailyLimit);
+        if (updated != 1) {
+            throw new IllegalStateException("Checked usage no longer permits completion");
+        }
     }
 
     private LimitConfiguration configuration(ResultSet rs, int row) throws SQLException {
