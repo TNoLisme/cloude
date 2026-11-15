@@ -2,6 +2,7 @@ package com.simulatedbank.banking.common.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.simulatedbank.banking.support.CommonTestApplication;
 import com.simulatedbank.banking.common.config.AppProperties;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -14,7 +15,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+@SpringBootTest(classes = CommonTestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"

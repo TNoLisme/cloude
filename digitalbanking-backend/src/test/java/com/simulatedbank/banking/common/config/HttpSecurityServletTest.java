@@ -2,6 +2,7 @@ package com.simulatedbank.banking.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.simulatedbank.banking.support.CommonTestApplication;
 import jakarta.servlet.ServletContext;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
@@ -17,7 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.filter.CorsFilter;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+@SpringBootTest(classes = CommonTestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
