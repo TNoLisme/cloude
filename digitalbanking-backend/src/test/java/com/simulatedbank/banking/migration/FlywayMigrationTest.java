@@ -18,4 +18,24 @@ class FlywayMigrationTest {
             assertThat(sql).doesNotContain("foundation_probe");
         }
     }
+
+    @Test
+    void identityMigrationDeclaresAllIdentityAndRbacTables() throws IOException {
+        try (var stream = getClass().getClassLoader()
+                .getResourceAsStream("db/migration/V2__create_identity_and_rbac_tables.sql")) {
+            assertThat(stream).isNotNull();
+            var sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            for (String table : new String[] {
+                    "app_user", "device", "session", "auth_challenge", "auth_attempt",
+                    "password_history", "role", "permission", "user_role", "role_permission",
+                    "user_privilege"}) {
+                assertThat(sql).contains("CREATE TABLE banking." + table + " (");
+            }
+            // Bảng customer thuộc module customer (V3), không nằm trong V2.
+            assertThat(sql).doesNotContain("CREATE TABLE banking.customer");
+            // Partial unique: một challenge step-up active cho mỗi (idempotency_key, request_hash).
+            assertThat(sql).contains("uq_auth_challenge_active_stepup");
+            assertThat(sql).contains("WHERE purpose = 'TRANSFER_STEP_UP'");
+        }
+    }
 }

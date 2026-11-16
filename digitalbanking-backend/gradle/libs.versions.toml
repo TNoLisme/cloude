@@ -11,6 +11,7 @@ archunit = "1.4.0"
 wiremock = "3.12.1"
 jacoco = "0.8.12"
 jcs = "1.1"
+yubico-webauthn = "2.10.1"
 
 [libraries]
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
@@ -28,6 +29,7 @@ micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-p
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
 bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 jcs = { module = "io.github.erdtman:java-json-canonicalization", version.ref = "jcs" }
+yubico-webauthn-server-core = { module = "com.yubico:webauthn-server-core", version.ref = "yubico-webauthn" }
 
 mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
 mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
