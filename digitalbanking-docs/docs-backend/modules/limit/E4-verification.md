@@ -1,105 +1,97 @@
-# E4 — Báo cáo kiểm chứng LIM-07/LIM-08 và bàn giao LIM-09/LIM-10
+# E4 — Báo cáo triển khai và kiểm chứng LIM-07–LIM-10
 
-> **Ngày kiểm chứng:** 15/11/2026
-> **Cập nhật báo cáo:** 16/11/2026
-> **Phạm vi:** Giao diện nội bộ quản lý vòng đời cấu hình hạn mức — LIM-07/08
-> **Trạng thái:** LIM-07/08 hoàn tất; 159 kiểm thử liên quan đạt; build đóng gói thành công; converge độc lập PASS, 0 phát hiện; LIM-09/10 hoãn, chưa nghiệm thu
+> **Lượt provider:** 15/11/2026 — LIM-07/08
+> **Lượt endpoint:** 16/11/2026 — LIM-09/10
+> **Trạng thái hiện tại:** Code hai endpoint và approval LIMIT_CHANGE thật đã triển khai; 294 kiểm thử liên quan đạt; build thành công; tự converge PASS sau2 vòng, 0 gap cuối. Nghiệm thu với identity/customer/account/GET E3/transfer thật còn **Blocked**. Không dùng subagent ở lượt endpoint.
 
-## 1. Nguồn và quyết định đã được người dùng chốt
+## 1. Nguồn, phạm vi và quyết định
 
-Thứ tự ưu tiên: `docs-common/01–11` → `docs-common/design/` → tài liệu backend. Căn cứ: SRS FR-032/033/035/051, UC-011, AC-017/019/028; Database §4.5.1–3; Architecture §6–8; API §8.5; Consistency §9.2 và DELIVERY-PLAN §7/9.
+Ưu tiên docs-common/01–11 → design/05 → backend. Căn cứ: SRS FR-032/033/035/051, UC-011, AC-017/019/028; Database §4.5; Architecture §6–8; API §6.5/8.5; DESIGN-MOD-05 §5/6/7/10/11/12/13; DELIVERY-PLAN E4.
 
-Bốn quyết định tại bước clarify:
+Lượt 15/11 hoàn tất provider LIM-07/08; lúc đó hoãn endpoint theo clarify. Lượt 16/11 user yêu cầu làm tiếp theo contract, đồng ý triển khai approval_request/workflow LIMIT_CHANGE thật hẹp trong admin. Các quyết định hiện hành:
 
-1. Hoàn tất giao diện nội bộ LIM-07/08; hoãn tích hợp LIM-09/10 vì checkout chưa có các thành phần production `admin`, `identity`, `account`, `transfer` và API E3. Không dựng thành phần production giả để kết luận tích hợp đã hoàn tất.
-2. Max từng lần/ngày phải được cấu hình rõ ràng, không tự đặt mặc định nghiệp vụ. Thiếu hoặc sai policy thì từ chối tạo/duyệt đề xuất.
-3. Từ chối `effectiveFrom` trong tương lai; cấu hình có hiệu lực ngay khi duyệt. Không thêm scheduler hoặc áp dụng hồi tố.
-4. Chặn kích hoạt scope account chưa được theo dõi nếu customer đã dùng hạn mức trong ngày quyết định; giữ đề xuất chờ duyệt để có thể duyệt vào ngày mới chưa có giao dịch. Không reset hoặc bù lại usage từ lịch sử.
+- Policy max từng lần/ngày phải có cấu hình rõ, không default nghiệp vụ. Thiếu/sai policy từ chối tạo/duyệt; reject vẫn dùng được.
+- Từ chối effectiveFrom tương lai; config có hiệu lực ngay khi duyệt. Không scheduler/backdate.
+- D4: account scope chưa có cấu hình đang hiệu lực không được kích hoạt nếu customer đã dùng amount/count trong ngày; giữ pending để có thể duyệt ngày mới, không reset/backfill.
+- D5: maker tự duyệt trả **409 ROLE_CONFLICT**; đã đồng bộ SRS UC-011 và07. Thiếu quyền vẫn403.
+- Maker challenge bind actor/action/hash payload chuẩn hóa, chưa có approvalId; checker bind thêm approvalId/decision/proposal hash. Không tạo approval trước step-up.
+- Không subagent reviewer ở lượt16/11; tự chạy Spec Kit converge. Không tự commit/push lượt này.
 
-Hồ sơ SDD local, được ignore theo cấu hình repo hiện có: [spec](specs/003-controlled-limit-changes/spec.md), [plan](specs/003-controlled-limit-changes/plan.md), [research](specs/003-controlled-limit-changes/research.md), [hợp đồng nội bộ](specs/003-controlled-limit-changes/contracts/limit-changes.md), [tasks](specs/003-controlled-limit-changes/tasks.md). Checklist chất lượng đặc tả đạt **16/16**. Constitution còn là template chưa điền nên bỏ qua kiểm tra nguyên tắc của template; không có extension hook.
+Hồ sơ Spec Kit: [lượt provider](specs/003-controlled-limit-changes/spec.md), [lượt endpoint](specs/004-limit-admin-integration/spec.md), [plan](specs/004-limit-admin-integration/plan.md), [candidate contracts](specs/004-limit-admin-integration/contracts/integration.md), [tasks](specs/004-limit-admin-integration/tasks.md). Interface mới là candidate cần owner review; không tự ghi các thành viên khác đã phê duyệt.
 
-## 2. Phần đã triển khai
+## 2. Phần code đã thực hiện
 
-- `LimitChanges.prepare` kiểm tra ID scope/maker/approval dương, VND, tiền biểu diễn được bằng `NUMERIC(19,2)`, hạn mức từng lần ≤ hạn mức ngày và policy cấu hình. Tạo version tiếp theo với trạng thái `PENDING_APPROVAL`, giữ nguyên cấu hình đang áp dụng và toàn bộ usage. Liên kết `approval_id` khác null là duy nhất; đề xuất trùng bị từ chối mà không làm hỏng transaction của caller.
-- `approve` kiểm tra lại policy/thời gian, yêu cầu checker khác maker và chỉ xử lý đề xuất pending. Trong cùng transaction, bản active cũ chuyển `SUPERSEDED`, bản pending chuyển `ACTIVE` với thời điểm hiệu lực là thời điểm quyết định. `reject` giữ nguyên active; các trường checker/thời điểm duyệt trên config bị từ chối giữ null theo tài liệu 04. Thông tin người từ chối thuộc approval/audit do admin quản lý.
-- Mọi mutation yêu cầu transaction vật lý đang hoạt động, có quyền ghi của caller, propagation `MANDATORY` và isolation `READ COMMITTED`. Chặn gọi ngoài transaction, trong transaction chỉ đọc hoặc từ `afterCommit`. Lỗi từ chối nghiệp vụ cho phép caller ghi nhận việc từ chối; lỗi kỹ thuật/audit rollback toàn bộ thay đổi.
-- Khóa advisory theo customer được dùng chung với E2, lấy trước các khóa usage của E2; thao tác cấu hình còn khóa scope account tương ứng. Thay đổi cấu hình không tạo, reset hoặc tăng usage. D4 kiểm tra cả số tiền và số giao dịch của customer theo `app.timezone`; lịch sử account đã hết hiệu lực không giúp vượt qua kiểm tra này.
-- Migration V5 giữ nguyên checksum V3/V4, thêm unique index cho `approval_id` khác null và chỉ cấp `UPDATE` các cột phục vụ vòng đời cấu hình. Không cấp sửa scope, số tiền, version, maker, liên kết approval hoặc quyền xóa lịch sử. Fixture E1 được sửa để mỗi version dùng approval ID riêng; kiểm thử nâng cấp migration tính thêm V5.
-- Policy dùng `app.limit.policy.max-per-transaction-vnd` và `app.limit.policy.max-daily-vnd`, tương ứng biến môi trường `APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND` và `APP_LIMIT_POLICY_MAX_DAILY_VND`. Mặc định để trống: prepare/approve trả `SERVICE_UNAVAILABLE`. Vượt max trả `LIMIT_OUT_OF_POLICY`; đề xuất sai dữ liệu trả `VALIDATION_ERROR`. Reject vẫn hoạt động khi thiếu policy.
-
-## 3. Phạm vi kiểm thử đã thực hiện
-
-| Nội dung kiểm chứng | Bằng chứng thực thi |
+| Phần | Implementation và hành vi |
 |---|---|
-| Pending không đổi active/usage; cấp version, giữ lịch sử và chặn liên kết approval trùng | `LimitChangesIT` |
-| Validation, policy thiếu/sai, đúng/vượt ngưỡng; approve kiểm tra lại policy | `LimitChangePolicyTest`, `LimitChangesIT` |
-| Approve/reject; tự duyệt, approval không tìm thấy, quyết định lặp; đề xuất/quyết định đầu tiên chạy đồng thời | `LimitChangesIT` |
-| Hạ hạn mức không reset usage; enforcement E2 từ chối chi thêm khi đã vượt hạn mức mới | `LimitChangesIT` |
-| Scope account mới sau khi customer đã dùng amount/count; lịch sử account hết hiệu lực; duyệt vào ngày mới chưa dùng | `LimitChangesIT` |
-| Activation chờ E2 hoàn tất dưới khóa PostgreSQL; T2 bắt đầu trước activation không được bỏ qua account scope mới | `LimitChangesIT` |
-| Rollback do lỗi caller; commit cùng AuditRecorder thật; lỗi validation audit và lỗi quyền ghi SQL thật | `LimitChangesIT` |
-| Transaction vật lý, MANDATORY, chỉ đọc, isolation, afterCommit và quyền cột của DB app role | `LimitChangesIT` |
-| Hồi quy liên quan đến dữ liệu, chọn cấu hình, enforcement, ngày nghiệp vụ và ranh giới module | `LimitPersistenceIT`, `LimitRulesIT`, `LimitEnforcementIT`, `LimitBusinessDateIT`, `LimitRuleServiceTest`, `ModuleBoundaryArchTest` |
+| LIM-07/08 | LimitChanges prepare/approve/reject, version history, validation/policy, maker != checker, giữ usage; shared customer/account lock với E2 |
+| LIM-09 | POST `/api/v1/admin/limits`: staff permission/CSRF/step-up; 201 ApprovalSummary + Location `/api/v1/admin/approvals/{id}`; approval PENDING + config PENDING_APPROVAL + C2 audit cùng transaction |
+| LIM-10 | POST `/api/v1/admin/limits/{approvalId}/approve`: staff/CHECKER, lock/recheck pending, consume challenge, approve/reject, approval APPLIED/REJECTED + config + C2 audit cùng transaction; 200 ApprovalDetail |
+| Admin persistence | V6 tạo approval_request thật đúng04; chỉ workflow LIMIT_CHANGE, không generic GET approvals/role/retention. Quyền cột tối thiểu, không DELETE/maker-target rewrite |
+| Public provider API | Limit validateChange/current/approve(expectedVersion); identity StepUpChallengePort/StaffDirectory, customer CustomerQuery, account AccountQuery; admin chỉ import provider.api, không đọc bảng chéo |
+| Audit | AuditModuleApi facade, AuditRecorder thật: C2 MANDATORY fail-closed; self-denial C3 REQUIRES_NEW, reasonCode-only allowlist. C3 lỗi fallback log/metric, vẫn deny |
 
-Kiểm thử đồng thời dùng tối đa hai worker. Ca lỗi SQL của audit kiểm tra cụ thể `SQLState 42501`. Không chạy full regression của các module không liên quan.
+Các mutation dùng READ COMMITTED. Maker requestChallenge ở ngoài transaction nghiệp vụ; verified consume tham gia transaction caller. Decision khóa approval trước, kiểm config current version dưới limit scope lock; proposal stale bị409, giữ pending. Lost race không consume challenge của checker thua. Body ID/Money là JSON string; money fixed2, ID trong BIGINT, enum quyết định dạng string, extra fields bị từ chối.
 
-## 4. Thành phần thật, mock và dữ liệu giả lập trong kiểm thử
+Reason/note giới hạn500, từ chối control characters và mẫu PII/secret rõ ràng; không đưa free text vào audit/log. Bộ lọc không phải cơ chế phát hiện mọi loại PII; contract vẫn cấm caller gửi PII/secret. Actor/displayName lấy từ principal và StaffDirectory, không bịa displayName production.
 
-| Thành phần | Cách kiểm chứng | Giới hạn của bằng chứng |
+Policy: `app.limit.policy.max-per-transaction-vnd`, `app.limit.policy.max-daily-vnd`; env tương ứng `APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND`, `APP_LIMIT_POLICY_MAX_DAILY_VND`. Mặc định trống → SERVICE_UNAVAILABLE; vượt max → LIMIT_OUT_OF_POLICY.
+
+## 3. Thành phần thật, fake/mock và giới hạn bằng chứng
+
+| Thành phần | Cách test | Chứng minh / chưa chứng minh |
 |---|---|---|
-| PostgreSQL 16, Flyway, constraint, quyền DB và khóa | Chạy thật qua Testcontainers, dùng app role và các transaction độc lập | Không dùng DB mock để chứng minh constraint, locking hoặc rollback |
-| `LimitChanges`, `LimitEnforcement`, repository và `AuditRecorder` | Gọi implementation thật trong Spring context; các câu SQL chạy trên PostgreSQL thật | Đây là tích hợp giữa các thành phần đã có, chưa phải toàn luồng REST/admin/transfer |
-| Caller admin, maker/checker và approval | Test harness dùng `TransactionTemplate` để gọi provider; truyền ID test cố định | Không có admin/identity/approval workflow thật; ID test không chứng minh đối tượng tồn tại, ownership hoặc quyền truy cập |
-| Dữ liệu usage trước khi đổi cấu hình | Một số ca tạo usage bằng fixture trực tiếp; các ca phối hợp E2 gọi enforcement thật | Fixture chỉ dựng trạng thái đầu vào, không chứng minh giao dịch tiền/ledger đã chạy |
-| Chuyển ngày trong ca D4 | `@MockitoSpyBean` trên repository; chỉ stub `currentTime()` sang ngày tiếp theo | Thao tác cấu hình/usage/transaction vẫn chạy thật; thời gian trong ca này được điều khiển để kiểm tra biên ngày |
-| Ngày nghiệp vụ E2 trong `LimitBusinessDateIT` | Một số ca stub nguồn `transactionStart()`; có ca riêng kiểm tra SQL lấy thời điểm transaction thật | Không coi các ca thời gian giả lập là bằng chứng cho đồng hồ vận hành thực tế |
-| Policy | `MockEnvironment` trong unit test; integration test cung cấp property test và thay property source để kiểm tra tái validation | Các giá trị max chỉ là dữ liệu test, không phải default nghiệp vụ hoặc bằng chứng hệ thống có hot reload policy |
-| `LimitRuleServiceTest` của E1 | Unit test dùng repository mock | Chỉ chứng minh logic chọn/kiểm tra rule; bằng chứng persistence nằm ở các integration test PostgreSQL |
+| PostgreSQL16, Flyway V1–V6, constraints, role/grants, locks | Testcontainers thật, app/migrator role, transaction/connection độc lập | Kiểm chứng persistence, khóa và rollback của code đang có; không dùng H2/mock cho invariant |
+| Admin endpoint/service/store, limit providers, AuditRecorder/facade | Implementation thật, MockMvc đi qua Spring Security/common filters, SQL thật | Approval/config/audit cùng commit/rollback; concurrency, stale version, usage và HTTP mapping |
+| SessionAuthenticator | Bean fake chỉ ở TestConfiguration; ánh xạ bearer/cookie test sang Session snapshot | Test wiring principal, permission, CSRF thật; **không** chứng minh login/session expiry/revocation production |
+| StepUpChallengePort | TestPorts fake; requestChallenge tạo fixture PENDING, test đánh dấu VERIFIED, consume kiểm vector bằng SQL trên `e4_test.challenge` | Chứng minh consumer truyền binding đúng và consume fixture JOIN caller/rollback; **không** có OTP/FIDO/identity engine thật |
+| StaffDirectory, CustomerQuery, AccountQuery | Fake projection/ID test; unit test missing-provider dùng mock | Test consumer xử lý existence/ownership/missing dependency; **không** chứng minh DB lookup/data scope thực của các provider |
+| Ngày nghiệp vụ | Lượt provider có spy nguồn transactionStart/currentTime cho ca biên ngày, và ca SQL thời gian thật | Chỉ điều khiển seam thời gian; config/usage/transaction vẫn PostgreSQL thật |
+| Policy/usage | MockEnvironment trong unit test; property test và một số fixture usage trực tiếp; ca khác gọi E2 thật | Không phải max nghiệp vụ production, hot reload hoặc bằng chứng transfer/ledger thật |
 
-Không thêm mock/stub thay thế các dependency còn thiếu vào production. Build và test pass không đồng nghĩa những dependency đó đã được tích hợp.
+Không có fake provider bean production hoặc bảng customer/identity placeholder trong migration. Production chưa có session SPI thì401; đã auth mà thiếu provider bắt buộc thì503, không tạo/duyệt bằng đường giả.
 
-## 5. Lệnh và kết quả
+## 4. Kiểm thử và kết quả
 
-Chạy từ `digitalbanking-backend/`, Java 21, Docker/Testcontainers PostgreSQL 16:
+Lượt provider15/11: **159 tests pass**, package build thành công; reviewer độc lập lúc đó converge0 findings, 15/15 task. Đây là bằng chứng lịch sử của LIM-07/08, không tự nghiệm thu endpoint mới.
 
-- Baseline chỉ `limit.*`: **BUILD SUCCESSFUL**, 108 kiểm thử đạt, không failure/error/skip.
-- Test đỏ ban đầu `LimitChangesIT.validProposalIsPending`: fail đúng vì chưa có bean `LimitChanges`.
-- Regression `transactionStartedBeforeActivationCannotSkipNewAccountScope`: trước sửa kỳ vọng `NOT_CONFIGURED` nhưng nhận `PASS`. Sau sửa, kiểm tra snapshot dưới khóa dùng chung từ chối toàn bộ check nếu có scope mới mà T2 cũ không được phép bỏ qua.
-- Lượt cuối: `./gradlew test --tests 'com.simulatedbank.banking.limit.*' --tests 'com.simulatedbank.banking.architecture.ModuleBoundaryArchTest' --offline --console=plain --max-workers=2` → **BUILD SUCCESSFUL (46 giây), 159 kiểm thử / 0 failure / 0 error / 0 skip**.
-- Đóng gói: `./gradlew build -x test --offline --console=plain --max-workers=2` → **BUILD SUCCESSFUL (1 giây)**. Không chạy lại full regression không liên quan.
-- `git diff --check` và `git diff --cached --check`: đạt trước review cuối.
+Lượt endpoint16/11:
 
-XML kết quả: `digitalbanking-backend/build/test-results/test/TEST-*.xml`; báo cáo HTML: `digitalbanking-backend/build/reports/tests/test/index.html`. Các lần chạy sau có thể ghi đè kết quả này. Ngày 16/11/2026 đã đọc lại XML và xác nhận tổng 159 kiểm thử, không failure/error/skip.
+- Test đỏ đầu tiên: authenticated POST maker kỳ vọng503 khi chưa có provider; trước controller nhận404. Sau implementation ca fail-closed đạt.
+- Test HTTP/PostgreSQL gồm: maker pending/Location/audit; thiếu step-up không approval/config; role/privilege/CSRF; strict ID/Money/unknown fields/PII; binding đổi actor/payload/decision; expired/single-use challenge; approve/reject/self/repeat; stale config; D4; lowered limit giữ usage và E2 chặn chi thêm; hai checker cạnh tranh; audit SQL failure rollback approval/config/consume fixture; self-denial audit và fallback khi audit lỗi; DB grants/constraints.
+- Scoped command từ `digitalbanking-backend/`: `./gradlew test --tests 'com.simulatedbank.banking.admin.*' --tests 'com.simulatedbank.banking.limit.*' --tests 'com.simulatedbank.banking.audit.application.AuditWriterIT' --tests 'com.simulatedbank.banking.audit.domain.AuditEventValidatorTest' --tests 'com.simulatedbank.banking.audit.domain.AuditSnapshotContractTest' --tests 'com.simulatedbank.banking.common.config.HttpSecurityTest' --tests 'com.simulatedbank.banking.architecture.ModuleBoundaryArchTest' --offline --console=plain --max-workers=2` → **BUILD SUCCESSFUL (54 giây), 294 tests / 0 failure / 0 error / 0 skip**.
+- Package: `./gradlew build -x test --offline --console=plain --max-workers=2` → **BUILD SUCCESSFUL (1 giây)**.
+- Chỉ chạy scope liên quan, tối đa2 worker; không full regression của module khác.
 
-Các đường dẫn `/tmp/limit-e4-baseline.log`, `/tmp/limit-e4-red.log`, `/tmp/limit-e4-stale-red.log`, `/tmp/limit-e4-scoped.log`, `/tmp/limit-e4-package.log` là log tạm của phiên triển khai, không nằm trong commit; tại thời điểm cập nhật báo cáo, log scoped/package không còn trên filesystem. Không dùng các đường dẫn tạm làm bằng chứng lưu trữ lâu dài.
+XML: `digitalbanking-backend/build/test-results/test/TEST-*.xml`; HTML: `digitalbanking-backend/build/reports/tests/test/index.html`. Log tạm lượt16/11: `/tmp/limit-e4-api-red.log`, `/tmp/limit-e4-api-focused.log`, `/tmp/limit-e4-api-scoped.log`, `/tmp/limit-e4-api-package.log`; không commit log tạm. Log lượt15/11 có thể đã mất; các lần test sau ghi đè XML, không dùng đường dẫn tạm làm archive lâu dài.
 
-## 6. Dependency còn thiếu và phần chưa triển khai/nghiệm thu
+## 5. Dependency còn Blocked — owner và điều kiện đóng
 
-| Dependency hoặc phạm vi còn thiếu | Phần chưa làm/chưa kiểm chứng | Cách xử lý hiện tại và điều kiện hoàn tất |
-|---|---|---|
-| Production `admin` và workflow `approval_request` | LIM-09/10: endpoint maker/checker, lưu/quyết định approval thật và tính nguyên tử approval + config + audit qua endpoint | Hoãn theo clarify. Test harness chỉ gọi provider; owner admin cần cung cấp workflow và tích hợp thật |
-| Production `identity` | Session, quyền maker/checker, CSRF, verified step-up và mapping HTTP tự duyệt D5 | Provider chỉ chặn checker trùng maker từ ID được truyền; chưa chứng minh xác thực/phân quyền. Tích hợp identity thật trước nghiệm thu endpoint |
-| Dữ liệu/module customer, account, app_user và approval | Kiểm tra đối tượng tồn tại, ownership và FK liên module | Caller tương lai phải xác thực reference/ownership; thêm và validate FK khi migration của owner đã sẵn sàng. Không tạo bảng placeholder |
-| Production `transfer` và các thành phần tiền/ledger liên quan | Debit/credit/ledger thật, trạng thái terminal, replay/recovery; tác động thay đổi hạn mức qua giao dịch tiền thật | Chỉ kiểm chứng provider E2 đang có; chưa nghiệm thu LIM-05 hoặc acceptance tích hợp của LIM-10 |
-| API tra cứu E3 | `GET /limits`, các field remaining và response sau thay đổi cấu hình | Chỉ kiểm tra query/rule nội bộ; chưa kiểm chứng response/remaining của API thật |
-| Policy max nghiệp vụ của môi trường triển khai | Giá trị max cụ thể và seed/default nghiệp vụ | Không tự chốt; phải cấp hai cấu hình policy trước prepare/approve. Giá trị trong test không dùng làm baseline triển khai |
+**Ngày theo dõi: 16/11/2026.** Không có ngày hoàn thành của owner được tự đặt trong báo cáo.
 
-Khi tích hợp, admin phải kiểm tra customer/account/ownership, quyền, CSRF và step-up đã verify; sở hữu/khóa approval thật; gọi provider; cập nhật approval và ghi audit trong cùng transaction. Provider không sở hữu `approval_request`, không tự xác thực quyền và không tự ghi audit cho caller.
+| Dependency | Trạng thái và phần chưa nghiệm thu | Owner/phối hợp theo tài liệu11 | Điều kiện đóng |
+|---|---|---|---|
+| Identity/session/step-up/StaffDirectory thật | Blocked: hiện chỉ có candidate API và fake trong test; chưa login/OTP/FIDO/expiry/revoke/consume thực | Đạt; phối hợp admin/limit | Owner review interface/vectors, cung cấp bean production; chạy lại contract suite và HTTP integration với identity thật |
+| Customer/account thật | Blocked: chưa lookup reference/ownership/data scope từ DB thật | Đạt | Cung cấp query implementation, chạy not-found/ownership/IDOR và staff scope thật |
+| Owner review candidate contracts | Blocked: user chốt hướng triển khai, chưa có biên bản các owner cùng review PR | Đạt (identity/customer/account/admin), Vũ (limit), Thịnh (audit) | Review signature/DTO/tx/error/vectors và ghi nhận compatibility; không tự sign-off thay người khác |
+| FK liên module/lịch sử | Blocked: app_user/customer/account chưa có; limit.approval_id có dữ liệu lịch sử nên chưa validate FK tự động | Owner dữ liệu liên quan | Migration owner thật, đối chiếu/sửa reference lịch sử bằng quy trình được chốt, thêm/validate FK. Admin TX mới dùng approval thật nhưng không thay DB referential integrity toàn bộ |
+| GET E3/remaining response | Blocked: chưa có API thật | Vũ; phối hợp FE Thắng | Cung cấp E3, kiểm response/remaining không âm sau duyệt; internal LimitRules test không thay API acceptance |
+| Transfer/account/ledger thật | Blocked: chưa chứng minh debit/credit/ledger, terminal replay/recovery hoặc tác động qua transfer endpoint | Vũ, Đạt, Phương | Ghép consumer thật và chạy các ca limit/usage/retry/recovery/rollback theo E2/DELIVERY-PLAN |
+| Policy max production | Chưa chốt giá trị max nghiệp vụ/seed | BA và owner limit | Cấp cấu hình max rõ ràng; không lấy số1000/2000 trong test làm baseline triển khai |
 
-LIM-09/10 **chưa triển khai và chưa nghiệm thu**. Mã `ROLE_CONFLICT` nội bộ không phải bằng chứng đã chốt mapping HTTP D5. Các phần hoãn không được đóng bằng kết quả build, mock hoặc test harness.
+Admin approval_request/workflow LIMIT_CHANGE **đã có implementation thật** ở lượt này, không còn là dependency bị hoãn. Các workflow admin ngoài E4 vẫn ngoài phạm vi.
 
-## 7. Giới hạn vận hành cần giữ khi tích hợp
+## 6. Lưu ý khi tích hợp và nghiệm thu
 
-E2 giữ thời điểm đánh giá cố định từ lúc bắt đầu transaction. Nếu T2 bắt đầu trước activation rồi chờ khóa, sau đó phát hiện bất kỳ scope `ACTIVE` đang hiệu lực nào bắt đầu sau thời điểm cố định đó, toàn bộ check phải trả `NOT_CONFIGURED`, kể cả customer scope cũ vẫn đang áp dụng. Cơ chế này ngăn bỏ qua account scope mới và không cấp phép xử lý tiền. Transaction mới sau khi approval commit sẽ dùng cấu hình mới.
+E2 giữ transaction-start instant/business date cố định. Nếu scope mới ACTIVE có hiệu lực sau instant của T2 đang chờ, toàn check trả NOT_CONFIGURED để không bỏ qua scope mới; không cấp phép tiền. Caller transfer không được hiểu NOT_CONFIGURED thành không giới hạn. Transaction mới sau commit dùng cấu hình mới.
 
-Không tuyên bố các request đang chờ luôn được phục vụ liên tục; không có cơ chế activation theo lịch. Caller tích hợp phải xử lý `NOT_CONFIGURED` theo policy đã chốt, không tự hiểu thành không giới hạn.
+GET `/admin/approvals/{id}` trong Location là hợp đồng điều hướng nguồn07; feature này chưa thêm endpoint GET chung. Không tuyên bố toàn E4 đã verified với mọi provider chỉ từ test doubles. Code LIM-09/10 và atomicity approval/config/audit hiện có được kiểm chứng riêng; acceptance dùng provider thật nêu ở §5 còn mở.
 
-## 8. Kết quả converge độc lập
+## 7. Tự converge lượt endpoint
 
-Subagent `limit_e4_reviewer` chạy `speckit-converge` sau implementation. Vòng 1: **CONVERGED — 0 phát hiện** thuộc các nhóm thiếu, một phần, mâu thuẫn hoặc ngoài yêu cầu.
+Tự đối chiếu **12 FR, 4 SC, 9 acceptance scenario, 6 edge case, 12 quyết định thiết kế và 24 task** với code/test hiện tại. Không dùng subagent; constitution còn template nên bỏ qua placeholder, không extension hook.
 
-Reviewer đối chiếu **7 FR, 4 SC, 7 acceptance scenario trong phạm vi, 6 edge case, 12 quyết định thiết kế và 15 task** với source/test/bằng chứng. Các yêu cầu transaction, quyết định cạnh tranh, tái kiểm tra policy, giữ nguyên usage, D4 và bảo vệ T2 bắt đầu trước activation đạt phạm vi đã clarify. Constitution được bỏ qua vì còn là template; không có extension hook.
+- **Vòng1:** 2 gap partial: HIGH về thiếu vector purpose/cross-approval/wire type; MEDIUM về reject vẫn trả result như đã áp dụng. Đã append T023/T024 vào tasks, không sửa intent của spec/plan để che gap.
+- Regression trước sửa chứng minh numeric effectiveFrom nhận428 thay vì400 và reject có result. Đã thêm StrictInstant, StrictDecision test, kiểm SENSITIVE_ACTION ở challenge response, vector sai purpose/approval và chỉ xuất result khi APPLIED.
+- **Vòng2: CONVERGED — 0 gap.** Lượt đánh giá sạch không sửa tasks.md; sau đó phase implement/handoff đánh dấu T022 hoàn tất. **24/24 task xong** trong phạm vi code và consumer verification đã clarify.
 
-Reviewer không chạy lại test rộng, không sửa file; `tasks.md` giữ nguyên từng byte trong lượt converge. Sau báo cáo PASS, agent chính đánh dấu T015 hoàn tất: **15/15 task đã xong**. Không cần vòng sửa tiếp vì converge độc lập không còn phát hiện.
-
-Kết luận nghiệm thu chỉ áp dụng cho **provider LIM-07/08** với 159 kiểm thử đạt và build thành công. LIM-09/10, các tích hợp còn thiếu và review/chấp thuận của con người vẫn được theo dõi riêng.
+Kết quả cuối: 294 tests, 0 failure/error/skip; package BUILD SUCCESSFUL1 giây; JAR có controller thật, không chứa TestPorts/FakeProviders/test schema; admin chỉ phụ thuộc provider.api và common SPI được nguồn cho phép. Không chạy full regression ngoài scope. Acceptance tích hợp các provider thật trong §5 vẫn Blocked, không được đóng bằng fake hoặc converge pass.

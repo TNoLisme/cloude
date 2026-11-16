@@ -74,3 +74,8 @@ Các tên port/chữ ký bên dưới chỉ là đề xuất cũ, không thay h�
 ## Trạng thái provider E4 (15/11/2026)
 
 `LimitChanges` cung cấp prepare/approve/reject nội bộ theo [hướng dẫn module](../limit/README.md#e4--lim-07lim-08-provider) và [bằng chứng E4](../limit/E4-verification.md). LIM-07/08 dùng caller transaction, scope version mới, pending/active/superseded/rejected, explicit policy không default; không ghi usage. Shared customer advisory lock phối hợp với E2. Future effectiveFrom bị từ chối theo clarify; account scope chưa được tracking không kích hoạt sau khi customer đã dùng trong ngày, giữ pending để duyệt ngày mới. LIM-09/10 và các REST API ở mục 3 vẫn chưa triển khai/nghiệm thu; provider không thay auth/approval/audit của admin. FK/ownership vẫn chờ owner thật.
+
+
+### Cập nhật LIM-09/10 (16/11/2026)
+
+Consumer endpoint và approval LIMIT_CHANGE thật đã được triển khai trong admin; limit cung cấp validateChange/current/approve(expectedVersion) qua API, không ghi bảng approval. HTTP/atomicity kiểm chứng với PostgreSQL thật cho approval/config/audit và fake provider identity/customer/account chỉ trong test. Full integration với các provider thật, E3 và transfer còn Blocked; xem [báo cáo E4](../limit/E4-verification.md). Không tiếp tục hiểu “chưa triển khai endpoint” ở ghi chú lịch sử 15/11 là trạng thái hiện tại.

@@ -34,6 +34,15 @@ public class LimitChangeService implements LimitChanges {
     }
 
     @Override
+    @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+    public void validateChange(java.math.BigDecimal perTransaction, java.math.BigDecimal daily, String currency, Instant effectiveFrom) {
+        if (!"VND".equals(currency)) throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        validateAmounts(perTransaction, daily);
+        policy.check(perTransaction, daily);
+        requireNonFuture(effectiveFrom, repository.currentTime());
+    }
+
+    @Override
     public LimitConfiguration prepare(Proposal proposal) {
         requireCallerTransaction();
         if (proposal == null || proposal.customerId() <= 0 || proposal.makerId() <= 0
@@ -59,15 +68,21 @@ public class LimitChangeService implements LimitChanges {
 
     @Override
     public LimitConfiguration approve(long approvalId, long checkerId) {
-        return decide(approvalId, checkerId, true);
+        return decide(approvalId, checkerId, true, false, null);
     }
 
     @Override
     public LimitConfiguration reject(long approvalId, long checkerId) {
-        return decide(approvalId, checkerId, false);
+        return decide(approvalId, checkerId, false, false, null);
     }
 
-    private LimitConfiguration decide(long approvalId, long checkerId, boolean approve) {
+    @Override
+    public LimitConfiguration approve(long approvalId, long checkerId, Integer expectedCurrentVersion) {
+        return decide(approvalId, checkerId, true, true, expectedCurrentVersion);
+    }
+
+    private LimitConfiguration decide(long approvalId, long checkerId, boolean approve,
+            boolean checkVersion, Integer expectedCurrentVersion) {
         requireCallerTransaction();
         if (approvalId <= 0 || checkerId <= 0) throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         var initial = repository.findProposal(approvalId, false)
@@ -88,6 +103,9 @@ public class LimitChangeService implements LimitChanges {
             var active = scope.stream().filter(config -> config.status() == Status.ACTIVE).findFirst().orElse(null);
             boolean effectiveAccount = active != null && !active.effectiveFrom().isAfter(now)
                     && (active.effectiveTo() == null || active.effectiveTo().isAfter(now));
+            if (checkVersion && !java.util.Objects.equals(expectedCurrentVersion, effectiveAccount ? active.version() : null)) {
+                throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
+            }
             if (pending.accountId() != null && !effectiveAccount) {
                 var usage = repository.findUsage(pending.customerId(), null, now.atZone(businessZoneId).toLocalDate());
                 if (usage.isPresent() && (usage.get().usedAmount().signum() != 0 || usage.get().transferCount() != 0)) {

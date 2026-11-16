@@ -55,7 +55,7 @@ class LimitPersistenceIT {
         assertThat(jdbc.queryForObject("SELECT used_amount FROM banking.limit_usage", java.math.BigDecimal.class))
                 .isEqualByComparingTo("0");
         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema='banking'",
-                String.class)).doesNotContain("customer", "account", "app_user", "approval_request");
+                String.class)).contains("approval_request").doesNotContain("customer", "account", "app_user");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.table_constraints "
                 + "WHERE table_schema='banking' AND table_name IN ('limit_config','limit_usage') "
                 + "AND constraint_type='FOREIGN KEY'", Integer.class)).isZero();
@@ -75,7 +75,7 @@ class LimitPersistenceIT {
         upgradeJdbc.execute("COMMENT ON TABLE banking.audit_log IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(3);
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
         assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking.audit_log'::regclass)", String.class))
                 .isEqualTo("preexisting baseline");

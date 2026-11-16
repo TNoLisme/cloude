@@ -30,6 +30,16 @@ public class LimitRuleService implements LimitRules {
     }
 
     @Override
+    public java.util.Optional<com.simulatedbank.banking.limit.api.LimitConfiguration> current(long customerId, Long accountId, Instant asOf) {
+        return repository.findScope(customerId, accountId).stream()
+                .filter(config -> config.customerId() == customerId
+                        && config.status() == com.simulatedbank.banking.limit.api.LimitConfiguration.Status.ACTIVE
+                        && !config.effectiveFrom().isAfter(asOf)
+                        && (config.effectiveTo() == null || config.effectiveTo().isAfter(asOf)))
+                .findFirst();
+    }
+
+    @Override
     public CheckOutcome checkPerTransaction(long customerId, long sourceAccountId, BigDecimal amount, Instant asOf) {
         try {
             LimitAmounts.requireValid(amount, false);

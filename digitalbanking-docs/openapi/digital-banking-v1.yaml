@@ -2644,6 +2644,7 @@ components:
           $ref: '#/components/schemas/Currency'
         effectiveFrom:
           $ref: '#/components/schemas/Instant'
+          description: E4 hiện từ chối thời điểm tương lai; cấu hình có hiệu lực khi checker approve (clarify 15–16/11/2026).
         reason:
           type: string
           maxLength: 500

@@ -39,7 +39,7 @@ Caller xử lý fraud/tiền/ledger thành công rồi gọi `recordCompleted(ch
 
 ## E4 — LIM-07/LIM-08 provider
 
-Theo clarify ngày 15/11/2026, hoàn tất provider tạo/duyệt/từ chối cấu hình; LIM-09/10 hoãn vì chưa có production admin/identity/account/transfer và E3. Xem [bằng chứng E4](E4-verification.md), [spec](specs/003-controlled-limit-changes/spec.md), [plan](specs/003-controlled-limit-changes/plan.md), [tasks](specs/003-controlled-limit-changes/tasks.md).
+Lượt 15/11/2026 hoàn tất provider tạo/duyệt/từ chối cấu hình. Lượt 16/11/2026 bổ sung endpoint LIM-09/10 và approval LIMIT_CHANGE thật trong admin; nghiệm thu với identity/customer/account/GET E3/transfer thật còn Blocked. Xem [bằng chứng E4](E4-verification.md), [spec](specs/003-controlled-limit-changes/spec.md), [plan](specs/003-controlled-limit-changes/plan.md), [tasks](specs/003-controlled-limit-changes/tasks.md).
 
 `LimitChanges.prepare(Proposal)` nhận scope/maker/approval ID đã được caller xác thực, kiểm tra money/VND/policy, cấp version mới và lưu PENDING_APPROVAL. Pending không đổi active hoặc usage. `approve(approvalId, checkerId)` tái kiểm tra policy, chặn self/repeat, supersede active và activate pending nguyên tử; `reject` giữ active và để attribution checker cho approval/audit của admin (config rejected giữ approved_by/approved_at null theo nguồn 04).
 
@@ -48,8 +48,19 @@ Tất cả mutation yêu cầu physical writable caller transaction, READ COMMIT
 Quyết định user cho phạm vi này:
 
 - Policy max từng lần/ngày là cấu hình bắt buộc, không có default nghiệp vụ. Thiếu/sai policy trả SERVICE_UNAVAILABLE khi prepare/approve; quá max LIMIT_OUT_OF_POLICY. Reject vẫn hoạt động khi thiếu policy. Xem [cấu hình](../../deployment/configuration.md#e4--limit-change-policy).
-- Từ chối effectiveFrom tương lai; approve hiệu lực tại thời điểm quyết định, không scheduler/backdate. Đây là giới hạn provider được user chốt; public future-effective API chưa được triển khai/nghiệm thu.
+- Từ chối effectiveFrom tương lai; approve hiệu lực tại thời điểm quyết định, không scheduler/backdate. Đây là giới hạn E4 được user chốt; endpoint mới cũng từ chối future-effective và nguồn 07 đã được đồng bộ.
 - Bật account scope chưa có cấu hình đang hiệu lực bị chặn nếu customer đã dùng amount hoặc count trong ngày theo app.timezone. Pending được giữ để có thể duyệt ngày mới chưa dùng; lịch sử expired không vượt qua guard. Không tạo/reset/backfill usage.
-- Chỉ mã nội bộ ROLE_CONFLICT cho self-decision; xung đột HTTP D5 còn hoãn với endpoint LIM-10.
+- D5 đã chốt ngày 16/11/2026: HTTP409 ROLE_CONFLICT khi self-decision; SRS/07 đã đồng bộ. Có C3 denial audit độc lập.
 
 Thay đổi cấu hình không ghi usage, kể cả tạo counter 0. Hạ limit dưới usage giữ nguyên counter; E2 chặn chi thêm. E2 vẫn dùng transaction-start instant cố định: một T2 bắt đầu trước activation nhưng chờ khóa trả NOT_CONFIGURED nếu bất kỳ scope ACTIVE đang hiệu lực bắt đầu sau instant đó; chặn toàn check để không bỏ qua account scope mới trong khi customer scope cũ còn hiệu lực. Fail-closed, không tự cho phép chuyển tiền. Transaction mới sau commit đọc hạn mức mới. Không tuyên bố availability liên tục cho request đang chờ, hoặc nghiệm thu consumer transfer/GET thật.
+
+
+## E4 — LIM-09/LIM-10 endpoint và approval thật (16/11/2026)
+
+Đã triển khai `POST /api/v1/admin/limits` (201 ApprovalSummary + Location) và `POST /api/v1/admin/limits/{approvalId}/approve` (200 ApprovalDetail APPLIED/REJECTED). `admin` sở hữu approval_request thật theo04; chỉ workflow LIMIT_CHANGE. Chưa thêm GET approvals hoặc role/retention workflow.
+
+Actor lấy từ principal của SessionAuthenticator; service kiểm staff role, LIMIT_MAKER/LIMIT_MANAGE và CHECKER. Cookie dùng CSRF common. Step-up SENSITIVE_ACTION theo candidate `identity.api.StepUpChallengePort`: maker bind actor/action/hash payload; checker thêm approvalId/decision/proposal hash. Consume tham gia cùng transaction approval/config/audit. Provider bắt buộc chưa có thì fail-closed, không có bean giả production.
+
+Tạo/duyệt/từ chối và C2 audit dùng implementation thật + PostgreSQL. Self-decision trả409 ROLE_CONFLICT theo clarify, có C3 security audit độc lập; lỗi C3 fallback log/metric, không chuyển deny thành allow. Approve kiểm current version dưới limit lock; stale proposal bị409 và giữ pending. Usage giữ nguyên; future-effective và D4 giữ quyết định cũ.
+
+Candidate APIs `StaffDirectory`, `CustomerQuery`, `AccountQuery` chỉ công bố contract/projection; owner cần review và cung cấp implementation thật. Các fake tương ứng và bảng `e4_test.challenge` chỉ ở test. Không dùng kết quả test này để nhận OTP/session/ownership thật đã đạt. Xem [báo cáo E4](E4-verification.md) và [hồ sơ SDD endpoint](specs/004-limit-admin-integration/spec.md).

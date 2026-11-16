@@ -9,9 +9,15 @@ import java.time.Instant;
  * the approval decision and audit in the same transaction. This provider never writes approval data.
  */
 public interface LimitChanges {
+    /** Read-only preflight; the mutation revalidates policy under its own transaction. */
+    void validateChange(BigDecimal perTransaction, BigDecimal daily, String currency, Instant effectiveFrom);
+
     LimitConfiguration prepare(Proposal proposal);
 
     LimitConfiguration approve(long approvalId, long checkerId);
+
+    /** JOIN; null expected version means the proposal expected no effective current configuration. */
+    LimitConfiguration approve(long approvalId, long checkerId, Integer expectedCurrentVersion);
 
     LimitConfiguration reject(long approvalId, long checkerId);
 
