@@ -65,7 +65,7 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - Chỉ CUSTOMER có permission và sở hữu nguồn được tạo; GET chỉ participant hoặc staff đúng permission/scope; test IDOR và cross-customer; staff-only fraud flags không lộ customer. CSRF, `no-store`, masking và lỗi an toàn được xác nhận.
 - Test controller/contract và session thật; kiểm tra nguồn/đích bằng account API. Không dùng rate limiter local làm bằng chứng quota toàn cụm.
 
-### BE-TRF-04 — Idempotency, step-up và T1
+### [BE-TRF-04 — Idempotency, step-up và T1](BE-TRF-04.md)
 
 **Mô tả:** Chuẩn hóa payload, dùng common JCS/SHA, kiểm tra key/replay; điều phối challenge và tạo intent bền vững trong transaction riêng.
 
@@ -148,3 +148,4 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 | 1.2 | 16/11/2026 | Codex | Cập nhật preflight và evidence T2/recovery với fake và PostgreSQL synthetic. |
 | 1.3 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
 | 1.4 | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
+| 1.5 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-04; không thay đổi AC hay trạng thái task. |
