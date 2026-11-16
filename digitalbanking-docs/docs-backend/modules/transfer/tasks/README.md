@@ -7,7 +7,7 @@
 > **Trạng thái:** Draft — chờ review; tất cả implementation task chưa xác minh
 > **Owner:** Vũ
 > **Reviewer:** Backend Lead, các owner phụ thuộc, QA, Security — chờ review
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7–§10; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §11–§13; [thiết kế module](design.md).
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7–§10; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §11–§13; [thiết kế module](../design.md).
 
 Các task là kế hoạch, không yêu cầu thực hiện trong lần viết tài liệu này. Ưu tiên **P0** là điều kiện cho money path/release an toàn; **P1** hoàn thiện trải nghiệm, vận hành và hardening trong phạm vi MVP, không tự hạ bất kỳ yêu cầu Must. Mốc W3–W8 là dự kiến theo `10`, phụ thuộc lịch và năng lực của các owner. Trước mỗi task kiểm tra code hiện tại, hợp đồng và quyết định mới; tái sử dụng common, không sao chép tính năng đã có. Mỗi task có thể làm phần độc lập trước khi dependency sẵn sàng nhưng chỉ đánh dấu hoàn thành khi toàn bộ AC và bằng chứng đạt.
 
@@ -36,10 +36,10 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 **AC:**
 
 - Ghi nhận key global, `IDEMPOTENCY_CONFLICT`, replay HTTP/body gốc theo `04/07`; tạo việc đồng bộ overview và YAML 200 replay với API/FE/QA. Xác định `202` là tùy chọn async, không ngầm thay MVP synchronous.
-- Identity/Limit/Architect/BA chốt protocol chống race khi step-up theo tổng ngày, bao gồm hành vi 428 trước T1, expiry và retry. Có test oracle hai key đồng thời quanh ngưỡng; nếu chưa chốt thì release money path **Blocked**.
-- BA/QA/Architect phân xử AC-006 so với nhánh FAILED sau T1 trong `design/02`; chốt và kiểm thử riêng lỗi phát hiện trước T1 và điều kiện thay đổi sau T1, đồng bộ nguồn trước nghiệm thu.
+- Identity/Limit/Architect/BA review protocol DEC-TRF-008 chống race step-up, 428 trước T1, expiry và retry. Chứng minh oracle hai key đồng thời; release money path **Blocked** khi chưa có review và evidence.
+- BA/QA/Architect review quyết định DEC-TRF-003 cho AC-006/012; kiểm thử riêng lỗi phát hiện trước T1, điều kiện đổi sau T1 và credit failure trước nghiệm thu.
 - BA/Product/BE chốt retention/purge và hướng dẫn retry sau TTL; Backend/Ops/Ledger/Audit chốt xử lý PENDING có ledger/audit, retry/escalation. `09` T-REC-02 yêu cầu hoàn tất không duplicate khi đủ bằng chứng; chỉ làm theo protocol đã chứng minh và thống nhất tính nhất quán response/idempotency; thiếu/chênh bằng chứng giữ nguyên, cảnh báo.
-- Liệt kê owner/trạng thái/ảnh hưởng của `OI-CON-02–13`, gồm business date/timezone, config version, fraud count, audit throughput, multi-instance, notification duplicate và replay correlation; điểm chưa quyết định chặn AC tương ứng. Phân công contract API cùng transaction cho từng owner; ngưỡng đề xuất không mặc định là policy đã duyệt.
+- Liệt kê owner/trạng thái/ảnh hưởng của `OI-CON-02–13`, gồm business date/timezone, config version, fraud count, audit throughput, multi-instance, notification duplicate và replay correlation; DEC-TRF-009–012 đã chọn phương án; review và evidence thiếu vẫn chặn AC tương ứng. Phân công contract API cùng transaction cho từng owner.
 
 **Evidence:** decision log, liên kết nguồn và owner/reviewer, matrix dependency, contract/test oracle đã thống nhất.
 
@@ -69,8 +69,8 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 
 **AC:**
 
-- Hash có test vector theo `07 §5.2`, kể cả scale amount, null/rỗng, field order và destination type; không log raw key/body/PII. Cùng key/hash terminal replay status/body gốc với header; khác hash/actor conflict + C3, không lộ dữ liệu; live → 409 `Retry-After`, stale → resume sau recheck.
-- T0 challenge bind user/hash/key, không có transfer/idempotency/ledger khi 428; T1 consume VERIFIED chưa hết hạn đúng binding, một lần; rollback T1 hoàn lại consume. Chính sách step-up race từ 01 được áp dụng và test.
+- Hash có test vector theo `07 §5.2`, kể cả scale amount, null/rỗng, field order và destination type; không log raw key/body/PII. Cùng key/hash terminal replay status/body gốc với header; khác hash/actor conflict + C3, không lộ dữ liệu; nonterminal → HTTP 409 `Retry-After`, recovery do worker nội bộ theo DEC-TRF-004.
+- T0 challenge bind user/hash/key; nhánh 428 không tạo transfer/idempotency/ledger, request khác cùng key có thể commit đồng thời. T1 consume VERIFIED chưa hết hạn đúng binding, một lần; rollback T1 hoàn lại consume. Test guard/reservation, key race và PENDING qua ngày theo DEC-TRF-008.
 - T1 insert transfer rồi insert key `ON CONFLICT`; request thua rollback toàn bộ trước khi đọc lại, không orphan. Audit CREATED fail rollback T1; T1 commit để lại PENDING/RECEIVED khi T2 chưa chạy. Test cùng key nhiều connection, challenge race/expiry và crash sau T1.
 
 ### BE-TRF-05 — T2 money transaction
@@ -79,8 +79,8 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 
 **AC:**
 
-- Lock transfer NOWAIT → account ID tăng dần → usage customer/account → audit cuối; revalidate ownership/status/balance/limit trong lock, debit có điều kiện, credit và hai entry ledger cân bằng; usage chỉ tăng khi COMPLETED. Không balance âm, không double debit, không ledger cho FAILED/PENDING bình thường.
-- Fraud engine lỗi fail-open có savepoint thực sự; auto-block commit FAILED trước money. Audit `FRAUD_FLAG_CREATED` C2 và audit C1 vẫn fail-closed; lỗi audit rollback T2 về PENDING, không bị savepoint nuốt. Outcome nghiệp vụ FAILED commit audit/outbox/response, không ledger/usage; lỗi hệ thống hoặc audit rollback toàn T2, để PENDING/RECEIVED, không false success.
+- Đọc context không lock → guard CUSTOMER → transfer/fence → account ID tăng → usage customer/account → business flush → audit cuối theo DEC-TRF-008; revalidate ownership/status/balance/limit, debit có điều kiện, credit và hai entry ledger cân bằng. Capture terminal timestamp sau account lock, trước usage lock; usage chỉ tăng khi COMPLETED. Không balance âm, không double debit, không ledger cho FAILED/PENDING bình thường.
+- Fraud engine lỗi fail-open có savepoint thực sự; auto-block commit FAILED trước money. Audit `FRAUD_FLAG_CREATED` C2 theo flag ID tăng rồi C1 sau business flush, fail-closed; lỗi audit không bị savepoint nuốt. Outcome nghiệp vụ FAILED commit audit/outbox/response, không ledger/usage; nếu T2 rollback được xác nhận thì PENDING/RECEIVED, còn commit chưa rõ thì xác minh primary và không suy đoán trạng thái.
 - Status/idempotency response/outbox và audit completion cùng commit; không terminal state transition sai; retry deadlock/lock timeout bounded trên toàn transaction mới. Test PostgreSQL với failure injection và các owner thật, xác nhận transaction propagation.
 
 ### BE-TRF-06 — Recovery, reconciliation và purge
@@ -89,9 +89,9 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 
 **AC:**
 
-- Claim một transfer `FOR UPDATE SKIP LOCKED` và execute trong cùng transaction; hai instance không xử lý trùng; resume khi không có ledger và an toàn; retry/backoff/alert có giới hạn theo policy đã duyệt.
-- T-REC-01–04 đạt, bao gồm hoàn tất PENDING có đủ ledger/audit khi protocol kiểm chứng từ 01 cho phép và đồng bộ idempotency/response không tạo ledger kép. Thiếu audit, partial/unbalanced ledger hoặc bằng chứng mâu thuẫn giữ nguyên và alert/manual, không sửa ledger tùy tiện; terminal không bị ghi đè.
-- Purge chỉ record terminal đủ điều kiện, không purge PENDING kể cả quá TTL; test ranh giới TTL và minh họa key sau purge có thể thành yêu cầu mới. Cung cấp runbook và evidence crash/restart, audit failure, nhiều worker.
+- Đọc candidate không lock → guard CUSTOMER → claim transfer `FOR UPDATE SKIP LOCKED`, re-read và execute cùng transaction; hai instance không xử lý trùng; chỉ resume khi đầy đủ evidence an toàn và fence cho phép.
+- T-REC-01–04 đạt, bao gồm hoàn tất PENDING khi đủ evidence per-transfer Account/Ledger/Limit/Audit, mode và response theo DEC-TRF-006; đồng bộ idempotency/response không tạo ledger kép. Thiếu/lệch/error hoặc outcome không rõ giữ nguyên trạng thái thực tế và alert/manual; terminal không bị ghi đè.
+- Purge chỉ record terminal đủ điều kiện; TTL mặc định/tối thiểu 24h từ `completed_at` theo DEC-TRF-005; không purge PENDING kể cả quá TTL. Test long-PENDING, concurrent purge/retry và key sau purge có thể thành yêu cầu mới. Cung cấp runbook và evidence crash/restart, audit failure, nhiều worker.
 
 ### BE-TRF-07 — Security, observability và notification
 
@@ -105,7 +105,7 @@ Các task là kế hoạch, không yêu cầu thực hiện trong lần viết t
 
 ### BE-TRF-08 — Kiểm thử tích hợp và hồi quy
 
-**Mô tả:** Thực thi các test quy định tại [TKCT §7](design.md), bổ sung test độc lập cho các task; không chứng minh invariant bằng mock/H2.
+**Mô tả:** Thực thi các test quy định tại [TKCT §7](../design.md), bổ sung test độc lập cho các task; không chứng minh invariant bằng mock/H2.
 
 **AC:**
 
