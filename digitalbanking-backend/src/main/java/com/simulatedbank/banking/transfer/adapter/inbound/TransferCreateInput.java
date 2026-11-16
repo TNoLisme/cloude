@@ -39,7 +39,7 @@ public final class TransferCreateInput {
         if (maxBodyBytes <= 0) throw new IllegalArgumentException("Invalid request size configuration");
         if (idempotencyHeaders == null || idempotencyHeaders.size() != 1
                 || idempotencyHeaders.getFirst() == null || !idempotencyHeaders.getFirst().matches(KEY)) {
-            throw invalid();
+            throw invalid("Idempotency-Key");
         }
         if (body == null) throw malformed();
         if (body.length > maxBodyBytes) throw tooLarge();
@@ -54,79 +54,84 @@ public final class TransferCreateInput {
             throw malformed();
         }
         if (root == null || root.isMissingNode()) throw malformed();
-        if (!root.isObject()) throw invalid();
+        if (!root.isObject()) throw invalid("request");
         Iterator<String> fields = root.fieldNames();
         while (fields.hasNext()) {
-            if (!FIELDS.contains(fields.next())) throw invalid();
+            if (!FIELDS.contains(fields.next())) throw invalid("request");
         }
-        long source = parseId(string(root.get("sourceAccountId")));
+        long source = parseId(string(root.get("sourceAccountId"), "sourceAccountId"), "sourceAccountId");
         Destination destination = destination(root.get("destination"));
-        if (destination.type() == DestinationType.ACCOUNT_ID && source == parseId(destination.value())) throw invalid();
-        String amount = string(root.get("amount"));
-        if (!amount.matches(MONEY)) throw invalid();
+        if (destination.type() == DestinationType.ACCOUNT_ID
+                && source == parseId(destination.value(), "destination.accountId")) {
+            throw invalid("destination.accountId");
+        }
+        String amount = string(root.get("amount"), "amount");
+        if (!amount.matches(MONEY)) throw invalid("amount");
+        String currency = currency(root);
+        if (!"VND".equals(currency)) throw invalid("currency");
         TransferAmount validatedAmount;
         try {
-            validatedAmount = new TransferAmount(new BigDecimal(amount), currency(root));
+            validatedAmount = new TransferAmount(new BigDecimal(amount), currency);
         } catch (IllegalArgumentException ex) {
-            throw invalid();
+            throw invalid("amount");
         }
         String description = description(root.get("description"));
         return new Validated(source, destination, validatedAmount, description, idempotencyHeaders.getFirst());
     }
 
     private static Destination destination(JsonNode node) {
-        if (node == null || !node.isObject() || node.size() != 1) throw invalid();
+        if (node == null || !node.isObject() || node.size() != 1) throw invalid("destination");
         if (node.has("accountId")) {
-            String value = string(node.get("accountId"));
-            parseId(value);
+            String value = string(node.get("accountId"), "destination.accountId");
+            parseId(value, "destination.accountId");
             return new Destination(DestinationType.ACCOUNT_ID, value);
         }
         if (node.has("accountNumber")) {
-            String value = string(node.get("accountNumber"));
-            if (!value.matches("[0-9]{6,20}")) throw invalid();
+            String value = string(node.get("accountNumber"), "destination.accountNumber");
+            if (!value.matches("[0-9]{6,20}")) throw invalid("destination.accountNumber");
             return new Destination(DestinationType.ACCOUNT_NUMBER, value);
         }
-        throw invalid();
+        throw invalid("destination");
     }
 
-    private static long parseId(String value) {
-        if (!value.matches(ID)) throw invalid();
+    private static long parseId(String value, String field) {
+        if (!value.matches(ID)) throw invalid(field);
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException ex) {
-            throw invalid();
+            throw invalid(field);
         }
     }
 
     private static String currency(JsonNode root) {
-        return root.has("currency") ? string(root.get("currency")) : "VND";
+        return root.has("currency") ? string(root.get("currency"), "currency") : "VND";
     }
 
-    private static String string(JsonNode node) {
-        if (node == null || !node.isTextual()) throw invalid();
+    private static String string(JsonNode node, String field) {
+        if (node == null || !node.isTextual()) throw invalid(field);
         return node.textValue();
     }
 
     private static String description(JsonNode node) {
         if (node == null || node.isNull()) return "";
-        String value = string(node);
+        String value = string(node, "description");
         if (value.codePointCount(0, value.length()) > 255 || value.codePoints().anyMatch(Character::isISOControl)) {
-            throw invalid();
+            throw invalid("description");
         }
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
             if (Character.isHighSurrogate(c)) {
-                if (++i == value.length() || !Character.isLowSurrogate(value.charAt(i))) throw invalid();
+                if (++i == value.length() || !Character.isLowSurrogate(value.charAt(i))) throw invalid("description");
             } else if (Character.isLowSurrogate(c)) {
-                throw invalid();
+                throw invalid("description");
             }
         }
         return value.trim();
     }
 
-    private static InvalidRequestException invalid() { return new InvalidRequestException(Kind.VALIDATION); }
-    private static InvalidRequestException malformed() { return new InvalidRequestException(Kind.MALFORMED); }
-    private static InvalidRequestException tooLarge() { return new InvalidRequestException(Kind.TOO_LARGE); }
+    private static InvalidRequestException invalid(String field) { return new InvalidRequestException(Kind.VALIDATION, field); }
+    private static InvalidRequestException malformed() { return new InvalidRequestException(Kind.MALFORMED, null); }
+    private static InvalidRequestException tooLarge() { return new InvalidRequestException(Kind.TOO_LARGE, null); }
 
     public enum Kind { VALIDATION, MALFORMED, TOO_LARGE }
 
@@ -157,14 +162,18 @@ public final class TransferCreateInput {
     /** Classification helps the future controller choose the existing shared Problem code. */
     public static final class InvalidRequestException extends IllegalArgumentException {
         private final Kind kind;
-        private InvalidRequestException(Kind kind) {
+        private final String field;
+        private InvalidRequestException(Kind kind, String field) {
             super(switch (kind) {
                 case MALFORMED -> "Malformed transfer request";
                 case VALIDATION -> "Invalid transfer request";
                 case TOO_LARGE -> "Transfer request too large";
             });
             this.kind = kind;
+            this.field = field;
         }
         public Kind kind() { return kind; }
+        /** Safe relative JSON path or header name; null for malformed/oversize bodies. Never an input value. */
+        public String field() { return field; }
     }
 }
