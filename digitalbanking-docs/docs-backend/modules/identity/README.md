@@ -15,6 +15,7 @@
 - [BE-ID-IMP-11 — JPA RBAC, Admin role command, assignment version và active-session revocation; dependency Admin/Audit](BE-ID-IMP-11.md)
 - [BE-ID-IMP-12 — REST DTO/validation/error mapping API-AUTH-01..07 + OpenAPI; Passcode positive và resend BLOCKED](BE-ID-IMP-12.md)
 - [BE-ID-IMP-13 — Audit integration/metrics/username rate limit/log redaction; durable audit persistence BLOCKED](BE-ID-IMP-13.md)
+- [BE-ID-TEST-01 — Unit/contract/concurrency suite, traceability và blocker integration](BE-ID-TEST-01.md)
 - [BE-ID — Task breakdown, checklist và acceptance criteria](tasks/README.md)
 - [Nguồn tổng quan Identity/Auth](../_overview/01-identity-auth.md)
 
