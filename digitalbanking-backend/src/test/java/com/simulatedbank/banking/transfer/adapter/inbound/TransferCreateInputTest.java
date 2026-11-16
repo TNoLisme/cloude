@@ -114,6 +114,42 @@ class TransferCreateInputTest {
         assertThatThrownBy(() -> TransferCreateInput.parse(valid, KEY, 0)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void validationErrorsCarrySafeRelativeFieldPaths() {
+        assertField(VALID.replace("\"3001\"", "\"03001\""), KEY, "sourceAccountId");
+        assertField(VALID.replace("\"amount\":\"150000.00\"", "\"amount\":\"0.00\""), KEY, "amount");
+        assertField(VALID.replace("\"amount\":", "\"currency\":\"USD\",\"amount\":"), KEY, "currency");
+        assertField(VALID.replace("  memo  ", "x".repeat(256)), KEY, "description");
+        assertField(VALID.replace("0123456789", "12345"), KEY, "destination.accountNumber");
+        assertField(VALID.replace("{\"accountNumber\":\"0123456789\"}", "{\"accountId\":\"03001\"}"), KEY, "destination.accountId");
+        assertField(VALID.replace("{\"accountNumber\":\"0123456789\"}", "{}"), KEY, "destination");
+        assertField(VALID.replace("{\"accountNumber\":\"0123456789\"}",
+                "{\"accountNumber\":\"0123456789\",\"accountId\":\"2\"}"), KEY, "destination");
+        assertField(VALID.replace("\"accountId\":\"3002\"", "\"accountId\":\"3001\"")
+                .replace("{\"accountNumber\":\"0123456789\"}", "{\"accountId\":\"3001\"}"), KEY, "destination.accountId");
+        assertField(VALID, List.of("with space"), "Idempotency-Key");
+        assertField(VALID, List.of(), "Idempotency-Key");
+        assertField(VALID.replace("\"amount\":", "\"actorId\":\"8\",\"amount\":"), KEY, "request");
+        assertField("[]", KEY, "request");
+    }
+
+    @Test
+    void malformedAndTooLargeErrorsCarryNoField() {
+        assertThatThrownBy(() -> parse("{not-json}", KEY))
+                .isInstanceOf(InvalidRequestException.class)
+                .satisfies(error -> assertThat(((InvalidRequestException) error).field()).isNull());
+        byte[] valid = VALID.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> TransferCreateInput.parse(valid, KEY, valid.length - 1))
+                .isInstanceOf(InvalidRequestException.class)
+                .satisfies(error -> assertThat(((InvalidRequestException) error).field()).isNull());
+    }
+
+    private static void assertField(String body, List<String> key, String expectedField) {
+        assertThatThrownBy(() -> parse(body, key))
+                .isInstanceOf(InvalidRequestException.class)
+                .satisfies(error -> assertThat(((InvalidRequestException) error).field()).isEqualTo(expectedField));
+    }
+
     private static TransferCreateInput.Validated parse(String body, List<String> key) {
         return TransferCreateInput.parse(body == null ? null : body.getBytes(StandardCharsets.UTF_8), key, 65536);
     }
