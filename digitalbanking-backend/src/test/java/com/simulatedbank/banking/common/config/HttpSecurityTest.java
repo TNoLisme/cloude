@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 
 @SpringBootTest(properties = {
         "app.identity.enabled=false",
+        "app.customer.enabled=false",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"

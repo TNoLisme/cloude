@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
     "app.identity.enabled=false",
+        "app.customer.enabled=false",
         "spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"

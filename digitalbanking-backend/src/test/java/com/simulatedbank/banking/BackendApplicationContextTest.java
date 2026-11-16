@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(properties = {
     "app.identity.enabled=false",
+        "app.customer.enabled=false",
         "spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
