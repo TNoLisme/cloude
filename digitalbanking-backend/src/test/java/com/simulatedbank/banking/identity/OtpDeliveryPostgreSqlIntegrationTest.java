@@ -23,7 +23,9 @@ import com.simulatedbank.banking.identity.application.OtpCodeGenerator;
 import com.simulatedbank.banking.identity.application.OtpDispatchService;
 import com.simulatedbank.banking.identity.application.OtpExpiryRecoveryService;
 import com.simulatedbank.banking.notification.api.OtpGateway;
+import com.simulatedbank.banking.testsupport.PostgreSqlIntegrationTestSupport;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,20 +79,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class OtpDeliveryPostgreSqlIntegrationTest {
 
     @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("otp_delivery")
-            .withUsername("postgres")
-            .withPassword("test")
-            .withUrlParam("currentSchema", "banking");
+    static final PostgreSQLContainer<?> postgres =
+            PostgreSqlIntegrationTestSupport.newContainer("otp_delivery");
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.flyway.url", postgres::getJdbcUrl);
-        registry.add("spring.flyway.user", postgres::getUsername);
-        registry.add("spring.flyway.password", postgres::getPassword);
+        PostgreSqlIntegrationTestSupport.registerSpringProperties(registry, postgres);
         registry.add("spring.datasource.hikari.maximum-pool-size", () -> "12");
         registry.add("spring.datasource.hikari.minimum-idle", () -> "2");
         registry.add("app.identity.otp-expiry-sweep-delay", () -> "PT24H");
@@ -298,6 +293,35 @@ class OtpDeliveryPostgreSqlIntegrationTest {
         assertUndeliveredCannotVerify();
         assertThat(logs.text()).doesNotContain("provider-private", "+15555550101", "private destination");
         assertThat(logs.events).allSatisfy(event -> assertThat(event.getThrowableProxy()).isNull());
+    }
+
+    @Test
+    void connectionRefusedFailsClosedAndRecoveryRequiresExpiryBeforeAFreshDispatch() {
+        String providerSecret = "provider-password recipient@example.invalid";
+        gateway.behavior = ignored -> {
+            throw new CompletionException(new ConnectException(providerSecret));
+        };
+
+        assertBusiness(() -> issue("connection-refused"), ErrorCode.OTP_DISPATCH_FAILED);
+        assertUndeliveredCannotVerify();
+        String failedRef = gateway.calls.getFirst().challengeRef();
+        assertThat(logs.text()).doesNotContain(providerSecret, "recipient@example.invalid");
+
+        gateway.behavior = ignored -> ACCEPTED;
+        assertBusiness(() -> issue("connection-refused"), ErrorCode.OTP_DISPATCH_FAILED);
+        assertThat(gateway.calls).hasSize(1);
+        assertThat(challengeCount()).isEqualTo(1);
+
+        expire(failedRef);
+        assertThat(recovery.recoverExpired()).isPositive();
+        var recovered = issue("connection-refused");
+
+        assertThat(recovered.challengeRef()).isNotEqualTo(failedRef);
+        assertThat(row(failedRef).get("status")).isEqualTo("EXPIRED");
+        assertThat(row(recovered.challengeRef()).get("status")).isEqualTo("SENT");
+        assertThat(gateway.calls).hasSize(2);
+        assertThat(challengeCount()).isEqualTo(2);
+        assertNoSessions();
     }
 
     @Test
