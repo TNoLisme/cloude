@@ -3,7 +3,7 @@
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-TASK-TRANSFER-01`
 > **Ưu tiên / kế hoạch:** P0 / W3–W4
-> **Trạng thái:** Blocked — các quyết định DEC-TRF-001–012 đã ghi; contract/provider review và evidence chưa hoàn tất
+> **Trạng thái:** Baseline thiết kế độc lập đã chốt; nghiệm thu liên module và release còn Blocked
 > **Owner:** Vũ
 > **Phối hợp / review:** Backend Lead, Architect, API, BA/Product, Identity, Account, Ledger, Limit, Audit, Fraud, Notification, QA, Security, FE và Ops theo từng vấn đề.
 
@@ -13,7 +13,7 @@ Tạo căn cứ thống nhất để các task Transfer tiếp theo có thể tr
 
 Task này không triển khai money path, migration, provider hay tự duyệt chính sách. Mỗi vấn đề chưa chốt phải có đầu mối, ảnh hưởng, phương án, nguồn và trạng thái; chỉ ghi quyết định vào `DECISIONS.md` sau khi người có thẩm quyền quyết định. Không tự đổi nguồn có thẩm quyền hoặc coi giá trị đề xuất là policy đã duyệt. Việc độc lập có thể chuẩn bị song song; AC phụ thuộc quyết định hoặc provider chưa sẵn sàng vẫn **Blocked**.
 
-**Cập nhật 16/11/2026:** người điều hành đã yêu cầu trợ lý quyết định và đồng bộ tài liệu; các lựa chọn được ghi tại [DECISIONS.md](../../../../../DECISIONS.md) DEC-TRF-001–012. Nội dung ở các bảng dưới mô tả yêu cầu và danh mục vấn đề tại thời điểm lập task; trạng thái hiện hành, review và evidence còn thiếu xem [hồ sơ bàn giao](evidence/BE-TRF-01-handoff.md) và [risk register](evidence/BE-TRF-01-risk-register.md). Quyết định không thay sign-off của các owner hay kết quả test.
+**Cập nhật 16/11/2026:** theo ủy quyền của người điều hành, các lựa chọn DEC-TRF-001–015 được ghi tại [DECISIONS.md](../../../../../DECISIONS.md); baseline v1 cho dữ kiện, outcome và transaction Transfer–provider được cụ thể hóa tại `05` §13.4. Consumer có thể triển khai/test độc lập theo contract và fake test-only mà không đợi provider. **Tách trạng thái:** việc lựa chọn và bàn giao baseline thiết kế độc lập đã thực hiện; các điều kiện provider/consumer review, provider contract suite và integration trong AC gốc chưa được xác minh và không được gán sign-off. Hồ sơ/evidence cụ thể tại [handoff](evidence/BE-TRF-01-handoff.md), [risk register](evidence/BE-TRF-01-risk-register.md) và [candidate verification](evidence/BE-TRF-04-05-candidate.md).
 
 ## 2. Tài liệu cần đọc và thứ tự nguồn
 
@@ -38,7 +38,7 @@ Theo quy tắc nguồn của thiết kế Transfer, `docs-common/01–11` ưu ti
 
 ## 4. Matrix giao tiếp cần chốt
 
-Các operation dưới đây đã được mô tả trong `05. Modules contract`; tên/chữ ký phần lớn vẫn là **đề xuất**, không phải xác nhận runtime hoặc sign-off. Transfer gọi public API của provider, không ghi trực tiếp bảng thuộc module khác. T1/T2 phải tham gia cùng PostgreSQL transaction theo contract, không gọi HTTP/broker trong T2.
+Các operation dưới đây và baseline v1 đã được mô tả tại `05. Modules contract` §§5–11, §13.4; đây không phải xác nhận runtime hoặc sign-off provider. Transfer gọi public API của provider, không ghi trực tiếp bảng thuộc module khác. T1/T2 phải tham gia cùng PostgreSQL transaction theo contract, không gọi HTTP/broker trong T2.
 
 | Provider / owner theo kế hoạch | Transfer cần | Boundary và điểm cần xác nhận | Nguồn |
 |---|---|---|---|
@@ -52,7 +52,7 @@ Các operation dưới đây đã được mô tả trong `05. Modules contract`
 | Common — Phương | Problem, request context, canonicalization/hash, masking, Clock/security | Dùng API common hiện có; xác nhận mapping, correlation và kiểm thử tích hợp thực tế | `05` §12.2; MOD-OI-08/09 |
 | API / FE / QA / Ops | POST/GET, retry/receipt, oracle và xử lý incident | Chốt status/body/header, quyền đọc, hướng dẫn sau TTL và runbook; phân công reviewer theo từng quyết định | `07` §5, §8.3; `05` §13–§14 |
 
-Với contract đã ghi nhưng chưa chốt chi tiết, dùng quy trình review `05` §13 thay vì tự tạo chữ ký riêng. Nếu provider chưa sẵn sàng, consumer có thể dùng mock/fake trong test/dev theo cùng contract và vector; không đưa stub vào production hoặc coi mock là bằng chứng integration/lock/rollback.
+Consumer dùng baseline `05` §13.4 và quy trình compatibility/review §13; không tự tạo chữ ký production thay provider. Nếu provider chưa sẵn sàng, consumer dùng mock/fake trong test/dev theo cùng contract và vector; không đưa stub vào production hoặc coi mock là bằng chứng integration/lock/rollback.
 
 ## 5. Danh mục quyết định và rủi ro cần theo dõi
 
@@ -87,7 +87,7 @@ Các số `02–09` ở cột cuối là task `BE-TRF-02–09`; chúng chỉ ra 
 | Recovery | `T-REC-01–04`: không ledger; đủ ledger/audit; thiếu, partial hoặc mismatch; nhiều worker/crash. Đủ evidence chỉ hoàn tất theo protocol đã duyệt và đồng bộ response/idempotency, không duplicate; thiếu/lệch giữ nguyên và alert. |
 | Notification và TTL | Outbox atomic cùng terminal, gateway lỗi/retry/duplicate và worker lease (`T-OUT-01/02`); terminal đủ điều kiện purge theo policy, PENDING không purge, mô tả rủi ro key thành yêu cầu mới sau purge. |
 
-Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàng chạy integration với implementation thật. PostgreSQL thật, connection độc lập và failure injection là bắt buộc để chứng minh lock, unique, savepoint và atomicity; mock/H2 không đủ. Evidence theo `09` §10: revision, lệnh, môi trường, test ID, kết quả, artifact synthetic không chứa PII/secret, owner và reviewer. Các test ở đây là kế hoạch, chưa có kết quả thực thi.
+Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàng chạy integration với implementation thật. PostgreSQL thật, connection độc lập và failure injection là bắt buộc để chứng minh lock, unique, savepoint và atomicity; mock/H2 không đủ. Evidence theo `09` §10: revision, lệnh, môi trường, test ID, kết quả, artifact synthetic không chứa PII/secret, owner và reviewer. Đây là oracle; các test candidate đã chạy, phạm vi và giới hạn xem [evidence](evidence/BE-TRF-04-05-candidate.md), không coi đó là kết quả provider thật.
 
 ## 7. Bàn giao và điều kiện đóng task
 
@@ -97,7 +97,8 @@ Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàn
 
 ## Change Log
 
-| Phiên bản | Ngày | Thay đổi |
-|---|---|---|
-| v1.0 | 15/11/2026 | Chi tiết phạm vi, dependency, quyết định mở, oracle và điều kiện nghiệm thu BE-TRF-01. |
-| v1.1 | 16/11/2026 | Liên kết DEC-TRF-001–012 và trạng thái review/evidence; chưa nghiệm thu. |
+| Phiên bản | Ngày       | Thay đổi                                                                               |
+| --------- | ---------- | -------------------------------------------------------------------------------------- |
+| v1.0      | 15/11/2026 | Chi tiết phạm vi, dependency, quyết định mở, oracle và điều kiện nghiệm thu BE-TRF-01. |
+| v1.1      | 16/11/2026 | Liên kết DEC-TRF-001–012 và trạng thái review/evidence; chưa nghiệm thu.               |
+| v1.2 | 16/11/2026 | Chốt baseline v1 theo DEC-TRF-015 và tách bàn giao thiết kế độc lập khỏi review/integration. |

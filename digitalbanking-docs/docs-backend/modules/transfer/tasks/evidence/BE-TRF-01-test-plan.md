@@ -1,12 +1,12 @@
 # BE-TRF-01 — Kế hoạch contract suite và integration Transfer
 
-> **Trạng thái:** Draft / Planned, chưa chạy, chưa được provider/consumer hoặc QA duyệt. Các test đòi hỏi module nghiệp vụ hoặc quyết định chưa có đều **Blocked**. Người theo dõi: Transfer (Vũ); reviewer và owner thực thi theo bảng dưới. Không coi tài liệu này là evidence thực thi hay sign-off.
+> **Trạng thái:** Baseline oracle v1; provider/consumer và QA chưa review, kết quả candidate đã có theo evidence được dẫn. Các test đòi hỏi module nghiệp vụ hoặc quyết định chưa có đều **Blocked**. Người theo dõi: Transfer (Vũ); reviewer và owner thực thi theo bảng dưới. Không coi tài liệu này là evidence thực thi hay sign-off.
 
 ## 1. Căn cứ và điều kiện chạy
 
 Nguồn có thẩm quyền: [[digitalbanking-docs/docs-common/03. SRS.md]] (đặc biệt AC-006, AC-012, AC-033–034), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.4, [[digitalbanking-docs/docs-common/07. API contracts.md]] §5–§6, §8.3, §10 và [[digitalbanking-docs/docs-common/09. Test plan.md]] §4–§7, §10. Chi tiết transaction/contract theo [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§10, §14 và [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] §3–§14; theo thứ tự nguồn của [thiết kế Transfer](../../design.md), nguồn `01–11` ưu tiên hơn thiết kế chi tiết. Các điểm mâu thuẫn phải chuyển owner phân xử, không lấy kết quả fake làm quyết định.
 
-Tại thời điểm rà soát, backend chỉ có common và migration tạo schema; chưa có implementation Transfer hoặc provider nghiệp vụ. Common có JCS, SHA-256, error, context, `Clock` và session SPI; chưa có identity adapter thật. Các tên operation trong `05` là đề xuất, cần provider/consumer review. Không khai báo test double thành bean production.
+Transfer có các candidate và test với fake/fixture, phạm vi chạy tại [BE-TRF-04/05](BE-TRF-04-05-candidate.md) và [BE-TRF-02](BE-TRF-02-candidate-verification.md); không coi chúng là provider thật, API production hay integration. Common có JCS, SHA-256, error, context, `Clock` và session SPI; chưa có identity adapter thật. Contract dữ kiện/outcome v1 đã chọn tại `05` §13.4 theo DEC-TRF-015, provider runtime và review còn thiếu. Không khai báo test double thành bean production.
 
 - **Tầng nhanh:** unit và consumer contract với fake chỉ ở test/dev, dùng cùng dữ liệu và oracle với provider contract suite. Kiểm tra input/output, nullability, lỗi, PII, binding và lời gọi; fake không chứng minh transaction.
 - **Tầng bắt buộc cho invariant:** PostgreSQL thật (baseline Testcontainers PostgreSQL 16), migration và provider thật; connection/transaction độc lập, barrier/latch có timeout, failure injection có điểm dừng xác định. Kiểm tra HTTP **và** snapshot DB sau commit/rollback; không dùng H2 hay mock để chứng minh lock, unique, savepoint hoặc atomicity. Không gọi network/broker trong T2.
@@ -37,7 +37,7 @@ Dùng key synthetic `trf-test-01`, actor A và V1. Với balance/limit đủ, PO
 
 ## 3. Contract suite theo provider
 
-Tất cả dòng **Planned / Blocked** đến khi provider và consumer review signature, phiên bản, nullability, lỗi, vector và implementation; tên dùng theo `05` §5–§12, không khẳng định API đã tồn tại.
+Các dòng mô tả oracle provider và integration; baseline dữ kiện/outcome đã chọn tại `05` §13.4, test fake có thể chạy ngay. Chỉ provider/consumer review và test provider thật mới xác nhận integration; không khẳng định API đã tồn tại.
 
 | Provider → consumer / owner phối hợp | Vector và assertion fake + provider dùng chung | Integration thật bổ sung |
 |---|---|---|
@@ -87,3 +87,7 @@ Các lựa chọn trên cần provider/consumer/QA review và evidence thực t�
 Mỗi lần chạy lưu record theo `09` §10: trạng thái, phạm vi/loại test và test ID, requirement/AC, revision (commit và nếu có diff), hệ điều hành/JDK/PostgreSQL/profile/cấu hình không chứa secret, lệnh chính xác, steps/fixture, expected và actual, số passed/failed/skipped, report gốc/đường dẫn artifact, owner/reviewer, giới hạn/blocker. Lưu snapshot response và truy vấn DB synthetic trước/sau với mask, correlation an toàn; ghi lại injection point, barrier/timeout và transaction topology cho race. Không lưu token, OTP, raw key, PII, mật khẩu hoặc secrets. Link report gốc với summary và liên kết quyết định có thẩm quyền trong `DECISIONS.md`; không ghi quyết định khi chưa có người có thẩm quyền duyệt.
 
 Provider và consumer review cùng vector/oracle; QA review traceability và kết quả; Security review access/masking/step-up; Ops review recovery/outbox/runbook. Đóng riêng từng blocker với evidence thật và reviewer xác nhận. Tài liệu này chỉ là kế hoạch và không thay điều kiện đóng BE-TRF-01 tại [task](../BE-TRF-01.md).
+
+## Baseline v1: điều kiện contract test dùng chung
+
+Provider suite và fake suite dùng cùng vector §2–§5, bao gồm null/absent khác DB error; step-up guard CUSTOMER và trạng thái reservation; settlement COMPLETED tăng usage mỗi scope đúng một lần và FAILED không tăng; debit/credit và cặp ledger cân bằng; audit lỗi fail-closed; replay và binding; recovery per-transfer evidence đủ/thiếu/lệch. Baseline dữ kiện là `05` §13.4, không tự tạo bộ contract khác. Tên test candidate, command và kết quả cụ thể xem [BE-TRF-04/05](BE-TRF-04-05-candidate.md); proof provider thật và PostgreSQL sau ghép vẫn chưa có.
