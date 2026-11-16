@@ -53,11 +53,11 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - Terminal bất biến; không có orphan trong T1 race; JPA không xuất entity ra API. Migration sạch và nâng cấp chạy được trên PostgreSQL, schema validation và rollback/recovery plan migration được review.
 - Test constraint, unique race, FK và state transition trên DB thật; các thay đổi schema đề xuất chưa được chốt không tự thêm.
 
-### BE-TRF-03 — API, validation, quyền và tra cứu
+### [BE-TRF-03 — API, validation, quyền và tra cứu](BE-TRF-03.md)
 
 **Mô tả:** Xây controller/DTO và query service cho POST/GET theo `07`, tích hợp session/CSRF và service authorization; hỗ trợ masked receipt.
 
-**Một phần đã có:** `TransferCreateInput` là parser candidate với 8 test đạt cho shape/UTF-8, giới hạn byte, header và validation; chưa nối endpoint/runtime và chưa thực thi policy cấm PII trong description hoặc key. Xác thực, authorization, CSRF, HTTP mapping và kiểm thử tích hợp vẫn chưa hoàn tất. Xem [evidence](evidence/BE-TRF-04-05-candidate.md).
+**Một phần đã có:** boundary HTTP candidate đã triển khai và test bằng fake (DEC-TRF-016): `TransferController`/`TransferHttpConfiguration` trong `com.simulatedbank.transfercandidate.web` (ngoài scan root, đăng ký tường minh khi 04/05 + provider thật + migration sẵn sàng), DTO record `TransferResponse`/`TransferDetail`/`AccountRef`/`FraudFlagSummary`; `TransferCreateService` (re-check `TRANSFER_CREATE`, C3 deny, ủy quyền `TransferOrchestrator`), `TransferQueryService` (read-only, ownership nguồn/đích qua `AccountOwnershipPort`, fraud flags theo quyền), `SecurityDenyAudit` (C3 best-effort + fallback log/metric). Parser `TransferCreateInput` nối endpoint, mang `errors[].field` (10 test). 38 test mới (service/query/HTTP/contract OpenAPI) đạt; `./gradlew check` 338 test xanh. Vẫn **Blocked**: policy PII description/key, scope staff server-side, format reference OQ-02, session/Account/Audit thật, orchestrator 04/05, quota shared đa instance, review API/FE/QA và YAML còn thiếu header `no-store`/`Pragma` + default currency. Xem [evidence BE-TRF-03](evidence/BE-TRF-03-candidate-verification.md).
 
 **AC:**
 
@@ -146,3 +146,5 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 | 1.0 | 15/11/2026 | Codex | Tạo backlog, phụ thuộc, AC và quy tắc theo dõi implementation. |
 | 1.1 | 16/11/2026 | Codex | Ghi primitive và T1/T2 candidate, giới hạn fake/fixture và kiểm tra provider sau ghép. |
 | 1.2 | 16/11/2026 | Codex | Cập nhật preflight và evidence T2/recovery với fake và PostgreSQL synthetic. |
+| 1.3 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
+| 1.4 | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
