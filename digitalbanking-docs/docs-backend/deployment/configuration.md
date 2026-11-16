@@ -610,3 +610,17 @@ Các quyết định liên quan `common` được chốt tại [[digitalbanking-
 ### Request context / proxy boundary — BE-COM-IMP-03
 
 Runtime bỏ qua Forwarded/X-Forwarded-*; context dùng socket peer, chỉ giữ IPv4 masked; IPv6/unknown là null. Sau Nginx, peer này là proxy, không phải IP end-user để rate-limit/audit. Chỉ bật hỗ trợ forwarded headers sau khi kiểm chứng ingress strip/overwrite header, chặn truy cập backend trực tiếp và HTTPS redirect (IMP-05/08); không dùng metadata masked làm khóa IP limiter. Xem [usage](../../../digitalbanking-backend/README.md#request-context-and-propagation) và [verification](../modules/common/report/BE-COM-IMP-03-verification.md).
+
+
+## E4 — Limit change policy
+
+Provider LIM-07/08 đọc policy riêng, không dùng các default `app.transfer.*` để tự chốt OI-API-05. User clarify 15/11/2026 yêu cầu cả hai max được cấu hình rõ ràng trước prepare/approve:
+
+| Property | Environment variable | Default |
+|---|---|---|
+| `app.limit.policy.max-per-transaction-vnd` | `APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND` | Rỗng — từ chối thay đổi |
+| `app.limit.policy.max-daily-vnd` | `APP_LIMIT_POLICY_MAX_DAILY_VND` | Rỗng — từ chối thay đổi |
+
+Giá trị VND dương, tối đa 17 chữ số nguyên/2 chữ số thập phân; max từng lần ≤ max ngày. Thiếu/malformed/ngoài miền policy: SERVICE_UNAVAILABLE; một đề xuất hợp lệ vượt max: LIMIT_OUT_OF_POLICY. Policy được kiểm tra lại mỗi lần approve. Không có seed/default max ngầm; số dùng trong test chỉ là dữ liệu test. Thay môi trường cần restart theo quy trình cấu hình hiện có; không có API hot reload.
+
+Không cấu hình policy không làm mất khả năng đọc/enforce cấu hình đang có; reject pending vẫn hoạt động. `app.timezone` quyết định business date của D4, nghiệm thu Asia/Ho_Chi_Minh như E2. Xem [provider E4](../modules/limit/README.md#e4--lim-07lim-08-provider); endpoint LIM-09/10 và FK/ownership chưa nghiệm thu.

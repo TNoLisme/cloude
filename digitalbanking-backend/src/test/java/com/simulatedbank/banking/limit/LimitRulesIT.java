@@ -41,6 +41,7 @@ class LimitRulesIT {
     private static final Instant START = Instant.parse("2026-11-15T00:00:00Z");
     private static final Instant END = START.plusSeconds(3600);
     private static final LocalDate DATE = LocalDate.of(2026, 11, 15);
+    private static final java.util.concurrent.atomic.AtomicLong APPROVAL_IDS = new java.util.concurrent.atomic.AtomicLong(41);
 
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -214,6 +215,6 @@ class LimitRulesIT {
         boolean approved = status == Status.ACTIVE || status == Status.SUPERSEDED;
         return new LimitConfiguration(null, customer, account, new BigDecimal(perTransaction), new BigDecimal("1000.00"),
                 "VND", from, to, status, status == Status.SUPERSEDED ? 1 : 2, 1, approved ? 2L : null,
-                approved ? 41L : null, null, approved ? START.minusSeconds(10) : null, null);
+                approved ? APPROVAL_IDS.getAndIncrement() : null, null, approved ? START.minusSeconds(10) : null, null);
     }
 }

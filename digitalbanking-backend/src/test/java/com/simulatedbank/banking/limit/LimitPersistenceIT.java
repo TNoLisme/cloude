@@ -75,7 +75,7 @@ class LimitPersistenceIT {
         upgradeJdbc.execute("COMMENT ON TABLE banking.audit_log IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(3);
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
         assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking.audit_log'::regclass)", String.class))
                 .isEqualTo("preexisting baseline");

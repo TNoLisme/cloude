@@ -21,7 +21,7 @@ Money là BigDecimal (tối đa 17 chữ số nguyên, 2 chữ số thập phân
 
 - FK/reference existence và account/customer ownership: cần migrations thật của owner, thêm/validate FK trong migration tiếp theo.
 - D1 policy max/default và enforcement khi NOT_CONFIGURED: còn mở cho E2 và cấu hình sau này.
-- Daily locking/increment, transfer retry/recovery/concurrency, API self limits và maker/checker/audit activation: thuộc E2–E4.
+- LIM-05 transfer thật (retry/recovery/concurrency), E3 API self limits và LIM-09/10 endpoint maker/checker: chưa nghiệm thu. Daily enforcement provider E2 và lifecycle provider E4 được mô tả bên dưới.
 - Future activation transition D3 và account scope giữa ngày D4: chưa được giải quyết bằng E1.
 
 Build/test provider pass không thay nghiệm thu các tích hợp trên hoặc human review.
@@ -35,3 +35,21 @@ Caller xử lý fraud/tiền/ledger thành công rồi gọi `recordCompleted(ch
 - [Spec E2](specs/002-limit-enforcement/spec.md), [plan](specs/002-limit-enforcement/plan.md), [tasks](specs/002-limit-enforcement/tasks.md).
 - [Bằng chứng E2 và bàn giao LIM-05](E2-verification.md).
 - LIM-05 hoãn theo clarify: checkout chưa có production transfer/account/ledger/identity. Provider test không nghiệm thu debit/credit, ledger, terminal replay hay recovery. D4 (bật account scope giữa ngày) thuộc quyết định E4, không tự reset/backfill.
+
+
+## E4 — LIM-07/LIM-08 provider
+
+Theo clarify ngày 15/11/2026, hoàn tất provider tạo/duyệt/từ chối cấu hình; LIM-09/10 hoãn vì chưa có production admin/identity/account/transfer và E3. Xem [bằng chứng E4](E4-verification.md), [spec](specs/003-controlled-limit-changes/spec.md), [plan](specs/003-controlled-limit-changes/plan.md), [tasks](specs/003-controlled-limit-changes/tasks.md).
+
+`LimitChanges.prepare(Proposal)` nhận scope/maker/approval ID đã được caller xác thực, kiểm tra money/VND/policy, cấp version mới và lưu PENDING_APPROVAL. Pending không đổi active hoặc usage. `approve(approvalId, checkerId)` tái kiểm tra policy, chặn self/repeat, supersede active và activate pending nguyên tử; `reject` giữ active và để attribution checker cho approval/audit của admin (config rejected giữ approved_by/approved_at null theo nguồn 04).
+
+Tất cả mutation yêu cầu physical writable caller transaction, READ COMMITTED. Admin chịu trách nhiệm quyền/step-up/reference/ownership, approval và audit cùng transaction; provider không tạo/sửa approval_request, không ghi audit tự động. Shared customer advisory lock được lấy trước usage locks của E2, và trước account advisory lock của E4; caller không đảo thứ tự bằng cách giữ usage/config lock trước provider. Version/approval link được giữ; V5 chỉ cấp UPDATE cột lifecycle và unique nonnull approval_id, không sửa V3/V4.
+
+Quyết định user cho phạm vi này:
+
+- Policy max từng lần/ngày là cấu hình bắt buộc, không có default nghiệp vụ. Thiếu/sai policy trả SERVICE_UNAVAILABLE khi prepare/approve; quá max LIMIT_OUT_OF_POLICY. Reject vẫn hoạt động khi thiếu policy. Xem [cấu hình](../../deployment/configuration.md#e4--limit-change-policy).
+- Từ chối effectiveFrom tương lai; approve hiệu lực tại thời điểm quyết định, không scheduler/backdate. Đây là giới hạn provider được user chốt; public future-effective API chưa được triển khai/nghiệm thu.
+- Bật account scope chưa có cấu hình đang hiệu lực bị chặn nếu customer đã dùng amount hoặc count trong ngày theo app.timezone. Pending được giữ để có thể duyệt ngày mới chưa dùng; lịch sử expired không vượt qua guard. Không tạo/reset/backfill usage.
+- Chỉ mã nội bộ ROLE_CONFLICT cho self-decision; xung đột HTTP D5 còn hoãn với endpoint LIM-10.
+
+Thay đổi cấu hình không ghi usage, kể cả tạo counter 0. Hạ limit dưới usage giữ nguyên counter; E2 chặn chi thêm. E2 vẫn dùng transaction-start instant cố định: một T2 bắt đầu trước activation nhưng chờ khóa trả NOT_CONFIGURED nếu bất kỳ scope ACTIVE đang hiệu lực bắt đầu sau instant đó; chặn toàn check để không bỏ qua account scope mới trong khi customer scope cũ còn hiệu lực. Fail-closed, không tự cho phép chuyển tiền. Transaction mới sau commit đọc hạn mức mới. Không tuyên bố availability liên tục cho request đang chờ, hoặc nghiệm thu consumer transfer/GET thật.

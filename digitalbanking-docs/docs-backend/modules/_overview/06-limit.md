@@ -69,3 +69,8 @@ Các tên port/chữ ký bên dưới chỉ là đề xuất cũ, không thay h�
 2. [ ] E2: Mở rộng `LimitJdbcRepository` với mẫu SQL Upsert + `FOR UPDATE` theo đúng thứ tự `CUSTOMER -> ACCOUNT`.
 3. [ ] Hiện thực `LimitConfigMutationPort` phục vụ luồng phê duyệt Maker-Checker của module `admin`.
 4. [ ] Viết bài test đồng thời `T-LIM-01` & `T-LIM-02` (bắn 5 request đồng thời có tổng tiền vượt hạn mức ngày còn lại $\rightarrow$ chứng minh không thể vượt hạn mức ngày nhờ khóa `limit_usage`).
+
+
+## Trạng thái provider E4 (15/11/2026)
+
+`LimitChanges` cung cấp prepare/approve/reject nội bộ theo [hướng dẫn module](../limit/README.md#e4--lim-07lim-08-provider) và [bằng chứng E4](../limit/E4-verification.md). LIM-07/08 dùng caller transaction, scope version mới, pending/active/superseded/rejected, explicit policy không default; không ghi usage. Shared customer advisory lock phối hợp với E2. Future effectiveFrom bị từ chối theo clarify; account scope chưa được tracking không kích hoạt sau khi customer đã dùng trong ngày, giữ pending để duyệt ngày mới. LIM-09/10 và các REST API ở mục 3 vẫn chưa triển khai/nghiệm thu; provider không thay auth/approval/audit của admin. FK/ownership vẫn chờ owner thật.

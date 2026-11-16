@@ -46,9 +46,13 @@ public class LimitEnforcementService implements LimitEnforcement {
         }
         Instant asOf = repository.transactionStart();
         LocalDate date = asOf.atZone(businessZoneId).toLocalDate();
+        repository.lockChangeScope(customerId, null);
         var customer = repository.lockUsage(customerId, null, date);
+        // Keep the fixed T2 instant, but never silently skip a scope activated while this caller waited.
+        var configurations = repository.hasActivationAfter(customerId, sourceAccountId, asOf)
+                ? java.util.List.<LimitConfiguration>of() : repository.findEffective(customerId, sourceAccountId, asOf);
         var limits = new ApplicableLimits(customerId, sourceAccountId, asOf,
-                repository.findEffective(customerId, sourceAccountId, asOf));
+                configurations);
         var accountConfig = limits.items().stream().filter(config -> config.accountId() != null)
                 .findFirst().orElse(null);
         var account = accountConfig == null ? null : repository.lockUsage(customerId, sourceAccountId, date);
