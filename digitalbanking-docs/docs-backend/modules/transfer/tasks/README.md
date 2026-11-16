@@ -53,7 +53,7 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - Terminal bất biến; không có orphan trong T1 race; JPA không xuất entity ra API. Migration sạch và nâng cấp chạy được trên PostgreSQL, schema validation và rollback/recovery plan migration được review.
 - Test constraint, unique race, FK và state transition trên DB thật; các thay đổi schema đề xuất chưa được chốt không tự thêm.
 
-### BE-TRF-03 — API, validation, quyền và tra cứu
+### [BE-TRF-03 — API, validation, quyền và tra cứu](BE-TRF-03.md)
 
 **Mô tả:** Xây controller/DTO và query service cho POST/GET theo `07`, tích hợp session/CSRF và service authorization; hỗ trợ masked receipt.
 
@@ -146,3 +146,4 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 | 1.0 | 15/11/2026 | Codex | Tạo backlog, phụ thuộc, AC và quy tắc theo dõi implementation. |
 | 1.1 | 16/11/2026 | Codex | Ghi primitive và T1/T2 candidate, giới hạn fake/fixture và kiểm tra provider sau ghép. |
 | 1.2 | 16/11/2026 | Codex | Cập nhật preflight và evidence T2/recovery với fake và PostgreSQL synthetic. |
+| 1.3 | 16/11/2026 | Codex | Liên kết chi tiết BE-TRF-03 vào checklist và mục chi tiết công việc. |
