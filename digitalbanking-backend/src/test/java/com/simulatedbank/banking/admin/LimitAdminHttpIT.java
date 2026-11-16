@@ -16,6 +16,7 @@ import com.simulatedbank.banking.identity.api.StaffDirectory;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort;
 import com.simulatedbank.banking.limit.api.LimitEnforcement;
 import com.simulatedbank.banking.limit.api.LimitRules;
+import com.simulatedbank.banking.support.SqlAuditFixture;
 import java.sql.DriverManager;
 import java.time.Instant;
 import java.util.List;
@@ -55,11 +56,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-@Import(LimitAdminHttpIT.FakeProviders.class)
+@Import({LimitAdminHttpIT.FakeProviders.class, SqlAuditFixture.class})
 class LimitAdminHttpIT {
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withInitScript("audit/init-roles.sql");
+            .withInitScript("limit/init-roles.sql");
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) {
@@ -107,7 +108,7 @@ class LimitAdminHttpIT {
     }
 
     @Test
-    void makerCreatesRealApprovalPendingConfigAndAuditWithoutChangingAllowance() throws Exception {
+    void makerCreatesRealApprovalPendingConfigAndAuditFixtureWithoutChangingAllowance() throws Exception {
         var response = create(CHANGE);
         assertThat(response.getResponse().getHeader("Location")).isEqualTo("/api/v1/admin/approvals/1");
         var body = body(response);
@@ -251,7 +252,7 @@ class LimitAdminHttpIT {
     }
 
     @Test
-    void selfDecisionReturns409AndWritesIndependentSecurityAudit() throws Exception {
+    void selfDecisionReturns409AndCallsStandaloneAuditFixture() throws Exception {
         create(CHANGE);
         send("maker", "/api/v1/admin/limits/1/approve", APPROVE, null, 409);
         assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request", String.class)).isEqualTo("PENDING");
@@ -263,9 +264,9 @@ class LimitAdminHttpIT {
     void auditUnavailableDoesNotTurnSelfDenialIntoApproval() throws Exception {
         create(CHANGE);
         double before = metrics.counter("audit.security.fallback").count();
-        permission("REVOKE INSERT ON banking.audit_log FROM banking_app");
+        permission("REVOKE INSERT ON limit_test.audit_event FROM banking_app");
         try { send("maker", "/api/v1/admin/limits/1/approve", APPROVE, null, 409); }
-        finally { permission("GRANT INSERT ON banking.audit_log TO banking_app"); }
+        finally { permission("GRANT INSERT ON limit_test.audit_event TO banking_app"); }
         assertThat(metrics.counter("audit.security.fallback").count()).isEqualTo(before + 1);
         assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT status FROM banking.limit_config", String.class)).isEqualTo("PENDING_APPROVAL");
@@ -308,16 +309,16 @@ class LimitAdminHttpIT {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void sqlAuditFailureRollsBackRealApprovalConfigAndTestIdentityConsumption(boolean decision) throws Exception {
+    void sqlAuditFixtureFailureRollsBackRealApprovalConfigAndTestIdentityConsumption(boolean decision) throws Exception {
         String path = "/api/v1/admin/limits";
         String actor = "maker";
         String payload = CHANGE;
         if (decision) { create(CHANGE); path += "/1/approve"; actor = "checker"; payload = APPROVE; }
         UUID challenge = verified(actor, path, payload);
         var before = jdbc.queryForList("SELECT * FROM banking.limit_config ORDER BY limit_id");
-        permission("REVOKE INSERT ON banking.audit_log FROM banking_app");
+        permission("REVOKE INSERT ON limit_test.audit_event FROM banking_app");
         try { send(actor, path, payload, challenge, 500); }
-        finally { permission("GRANT INSERT ON banking.audit_log TO banking_app"); }
+        finally { permission("GRANT INSERT ON limit_test.audit_event TO banking_app"); }
         assertThat(jdbc.queryForList("SELECT * FROM banking.limit_config ORDER BY limit_id")).isEqualTo(before);
         assertThat(jdbc.queryForObject("SELECT status FROM e4_test.challenge WHERE id=?", String.class, challenge)).isEqualTo("VERIFIED");
         if (decision) assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request", String.class)).isEqualTo("PENDING");
@@ -384,7 +385,7 @@ class LimitAdminHttpIT {
     private JsonNode body(MvcResult result) throws Exception { return json.readTree(result.getResponse().getContentAsString()); }
     private int count(String table) { return jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class); }
     private void assertAudit(String action, int expected) {
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.audit_log WHERE correlation_id=? AND action=?", Integer.class, correlation, action))
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM limit_test.audit_event WHERE correlation_id=? AND action=?", Integer.class, correlation, action))
                 .isEqualTo(expected);
     }
     private void complete(String amount) {

@@ -3,8 +3,9 @@ package com.simulatedbank.banking.limit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.simulatedbank.banking.audit.application.AuditRecorder;
-import com.simulatedbank.banking.audit.domain.AuditEvent;
+import com.simulatedbank.banking.audit.api.AuditModuleApi;
+import com.simulatedbank.banking.support.SqlAuditFixture;
+import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
@@ -39,12 +40,13 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@Import(SqlAuditFixture.class)
 @ActiveProfiles("test")
 @Testcontainers
 class LimitEnforcementIT {
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withInitScript("audit/init-roles.sql");
+            .withInitScript("limit/init-roles.sql");
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -61,7 +63,7 @@ class LimitEnforcementIT {
     @Autowired LimitRules rules;
     @Autowired TransactionTemplate transactions;
     @Autowired JdbcTemplate jdbc;
-    @Autowired AuditRecorder audit;
+    @Autowired AuditModuleApi audit;
 
     @BeforeEach
     void reset() throws Exception {
@@ -71,7 +73,7 @@ class LimitEnforcementIT {
         }
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              var statement = connection.createStatement()) {
-            statement.execute("TRUNCATE audit_test.business_probe");
+            statement.execute("TRUNCATE limit_test.business_probe");
         }
     }
 
@@ -120,7 +122,7 @@ class LimitEnforcementIT {
             assertThatThrownBy(() -> enforcement.lockAndCheck(11, 21, amount(requested)))
                     .isInstanceOfSatisfying(BankingBusinessException.class,
                             failure -> assertThat(failure.code()).isEqualTo(ErrorCode.LIMIT_EXCEEDED));
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
         });
         assertThat(probeCount()).isEqualTo(1);
         assertUsage(null, "50", 1);
@@ -135,7 +137,7 @@ class LimitEnforcementIT {
             assertThatThrownBy(() -> enforcement.lockAndCheck(11, 21, value == null ? null : amount(value)))
                     .isInstanceOfSatisfying(BankingBusinessException.class,
                             failure -> assertThat(failure.code()).isEqualTo(ErrorCode.VALIDATION_ERROR));
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
         });
         assertThat(probeCount()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.limit_usage", Integer.class)).isZero();
@@ -157,7 +159,7 @@ class LimitEnforcementIT {
         configure(true, true, "100", "100");
         transactions.executeWithoutResult(tx -> {
             enforcement.lockAndCheck(11, 21, amount("20"));
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
             // Caller chooses business FAILED (e.g. insufficient balance), so never calls recordCompleted.
         });
         assertThat(probeCount()).isEqualTo(1);
@@ -170,7 +172,7 @@ class LimitEnforcementIT {
         configure(true, true, "100", "100");
         assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
             var check = enforcement.lockAndCheck(11, 21, amount("20"));
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
             enforcement.recordCompleted(check);
             throw new IllegalStateException("injected technical failure after usage");
         })).isInstanceOf(IllegalStateException.class);
@@ -179,18 +181,16 @@ class LimitEnforcementIT {
     }
 
     @Test
-    void realAuditFailureEvenWhenCaughtRollsBackUsageAndBusinessWork() {
+    void auditContractDoubleFailureEvenWhenCaughtRollsBackUsageAndBusinessWork() {
         configure(true, true, "100", "100");
         assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
             var check = enforcement.lockAndCheck(11, 21, amount("20"));
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
             enforcement.recordCompleted(check);
-            var event = new AuditEvent("TRANSFER_COMPLETED", "USER", 1L, "CUSTOMER", "TRANSFER", "E2-AUDIT",
-                    null, Map.of("status", "COMPLETED"), amount("20"), "VND", "E2-CORR", "E2-REQ", "SUCCESS", null);
             try {
-                audit.recordInTransaction(event, null);
+                audit.recordInTransaction(null);
             } catch (IllegalArgumentException expected) {
-                // Real audit fail-closed marks caller rollback-only.
+                // The test audit contract double marks caller rollback-only.
             }
         })).isInstanceOf(UnexpectedRollbackException.class);
         assertThat(probeCount()).isZero();
@@ -259,7 +259,7 @@ class LimitEnforcementIT {
         configure(true, true, "100", "100");
         var rejected = new AtomicReference<Throwable>();
         transactions.executeWithoutResult(tx -> {
-            jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+            jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                     new org.springframework.transaction.support.TransactionSynchronization() {
                         @Override
@@ -442,31 +442,29 @@ class LimitEnforcementIT {
     }
 
     @Test
-    void realAuditDatabaseInsertFailureRollsBackPreviouslyExistingUsage() throws Exception {
+    void auditFixtureSqlFailureRollsBackPreviouslyExistingUsage() throws Exception {
         configure(true, true, "100", "100");
         transactions.executeWithoutResult(tx -> enforcement.recordCompleted(enforcement.lockAndCheck(11, 21, amount("10"))));
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("""
-                    CREATE FUNCTION banking.fail_e2_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+                    CREATE FUNCTION limit_test.fail_e2_audit() RETURNS trigger LANGUAGE plpgsql AS $$
                     BEGIN RAISE EXCEPTION 'injected audit persistence failure'; END; $$;
-                    CREATE TRIGGER fail_e2_audit BEFORE INSERT ON banking.audit_log
-                    FOR EACH ROW EXECUTE FUNCTION banking.fail_e2_audit();
+                    CREATE TRIGGER fail_e2_audit BEFORE INSERT ON limit_test.audit_event
+                    FOR EACH ROW EXECUTE FUNCTION limit_test.fail_e2_audit();
                     """);
             try {
                 assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
                     var check = enforcement.lockAndCheck(11, 21, amount("20"));
-                    jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (1)");
+                    jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
                     enforcement.recordCompleted(check);
-                    var event = new AuditEvent("TRANSFER_COMPLETED", "USER", 7L, "CUSTOMER", "TRANSFER", "E2-AUDIT-SQL",
-                            Map.of("status", "PENDING"), Map.of("status", "COMPLETED"), amount("20"), "VND",
-                            "E2-CORR", "E2-REQ", "SUCCESS", null);
                     try {
-                        audit.recordInTransaction(event, Instant.now());
+                        audit.recordInTransaction(new AuditModuleApi.ApprovalEvent("LIMIT_CHANGE_APPROVED", 1, 1, "OPERATIONS",
+                                "CUSTOMER", "11", 2, 1L, "APPROVE", "PENDING", "APPLIED", "E2-CORR", "E2-REQ"));
                     } catch (org.springframework.dao.DataAccessException expected) { }
                 })).isInstanceOf(UnexpectedRollbackException.class);
             } finally {
-                statement.execute("DROP TRIGGER fail_e2_audit ON banking.audit_log; DROP FUNCTION banking.fail_e2_audit()");
+                statement.execute("DROP TRIGGER fail_e2_audit ON limit_test.audit_event; DROP FUNCTION limit_test.fail_e2_audit()");
             }
         }
         assertThat(probeCount()).isZero();
@@ -496,7 +494,7 @@ class LimitEnforcementIT {
     }
 
     private int probeCount() {
-        return jdbc.queryForObject("SELECT count(*) FROM audit_test.business_probe", Integer.class);
+        return jdbc.queryForObject("SELECT count(*) FROM limit_test.business_probe", Integer.class);
     }
 
     private static BigDecimal amount(String value) { return new BigDecimal(value); }

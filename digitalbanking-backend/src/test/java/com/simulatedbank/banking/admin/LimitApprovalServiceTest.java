@@ -30,7 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 class LimitApprovalServiceTest {
     @ParameterizedTest
-    @ValueSource(ints = {0, 1, 2, 3})
+    @ValueSource(ints = {0, 1, 2, 3, 4})
     @SuppressWarnings("unchecked")
     void absentRequiredProviderRefusesBeforeAnyBusinessMutation(int missing) {
         var approvals = mock(ApprovalJdbcRepository.class);
@@ -40,6 +40,8 @@ class LimitApprovalServiceTest {
         var directory = mock(StaffDirectory.class);
         var customer = mock(CustomerQuery.class);
         var account = mock(AccountQuery.class);
+        ObjectProvider<AuditModuleApi> audits = mock(ObjectProvider.class);
+        when(audits.getIfAvailable()).thenReturn(missing == 4 ? null : audit);
         ObjectProvider<StepUpChallengePort> stepUps = mock(ObjectProvider.class);
         ObjectProvider<StaffDirectory> staff = mock(ObjectProvider.class);
         ObjectProvider<CustomerQuery> customers = mock(ObjectProvider.class);
@@ -50,7 +52,7 @@ class LimitApprovalServiceTest {
         when(accounts.getIfAvailable()).thenReturn(missing == 3 ? null : account);
         when(customer.findById(11)).thenReturn(Optional.of(new CustomerQuery.CustomerSnapshot(11)));
         var manager = mock(PlatformTransactionManager.class);
-        var service = new LimitApprovalService(approvals, limits, mock(LimitRules.class), audit,
+        var service = new LimitApprovalService(approvals, limits, mock(LimitRules.class), audits,
                 mock(LimitApprovalBinding.class), stepUps, staff, customers, accounts, manager);
         var principal = new SessionAuthenticator.Session("1", null, Set.of("ROLE_OPERATIONS", "LIMIT_MAKER"), "0".repeat(64));
         var actor = UsernamePasswordAuthenticationToken.authenticated(principal, null, java.util.List.of());

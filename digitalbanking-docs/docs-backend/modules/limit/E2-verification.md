@@ -1,5 +1,7 @@
 # E2 — LIM-03/LIM-04 Verification and LIM-05 handoff
 
+> **Ghi chú chuyển nền16/11/2026:** các kết quả dưới đây là lịch sử trên nền cũ. Readiness hiện tại theo [DEV2-MIGRATION.md](DEV2-MIGRATION.md); audit production cũ không được chuyển, các test liên quan dùng contract double có ghi rõ.
+
 > **Ngày:** 15/11/2026
 > **Phạm vi:** Provider transaction/locking/accounting LIM-03/04
 > **Trạng thái:** LIM-03/04 hoàn tất; 113 scoped tests pass, package build pass, independent converge vòng 3 PASS; LIM-05 deferred

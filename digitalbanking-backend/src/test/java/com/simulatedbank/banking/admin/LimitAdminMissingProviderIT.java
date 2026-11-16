@@ -30,7 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class LimitAdminMissingProviderIT {
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withInitScript("audit/init-roles.sql");
+            .withInitScript("limit/init-roles.sql");
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) {

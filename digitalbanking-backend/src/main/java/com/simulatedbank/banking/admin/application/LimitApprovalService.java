@@ -31,7 +31,7 @@ public class LimitApprovalService {
     private final ApprovalJdbcRepository approvals;
     private final LimitChanges limits;
     private final LimitRules rules;
-    private final AuditModuleApi audit;
+    private final ObjectProvider<AuditModuleApi> audits;
     private final LimitApprovalBinding bindings;
     private final ObjectProvider<StepUpChallengePort> stepUps;
     private final ObjectProvider<StaffDirectory> staff;
@@ -39,10 +39,10 @@ public class LimitApprovalService {
     private final ObjectProvider<AccountQuery> accounts;
     private final TransactionTemplate transactions;
 
-    public LimitApprovalService(ApprovalJdbcRepository approvals, LimitChanges limits, LimitRules rules, AuditModuleApi audit,
+    public LimitApprovalService(ApprovalJdbcRepository approvals, LimitChanges limits, LimitRules rules, ObjectProvider<AuditModuleApi> audits,
             LimitApprovalBinding bindings, ObjectProvider<StepUpChallengePort> stepUps, ObjectProvider<StaffDirectory> staff,
             ObjectProvider<CustomerQuery> customers, ObjectProvider<AccountQuery> accounts, PlatformTransactionManager manager) {
-        this.approvals = approvals; this.limits = limits; this.rules = rules; this.audit = audit; this.bindings = bindings;
+        this.approvals = approvals; this.limits = limits; this.rules = rules; this.audits = audits; this.bindings = bindings;
         this.stepUps = stepUps; this.staff = staff; this.customers = customers; this.accounts = accounts;
         transactions = new TransactionTemplate(manager);
         transactions.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
@@ -54,6 +54,7 @@ public class LimitApprovalService {
     public Result propose(Authentication authentication, LimitApprovalBinding.Change change, UUID challenge, RequestContext trace) {
         var actor = actor(authentication, false);
         requireNoOuterTransaction();
+        required(audits);
         var identity = required(stepUps);
         var directory = required(staff);
         limits.validateChange(change.perTransaction(), change.daily(), change.currency(), change.effectiveFrom());
@@ -83,6 +84,7 @@ public class LimitApprovalService {
             UUID challenge, RequestContext trace) {
         var actor = actor(authentication, true);
         requireNoOuterTransaction();
+        var audit = required(audits);
         if (approvalId <= 0 || decision == null || !java.util.Set.of("APPROVE", "REJECT").contains(decision)) fail(ErrorCode.VALIDATION_ERROR);
         String safeNote = LimitApprovalBinding.note(note);
         var initial = approvals.find(approvalId).orElseThrow(() -> new BankingBusinessException(ErrorCode.APPROVAL_NOT_FOUND));
@@ -129,7 +131,7 @@ public class LimitApprovalService {
     }
 
     private void record(ApprovalRequest approval, Actor actor, String action, String decision, String before, RequestContext trace) {
-        audit.recordInTransaction(new AuditModuleApi.ApprovalEvent(action, approval.approvalId(), actor.id(), actor.role(),
+        required(audits).recordInTransaction(new AuditModuleApi.ApprovalEvent(action, approval.approvalId(), actor.id(), actor.role(),
                 approval.targetType(), approval.targetId(), approval.makerId(), approval.checkerId(), decision, before,
                 approval.status(), trace.correlationId(), trace.requestId()));
     }

@@ -1,5 +1,7 @@
 # E1 — LIM-01/LIM-02 Verification
 
+> **Ghi chú chuyển nền16/11/2026:** các kết quả dưới đây là lịch sử trên nền cũ. Readiness hiện tại theo [DEV2-MIGRATION.md](DEV2-MIGRATION.md); audit production cũ không được chuyển, các test liên quan dùng contract double có ghi rõ.
+
 > **Ngày:** 15/11/2026
 > **Phạm vi:** Provider nội bộ E1; không phải nghiệm thu transfer/approval toàn luồng
 > **Trạng thái:** E1 đã kiểm chứng trong phạm vi clarify; scoped tests/build pass; independent converge pass

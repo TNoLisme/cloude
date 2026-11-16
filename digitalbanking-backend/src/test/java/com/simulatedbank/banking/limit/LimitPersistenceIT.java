@@ -24,7 +24,7 @@ class LimitPersistenceIT {
 
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withInitScript("audit/init-roles.sql");
+            .withInitScript("limit/init-roles.sql");
 
     static JdbcTemplate jdbc;
 
@@ -62,22 +62,22 @@ class LimitPersistenceIT {
     }
 
     @Test
-    void upgradeFromV2PreservesExistingAuditAndInstallsLimitMigrations() throws Exception {
+    void upgradeFromV1PreservesExistingSchemaAndInstallsLimitMigrations() throws Exception {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              var statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE limit_upgrade");
         }
         String url = postgres.getJdbcUrl().replace("/test", "/limit_upgrade");
         var baseline = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
-                .schemas("banking").defaultSchema("banking").target("2").load();
-        assertThat(baseline.migrate().migrationsExecuted).isEqualTo(2);
+                .schemas("banking").defaultSchema("banking").target("1").load();
+        assertThat(baseline.migrate().migrationsExecuted).isEqualTo(1);
         var upgradeJdbc = new JdbcTemplate(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
-        upgradeJdbc.execute("COMMENT ON TABLE banking.audit_log IS 'preexisting baseline'");
+        upgradeJdbc.execute("COMMENT ON SCHEMA banking IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
         assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
-        assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking.audit_log'::regclass)", String.class))
+        assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking'::regnamespace, 'pg_namespace')", String.class))
                 .isEqualTo("preexisting baseline");
         assertThat(upgradeJdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isZero();
     }

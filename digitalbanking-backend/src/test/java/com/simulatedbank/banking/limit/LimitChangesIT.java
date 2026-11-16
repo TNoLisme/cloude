@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.doReturn;
 
-import com.simulatedbank.banking.audit.application.AuditRecorder;
-import com.simulatedbank.banking.audit.domain.AuditEvent;
+import com.simulatedbank.banking.audit.api.AuditModuleApi;
+import com.simulatedbank.banking.support.SqlAuditFixture;
+import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
@@ -49,12 +50,13 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@Import(SqlAuditFixture.class)
 @ActiveProfiles("test")
 @Testcontainers
 class LimitChangesIT {
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withInitScript("audit/init-roles.sql");
+            .withInitScript("limit/init-roles.sql");
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -73,7 +75,7 @@ class LimitChangesIT {
     @Autowired JdbcTemplate jdbc;
     @Autowired LimitRules rules;
     @Autowired LimitEnforcement enforcement;
-    @Autowired AuditRecorder audit;
+    @Autowired AuditModuleApi audit;
     @Autowired ZoneId businessZoneId;
     @MockitoSpyBean LimitJdbcRepository repository;
 
@@ -246,7 +248,7 @@ class LimitChangesIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"PREPARE", "APPROVE", "REJECT"})
-    void caughtRealAuditFailureRollsBackEveryMutation(String operation) {
+    void caughtAuditContractDoubleFailureRollsBackEveryMutation(String operation) {
         if (!operation.equals("PREPARE")) prepare(81, null, "100", "200");
         var before = configs();
         assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
@@ -256,9 +258,9 @@ class LimitChangesIT {
                 default -> changes.reject(81, 2);
             }
             try {
-                audit.recordInTransaction(auditEvent("UNKNOWN_ACTION"), Instant.now());
+                audit.recordInTransaction(auditEvent("UNKNOWN_ACTION"));
             } catch (IllegalArgumentException expected) {
-                // The real recorder marks the caller rollback-only even when the caller catches it.
+                // The audit contract double marks the caller rollback-only even when the caller catches it.
             }
         })).isInstanceOf(UnexpectedRollbackException.class);
         assertThat(configs()).isEqualTo(before);
@@ -266,30 +268,30 @@ class LimitChangesIT {
     }
 
     @Test
-    void realAuditSuccessSharesPreparationCommitAndDatabaseFailureRollsBackApproval() {
+    void auditFixtureCommitAndSqlFailureParticipateInCallerTransaction() {
         var result = transactions.execute(tx -> {
             var config = changes.prepare(proposal(81, null, "100", "200"));
-            audit.recordInTransaction(auditEvent("LIMIT_CHANGE_REQUESTED"), Instant.now());
+            audit.recordInTransaction(auditEvent("LIMIT_CHANGE_REQUESTED"));
             return config;
         });
         assertThat(repository.findConfiguration(result.limitId())).contains(result);
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.audit_log WHERE action='LIMIT_CHANGE_REQUESTED'", Integer.class))
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM limit_test.audit_event WHERE action='LIMIT_CHANGE_REQUESTED'", Integer.class))
                 .isPositive();
         try {
             assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
                 changes.approve(81, 2);
-                // Trigger the real writer's database path by revoking INSERT.
+                // Trigger the test audit sink's database path by revoking INSERT.
                 try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
                      var statement = connection.createStatement()) {
-                    statement.execute("REVOKE INSERT ON banking.audit_log FROM banking_app");
+                    statement.execute("REVOKE INSERT ON limit_test.audit_event FROM banking_app");
                 } catch (java.sql.SQLException e) { throw new IllegalStateException(e); }
-                audit.recordInTransaction(auditEvent("LIMIT_CHANGE_APPROVED"), Instant.now());
+                audit.recordInTransaction(auditEvent("LIMIT_CHANGE_APPROVED"));
             })).isInstanceOf(org.springframework.dao.DataAccessException.class)
                     .rootCause().extracting("SQLState").isEqualTo("42501");
         } finally {
             try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
                  var statement = connection.createStatement()) {
-                statement.execute("GRANT INSERT ON banking.audit_log TO banking_app");
+                statement.execute("GRANT INSERT ON limit_test.audit_event TO banking_app");
             } catch (java.sql.SQLException e) { throw new IllegalStateException(e); }
         }
         assertThat(repository.findConfiguration(result.limitId())).contains(result);
@@ -507,18 +509,10 @@ class LimitChangesIT {
         catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
     }
 
-    private static AuditEvent auditEvent(String action) {
-        var state = new java.util.HashMap<String, Object>();
-        state.put("requestType", "LIMIT_CHANGE");
-        state.put("status", action.equals("LIMIT_CHANGE_REQUESTED") ? "PENDING" : "APPLIED");
-        state.put("targetType", "CUSTOMER");
-        state.put("targetId", "11");
-        state.put("makerId", "1");
-        if (!action.equals("LIMIT_CHANGE_REQUESTED")) {
-            state.put("checkerId", "2");
-            state.put("decision", "APPROVE");
-        }
-        return new AuditEvent(action, "USER", 1L, "OPERATIONS", "APPROVAL_REQUEST", "81",
-                null, state, null, null, "limit-e4-correlation", "limit-e4-request", "SUCCESS", null);
+    private static AuditModuleApi.ApprovalEvent auditEvent(String action) {
+        return new AuditModuleApi.ApprovalEvent(action, 81, 1, "OPERATIONS", "CUSTOMER", "11", 1,
+                action.equals("LIMIT_CHANGE_REQUESTED") ? null : 2L,
+                action.equals("LIMIT_CHANGE_REQUESTED") ? null : "APPROVE", null,
+                action.equals("LIMIT_CHANGE_REQUESTED") ? "PENDING" : "APPLIED", "limit-e4-correlation", "limit-e4-request");
     }
 }

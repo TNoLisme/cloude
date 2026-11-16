@@ -1,5 +1,7 @@
 # Module `limit`
 
+> **Nền hiện tại:** codex/limit trên dev2 sạch. Audit production cũ không được mang sang; chỉ giữ AuditModuleApi contract, thiếu provider thì fail-closed503. Kết quả hiện tại213 tests; xem [chuyển nền dev2](DEV2-MIGRATION.md) và [báo cáo E4](E4-verification.md). Những kết quả audit thật ở ghi chú lịch sử bên dưới thuộc nền phuong/limit cũ.
+
 Nguồn ưu tiên: **docs-common/01–11 → docs-common/design → docs-backend**. Nguồn mô hình là 04 §4.5.1–4.5.2; ngữ nghĩa chọn hạn mức là 07 §8.5.1 và validation là §8.5.2. Không dùng GLOBAL/scope_type/scope_id từ bản tóm tắt cũ.
 
 - [Kế hoạch epic/feature](DELIVERY-PLAN.md): phạm vi E1–E4 và dependencies.
@@ -61,6 +63,6 @@ Thay đổi cấu hình không ghi usage, kể cả tạo counter 0. Hạ limit 
 
 Actor lấy từ principal của SessionAuthenticator; service kiểm staff role, LIMIT_MAKER/LIMIT_MANAGE và CHECKER. Cookie dùng CSRF common. Step-up SENSITIVE_ACTION theo candidate `identity.api.StepUpChallengePort`: maker bind actor/action/hash payload; checker thêm approvalId/decision/proposal hash. Consume tham gia cùng transaction approval/config/audit. Provider bắt buộc chưa có thì fail-closed, không có bean giả production.
 
-Tạo/duyệt/từ chối và C2 audit dùng implementation thật + PostgreSQL. Self-decision trả409 ROLE_CONFLICT theo clarify, có C3 security audit độc lập; lỗi C3 fallback log/metric, không chuyển deny thành allow. Approve kiểm current version dưới limit lock; stale proposal bị409 và giữ pending. Usage giữ nguyên; future-effective và D4 giữ quyết định cũ.
+Tạo/duyệt/từ chối dùng admin/limit thật + PostgreSQL; audit trên nền dev2 là SQL test double qua API, implementation production còn Blocked. Self-decision trả409 ROLE_CONFLICT khi các provider đã được ghép; contract yêu cầu C3 audit độc lập và fallback, hiện chỉ kiểm consumer với test double. Production thiếu audit thì503, không tiếp tục mutation. Approve kiểm current version dưới limit lock; stale proposal bị409 và giữ pending. Usage giữ nguyên; future-effective và D4 giữ quyết định cũ.
 
 Candidate APIs `StaffDirectory`, `CustomerQuery`, `AccountQuery` chỉ công bố contract/projection; owner cần review và cung cấp implementation thật. Các fake tương ứng và bảng `e4_test.challenge` chỉ ở test. Không dùng kết quả test này để nhận OTP/session/ownership thật đã đạt. Xem [báo cáo E4](E4-verification.md) và [hồ sơ SDD endpoint](specs/004-limit-admin-integration/spec.md).
