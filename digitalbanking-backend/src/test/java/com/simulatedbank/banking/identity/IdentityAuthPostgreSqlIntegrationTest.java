@@ -367,6 +367,47 @@ class IdentityAuthPostgreSqlIntegrationTest {
                         + "banking.app_user WHERE username = 't11user')", Integer.class)).isEqualTo(5);
     }
 
+    @Test
+    void excessConcurrentFailuresSaturateLockoutWithoutChallengeOrSession() throws Exception {
+        long userId = seedUser("lockout-saturation", "Concurrency2!", "ACTIVE", 4, null, "CUSTOMER");
+        int threads = 2;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CyclicBarrier barrier = new CyclicBarrier(threads);
+        List<Future<Integer>> outcomes;
+        try {
+            outcomes = pool.invokeAll(java.util.stream.IntStream.range(0, threads)
+                    .<Callable<Integer>>mapToObj(i -> () -> {
+                        barrier.await(10, TimeUnit.SECONDS);
+                        try {
+                            loginService.login(new LoginCommand("lockout-saturation",
+                                            "wrong-pass".toCharArray(), null, null, null),
+                                    client("corr-lockout-saturation-" + i));
+                            return 200;
+                        } catch (BankingBusinessException failure) {
+                            return failure.code().httpStatus();
+                        }
+                    }).toList(), 90, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        List<Integer> statuses = outcomes.stream().map(future -> {
+            try {
+                return future.get(90, TimeUnit.SECONDS);
+            } catch (Exception failure) {
+                throw new AssertionError(failure);
+            }
+        }).toList();
+        assertThat(statuses).containsOnly(423);
+        assertThat(row("SELECT status, failed_attempt_count FROM banking.app_user WHERE user_id = ?", userId))
+                .containsEntry("status", "LOCKED")
+                .containsEntry("failed_attempt_count", 5);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM banking.auth_challenge WHERE user_id = ?", Integer.class, userId)).isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM banking.session WHERE user_id = ?", Integer.class, userId)).isZero();
+    }
+
     // T12: đúng mật khẩu nhưng đang bị khóa → 423; không tạo session.
     @Test
     void t12_correctPasswordDuringLockoutDenied() throws Exception {
@@ -724,6 +765,40 @@ class IdentityAuthPostgreSqlIntegrationTest {
         assertThat(unexpected.get()).isNull();
         // Sau khi logout commit: mọi xác thực tiếp theo fail-closed; status không thể về ACTIVE.
         assertThat(logoutReturned).isTrue();
+        assertThat(sessionAuthenticator.authenticate(token)).isEmpty();
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM banking.session WHERE session_token_hash = ?", String.class,
+                HmacService.sha256Hex(token))).isEqualTo("LOGGED_OUT");
+    }
+
+    @Test
+    void concurrentDuplicateLogoutCommitsExactlyOneRevocation() throws Exception {
+        long userId = seedUser("duplicate-logout", "DuplicateLogout1", "ACTIVE", 0, null, "CUSTOMER");
+        HttpResult result = login("duplicate-logout", "DuplicateLogout1", Map.of());
+        String token = cookieValue(result.setCookie(), "DB_SESSION");
+        int threads = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CyclicBarrier barrier = new CyclicBarrier(threads);
+        List<Future<Boolean>> outcomes;
+        try {
+            outcomes = pool.invokeAll(java.util.stream.IntStream.range(0, threads)
+                    .<Callable<Boolean>>mapToObj(i -> () -> {
+                        barrier.await(10, TimeUnit.SECONDS);
+                        return logoutService.logout(token, userId, "corr-duplicate-logout-" + i);
+                    }).toList(), 30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        List<Boolean> revoked = outcomes.stream().map(future -> {
+            try {
+                return future.get(30, TimeUnit.SECONDS);
+            } catch (Exception failure) {
+                throw new AssertionError(failure);
+            }
+        }).toList();
+        assertThat(revoked).filteredOn(Boolean.TRUE::equals).hasSize(1);
+        assertThat(revoked).filteredOn(Boolean.FALSE::equals).hasSize(threads - 1);
         assertThat(sessionAuthenticator.authenticate(token)).isEmpty();
         assertThat(jdbc.queryForObject(
                 "SELECT status FROM banking.session WHERE session_token_hash = ?", String.class,

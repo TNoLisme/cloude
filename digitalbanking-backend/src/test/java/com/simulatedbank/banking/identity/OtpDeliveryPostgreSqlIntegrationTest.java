@@ -215,6 +215,29 @@ class OtpDeliveryPostgreSqlIntegrationTest {
     }
 
     @Test
+    void throwingVerificationC2AuditRollsBackStateAndAllowsSafeRetry() {
+        var view = issue("verify-audit-rollback");
+        char[] otp = gateway.calls.getFirst().otp();
+        audit.failVerified = true;
+
+        assertThatThrownBy(() -> verify(view.challengeRef(), otp)).isInstanceOf(AuditRejected.class);
+        Map<String, Object> rolledBack = row(view.challengeRef());
+        assertThat(rolledBack.get("status")).isEqualTo("SENT");
+        assertThat(((Number) rolledBack.get("attempt_count")).intValue()).isZero();
+        assertThat(rolledBack.get("verified_at")).isNull();
+        assertThat(rolledBack.get("consumed_at")).isNull();
+        assertNoSessions();
+
+        audit.failVerified = false;
+        verify(view.challengeRef(), otp);
+        Map<String, Object> committed = row(view.challengeRef());
+        assertThat(committed.get("status")).isEqualTo("VERIFIED");
+        assertThat(((Number) committed.get("attempt_count")).intValue()).isEqualTo(1);
+        assertThat(committed.get("verified_at")).isNotNull();
+        assertNoSessions();
+    }
+
+    @Test
     void missingProductionGatewayFailsClosedWithoutInventingSuccess() {
         var absentProvider = new StaticListableBeanFactory().getBeanProvider(OtpGateway.class);
         var unconfiguredDispatch = new OtpDispatchService(repository, absentProvider, manager, clock, meters);
@@ -650,6 +673,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
     static final class CapturingAudit implements AuthAuditPort {
         final List<Boolean> createdTransactions = new CopyOnWriteArrayList<>();
         volatile boolean failCreated;
+        volatile boolean failVerified;
         private final SecurityLogAuditAdapter delegate;
 
         CapturingAudit(SecurityLogAuditAdapter delegate) {
@@ -664,6 +688,9 @@ class OtpDeliveryPostgreSqlIntegrationTest {
                     throw new AuditRejected();
                 }
             }
+            if (event.action() == AuthAction.AUTH_STEP_UP_VERIFIED && failVerified) {
+                throw new AuditRejected();
+            }
             delegate.recordInTransaction(event, correlationId);
         }
 
@@ -674,6 +701,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
 
         void reset() {
             failCreated = false;
+            failVerified = false;
             createdTransactions.clear();
         }
     }
