@@ -11,13 +11,18 @@ import org.springframework.stereotype.Component;
 /** Bounded, process-local token buckets (virtual scheduling, no floating-point counters). Identity can use this for normalized username quotas. */
 @Component
 public final class RequestRateLimiter {
+    private static final org.slf4j.Logger LOG =
+            org.slf4j.LoggerFactory.getLogger(RequestRateLimiter.class);
     private final Clock clock;
     private final int capacity;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
     private final Map<String, Window> windows = new HashMap<>();
 
-    public RequestRateLimiter(Clock clock, AppProperties properties) {
+    public RequestRateLimiter(Clock clock, AppProperties properties,
+            io.micrometer.core.instrument.MeterRegistry metrics) {
         this.clock = clock;
         this.capacity = properties.security().http().maxRateLimitBuckets();
+        this.metrics = metrics;
     }
 
     /** Returns zero when allowed; otherwise ceil(seconds until the next token). Subjects are never stored raw. */
@@ -43,13 +48,24 @@ public final class RequestRateLimiter {
         Instant eligible = window.next.minus(spacing.multipliedBy(limit - 1L));
         if (now.isBefore(eligible)) {
             Duration remaining = Duration.between(now, eligible);
-            return remaining.getSeconds() + (remaining.getNano() == 0 ? 0 : 1);
+            long retrySeconds = remaining.getSeconds() + (remaining.getNano() == 0 ? 0 : 1);
+            rejection(group);
+            return retrySeconds;
         }
         window.next = (now.isAfter(window.next) ? now : window.next).plus(spacing);
         return 0;
     }
 
-    static final class CapacityExceededException extends RuntimeException {
+    /** BE-OBS-18: label chỉ gồm nhóm bounded; subject (kể cả đã hash) không bao giờ là label. */
+    private void rejection(String group) {
+        try {
+            metrics.counter("rate.limit.rejections", "group", group).increment();
+        } catch (RuntimeException metricsFailure) {
+            LOG.warn("RATE_LIMIT_METRIC_WRITE_FAILED group={}", group);
+        }
+    }
+
+    public static final class CapacityExceededException extends RuntimeException {
         CapacityExceededException() { super("Rate limiter capacity exceeded"); }
     }
 

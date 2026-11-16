@@ -26,7 +26,7 @@ class HttpSecurityComponentsTest {
     void rateLimiterMakesConcurrentQuotaAtomicAndReclaimsExpiredCapacity() throws Exception {
         runner.run(context -> {
             var clock = new HttpSecurityTest.MutableClock();
-            var limiter = new RequestRateLimiter(clock, context.getBean(AppProperties.class));
+            var limiter = new RequestRateLimiter(clock, context.getBean(AppProperties.class), new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
             try (var pool = Executors.newFixedThreadPool(8)) {
                 var results = pool.invokeAll(IntStream.range(0, 100)
                         .<java.util.concurrent.Callable<Long>>mapToObj(i -> () ->
@@ -42,7 +42,7 @@ class HttpSecurityComponentsTest {
         });
         runner.withPropertyValues("app.security.http.max-rate-limit-buckets=1").run(context -> {
             var clock = new HttpSecurityTest.MutableClock();
-            var limiter = new RequestRateLimiter(clock, context.getBean(AppProperties.class));
+            var limiter = new RequestRateLimiter(clock, context.getBean(AppProperties.class), new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
             assertThat(limiter.acquire("login-username", "synthetic-a", 10, Duration.ofMinutes(1))).isZero();
             assertThatThrownBy(() -> limiter.acquire("login-username", "synthetic-b", 10, Duration.ofMinutes(1)))
                     .isInstanceOf(RequestRateLimiter.CapacityExceededException.class)
