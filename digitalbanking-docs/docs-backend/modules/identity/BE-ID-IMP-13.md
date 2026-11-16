@@ -109,4 +109,10 @@ Không có. Không sửa migration V2/V3/V4.
 
 ## 10. Evidence
 
-Xem mục 7 + commit trên branch `datht-backend-rework` (hash ghi tại tasks/README sau commit). Trạng thái tổng: **PARTIAL** cho đến khi mục 8.1 được Audit module đóng (điều kiện của Gate D).
+Kiểm thử: mục 7 (unit 72 PASS; integration 6 PASS; full build `./gradlew build --rerun-tasks` **SUCCESSFUL — 55 classes / 791 tests / 0 failure/error/skip**).
+
+Commits trên branch `datht-backend-rework`:
+- `21ecdd96dc5` — BE-ID-IMP-13 implementation + tests + docs (kèm baseline backend IMP-01..12 chưa commit trước đó, để commit tự nhất quán).
+- `869fa958de9` — README module status IMP-13 PARTIAL.
+
+Trạng thái tổng: **PARTIAL** cho đến khi mục 8.1 được Audit module đóng (điều kiện của Gate D).
