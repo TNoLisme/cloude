@@ -23,6 +23,35 @@
 - **Lý do và phương án:** chọn phương án đã được Security ghi `OI-SEC-02` Resolved tại `design/04` §4.4/§13, khớp default step-up hiện có và tránh thay đổi ngưỡng bảo mật đã mô tả; `design/03` từng nêu OTP trên 5 triệu, nay không áp dụng làm trigger OTP riêng. Cả hai là thiết kế mô phỏng; SRS/API yêu cầu ngưỡng cấu hình, không ấn định con số. Không tuyên bố đây là quy định ngân hàng thực tế hay thay thế đánh giá rủi ro.
 - **Ngoài phạm vi:** scope customer/account, ngày nghiệp vụ/timezone, PIN, hạn mức tối thiểu/tối đa từng giao dịch, daily cap, phương thức xác thực khác, rule fraud/velocity, và protocol xử lý đồng thời không được quyết định tại đây. Xác thực và lỗi vẫn theo `07` §6; việc triển khai, versioning cấu hình và phối hợp provider phải review/test.
 - **Nguồn và ảnh hưởng:** `03. SRS.md` §2.13.6, AC-033; `07. API contracts.md` §6; `design/03. fraud-detection-rules.md` §§4–6, 11; `design/04. security.md` §§4.4, 13; `design/05. Modules contract.md` §10.1; `docs-backend/deployment/configuration.md` và Transfer BE-TRF-01. Không tự đóng MOD-OI-01: guard/reservation, race `428`, scope/ngày và evidence provider/PostgreSQL vẫn cần được chứng minh.
+## AUD-01/AUD-02 — Quyết định triển khai độc lập
+
+These entries record the current implementation and proposals for coordination. They do not imply owner approval.
+
+## Scope
+
+- Independent AUD-01/AUD-02 component work may proceed without owner approval.
+- Public API, caller integration, RBAC, export, C3, checkpoint and external anchor remain blocked until owner contracts are reviewed.
+
+## Decisions used for independent component work
+
+- `AuditRecorder` accepts only C1/C2 events through `Propagation.MANDATORY`; C3/C4 are rejected before database locking.
+- JDBC/native SQL remains in `audit.adapter.out` for hash-chain locking, JSONB projection, fixed audit projections and bounded verification scans. Spring Data JPA is not forced onto append-only or PostgreSQL-specific paths.
+- `AuditQueryPort` and `AuditRecordWriterPort` are outbound persistence ports in `audit.application.port`. They are not public cross-module APIs.
+- `AuditModuleApi` is not created or exposed before owner review of event DTOs, actor context, error mapping and transaction semantics.
+- Audit read projection fails closed. Raw JSON does not leave the internal persistence boundary; public API/RBAC is not implemented in this independent scope.
+- Writer canonical payload limit remains 32 KiB. Reader allows bounded PostgreSQL `jsonb::text` representation expansion, then enforces compact JSON <= 32 KiB before projection. This does not alter hash input or stored evidence.
+- Audit hash v1 remains a proposal. Current tests characterize implementation behavior; they are not production protocol approval or cross-language golden-vector sign-off.
+- Testcontainers PostgreSQL evidence is disposable component evidence. `ddl-auto=none` in isolated Audit tests does not prove full production `ddl-auto=validate` readiness.
+- Missing provider dependencies are not replaced with production stubs. Fake data is allowed only in tests and is not used to claim RBAC or caller integration.
+
+## Open owner decisions
+
+- Hash v1 formula, field set, delimiter and golden vectors: DB/Common and Architecture.
+- `AuditModuleApi`, actor role/scope and principal source: Identity, Architecture and business callers.
+- C3 standalone audit and security fallback: Identity, Security and Architecture.
+- Export byte/resource/CSV policy: DB, Security and Architecture.
+- Migration role/FK coordination, scheduled verification, checkpoint and external anchor: DB, Architecture and Operations.
+- Transfer/Ledger/Fraud/Admin caller integration fixtures: module owners.
 
 ## DEC-TRF-003 — Validation và credit failure
 
