@@ -12,10 +12,12 @@ import com.simulatedbank.banking.customer.application.OwnerCustomerPiiView;
 import com.simulatedbank.banking.customer.domain.CustomerStatus;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -77,6 +79,7 @@ class CustomerPiiPostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("AC-023 database: protected Customer columns contain ciphertext, never plaintext")
     void creationPersistsOnlyAesGcmCiphertextAndSerializesOwnerSafeFields() throws Exception {
         long userId = seedUser("encrypted-create");
         OwnerCustomerPiiView view = service.create(
@@ -86,6 +89,12 @@ class CustomerPiiPostgreSqlIntegrationTest {
         assertThat(stored.get("full_name_enc")).isNotEqualTo("Nguyễn An".getBytes(StandardCharsets.UTF_8));
         assertThat(stored.get("phone_enc")).isNotEqualTo("+84900000123".getBytes(StandardCharsets.UTF_8));
         assertThat(stored.get("email_enc")).isNotEqualTo("n.synthetic@example.com".getBytes(StandardCharsets.UTF_8));
+        assertThat(containsSubsequence(
+                stored.get("full_name_enc"), "Nguyễn An".getBytes(StandardCharsets.UTF_8))).isFalse();
+        assertThat(containsSubsequence(
+                stored.get("phone_enc"), "+84900000123".getBytes(StandardCharsets.UTF_8))).isFalse();
+        assertThat(containsSubsequence(
+                stored.get("email_enc"), "n.synthetic@example.com".getBytes(StandardCharsets.UTF_8))).isFalse();
         assertThat(crypto.decrypt(stored.get("full_name_enc"))).isEqualTo("Nguyễn An");
         assertThat(crypto.decrypt(stored.get("phone_enc"))).isEqualTo("+84900000123");
         assertThat(crypto.decrypt(stored.get("email_enc"))).isEqualTo("n.synthetic@example.com");
@@ -181,6 +190,39 @@ class CustomerPiiPostgreSqlIntegrationTest {
                 ErrorCode.VALIDATION_ERROR);
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM banking.customer WHERE user_id = ?", Long.class, userId)).isZero();
+    }
+
+    @Test
+    @DisplayName("BE-CUS-IMP-08 database: FK failure rolls back the encrypted Customer create atomically")
+    void foreignKeyFailureRollsBackEncryptedCustomerCreation() {
+        long rowsBefore = jdbc.queryForObject("SELECT count(*) FROM banking.customer", Long.class);
+
+        assertThatThrownBy(() -> service.create(
+                Long.MAX_VALUE,
+                "Never Committed",
+                "+84900000999",
+                "rollback.synthetic@example.com",
+                CustomerStatus.ACTIVE))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.customer", Long.class))
+                .isEqualTo(rowsBefore);
+    }
+
+    private static boolean containsSubsequence(byte[] value, byte[] candidate) {
+        if (candidate.length == 0 || candidate.length > value.length) {
+            return false;
+        }
+        for (int offset = 0; offset <= value.length - candidate.length; offset++) {
+            int index = 0;
+            while (index < candidate.length && value[offset + index] == candidate[index]) {
+                index++;
+            }
+            if (index == candidate.length) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Map<String, byte[]> encryptedColumns(long customerId) {
