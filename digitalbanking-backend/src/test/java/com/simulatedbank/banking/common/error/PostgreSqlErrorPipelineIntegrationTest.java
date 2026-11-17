@@ -49,7 +49,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.yaml.snakeyaml.Yaml;
 
 /** DB primitives -> Spring translation -> production HTTP errors. Not a business-consumer test. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "app.identity.enabled=false")
 @ActiveProfiles("test")
 @Testcontainers
 @Import({PostgreSqlErrorPipelineIntegrationTest.Harness.class, PostgreSqlErrorPipelineIntegrationTest.Fixture.class})

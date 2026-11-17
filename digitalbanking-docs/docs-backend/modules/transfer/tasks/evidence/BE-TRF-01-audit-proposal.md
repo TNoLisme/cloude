@@ -1,6 +1,6 @@
 # BE-TRF-01 — Đề xuất phối hợp audit C2/C1 trong T2
 
-**Trạng thái: Draft — chờ Audit, Fraud, Transfer và Architect review; chưa phải interface, policy hay implementation đã được duyệt.** Người theo dõi đề xuất: Transfer/Vũ; provider Audit/Fraud và QA cùng review. Không đánh dấu MOD-OI-05 hoặc TRF-01.6 hoàn tất chỉ dựa trên hồ sơ này.
+**Trạng thái: DEC-TRF-007 chọn phương án A; chờ Audit, Fraud, Transfer và Architect review và kiểm chứng runtime.** Người theo dõi: Transfer/Vũ; provider Audit/Fraud và QA cùng review. Không đánh dấu MOD-OI-05 hoặc TRF-01.6 hoàn tất chỉ dựa trên quyết định thiết kế.
 
 ## 1. Căn cứ và vấn đề
 
@@ -12,19 +12,19 @@ Vấn đề cần giải quyết: fraud có thể tạo một hoặc nhiều fla
 
 ## 2. Phương án A — gom dữ kiện, gọi API đơn trong pha audit cuối
 
-**Đề xuất để review:** tái sử dụng operation audit khái niệm `recordInTransaction(AuditEvent)` tại `05` §11.1; chưa giả định implementation có thể gọi lặp an toàn cho đến khi Audit xác nhận và test. Không cần giả định một batch API runtime mới.
+**Đã chọn theo DEC-TRF-007:** tái sử dụng operation audit khái niệm `recordInTransaction(AuditEvent)` tại `05` §11.1; chưa giả định implementation có thể gọi lặp an toàn cho đến khi Audit xác nhận và test. Không cần giả định một batch API runtime mới.
 
-1. Transfer claim transfer, Account/Limit lock theo thứ tự contract; Fraud đánh giá và ghi các flag thuộc owner Fraud trong T2. Fraud trả kết quả `ALLOW`/`BLOCK` hoặc `ENGINE_ERROR` cùng dữ kiện tối thiểu để tạo C2 cho **mỗi flag thực sự còn trong transaction**. Dữ kiện dự kiến gồm flag ID, transfer reference, rule code/version, severity, correlation và các trường allowlist cần thiết; kiểu, nullability, mapping sang `AuditEvent` và trách nhiệm validate cần Fraud/Audit/Transfer thống nhất. Không truyền entity/JPA, token, OTP, raw key hay PII không cần thiết.
+1. Transfer đọc context không lock, lấy guard CUSTOMER rồi claim/re-read transfer; Account/Limit lock theo thứ tự contract. Fraud đánh giá và ghi các flag thuộc owner Fraud trong T2. Fraud trả kết quả `ALLOW`/`BLOCK` hoặc `ENGINE_ERROR` cùng dữ kiện tối thiểu để tạo C2 cho **mỗi flag thực sự còn trong transaction**. Dữ kiện dự kiến gồm flag ID, transfer reference, rule code/version, severity, correlation và các trường allowlist cần thiết; kiểu, nullability, mapping sang `AuditEvent` và trách nhiệm validate cần Fraud/Audit/Transfer thống nhất. Không truyền entity/JPA, token, OTP, raw key hay PII không cần thiết.
 2. Nếu engine lỗi thuộc diện fail-open, rollback phần engine về savepoint và loại bỏ toàn bộ dữ kiện C2 tương ứng flag đã rollback. Chỉ tiếp tục nếu transaction **và persistence context** thực sự còn sử dụng được; nếu không chứng minh được thì rollback toàn T2. Không bao lỗi audit C1/C2 hoặc invariant tiền trong phạm vi catch/fail-open. Ghi log/metric hoặc xử lý C4 theo contract mà không làm audit bắt buộc thành best-effort.
-3. Hoàn tất nhánh nghiệp vụ: `ALLOW` tiếp tục money/ledger/usage; `BLOCK` xử lý nhánh từ chối theo policy. Hoàn tất thay đổi business, outbox, terminal status và idempotency response trước pha audit. Không gọi gateway/HTTP trong T2. Nếu transaction bị rollback thì dữ kiện lưu trong bộ nhớ bị bỏ, không phát ra event độc lập sau rollback.
-4. Trong **pha audit cuối** của cùng PostgreSQL transaction, dựng/validate event theo allowlist và ghi một C2 cho mỗi flag còn tồn tại theo thứ tự ổn định được Audit/Fraud thống nhất, sau đó ghi C1 `TRANSFER_COMPLETED` hoặc `TRANSFER_FAILED`. Audit sở hữu canonicalization, chain và lock; sau khi lấy audit lock không thực hiện business DB operation hay gọi network. Audit bảo đảm mỗi lần append tiếp nối chain đúng, kể cả nhiều event trong cùng transaction. Không suy ra một câu SQL duy nhất là bắt buộc: “cuối” ở đây là pha audit cuối; Audit owner xác nhận cách diễn giải phù hợp `design/01` §4.4.
+3. Hoàn tất nhánh nghiệp vụ: `ALLOW` tiếp tục money/ledger/usage; `BLOCK` xử lý nhánh từ chối theo policy. Hoàn tất và flush business writes, outbox, terminal status và idempotency response trước pha audit. Không gọi gateway/HTTP trong T2. Nếu transaction bị rollback thì dữ kiện lưu trong bộ nhớ bị bỏ, không phát ra event độc lập sau rollback.
+4. Trong **pha audit cuối** của cùng PostgreSQL transaction, dựng/validate event theo allowlist và ghi một C2 cho mỗi flag còn tồn tại theo flag ID tăng dần, sau đó ghi C1 `TRANSFER_COMPLETED` hoặc `TRANSFER_FAILED`. Audit sở hữu canonicalization, chain và lock; sau khi lấy audit lock không thực hiện business DB operation hay gọi network; kiểm ORM deferred flush/trigger. Audit bảo đảm mỗi lần append tiếp nối chain đúng, kể cả nhiều event trong cùng transaction. Không suy ra một câu SQL duy nhất là bắt buộc: “cuối” ở đây là pha audit cuối; Audit owner xác nhận bằng test phù hợp `design/01` §4.4.
 5. Bất kỳ lỗi validate, lock hay ghi C2/C1 bắt buộc phải lan ra để rollback toàn T2, gồm flag, balance, ledger, usage, outbox, terminal/idempotency response và mọi audit đã ghi trong T2. T1 đã commit vẫn giữ `PENDING`/audit CREATED. Không trả `COMPLETED`; retry cùng key theo contract. `FRAUD_ENGINE_ERROR` là C4, không thay thế C2/C1 bắt buộc.
 
-**Cần xác nhận trước khi chọn:** số flag tối đa và thứ tự ổn định; ownership dữ kiện/sự kiện và kiểm tra đủ một C2/flag; cách dùng savepoint cùng persistence context; reentrant lock/chain của nhiều lời gọi `recordInTransaction`; mapping lỗi và test provider thật. Không tự coi danh sách dữ kiện đã được thêm vào `FraudDecision` hoặc audit batch đã tồn tại.
+**Cần review và kiểm chứng:** số flag tối đa; ownership dữ kiện/sự kiện và kiểm tra đủ một C2/flag; cách dùng savepoint cùng persistence context; reentrant lock/chain của nhiều lời gọi `recordInTransaction`; mapping lỗi và test provider thật. Không tự coi danh sách dữ kiện đã được thêm vào runtime `FraudDecision`.
 
 ## 3. Phương án B — audit-owned batch
 
-Thay bước 4 bằng operation batch do Audit sở hữu nhận danh sách `AuditEvent` đã sắp thứ tự, JOIN/MANDATORY T2; Audit validate toàn bộ, lấy chain lock và append C2 rồi C1 trong một pha, lỗi bất kỳ rollback toàn T2. Có thể giảm số lần qua interface và giúp Audit kiểm soát thứ tự. Đổi lại cần public API/DTO mới, quy định lỗi theo phần tử, giới hạn batch, tính nguyên tử và phối hợp version provider/consumer. Đây chỉ là **đề xuất thay thế**, không phải interface đã được duyệt. Audit/Fraud/Transfer/Architect quyết định giữa A và B; lựa chọn cần cập nhật hợp đồng `05`, version/PR và suite liên quan.
+Thay bước 4 bằng operation batch do Audit sở hữu nhận danh sách `AuditEvent` đã sắp thứ tự, JOIN/MANDATORY T2; Audit validate toàn bộ, lấy chain lock và append C2 rồi C1 trong một pha, lỗi bất kỳ rollback toàn T2. Có thể giảm số lần qua interface và giúp Audit kiểm soát thứ tự. Đổi lại cần public API/DTO mới, quy định lỗi theo phần tử, giới hạn batch, tính nguyên tử và phối hợp version provider/consumer. Đây là **phương án thay thế chưa chọn**, không phải interface runtime. DEC-TRF-007 chọn A; provider/consumer vẫn cần review/test A.
 
 ## 4. Vector review và integration
 
@@ -47,5 +47,5 @@ Các vector dưới đây là **Planned**, chưa được chạy hay owner duy�
 
 - **Audit:** ownership và schema event, allowlist, serialization/hash chain, nhiều event cùng transaction, thứ tự và hành vi khi lỗi giữa các event.
 - **Fraud:** dữ kiện cần trả cho từng flag thực sự tồn tại sau savepoint, scope fail-open, không để rollback savepoint sót event trong bộ nhớ hoặc entity stale.
-- **Transfer + Architect:** ranh giới pha audit cuối, lock order, lựa chọn A/B, rollback và version/interface; không báo đã tích hợp chỉ vì fake pass.
+- **Transfer + Architect:** ranh giới pha audit cuối, lock order, phương án A đã chọn, rollback và version/interface; không báo đã tích hợp chỉ vì fake pass.
 - **QA:** duyệt oracle `AUD-P-01–08`, map vào test suite thật và lưu evidence; **Security:** kiểm allowlist/masking. Các phê duyệt, revision interface và kết quả test cần được liên kết trong hồ sơ bàn giao sau khi có thật.

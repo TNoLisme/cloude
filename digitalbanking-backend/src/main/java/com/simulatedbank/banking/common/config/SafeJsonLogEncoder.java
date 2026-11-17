@@ -4,6 +4,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.EncoderBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.common.context.RequestContext;
+import com.simulatedbank.banking.common.context.SecurityAuditFallbackLog;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -39,7 +40,24 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         boolean securityGap = event.getLoggerName().equals(
                 "com.simulatedbank.banking.common.config.SecurityAuditGapLogger")
                 && event.getMessage().equals("SECURITY_AUDIT_GAP");
-        fields.put("event", completion ? "HTTP_REQUEST_COMPLETED" : securityGap ? "SECURITY_AUDIT_GAP" : "APPLICATION_LOG");
+        boolean securityAuditFallback = event.getLoggerName().equals(SecurityAuditFallbackLog.class.getName())
+                && event.getMessage().equals(SecurityAuditFallbackLog.EVENT);
+        fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
+                : securityGap ? "SECURITY_AUDIT_GAP"
+                : securityAuditFallback ? SecurityAuditFallbackLog.EVENT : "APPLICATION_LOG");
+        if ((completion || securityGap || securityAuditFallback) && event.getKeyValuePairs() != null) {
+            for (KeyValuePair pair : event.getKeyValuePairs()) {
+                Object value = pair.value;
+                boolean allowed = switch (pair.key) {
+                    case "action" -> value instanceof String s
+                            && s.matches("SECURITY_ACCESS_DENIED|SECURITY_IDEMPOTENCY_CONFLICT");
+                    case "outcome" -> "REJECTED".equals(value);
+                    case "user_id" -> value instanceof String s && s.matches("sha256:[0-9a-f]{64}");
+                    default -> false;
+                };
+                if (allowed) fields.put(pair.key, value);
+            }
+        }
         if ((completion || securityGap) && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;

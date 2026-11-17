@@ -113,6 +113,10 @@ Runtime baseline 5bf84a6 trùng source/config/test hiện tại khi bỏ qua .gi
 
 Tiếp tục từng dependency ngay khi owner có implementation, không cần viết lại primitive hoặc đợi tất cả module cùng lúc. Khi runtime đổi: cập nhật TKCT/usage, chạy tests phù hợp, bổ sung verification theo đúng revision/môi trường, cập nhật final report/tracker. Chỉ đóng05/07/08 và module release khi mọi AC tương ứng đã Verified và có review/sign-off thực tế.
 
+### Cập nhật BE-TRF-07 sau snapshot
+
+`SafeJsonLogEncoder` có allowlist cho event `SECURITY_AUDIT_FALLBACK` qua `SecurityAuditFallbackLog`. Event chỉ thêm action, outcome REJECTED và user ID đã hash vào context an toàn của encoder. Transfer dùng event khi C3 không có durable audit ref hoặc port ném lỗi. Chi tiết và bằng chứng nằm tại [BE-TRF-07](../transfer/tasks/BE-TRF-07.md).
+
 ## 7. Định danh snapshot rà soát
 
 Các hash dưới đây dành cho đối chiếu docs/source tại thời điểm viết; không thay snapshot runtime/historical evidence của từng task.

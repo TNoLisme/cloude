@@ -61,9 +61,11 @@ public class LimitApprovalService {
         checkScope(change.customerId(), change.accountId());
         var maker = profile(directory, actor.id());
         var binding = bindings.create(actor.id(), change);
-        requireChallenge(identity, challenge, binding);
+        requireChallenge(identity, challenge, binding, trace);
         return transactions.execute(tx -> {
-            identity.consumeVerified(challenge, binding);
+            identity.consumeVerified(new StepUpChallengePort.ConsumeCommand(
+                    challenge.toString(), binding.userId(), StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION,
+                    binding.requestHash(), binding.approvalId() == null ? null : binding.approvalId().toString()));
             var approval = approvals.create(change.accountId() == null ? "CUSTOMER" : "ACCOUNT",
                     change.accountId() == null ? Long.toString(change.customerId()) : change.accountId().toString(),
                     change.payload(null), actor.id(), trace.correlationId());
@@ -101,13 +103,15 @@ public class LimitApprovalService {
         var maker = profile(directory, initial.makerId());
         var checker = profile(directory, actor.id());
         var binding = bindings.decision(actor.id(), approvalId, decision, safeNote, initial.payload());
-        requireChallenge(identity, challenge, binding);
+        requireChallenge(identity, challenge, binding, trace);
         return transactions.execute(tx -> {
             var locked = approvals.lock(approvalId);
             requirePending(locked);
             var lockedBinding = bindings.decision(actor.id(), approvalId, decision, safeNote, locked.payload());
             if (!binding.equals(lockedBinding)) fail(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
-            identity.consumeVerified(challenge, binding);
+            identity.consumeVerified(new StepUpChallengePort.ConsumeCommand(
+                    challenge.toString(), binding.userId(), StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION,
+                    binding.requestHash(), binding.approvalId() == null ? null : binding.approvalId().toString()));
             boolean approve = decision.equals("APPROVE");
             Map<?, ?> current = (Map<?, ?>) locked.payload().get("current");
             Integer expectedVersion = current == null ? null : ((Number) current.get("version")).intValue();
@@ -136,13 +140,16 @@ public class LimitApprovalService {
                 approval.status(), trace.correlationId(), trace.requestId()));
     }
 
-    private static void requireChallenge(StepUpChallengePort identity, UUID challenge, ActionBinding binding) {
+    private static void requireChallenge(StepUpChallengePort identity, UUID challenge, ActionBinding binding, RequestContext trace) {
         if (challenge == null) {
-            var requested = identity.requestChallenge(binding);
-            if (requested == null || !"SENSITIVE_ACTION".equals(requested.purpose())) fail(ErrorCode.SERVICE_UNAVAILABLE);
+            var requested = identity.requestChallenge(new StepUpChallengePort.ChallengeRequest(
+                    StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, binding.userId(),
+                    binding.requestHash(), binding.approvalId() == null ? null : binding.approvalId().toString(),
+                    trace.correlationId()));
+            if (requested == null || requested.purpose() != StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION) fail(ErrorCode.SERVICE_UNAVAILABLE);
             throw new BankingBusinessException(ErrorCode.STEP_UP_REQUIRED, ErrorCode.STEP_UP_REQUIRED.detail(), Map.of("challenge",
-                    Map.of("challengeId", requested.challengeId().toString(), "purpose", requested.purpose(),
-                            "methods", requested.methods(), "expiresAt", requested.expiresAt().toString(),
+                    Map.of("challengeId", requested.challengeRef(), "purpose", requested.purpose().name(),
+                            "methods", java.util.List.of(requested.method()), "expiresAt", requested.expiresAt().toString(),
                             "maxAttempts", requested.maxAttempts(), "remainingAttempts", requested.remainingAttempts())));
         }
     }

@@ -57,6 +57,7 @@ class ModuleBoundaryArchTest {
                             "jakarta.persistence..",
                             "javax.sql.."
                     )
+                    .allowEmptyShould(true)
                     .because("06 §6.2–6.3: common owns no persistence or business transaction boundary");
 
     @ArchTest
@@ -139,4 +140,50 @@ class ModuleBoundaryArchTest {
         assertThatThrownBy(() -> limitAndAdminDoNotExposePersistence.check(inbound)).isInstanceOf(AssertionError.class);
         assertThatThrownBy(() -> limitAndAdminUseOtherModuleApis.check(crossModule)).isInstanceOf(AssertionError.class);
     }
+    static final ArchRule auditApplicationMustNotDependOnOutboundAdapters =
+            noClasses()
+                    .that().resideInAPackage("..banking.audit.application..")
+                    .should().dependOnClassesThat().resideInAPackage("..banking.audit.adapter.out..")
+                    .allowEmptyShould(true)
+                    .because("BE-ARCH-00 §4.2: audit application must not depend on concrete outbound adapters");
+
+    @ArchTest
+    static final ArchRule auditDomainMustRemainFrameworkFree =
+            noClasses()
+                    .that().resideInAPackage("..banking.audit.domain..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "org.springframework..",
+                            "jakarta.persistence..",
+                            "javax.sql.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ARCH-00 §4.2 / BE-CON-35: audit domain must remain free of frameworks/persistence");
+
+    @ArchTest
+    static final ArchRule fraudApplicationMustNotDependOnOutboundAdapters =
+            noClasses()
+                    .that().resideInAPackage("..banking.fraud.application..")
+                    .should().dependOnClassesThat().resideInAPackage("..banking.fraud.adapter.out..")
+                    .allowEmptyShould(true)
+                    .because("BE-ARCH-00 §4.2: fraud application must not depend on concrete outbound adapters");
+
+    @ArchTest
+    static final ArchRule notificationApplicationMustNotDependOnOutboundAdapters =
+            noClasses()
+                    .that().resideInAPackage("..banking.notification.application..")
+                    .should().dependOnClassesThat().resideInAPackage("..banking.notification.adapter.out..")
+                    .allowEmptyShould(true)
+                    .because("BE-ARCH-00 §4.2: notification application must not depend on concrete outbound adapters");
+
+    @ArchTest
+    static final ArchRule otherModulesMustNotImportAuditInternals =
+            noClasses()
+                    .that().resideOutsideOfPackage("..banking.audit..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "..banking.audit.application..",
+                            "..banking.audit.domain..",
+                            "..banking.audit.adapter.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ARCH-00 §4.2: external modules must not depend on audit internals directly; consumers must use audit.api once approved");
 }

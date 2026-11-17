@@ -1,0 +1,89 @@
+package com.simulatedbank.banking.notification.configuration;
+
+import com.simulatedbank.banking.common.config.AppProperties;
+import com.simulatedbank.banking.notification.adapter.out.SimulatedNotificationGateway;
+import com.simulatedbank.banking.notification.application.NotificationOutboxWorker;
+import com.simulatedbank.banking.notification.application.port.NotificationDeliveryPort;
+import com.simulatedbank.banking.notification.application.port.NotificationPersistencePort;
+import com.simulatedbank.banking.notification.domain.NotificationPayloadValidator;
+import com.simulatedbank.banking.notification.domain.NotificationRetryPolicy;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.Clock;
+import java.time.Duration;
+
+/**
+ * Composition configuration for notification module.
+ * Wires domain services, outbound delivery simulators, and application worker.
+ * Placed in module-level configuration package outside application to enforce
+ * strict Hexagonal dependency direction (application layer must not depend on concrete outbound adapters).
+ */
+@Configuration
+public class NotificationConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public NotificationPayloadValidator notificationPayloadValidator() {
+        return new NotificationPayloadValidator();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public NotificationRetryPolicy notificationRetryPolicy(AppProperties properties) {
+        long leaseSeconds = properties.jobs() != null ? properties.jobs().outboxLeaseSeconds() : 30;
+        return new NotificationRetryPolicy(5, Duration.ofSeconds(5), Duration.ofSeconds(leaseSeconds));
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(NotificationDeliveryPort.class)
+    @Conditional(SimulatorOptInCondition.class)
+    public SimulatedNotificationGateway defaultSimulatedNotificationGateway() {
+        return new SimulatedNotificationGateway() {
+            @Override
+            public void send(com.simulatedbank.banking.notification.domain.NotificationItem item) {
+                // Explicit opt-in simulator in development/testing
+            }
+
+            @Override
+            public boolean isSimulator() {
+                return true;
+            }
+        };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(NotificationDeliveryPort.class)
+    public NotificationOutboxWorker notificationOutboxWorker(
+            NotificationPersistencePort repository,
+            NotificationDeliveryPort gateway,
+            NotificationRetryPolicy retryPolicy,
+            TransactionTemplate transactionTemplate,
+            Clock clock
+    ) {
+        return new NotificationOutboxWorker(repository, gateway, retryPolicy, transactionTemplate, clock);
+    }
+
+    public static class SimulatorOptInCondition implements Condition {
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Environment env = context.getEnvironment();
+            if (env == null) {
+                return false;
+            }
+            boolean profileOptIn = env.acceptsProfiles(Profiles.of("simulator"));
+            boolean propertyOptIn = "true".equalsIgnoreCase(env.getProperty("app.notification.simulator.enabled"));
+            return profileOptIn || propertyOptIn;
+        }
+    }
+}

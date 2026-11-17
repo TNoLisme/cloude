@@ -394,6 +394,8 @@ CORS fail startup nếu wildcard/origin sai dạng; methods GET/POST/OPTIONS, cr
 
 Nguồn: `08` §8.1, `04` §3–§8, `06` §8.1–§8.8. Tên bảng vật lý lấy theo `04`/`06` (`app_user`, `device`); `design/04` dùng `users`/`user_device` — cần đồng bộ thuật ngữ trong `docs-common/`.
 
+[BE-LED-02](../modules/ledger/tasks/BE-LED-02.md) giữ SQL Ledger ở location `db/ledger-candidate` trong lúc chờ predecessor và version Flyway production. SQL candidate tạo trigger và hardening ACL trong cùng migration. Sau migration production và mọi grant diện rộng, kiểm lại quyền hiệu lực trên Ledger bằng credential runtime. Identity mặc định không cần grant trực tiếp trên sequence Ledger.
+
 ### 6.3. Tài khoản DB và quyền tối thiểu
 
 | Tài khoản | Vai trò | Quyền |

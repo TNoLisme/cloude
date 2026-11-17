@@ -123,8 +123,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private ProblemResponse.FieldError fieldError(String field) {
+        // Hyphens are permitted so header names such as "Idempotency-Key" survive (BE-CON-55).
         String safeField = field != null && field.length() <= 128
-                && field.matches("[A-Za-z_$][A-Za-z0-9_.$]*(\\[[0-9]{1,4}\\])?(\\.[A-Za-z_$][A-Za-z0-9_$]*)*")
+                && field.matches("[A-Za-z_$][A-Za-z0-9_.$-]*(\\[[0-9]{1,4}\\])?(\\.[A-Za-z_$][A-Za-z0-9_$-]*)*")
                 ? field : "request";
         return new ProblemResponse.FieldError(safeField, "INVALID", "Giá trị không hợp lệ.");
     }

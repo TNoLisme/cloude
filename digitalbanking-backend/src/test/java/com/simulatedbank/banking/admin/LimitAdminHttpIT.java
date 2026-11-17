@@ -429,29 +429,37 @@ class LimitAdminHttpIT {
         public void setResponsePurpose(String purpose) { responsePurpose = purpose; }
         TestPorts(SqlFixture jdbc, TransactionTemplate transactions) { this.jdbc = jdbc; this.transactions = transactions; }
 
-        @Override public Challenge requestChallenge(ActionBinding binding) {
+        @Override public StepUpChallengePort.ChallengeView requestChallenge(StepUpChallengePort.ChallengeRequest request) {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             UUID id = UUID.randomUUID();
             Instant expiry = Instant.now().plusSeconds(300);
             transactions.executeWithoutResult(tx -> jdbc.update("""
                     INSERT INTO e4_test.challenge VALUES (?,?,?,?,?,'PENDING',?,'SENSITIVE_ACTION')
-                    """, id, binding.userId(), binding.action(), binding.approvalId(), binding.requestHash(), java.sql.Timestamp.from(expiry)));
-            return new Challenge(id, responsePurpose, List.of("OTP"), expiry, 5, 5);
+                    """, id, request.userId(), "SENSITIVE_ACTION", request.bindingKey() == null ? null : Long.parseLong(request.bindingKey()),
+                    request.requestHash(), java.sql.Timestamp.from(expiry)));
+            return new StepUpChallengePort.ChallengeView(id.toString(),
+                    StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, "OTP", "SMS", expiry, 5, 5);
         }
 
         @Override
         @Transactional(propagation = Propagation.MANDATORY)
-        public void consumeVerified(UUID id, ActionBinding binding) {
+        public StepUpChallengePort.ConsumedChallenge consumeVerified(StepUpChallengePort.ConsumeCommand command) {
+            UUID id = UUID.fromString(command.challengeRef());
             var rows = jdbc.queryForList("SELECT * FROM e4_test.challenge WHERE id=? FOR UPDATE", id);
             if (rows.isEmpty()) throw new BankingBusinessException(ErrorCode.AUTH_CHALLENGE_NOT_FOUND);
             var row = rows.getFirst();
             if (!"SENSITIVE_ACTION".equals(row.get("purpose"))) throw new BankingBusinessException(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
-            if (!row.get("user_id").equals(binding.userId()) || !row.get("action").equals(binding.action())
-                    || !java.util.Objects.equals(row.get("approval_id"), binding.approvalId())
-                    || !row.get("request_hash").equals(binding.requestHash())) throw new BankingBusinessException(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
+            if (!row.get("user_id").equals(command.userId())
+                    || !java.util.Objects.equals(row.get("approval_id"), command.bindingKey() == null ? null : Long.parseLong(command.bindingKey()))
+                    || !row.get("request_hash").equals(command.requestHash())) throw new BankingBusinessException(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
             if (((java.sql.Timestamp) row.get("expires_at")).toInstant().isBefore(Instant.now())) throw new BankingBusinessException(ErrorCode.AUTH_CHALLENGE_EXPIRED);
             if (!"VERIFIED".equals(row.get("status"))) throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
             jdbc.update("UPDATE e4_test.challenge SET status='CONSUMED' WHERE id=?", id);
+            return new StepUpChallengePort.ConsumedChallenge(id.hashCode(), id.toString(),
+                    StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, Instant.now());
+        }
+        @Override public StepUpChallengePort.VerifiedChallenge verifyChallenge(StepUpChallengePort.VerifyCommand command) {
+            throw new UnsupportedOperationException();
         }
         @Override public Optional<ActorSummary> findActor(long id) { return Optional.of(new ActorSummary(id, "Ops " + id)); }
     }

@@ -90,6 +90,13 @@ app:
       max-per-transaction-vnd: ${APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND:}
       max-daily-vnd: ${APP_LIMIT_POLICY_MAX_DAILY_VND:}
 
+  identity:
+    fido:
+      enabled: ${APP_FIDO_ENABLED:false}
+      rp-id: ${APP_FIDO_RP_ID:}
+      allowed-origins: ${APP_FIDO_ALLOWED_ORIGINS:}
+      challenge-ttl: ${APP_FIDO_CHALLENGE_TTL:PT30S}
+
   crypto:
     aes-key-id: ${APP_PII_AES_KEY_ID:k-v1}
     aes-key-base64: ${APP_PII_AES_KEY_BASE64:}

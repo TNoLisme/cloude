@@ -62,7 +62,7 @@ class LimitApprovalServiceTest {
                 .isInstanceOfSatisfying(BankingBusinessException.class, failure -> assertThat(failure.code()).isEqualTo(ErrorCode.SERVICE_UNAVAILABLE));
         verifyNoInteractions(approvals, audit, manager);
         verify(identity, never()).requestChallenge(any());
-        verify(identity, never()).consumeVerified(any(), any());
+        verify(identity, never()).consumeVerified(any());
         verify(limits, never()).prepare(any());
     }
 }
