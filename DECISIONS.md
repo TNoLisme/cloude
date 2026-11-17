@@ -23,6 +23,35 @@
 - **Lý do và phương án:** chọn phương án đã được Security ghi `OI-SEC-02` Resolved tại `design/04` §4.4/§13, khớp default step-up hiện có và tránh thay đổi ngưỡng bảo mật đã mô tả; `design/03` từng nêu OTP trên 5 triệu, nay không áp dụng làm trigger OTP riêng. Cả hai là thiết kế mô phỏng; SRS/API yêu cầu ngưỡng cấu hình, không ấn định con số. Không tuyên bố đây là quy định ngân hàng thực tế hay thay thế đánh giá rủi ro.
 - **Ngoài phạm vi:** scope customer/account, ngày nghiệp vụ/timezone, PIN, hạn mức tối thiểu/tối đa từng giao dịch, daily cap, phương thức xác thực khác, rule fraud/velocity, và protocol xử lý đồng thời không được quyết định tại đây. Xác thực và lỗi vẫn theo `07` §6; việc triển khai, versioning cấu hình và phối hợp provider phải review/test.
 - **Nguồn và ảnh hưởng:** `03. SRS.md` §2.13.6, AC-033; `07. API contracts.md` §6; `design/03. fraud-detection-rules.md` §§4–6, 11; `design/04. security.md` §§4.4, 13; `design/05. Modules contract.md` §10.1; `docs-backend/deployment/configuration.md` và Transfer BE-TRF-01. Không tự đóng MOD-OI-01: guard/reservation, race `428`, scope/ngày và evidence provider/PostgreSQL vẫn cần được chứng minh.
+## AUD-01/AUD-02 — Quyết định triển khai độc lập
+
+These entries record the current implementation and proposals for coordination. They do not imply owner approval.
+
+## Scope
+
+- Independent AUD-01/AUD-02 component work may proceed without owner approval.
+- Public API, caller integration, RBAC, export, C3, checkpoint and external anchor remain blocked until owner contracts are reviewed.
+
+## Decisions used for independent component work
+
+- `AuditRecorder` accepts only C1/C2 events through `Propagation.MANDATORY`; C3/C4 are rejected before database locking.
+- JDBC/native SQL remains in `audit.adapter.out` for hash-chain locking, JSONB projection, fixed audit projections and bounded verification scans. Spring Data JPA is not forced onto append-only or PostgreSQL-specific paths.
+- `AuditQueryPort` and `AuditRecordWriterPort` are outbound persistence ports in `audit.application.port`. They are not public cross-module APIs.
+- `AuditModuleApi` is not created or exposed before owner review of event DTOs, actor context, error mapping and transaction semantics.
+- Audit read projection fails closed. Raw JSON does not leave the internal persistence boundary; public API/RBAC is not implemented in this independent scope.
+- Writer canonical payload limit remains 32 KiB. Reader allows bounded PostgreSQL `jsonb::text` representation expansion, then enforces compact JSON <= 32 KiB before projection. This does not alter hash input or stored evidence.
+- Audit hash v1 remains a proposal. Current tests characterize implementation behavior; they are not production protocol approval or cross-language golden-vector sign-off.
+- Testcontainers PostgreSQL evidence is disposable component evidence. `ddl-auto=none` in isolated Audit tests does not prove full production `ddl-auto=validate` readiness.
+- Missing provider dependencies are not replaced with production stubs. Fake data is allowed only in tests and is not used to claim RBAC or caller integration.
+
+## Open owner decisions
+
+- Hash v1 formula, field set, delimiter and golden vectors: DB/Common and Architecture.
+- `AuditModuleApi`, actor role/scope and principal source: Identity, Architecture and business callers.
+- C3 standalone audit and security fallback: Identity, Security and Architecture.
+- Export byte/resource/CSV policy: DB, Security and Architecture.
+- Migration role/FK coordination, scheduled verification, checkpoint and external anchor: DB, Architecture and Operations.
+- Transfer/Ledger/Fraud/Admin caller integration fixtures: module owners.
 
 ## DEC-ID-001 — Seed role/permission tối thiểu đặt trong migration V2
 
@@ -289,3 +318,14 @@
 - **Build blocker chéo module:** `CustomerQueryService.toPublicStatus` compile FAIL (in-flight BE-CUS-IMP-04 — unqualified `CustomerStatus` bị inherited nested type che khuất, JLS §8.5). Owner Customer đã tự sửa bằng rename `CustomerQuery.CustomerStatus` → `CustomerQuery.Status`; bản vá tạm của TEST-03 không giữ lại, working tree sạch. `compileJava` SUCCESSFUL sau rename. **Còn OPEN:** `./gradlew build` full FAIL 2 test `customer.adapter.in.CustomerProfileControllerPostgreSqlIntegrationTest` (email mask expectation không khớp `PiiMaskingUtils` + `timestamptz`→`Instant` trong test code) — thuộc BE-CUS in-flight, owner Customer sửa; Identity 589/589 PASS trong cùng build, TEST-03 không can thiệp module khác.
 - **Shared worktree race:** một Gradle build khác (Customer owner) ghi đồng thời `build/test-results` trong thời gian chạy → toàn bộ verification của TEST-03 chạy trong isolated full-repo copy (rsync không `.git`/`build`), đúng precedent TEST-01/02; không kill process của người khác.
 - **Không tự ký:** FE/QA integration + external sign-off là `PENDING_EXTERNAL_SIGNOFF` (thư mục `digitalbanking-frontend/` trống); durable Audit/Notification/Transfer/Admin giữ BLOCKED theo TEST-01/02. Trạng thái task: PARTIAL.
+## DEC-TRF-017 — Seam orchestrator BE-TRF-04, boundary challenge UUID và T0
+
+- **Ngày / thẩm quyền:** 17/11/2026; Qoder theo chỉ đạo người điều hành triển khai BE-TRF-04 và tự quyết định kỹ thuật không cần hỏi lại. Không đại diện review/sign-off của Identity/Limit/Account/Audit, API/FE/QA, DBA/Architect hay Security.
+- **Seam orchestrator:** `TransferCreateOrchestrator` (candidate, `transfer.application`, không component-scan) hiện thực `TransferOrchestrator` cho boundary BE-TRF-03: nhận `TransferCreateCommand` (actor server-side + input đã validate), dựng request preflight, gọi `TransferPreflightCandidate` (T1/T2 qua transaction boundary thật, không outer transaction bao T0–T2) và map `Result` sang `TransferCreateOutcome` không đổi contract HTTP. Nhánh `ChallengeRequired` gọi T0 `requestChallenge` **sau khi gate transaction kết thúc**; chỉ trả `StepUpRequired` khi provider đã ACK + persist SENT. Lỗi có kiểu map: challenge mismatch → `409 STEP_UP_CHALLENGE_MISMATCH`, hết hạn → `410 AUTH_OTP_EXPIRED`, audit CREATED lỗi → `500 AUDIT_WRITE_FAILED`, dispatch OTP lỗi/unknown → `503 OTP_DISPATCH_FAILED`; lỗi hệ thống khác propagate. Đăng ký runtime vẫn theo DEC-TRF-016 (chờ provider thật + migration review).
+- **Boundary challenge UUID (đóng gap `05` §13.4):** `TransferIntentCandidate.Command` giữ `verifiedChallengeRef` UUID snapshot (TRFC-ID-05), không nhận BIGINT trước consume, không suy UUID→ID, không đọc bảng Identity. T1 insert transfer với `step_up_challenge_id` NULL → insert key → reservation → `consumeVerified(UUID)` (TRFC-ID-04, lock/revalidate/consume một lần) trả BIGINT `challengeId` → `attachChallenge` cập nhật FK **trước** flush/audit/commit; sai binding/hết hạn/đã dùng ném `ChallengeRejectedException` rollback toàn T1. `insertPendingAndKey` không còn tham số challengeId; consume trả ID ≤0 là invariant error.
+- **Seam preflight:** `ChallengeRequired` mang thêm `requestHash` (redacted `toString`) để T0 bind đúng hash mà không lộ ra boundary; `settleCreated` trả `Settlement(outcome, receipt)` gồm receipt masked đã lưu khi terminal, kiểm tra nhất quán status/failureCode với outcome, để orchestrator dựng `Completed`/`Failed` không đọc lại và không đổi contract. Đây là seam consumer-owned nội bộ, không phải provider API đã phát hành.
+- **Port Identity consumer:** `StepUpChallengePort` (`transfer.application`) ánh xạ TRFC-ID-02 `requestChallenge` và TRFC-ID-05 `findVerifiedBindingIfPresent`; `ChallengeIssued` mang trường hiển thị an toàn cho 428 (methods/channel/maskedDestination/expiresAt/maxAttempts/remainingAttempts) — **đề xuất mở rộng** baseline tối thiểu, ghi `05` §13.4 chờ Identity review. `OtpDispatchException` biểu diễn dispatch lỗi/unknown; provider invalidate khi an toàn. `findVerifiedBindingIfPresent` là seam cho adapter preflight thật (chưa nối runtime).
+- **Reference:** `TransferReferenceGenerator` sinh theo đề xuất OQ-02 `TXN[0-9]{8}[A-Z0-9]{8,20}` (SecureRandom, 8 số + 12 alphanumeric); unique DB là chốt cuối, collision reference là lỗi unique riêng không phải replay. OQ-02 chưa chốt bởi API owner, không đóng băng.
+- **TTL:** quy tắc snapshot ≥24h + version, fail-closed và expiry không rút ngắn đã có ở `Command`/`PendingInsert`/`IdempotencyRetention` (bổ sung test fail-closed). Cơ chế đọc snapshot từ config runtime vẫn là open issue (BE-TRF-04 §8), chưa tự dựng nguồn config production.
+- **Còn Blocked:** adapter provider thật (Identity challenge, Limit guard/reservation, Account resolve/ownership, Audit C1) và wiring preflight (gọi `findVerifiedBindingIfPresent`, ownership/status/balance/limit, đọc TTL config); proof PostgreSQL guard/key race/challenge consume-rollback/audit fail-closed; replay/428 HTTP end-to-end; review DEC-TRF-008, OQ-02, policy PII. Test fake không chứng minh lock/unique/rollback thật hay integration.
+- **Nguồn và ảnh hưởng:** `05` §§5.2/8/10.1/11.1/13.4, `02` §5.1–5.2/§6/§11.4/Appendix B.1–B.3, `07` §§5–6, BE-TRF-04 §3–§6, DEC-TRF-003/004/005/008/011/013/015/016.

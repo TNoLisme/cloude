@@ -67,9 +67,110 @@ class TransferSettlementCandidateTest {
     }
 
     @Test
+    void fraudVersionMustBePositiveInteger() {
+        assertEquals(1, new Flag(1, "RULE", 1, "LOW").ruleVersion());
+        assertThrows(IllegalArgumentException.class, () -> new Flag(1, "RULE", 0, "LOW"));
+        assertThrows(IllegalArgumentException.class, () -> new Flag(1, "RULE", -1, "LOW"));
+    }
+
+    @Test
+    void engineFailureFailsOpenOnlyAfterSavepointRollbackAndContextProof() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        Object savepoint = new Object();
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(savepoint);
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.fraudContextUsableAfterRollback()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL))
+                .thenThrow(new TransferSettlementCandidate.FraudEngineException("engine"));
+        assertEquals(Outcome.completed(), candidate.settle(3, FENCE));
+        InOrder order = inOrder(txStatus, ports);
+        order.verify(txStatus).createSavepoint();
+        order.verify(ports).evaluateFraud(context, TERMINAL);
+        order.verify(txStatus).rollbackToSavepoint(savepoint);
+        order.verify(ports).fraudContextUsableAfterRollback();
+        order.verify(txStatus).releaseSavepoint(savepoint);
+        order.verify(ports).recordFraudFailOpen();
+        order.verify(ports).debitConditional(context);
+        verify(ports, never()).recordFraudFlagAudit(any(), any(), any());
+    }
+
+    @Test
+    void engineFailureWithoutUsableContextRollsBackWholeTransaction() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(new Object());
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL))
+                .thenThrow(new TransferSettlementCandidate.FraudEngineException("engine"));
+        assertThrows(TransferSettlementCandidate.FraudEngineException.class, () -> candidate.settle(3, FENCE));
+        verify(manager).rollback(txStatus);
+        verify(ports, never()).debitConditional(any());
+        verify(ports, never()).recordFraudFailOpen();
+    }
+
+    @Test
+    void rollbackOnlyTransactionCannotFailOpen() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(new Object());
+        when(txStatus.isRollbackOnly()).thenReturn(true);
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL))
+                .thenThrow(new TransferSettlementCandidate.FraudEngineException("engine"));
+        assertThrows(TransferSettlementCandidate.FraudEngineException.class, () -> candidate.settle(3, FENCE));
+        verify(manager).rollback(txStatus);
+        verify(ports, never()).fraudContextUsableAfterRollback();
+        verify(ports, never()).debitConditional(any());
+    }
+
+    @Test
+    void contextProofCannotLeaveTransactionRollbackOnly() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(new Object());
+        when(txStatus.isRollbackOnly()).thenReturn(false, true);
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.fraudContextUsableAfterRollback()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL))
+                .thenThrow(new TransferSettlementCandidate.FraudEngineException("engine"));
+        assertThrows(TransferSettlementCandidate.FraudEngineException.class, () -> candidate.settle(3, FENCE));
+        verify(manager).rollback(txStatus);
+        verify(ports, never()).debitConditional(any());
+    }
+
+    @Test
+    void failOpenTelemetryFailureRollsBackWholeTransaction() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(new Object());
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.fraudContextUsableAfterRollback()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL))
+                .thenThrow(new TransferSettlementCandidate.FraudEngineException("engine"));
+        doThrow(new IllegalStateException("telemetry unavailable")).when(ports).recordFraudFailOpen();
+        assertThrows(IllegalStateException.class, () -> candidate.settle(3, FENCE));
+        verify(manager).rollback(txStatus);
+        verify(ports, never()).debitConditional(any());
+    }
+
+    @Test
+    void nonEngineFraudFailureNeverFailsOpen() {
+        var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(txStatus);
+        when(txStatus.createSavepoint()).thenReturn(new Object());
+        when(ports.fraudSavepointSupported()).thenReturn(true);
+        when(ports.evaluateFraud(context, TERMINAL)).thenThrow(new IllegalStateException("invariant"));
+        assertThrows(IllegalStateException.class, () -> candidate.settle(3, FENCE));
+        verify(manager).rollback(txStatus);
+        verify(ports, never()).recordFraudFailOpen();
+        verify(ports, never()).debitConditional(any());
+    }
+
+    @Test
     void successUsesLockOrderOneTerminalDateAndAuditAfterBusinessFlush() {
-        Flag later = new Flag(9, "RULE", "v1", "HIGH");
-        Flag earlier = new Flag(2, "RULE", "v1", "LOW");
+        Flag later = new Flag(9, "RULE", 1, "HIGH");
+        Flag earlier = new Flag(2, "RULE", 1, "LOW");
         when(ports.evaluateFraud(context, TERMINAL)).thenReturn(new FraudResult(false, List.of(later, earlier)));
         Outcome outcome = candidate.settle(3, FENCE);
         assertEquals(Outcome.completed(), outcome);
@@ -114,7 +215,7 @@ class TransferSettlementCandidateTest {
 
     @Test
     void fraudBlockAndConditionalDebitFailureDoNotCreditOrPostLedger() {
-        Flag flag = new Flag(1, "BLOCK", "v1", "HIGH");
+        Flag flag = new Flag(1, "BLOCK", 1, "HIGH");
         when(ports.evaluateFraud(context, TERMINAL)).thenReturn(new FraudResult(true, List.of(flag)));
         Outcome blocked = candidate.settle(3, FENCE);
         assertEquals(Outcome.failed(Failure.FRAUD_BLOCKED), blocked);
@@ -287,7 +388,7 @@ class TransferSettlementCandidateTest {
 
     @Test
     void fraudFlagAuditFailureRollsBackAndDoesNotWriteTerminalAudit() {
-        Flag flag = new Flag(1, "RULE", "v1", "LOW");
+        Flag flag = new Flag(1, "RULE", 1, "LOW");
         when(ports.evaluateFraud(context, TERMINAL)).thenReturn(new FraudResult(false, List.of(flag)));
         doThrow(new IllegalStateException("flag audit")).when(ports).recordFraudFlagAudit(context, flag, TERMINAL);
         assertThrows(IllegalStateException.class, () -> candidate.settle(3, FENCE));

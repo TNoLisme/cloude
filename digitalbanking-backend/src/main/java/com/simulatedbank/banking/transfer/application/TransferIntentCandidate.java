@@ -6,6 +6,7 @@ import com.simulatedbank.banking.transfer.domain.TransferIdentity;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -17,9 +18,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * dispatch any challenge outside this transaction. Provider APIs and adapters
  * remain unimplemented; all ports below must join the same primary transaction.
  * The command is constructed only after authentication, authorization, request
- * validation, normalization and hashing of the same payload; the challenge ID is
- * merely a snapshot. consumeVerified must revalidate actor, customer, purpose,
- * request hash, key, status and expiry, under lock, before consuming it.
+ * validation, normalization and hashing of the same payload. The challenge is a
+ * UUID {@code challengeRef} snapshot (TRFC-ID-05), never a derived BIGINT: T1 inserts
+ * the transfer with a NULL challenge FK, then consumeVerified (TRFC-ID-04) revalidates
+ * actor, customer, purpose, hash, key, status and expiry under lock and returns the
+ * BIGINT challengeId, which is attached to the transfer before flush/audit/commit.
  */
 public final class TransferIntentCandidate {
     private final Ports ports;
@@ -53,17 +56,22 @@ public final class TransferIntentCandidate {
             return classifyExisting(command, found);
         }
         Assessment assessment = Objects.requireNonNull(ports.evaluateStepUpUnderGuard(command), "assessment");
-        if (assessment.requiresChallenge() && command.verifiedChallengeId() == null) {
+        if (assessment.requiresChallenge() && command.verifiedChallengeRef() == null) {
             return new ChallengeRequired(assessment.policyVersion());
         }
-        Long challenge = assessment.requiresChallenge() ? command.verifiedChallengeId() : null;
-        long transferId = ports.insertPendingAndKey(command, challenge);
+        UUID challengeRef = assessment.requiresChallenge() ? command.verifiedChallengeRef() : null;
+        // The challenge FK stays NULL at insert; it is attached only after a successful consume.
+        long transferId = ports.insertPendingAndKey(command);
         if (transferId <= 0) {
             throw new IllegalStateException("Invalid transfer ID from insert");
         }
         ports.reserveForPendingTransfer(command, assessment, transferId);
-        if (challenge != null && ports.consumeVerified(command, challenge) != challenge.longValue()) {
-            throw new IllegalStateException("Consumed challenge does not match the transfer");
+        if (challengeRef != null) {
+            long challengeId = ports.consumeVerified(command, challengeRef);
+            if (challengeId <= 0) {
+                throw new IllegalStateException("Invalid consumed challenge ID");
+            }
+            ports.attachChallenge(transferId, challengeId);
         }
         // Flush all business writes before acquiring the audit chain lock.
         ports.flushBusinessWrites();
@@ -95,12 +103,15 @@ public final class TransferIntentCandidate {
         void lockStepUpGuard(long customerId);
         Optional<IdempotencyDecision.Existing> findExistingOnPrimary(String key);
         Assessment evaluateStepUpUnderGuard(Command command);
-        /** Insert transfer then key in this transaction; map only TransferPersistence's
+        /** Insert transfer (challenge FK NULL) then key in this transaction; map only TransferPersistence's
          * DuplicateIdempotencyKeyException to DuplicateKeyRace, never other unique violations. */
-        long insertPendingAndKey(Command command, Long challengeId);
+        long insertPendingAndKey(Command command);
         void reserveForPendingTransfer(Command command, Assessment assessment, long transferId);
-        /** Revalidate binding, status and expiry under lock; return consumed challenge ID. */
-        long consumeVerified(Command command, long challengeId);
+        /** TRFC-ID-04: revalidate binding, status and expiry under lock, consume once, return the BIGINT
+         * challengeId. Business rejection throws ChallengeRejectedException; DB/system errors propagate. */
+        long consumeVerified(Command command, UUID challengeRef);
+        /** Set transfer.step_up_challenge_id to the consumed BIGINT before flush/audit; unique is the backstop. */
+        void attachChallenge(long transferId, long challengeId);
         /** Flush all business writes and triggers before the final audit phase. */
         void flushBusinessWrites();
         /** Append mandatory C1, joining the transaction. Do not log secrets or raw account data. */
@@ -118,11 +129,11 @@ public final class TransferIntentCandidate {
 
     public record Command(TransferIdentity identity, TransferAmount amount, String description,
                           String correlationId, String idempotencyKey, String requestHash,
-                          long ttlSeconds, String ttlConfigVersion, Long verifiedChallengeId) {
+                          long ttlSeconds, String ttlConfigVersion, UUID verifiedChallengeRef) {
         public Command {
             Objects.requireNonNull(identity, "identity");
             Objects.requireNonNull(amount, "amount");
-            if (identity.stepUpChallengeId() != null || (verifiedChallengeId != null && verifiedChallengeId <= 0)
+            if (identity.stepUpChallengeId() != null
                     || correlationId == null || correlationId.isEmpty() || correlationId.length() > 64
                     || idempotencyKey == null || !idempotencyKey.matches("[A-Za-z0-9._:~\\-]{1,255}")
                     || requestHash == null || !requestHash.matches("[0-9a-f]{64}")
@@ -148,5 +159,21 @@ public final class TransferIntentCandidate {
     /** Only a known idempotency-key unique conflict may be translated to this exception. */
     public static final class DuplicateKeyRace extends RuntimeException {
         public DuplicateKeyRace() { super("Idempotency key already exists"); }
+    }
+
+    /** Business rejection from consumeVerified (TRFC-ID-04); rolls back T1, mapped to 409/410 by the caller. */
+    public static final class ChallengeRejectedException extends RuntimeException {
+        public enum Reason { MISMATCH, EXPIRED }
+        private final Reason reason;
+        public ChallengeRejectedException(Reason reason) {
+            super("Step-up challenge rejected: " + reason);
+            this.reason = Objects.requireNonNull(reason, "reason");
+        }
+        public Reason reason() { return reason; }
+    }
+
+    /** Mandatory C1 TRANSFER_CREATED failed; rolls back T1, mapped to 500 AUDIT_WRITE_FAILED by the caller. */
+    public static final class AuditWriteException extends RuntimeException {
+        public AuditWriteException() { super("Transfer created audit write failed"); }
     }
 }
