@@ -77,7 +77,7 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - T0 challenge bind user/hash/key; nhánh 428 không tạo transfer/idempotency/ledger, request khác cùng key có thể commit đồng thời. T1 consume VERIFIED chưa hết hạn đúng binding, một lần; rollback T1 hoàn lại consume. Test guard/reservation, key race và PENDING qua ngày theo DEC-TRF-008.
 - T1 insert transfer rồi insert key `ON CONFLICT`; request thua rollback toàn bộ trước khi đọc lại, không orphan. Audit CREATED fail rollback T1; T1 commit để lại PENDING/RECEIVED khi T2 chưa chạy. Test cùng key nhiều connection, challenge race/expiry và crash sau T1.
 
-### BE-TRF-05 — T2 money transaction
+### [BE-TRF-05 — T2 money transaction](BE-TRF-05.md)
 
 **Mô tả:** Điều phối owner APIs trong một PostgreSQL transaction, với lock order và invariant theo thiết kế; không HTTP/broker trong T2.
 

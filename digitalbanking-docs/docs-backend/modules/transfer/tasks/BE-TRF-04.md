@@ -1,13 +1,10 @@
-<<<<<<< HEAD
 # BE-TRF-04 — Idempotency, step-up và T1
 =======
 # BE-TRF-04 — Idempotency, canonical hash, T1 và step-up
->>>>>>> origin/dev2
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-TASK-TRANSFER-04`
 > **Ưu tiên / kế hoạch:** P0 / W4
-<<<<<<< HEAD
 > **Trạng thái:** In progress / Blocked — primitive hash/classification/step-up/retention, preflight/T1/T2 candidate và seam orchestrator (`TransferCreateOrchestrator`) đã triển khai và test bằng fake; boundary challenge UUID đã đóng gap `05` §13.4 trong candidate; port T0 `StepUpChallengePort` và `TransferReferenceGenerator` đã có. Chưa nối runtime production. Provider thật (Identity challenge, Limit guard/reservation, Account resolve, Audit C1), bằng chứng PostgreSQL cho guard/key race/challenge/rollback, replay HTTP end-to-end và review DEC-TRF-008 chưa hoàn tất.
 > **Owner:** Vũ
 > **Phối hợp / review:** Backend Lead, Identity (Đạt), Account/Customer (Đạt), Limit (Vũ), Audit (Thịnh), Common (Phương), DBA/Architect, API owner, QA và Security theo phạm vi.

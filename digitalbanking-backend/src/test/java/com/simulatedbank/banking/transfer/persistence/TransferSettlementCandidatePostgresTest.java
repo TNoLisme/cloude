@@ -75,6 +75,7 @@ class TransferSettlementCandidatePostgresTest {
         jdbc.execute("CREATE TABLE transfer_t2_fixture.outbox (transfer_id BIGINT PRIMARY KEY)");
         jdbc.execute("CREATE TABLE transfer_t2_fixture.audit (transfer_id BIGINT PRIMARY KEY, outcome TEXT NOT NULL)");
         jdbc.execute("CREATE TABLE transfer_t2_fixture.caller_work (id BIGINT PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE transfer_t2_fixture.fraud_flag (id BIGINT PRIMARY KEY)");
         jdbc.update("INSERT INTO transfer_t2_fixture.customer_guard VALUES (7)");
         jdbc.update("INSERT INTO transfer_t2_fixture.transfer VALUES (3,7,?,'PENDING',1,?)", Timestamp.from(CREATED), TOKEN);
         jdbc.update("INSERT INTO transfer_t2_fixture.account VALUES (10,100.00),(20,40.00)");
@@ -102,6 +103,16 @@ class TransferSettlementCandidatePostgresTest {
         assertThat(value("reservation", "status")).isEqualTo("SETTLED");
         assertThat(count("audit")).isEqualTo(1);
         assertThat(count("outbox")).isEqualTo(1);
+    }
+
+    @Test
+    void fraudEngineFailureRollsBackPartialFlagBeforeContinuing() {
+        assertThat(candidate(new FakePorts(jdbc, FailurePoint.FRAUD_ENGINE)).settle(3, CLAIM))
+                .isEqualTo(Outcome.completed());
+        assertThat(count("fraud_flag")).isZero();
+        assertMoney("70.00", "70.00");
+        assertThat(count("ledger")).isEqualTo(2);
+        assertThat(value("transfer", "status")).isEqualTo("COMPLETED");
     }
 
     @Test
@@ -223,7 +234,7 @@ class TransferSettlementCandidatePostgresTest {
         return jdbc.queryForObject("SELECT count(*) FROM transfer_t2_fixture." + table, Integer.class);
     }
 
-    private enum FailurePoint { NONE, AFTER_DEBIT, AFTER_CREDIT, AFTER_LEDGER, AFTER_AUDIT }
+    private enum FailurePoint { NONE, AFTER_DEBIT, AFTER_CREDIT, AFTER_LEDGER, AFTER_AUDIT, FRAUD_ENGINE }
 
     /** All fake writes intentionally use the same JdbcTemplate/DataSource as the transaction manager. */
     private static final class FakePorts implements Ports {
@@ -282,7 +293,18 @@ class TransferSettlementCandidatePostgresTest {
             jdbc.queryForObject("SELECT customer_id FROM transfer_t2_fixture.usage WHERE customer_id=? FOR UPDATE", Long.class, context.customerId());
         }
         @Override public Optional<Failure> validateLockedState(Context context, LocalDate date) { return Optional.empty(); }
-        @Override public FraudResult evaluateFraud(Context context, Instant terminalAt) { return new FraudResult(false, List.of()); }
+        @Override public boolean fraudSavepointSupported() { return failure == FailurePoint.FRAUD_ENGINE; }
+        @Override public boolean fraudContextUsableAfterRollback() {
+            return jdbc.queryForObject("SELECT 1", Integer.class) == 1;
+        }
+        @Override public void recordFraudFailOpen() { }
+        @Override public FraudResult evaluateFraud(Context context, Instant terminalAt) {
+            if (failure == FailurePoint.FRAUD_ENGINE) {
+                jdbc.update("INSERT INTO transfer_t2_fixture.fraud_flag VALUES (1)");
+                throw new TransferSettlementCandidate.FraudEngineException("synthetic engine failure");
+            }
+            return new FraudResult(false, List.of());
+        }
         @Override public boolean debitConditional(Context context) {
             int updated = jdbc.update("UPDATE transfer_t2_fixture.account SET balance=balance-? WHERE id=10 AND balance>=?", AMOUNT, AMOUNT);
             if (updated == 1 && failure == FailurePoint.AFTER_DEBIT) throw new IllegalStateException("after debit");

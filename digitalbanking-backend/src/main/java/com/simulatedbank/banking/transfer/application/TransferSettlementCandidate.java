@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -17,7 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Isolated T2 candidate, not a registered runtime component. Each port must use
  * the same primary transaction and respect the documented module contracts.
  * A port failure aborts T2; in particular this candidate does not implement
- * fraud fail-open, credit savepoint recovery, Tfail, retries or reconciliation.
+ * credit savepoint recovery, Tfail, retries or reconciliation. Fraud fail-open is
+ * available only when the provider explicitly proves savepoint recovery is safe.
  */
 public final class TransferSettlementCandidate {
     private final Ports ports;
@@ -45,7 +47,7 @@ public final class TransferSettlementCandidate {
         // Read immutable context without locking so the customer guard is always acquired first.
         Context context = Objects.requireNonNull(ports.readContextOnPrimary(transferId), "context");
         if (context.transferId() != transferId) throw new IllegalStateException("Transfer context mismatch");
-        return Objects.requireNonNull(tx.execute(status -> execute(context, attempt)));
+        return Objects.requireNonNull(tx.execute(status -> execute(context, attempt, status)));
     }
 
     /**
@@ -59,10 +61,10 @@ public final class TransferSettlementCandidate {
     public Outcome settleInRecoveryTransaction(Context context, AttemptFence attempt) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(attempt, "attempt fence");
-        return Objects.requireNonNull(recoveryTx.execute(status -> execute(context, attempt)));
+        return Objects.requireNonNull(recoveryTx.execute(status -> execute(context, attempt, status)));
     }
 
-    private Outcome execute(Context context, AttemptFence attempt) {
+    private Outcome execute(Context context, AttemptFence attempt, TransactionStatus status) {
         ports.lockStepUpGuard(context.customerId());
         // Lock and re-read PENDING; both durable epoch and token must match this attempt.
         AttemptFence locked = Objects.requireNonNull(ports.lockPendingAndReadFence(context), "durable fence");
@@ -75,8 +77,7 @@ public final class TransferSettlementCandidate {
         Optional<Failure> failure = Objects.requireNonNull(ports.validateLockedState(context, businessDate), "validation");
         FraudResult fraud = new FraudResult(false, List.of());
         if (failure.isEmpty()) {
-            // A technical fraud failure rolls the whole T2 back, rather than pretending a savepoint exists.
-            fraud = Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+            fraud = evaluateFraud(context, terminalAt, status);
             if (fraud.blocked()) failure = Optional.of(Failure.FRAUD_BLOCKED);
         }
         if (failure.isEmpty() && !ports.debitConditional(context)) {
@@ -105,6 +106,33 @@ public final class TransferSettlementCandidate {
         return outcome;
     }
 
+    private FraudResult evaluateFraud(Context context, Instant terminalAt, TransactionStatus status) {
+        if (!ports.fraudSavepointSupported()) {
+            return Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+        }
+        Object savepoint = status.createSavepoint();
+        FraudResult result;
+        try {
+            result = Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+        } catch (FraudEngineException engineFailure) {
+            status.rollbackToSavepoint(savepoint);
+            if (status.isRollbackOnly() || !ports.fraudContextUsableAfterRollback() || status.isRollbackOnly()) {
+                throw engineFailure;
+            }
+            status.releaseSavepoint(savepoint);
+            // Provider must emit the prescribed safe telemetry without business SQL or sensitive data.
+            ports.recordFraudFailOpen();
+            return new FraudResult(false, List.of());
+        }
+        status.releaseSavepoint(savepoint);
+        return result;
+    }
+
+    /** Only failures classified by the fraud provider as engine failures may use fail-open. */
+    public static final class FraudEngineException extends RuntimeException {
+        public FraudEngineException(String message) { super(message); }
+    }
+
     /** All operations except readContextOnPrimary are mandatory participants in the same T2. */
     public interface Ports {
         Context readContextOnPrimary(long transferId);
@@ -118,6 +146,12 @@ public final class TransferSettlementCandidate {
         /** Re-check source ownership, account state/currency, balance and limit under lock. */
         Optional<Failure> validateLockedState(Context context, LocalDate businessDate);
         FraudResult evaluateFraud(Context context, Instant terminalAt);
+        /** Opt in only after proving savepoint and persistence-context recovery with the provider. */
+        default boolean fraudSavepointSupported() { return false; }
+        /** Restore/clear provider persistence state and prove the shared transaction remains usable. */
+        default boolean fraudContextUsableAfterRollback() { return false; }
+        /** Emit safe fail-open telemetry; failures propagate and roll back T2. */
+        default void recordFraudFailOpen() { throw new IllegalStateException("Fraud telemetry unavailable"); }
         /** Return false only when debit did not occur and insufficient balance was confirmed. */
         boolean debitConditional(Context context);
         void credit(Context context);
@@ -154,9 +188,9 @@ public final class TransferSettlementCandidate {
         public static Outcome completed() { return new Outcome(Optional.empty()); }
         public static Outcome failed(Failure failure) { return new Outcome(Optional.of(failure)); }
     }
-    public record Flag(long id, String ruleCode, String ruleVersion, String severity) {
+    public record Flag(long id, String ruleCode, int ruleVersion, String severity) {
         public Flag {
-            if (id <= 0 || ruleCode == null || ruleCode.isBlank() || ruleVersion == null || ruleVersion.isBlank()
+            if (id <= 0 || ruleCode == null || ruleCode.isBlank() || ruleVersion <= 0
                     || severity == null || severity.isBlank()) throw new IllegalArgumentException("Invalid fraud flag");
         }
     }
