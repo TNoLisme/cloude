@@ -37,11 +37,15 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         // Only the fixed completion event can contribute HTTP fields. Other log content is omitted.
         boolean completion = event.getLoggerName().equals("com.simulatedbank.banking.common.context.HttpRequestLog")
                 && event.getMessage().equals("HTTP_REQUEST_COMPLETED");
+        boolean securityGap = event.getLoggerName().equals(
+                "com.simulatedbank.banking.common.config.SecurityAuditGapLogger")
+                && event.getMessage().equals("SECURITY_AUDIT_GAP");
         boolean securityAuditFallback = event.getLoggerName().equals(SecurityAuditFallbackLog.class.getName())
                 && event.getMessage().equals(SecurityAuditFallbackLog.EVENT);
         fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
+                : securityGap ? "SECURITY_AUDIT_GAP"
                 : securityAuditFallback ? SecurityAuditFallbackLog.EVENT : "APPLICATION_LOG");
-        if (securityAuditFallback && event.getKeyValuePairs() != null) {
+        if ((completion || securityGap || securityAuditFallback) && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;
                 boolean allowed = switch (pair.key) {
@@ -54,7 +58,7 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 if (allowed) fields.put(pair.key, value);
             }
         }
-        if (completion && event.getKeyValuePairs() != null) {
+        if ((completion || securityGap) && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;
                 boolean allowed = switch (pair.key) {
@@ -64,8 +68,10 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                     case "status" -> value instanceof Integer n && n >= 100 && n <= 599;
                     case "latency_ms" -> value instanceof Long n && n >= 0;
                     case "user_id" -> value instanceof String s && s.matches("sha256:[0-9a-f]{64}");
-                    case "action" -> "HTTP_REQUEST".equals(value);
-                    case "outcome" -> "SUCCESS".equals(value) || "CLIENT_ERROR".equals(value) || "SERVER_ERROR".equals(value);
+                    case "action" -> (completion && "HTTP_REQUEST".equals(value))
+                            || (securityGap && "SECURITY_ACCESS_DENIED".equals(value));
+                    case "outcome" -> completion && ("SUCCESS".equals(value) || "CLIENT_ERROR".equals(value) || "SERVER_ERROR".equals(value))
+                            || securityGap && "REJECTED".equals(value);
                     case "error_code" -> value instanceof String s && isErrorCode(s);
                     default -> false;
                 };

@@ -9,7 +9,7 @@
 > **Reviewer:** Backend Lead, QA, Security (chờ review)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (§2.13, §3, §10), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6, §9, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2–§5, §7.2, §10), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§4.6, §5–§7), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §11, Appendix C), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§8).
 
-Thiết kế trước đây nằm trong README.md, nay chuyển sang TKCT.md. [README](README.md) là hướng dẫn sử dụng/tra cứu; [final report](report/BE-COM-FINAL-REPORT.md) tổng hợp state và dependency. Giữ số mục 1–7 để tra các tham chiếu lịch sử. Verified chỉ áp dụng scope/revision/môi trường trong report, không nghiệm thu toàn module.
+Thiết kế trước đây nằm trong README.md, nay chuyển sang TKCT.md. [README](README.md) là hướng dẫn sử dụng/tra cứu; [final report](CURRENT-STATE.md) tổng hợp state và dependency. Giữ số mục 1–7 để tra các tham chiếu lịch sử. Verified chỉ áp dụng scope/revision/môi trường trong report, không nghiệm thu toàn module.
 
 ## 1. Phạm vi & Truy vết Yêu cầu
 
@@ -697,7 +697,7 @@ BE-COM-IMP-08 bổ sung profile demo (Secure cookie config, CORS explicit), test
 | COM-ARCH-01 | ModuleBoundaryArchTest: 5 rules, gồm common không persistence/transaction dependency | Business packages trống nên chưa review hết architecture consumer |
 | Readiness08 | PackagedApplicationReadinessIntegrationTest: demo JAR start/restart/roles/Flyway/10 negative config cases | Chưa accepted prior artifact rollback, RC/image/scan/URL/owner/W7/W8 |
 
-Report01–08 là nơi giữ revision/command/result cụ thể; [final report](report/BE-COM-FINAL-REPORT.md) tổng hợp task/dependency. Không đánh dấu AC nhiều vế Verified chỉ vì primitive/component đã pass.
+Report01–08 là nơi giữ revision/command/result cụ thể; [final report](CURRENT-STATE.md) tổng hợp task/dependency. Không đánh dấu AC nhiều vế Verified chỉ vì primitive/component đã pass.
 
 ## Change Log
 

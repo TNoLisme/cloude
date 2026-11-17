@@ -1,4 +1,4 @@
-# Common — Final report về trạng thái triển khai
+# Common — Trạng thái triển khai
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** BE-COM-FINAL-REPORT
@@ -14,7 +14,7 @@ Common có **28 Java files trong 4 package**: config 14, context 4, crypto 4, er
 
 Trong **8 task implementation**, **5 Done** trong phạm vi được công bố (01–04, 06), **3 Blocked** (05, 07, 08). Ngoài ra có 2 task tài liệu DOC-01/02 đã hoàn thành nội dung/verification tài liệu. Không cộng hai loại này thành bằng chứng hệ thống đã chạy end-to-end. Tất cả vẫn chưa có reviewer sign-off được ghi nhận.
 
-Kết quả runtime gần nhất: **203 tests pass, 0 failure/error/skip, 23 suites** ở [verification 08](BE-COM-IMP-08-verification.md), bao gồm PostgreSQL 16 và packaged demo JAR. Đợt này chỉ rà soát tài liệu/source/links và đọc XML hiện có, **không chạy lại test suite**. Không coi kết quả common là bằng chứng D1–D5, full security scan, financial correctness, immutable audit hoặc Cloud readiness toàn hệ thống.
+Kết quả runtime gần nhất: **203 tests pass, 0 failure/error/skip, 23 suites** ở [verification 08](report/BE-COM-IMP-08-verification.md), bao gồm PostgreSQL 16 và packaged demo JAR. Đợt này chỉ rà soát tài liệu/source/links và đọc XML hiện có, **không chạy lại test suite**. Không coi kết quả common là bằng chứng D1–D5, full security scan, financial correctness, immutable audit hoặc Cloud readiness toàn hệ thống.
 
 Quyết định release giữ **NO-GO**: cần consumer integration và quality gate 07, RC đã được chấp nhận, owner hạ tầng/reviewer, URL/môi trường/secret references và bằng chứng W7/W8. Từ “final” trong tên report là tổng hợp công việc đã làm đến snapshot này, không phải tuyên bố mọi dependency đã hoàn tất.
 
@@ -22,18 +22,18 @@ Quyết định release giữ **NO-GO**: cần consumer integration và quality 
 
 | Task | Nội dung đã làm | Kết luận hiện tại | Verification |
 |---|---|---|---|
-| [BE-COM-DOC-01](../tasks/BE-COM-DOC-01.md) | Thiết kế chi tiết common, traceability, class/error/security/crypto/context/test catalog trước code | Hoàn thành tài liệu; không runtime evidence | [DOC-01](BE-COM-DOC-01-verification.md) |
-| [BE-COM-DOC-02](../tasks/BE-COM-DOC-02.md) | Phân xử nguồn, giữ rotation/ngưỡng còn mở, chuẩn bị baseline triển khai | Hoàn thành tài liệu; không phê duyệt release policy | [DOC-02](BE-COM-DOC-02-verification.md) |
-| [BE-COM-IMP-01](../tasks/BE-COM-IMP-01.md) | AppProperties/nested defaults/validation, Clock UTC/business zone, đồng bộ baseline cấu hình | **Done — scope cấu hình/thời gian**, chờ review | [01](BE-COM-IMP-01-verification.md) |
-| [BE-COM-IMP-02](../tasks/BE-COM-IMP-02.md) | 46-code ErrorCode, RFC9457 Problem/writer/advice/extension allowlist, safe MVC/security/SQLSTATE formatting | **Done — scope error layer**, không tự điều phối rollback/retry | [02](BE-COM-IMP-02-verification.md) |
-| [BE-COM-IMP-03](../tasks/BE-COM-IMP-03.md) | Correlation/request IDs, request snapshot/MDC/scope, outer filter/error/async cleanup, proxy trust disabled | **Done — scope HTTP/context**, chưa propagation qua bảng nghiệp vụ | [03](BE-COM-IMP-03-verification.md) |
-| [BE-COM-IMP-04](../tasks/BE-COM-IMP-04.md) | AES256-GCM/HMAC/SHA/constant-time, RFC8785 JCS/raw duplicate detection, PII masking, crypto fail-fast | **Done — primitive/caller-fixture scope**, không storage/consumer/rotation toàn hệ thống | [04](BE-COM-IMP-04-verification.md) |
-| [BE-COM-IMP-05](../tasks/BE-COM-IMP-05.md) | Production chain, SPI SessionAuthenticator, CSRF/CORS/headers/permission gates, bounded body reader/token buckets, tests | **Blocked — 5/9 AC Verified, 4 Blocked**; thiếu session/identity/cookie/quota integration và môi trường liên quan | [05](BE-COM-IMP-05-verification.md) |
-| [BE-COM-IMP-06](../tasks/BE-COM-IMP-06.md) | Safe JSON stdout/completion, HTTP timer/histogram/export, operational endpoint protection, HealthController app/DB | **Done — common/local**, 9/9 AC Verified; business signals/C3 fallback/Cloud còn bàn giao | [06](BE-COM-IMP-06-verification.md) |
-| [BE-COM-IMP-07](../tasks/BE-COM-IMP-07.md) | Ma trận W3/W4/W5, real PG error pipeline/rollback probe, contract subset, 5 ArchUnit rules, regression | **Blocked — 5/10 Verified, 5 Blocked**; thiếu consumer/state/schema để kiểm đủ end-to-end | [07](BE-COM-IMP-07-verification.md) |
-| [BE-COM-IMP-08](../tasks/BE-COM-IMP-08.md) | Demo Secure/CORS config, packaged JAR start/restart/negative config, roles/Flyway, readiness/runbook/NO-GO/handoff | **Blocked — 6/10 Verified, 4 Blocked**; W6 phần độc lập đạt, chưa RC/Cloud/owner/W7/W8 | [08](BE-COM-IMP-08-verification.md) |
+| [BE-COM-DOC-01](tasks/BE-COM-DOC-01.md) | Thiết kế chi tiết common, traceability, class/error/security/crypto/context/test catalog trước code | Hoàn thành tài liệu; không runtime evidence | [DOC-01](report/BE-COM-DOC-01-verification.md) |
+| [BE-COM-DOC-02](tasks/BE-COM-DOC-02.md) | Phân xử nguồn, giữ rotation/ngưỡng còn mở, chuẩn bị baseline triển khai | Hoàn thành tài liệu; không phê duyệt release policy | [DOC-02](report/BE-COM-DOC-02-verification.md) |
+| [BE-COM-IMP-01](tasks/BE-COM-IMP-01.md) | AppProperties/nested defaults/validation, Clock UTC/business zone, đồng bộ baseline cấu hình | **Done — scope cấu hình/thời gian**, chờ review | [01](report/BE-COM-IMP-01-verification.md) |
+| [BE-COM-IMP-02](tasks/BE-COM-IMP-02.md) | 46-code ErrorCode, RFC9457 Problem/writer/advice/extension allowlist, safe MVC/security/SQLSTATE formatting | **Done — scope error layer**, không tự điều phối rollback/retry | [02](report/BE-COM-IMP-02-verification.md) |
+| [BE-COM-IMP-03](tasks/BE-COM-IMP-03.md) | Correlation/request IDs, request snapshot/MDC/scope, outer filter/error/async cleanup, proxy trust disabled | **Done — scope HTTP/context**, chưa propagation qua bảng nghiệp vụ | [03](report/BE-COM-IMP-03-verification.md) |
+| [BE-COM-IMP-04](tasks/BE-COM-IMP-04.md) | AES256-GCM/HMAC/SHA/constant-time, RFC8785 JCS/raw duplicate detection, PII masking, crypto fail-fast | **Done — primitive/caller-fixture scope**, không storage/consumer/rotation toàn hệ thống | [04](report/BE-COM-IMP-04-verification.md) |
+| [BE-COM-IMP-05](tasks/BE-COM-IMP-05.md) | Production chain, SPI SessionAuthenticator, CSRF/CORS/headers/permission gates, bounded body reader/token buckets, tests | **Blocked — 5/9 AC Verified, 4 Blocked**; thiếu session/identity/cookie/quota integration và môi trường liên quan | [05](report/BE-COM-IMP-05-verification.md) |
+| [BE-COM-IMP-06](tasks/BE-COM-IMP-06.md) | Safe JSON stdout/completion, HTTP timer/histogram/export, operational endpoint protection, HealthController app/DB | **Done — common/local**, 9/9 AC Verified; business signals/C3 fallback/Cloud còn bàn giao | [06](report/BE-COM-IMP-06-verification.md) |
+| [BE-COM-IMP-07](tasks/BE-COM-IMP-07.md) | Ma trận W3/W4/W5, real PG error pipeline/rollback probe, contract subset, 5 ArchUnit rules, regression | **Blocked — 5/10 Verified, 5 Blocked**; thiếu consumer/state/schema để kiểm đủ end-to-end | [07](report/BE-COM-IMP-07-verification.md) |
+| [BE-COM-IMP-08](tasks/BE-COM-IMP-08.md) | Demo Secure/CORS config, packaged JAR start/restart/negative config, roles/Flyway, readiness/runbook/NO-GO/handoff | **Blocked — 6/10 Verified, 4 Blocked**; W6 phần độc lập đạt, chưa RC/Cloud/owner/W7/W8 | [08](report/BE-COM-IMP-08-verification.md) |
 
-Task/report cũ ghi kết quả của revision và môi trường khi thực hiện; không sửa counts lịch sử thành 203 hoặc tự thêm sign-off. [Tracker](../tasks/README.md) giữ AC/dependency và điều kiện Done. Đợt tổ chức tài liệu này không tạo task implementation thứ 9 và không thay trạng thái của bất kỳ AC nào.
+Task/report cũ ghi kết quả của revision và môi trường khi thực hiện; không sửa counts lịch sử thành 203 hoặc tự thêm sign-off. [Tracker](tasks/README.md) giữ AC/dependency và điều kiện Done. Đợt tổ chức tài liệu này không tạo task implementation thứ 9 và không thay trạng thái của bất kỳ AC nào.
 
 Các commit runtime liên quan: 01 `00a5823`, 02 `8b7298a`, 03 `991472b`, 04 `b44e927`, 05–06 `87427ce`, 07–08 `5bf84a6`. Các thay đổi README/TKCT/final report hiện tại chưa commit.
 
@@ -50,7 +50,7 @@ Các commit runtime liên quan: 01 `00a5823`, 02 `8b7298a`, 03 `991472b`, 04 `b4
 | Metrics/health | HTTP count/latency/histogram, low-cardinality tags; actual operational HealthController và public probe | Không emit business metrics/outbox count giả; authenticated access cần identity thật; chưa Cloud scraping/alerts/retention |
 | Quality/readiness | PostgreSQL primitive failures qua HTTP handler, probe rollback/no generic retry, architecture rules, demo JAR smoke/negative config | Probe/harness không thay tiền/audit/session consumer; same-JAR restart không phải rollback accepted prior release hoặc Cloud deployment |
 
-Xem [README hướng dẫn sử dụng](../README.md), [TKCT](../TKCT.md), [runtime backend](../../../../../digitalbanking-backend/README.md), [readiness/runbook](../../../deployment/common-readiness.md). Không dùng `logger.info` tùy ý hoặc test auth adapter như API nghiệp vụ production.
+Xem [README hướng dẫn sử dụng](README.md), [TKCT](TKCT.md), [runtime backend](../../../../digitalbanking-backend/README.md), [readiness/runbook](../../deployment/common-readiness.md). Không dùng `logger.info` tùy ý hoặc test auth adapter như API nghiệp vụ production.
 
 ## 4. Dependency còn chặn hoàn thiện
 
@@ -123,9 +123,9 @@ Các hash dưới đây dành cho đối chiếu docs/source tại thời điể
 
 | File | SHA-256 |
 |---|---|
-| `digitalbanking-docs/docs-backend/modules/common/README.md` | `a40fcfba9018b63c377d98e6ed62e250a28241b5db4aab1040bd247cde389a3c` |
-| `digitalbanking-docs/docs-backend/modules/common/TKCT.md` | `93d07bbe1a865075454ac6691c2c4d41535d908ba53a72a7729984ea506fcafe` |
-| `digitalbanking-docs/docs-backend/modules/common/tasks/README.md` | `566019c70ee6ac756ab82a6d44de3a50f21b9e629f0882434231c39db4a2db4f` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/HealthController.java` | `2e47bc8504ec877cbdc0eb42fa2f41b887cac42708ca3f7ca24eabe0831021c5` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SafeJsonLogEncoder.java` | `64407f50bd2bca2881bd40db469d2e18f1bd1929dedf38d24d89ff3922061e10` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/HttpRequestLog.java` | `69b5d5e828ffb5b4edd35f97658faf598ce7d29691cf6cdd1191467ce678e4d1` |
+| `README.md` | `a40fcfba9018b63c377d98e6ed62e250a28241b5db4aab1040bd247cde389a3c` |
+| `TKCT.md` | `93d07bbe1a865075454ac6691c2c4d41535d908ba53a72a7729984ea506fcafe` |
+| `tasks/README.md` | `566019c70ee6ac756ab82a6d44de3a50f21b9e629f0882434231c39db4a2db4f` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/HealthController.java` | `2e47bc8504ec877cbdc0eb42fa2f41b887cac42708ca3f7ca24eabe0831021c5` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SafeJsonLogEncoder.java` | `64407f50bd2bca2881bd40db469d2e18f1bd1929dedf38d24d89ff3922061e10` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/HttpRequestLog.java` | `69b5d5e828ffb5b4edd35f97658faf598ce7d29691cf6cdd1191467ce678e4d1` |

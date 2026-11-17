@@ -4,7 +4,7 @@
 > **Tệp:** `digital-banking-v1.yaml`
 > **Phiên bản:** 1.0.1
 > **Trạng thái:** Auth đồng bộ `07` + DEC-ID-008/010; không đồng nghĩa mọi operation đã có runtime
-> **Cập nhật:** 16/11/2026
+> **Cập nhật:** 17/11/2026
 
 ## 1. Mục đích
 

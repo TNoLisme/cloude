@@ -84,6 +84,12 @@ info:
 app:
   timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
 
+  limit:
+    policy:
+      # No business default: absent policy disables preparation/approval, never enforcement reads.
+      max-per-transaction-vnd: ${APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND:}
+      max-daily-vnd: ${APP_LIMIT_POLICY_MAX_DAILY_VND:}
+
   identity:
     fido:
       enabled: ${APP_FIDO_ENABLED:false}
