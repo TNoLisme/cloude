@@ -365,7 +365,10 @@ paths:
       summary: Gửi lại OTP cho challenge
       description: >-
         Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge
-        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge.
+        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge, cooldown
+        mặc định 60 giây và TTL 5 phút; xoay OTP và generation, không reset
+        số lần nhập sai. 202 chỉ sau ACK và lưu SENT cho generation hiện tại;
+        lỗi hoặc kết quả dispatch không rõ trả 503 OTP_DISPATCH_FAILED.
       operationId: resendChallenge
       security: []
       parameters:
@@ -560,6 +563,12 @@ paths:
       description: >-
         Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED,
         428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency.
+        Cùng actor/key/hash terminal replay nguyên status/body gốc 201 hoặc 422
+        kèm Idempotent-Replayed; record chưa terminal trả 409 Retry-After,
+        worker recovery nội bộ xử lý. Record terminal hết TTL nhưng chưa purge
+        vẫn replay/conflict; sau purge key có thể tạo yêu cầu mới. Step-up chỉ trả
+        428 sau gateway ACK và SENT được lưu cho generation hiện tại; lỗi
+        dispatch hoặc quota store không sẵn sàng trả 503.
       operationId: createTransfer
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -582,24 +591,18 @@ paths:
                   currency: VND
                   description: Chuyển tiền tháng 11
       responses:
-        '200':
-          description: Replay kết quả cũ
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationId'
-            Idempotent-Replayed:
-              $ref: '#/components/headers/IdempotentReplayed'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransferResponse'
         '201':
-          description: Transfer COMPLETED
+          description: Transfer COMPLETED; replay giữ 201 và body gốc
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
           content:
             application/json:
               schema:
@@ -629,7 +632,31 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+          description: >-
+            Vi phạm business rule; nếu terminal FAILED thì replay giữ nguyên
+            422 và body gốc, với Idempotent-Replayed true. Lỗi trước T1 không
+            có reference/transferStatus và không phải terminal replay. Account
+            inactive/not-found sau T1 dùng code TRANSFER_FAILED cùng failureCode
+            ACCOUNT_INACTIVE/ACCOUNT_NOT_FOUND; trước T1 dùng 409/404 tương ứng.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                insufficientBalance:
+                  $ref: '#/components/examples/InsufficientBalanceExample'
+                transferFailed:
+                  $ref: '#/components/examples/TransferFailedExample'
+                accountInactiveAfterT1:
+                  $ref: '#/components/examples/AccountInactiveAfterT1Example'
         '428':
           $ref: '#/components/responses/StepUpRequired'
         '429':
@@ -3058,6 +3085,21 @@ components:
         reference: TXN20261103A1B2C3D4
         transferStatus: FAILED
         failureCode: PROCESSING_ERROR
+    AccountInactiveAfterT1Example:
+      summary: Account inactive sau khi tạo intent T1
+      value:
+        type: https://api.demo.local/problems/transfer-failed
+        title: Transfer failed
+        status: 422
+        detail: Giao dịch không hoàn tất vì tài khoản không còn hoạt động.
+        instance: /api/v1/transfers
+        code: TRANSFER_FAILED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-16T10:15:30Z'
+        retryable: false
+        reference: TXN20261103A1B2C3D4
+        transferStatus: FAILED
+        failureCode: ACCOUNT_INACTIVE
     StepUpRequiredExample:
       summary: Step-up required
       value:

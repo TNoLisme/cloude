@@ -3,7 +3,7 @@
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-TASK-TRANSFER-01`
 > **Ưu tiên / kế hoạch:** P0 / W3–W4
-> **Trạng thái:** Planned — hợp đồng và quyết định đang chờ các owner review; chưa nghiệm thu
+> **Trạng thái:** Baseline thiết kế độc lập đã chốt; nghiệm thu liên module và release còn Blocked
 > **Owner:** Vũ
 > **Phối hợp / review:** Backend Lead, Architect, API, BA/Product, Identity, Account, Ledger, Limit, Audit, Fraud, Notification, QA, Security, FE và Ops theo từng vấn đề.
 
@@ -12,6 +12,8 @@
 Tạo căn cứ thống nhất để các task Transfer tiếp theo có thể triển khai và kiểm thử an toàn: đối chiếu yêu cầu, hợp đồng công khai, quyền sở hữu dữ liệu, ranh giới transaction, các mâu thuẫn nguồn và chính sách còn mở. Đầu ra là hồ sơ quyết định, matrix dependency và oracle kiểm thử được các bên liên quan review; việc viết tài liệu task này không đồng nghĩa các bên đã thống nhất.
 
 Task này không triển khai money path, migration, provider hay tự duyệt chính sách. Mỗi vấn đề chưa chốt phải có đầu mối, ảnh hưởng, phương án, nguồn và trạng thái; chỉ ghi quyết định vào `DECISIONS.md` sau khi người có thẩm quyền quyết định. Không tự đổi nguồn có thẩm quyền hoặc coi giá trị đề xuất là policy đã duyệt. Việc độc lập có thể chuẩn bị song song; AC phụ thuộc quyết định hoặc provider chưa sẵn sàng vẫn **Blocked**.
+
+**Cập nhật 16/11/2026:** theo ủy quyền của người điều hành, các lựa chọn DEC-TRF-001–015 được ghi tại [DECISIONS.md](../../../../../DECISIONS.md); baseline v1 cho dữ kiện, outcome và transaction Transfer–provider được cụ thể hóa tại `05` §13.4. Consumer có thể triển khai/test độc lập theo contract và fake test-only mà không đợi provider. **Tách trạng thái:** việc lựa chọn và bàn giao baseline thiết kế độc lập đã thực hiện; các điều kiện provider/consumer review, provider contract suite và integration trong AC gốc chưa được xác minh và không được gán sign-off. Hồ sơ/evidence cụ thể tại [handoff](evidence/BE-TRF-01-handoff.md), [risk register](evidence/BE-TRF-01-risk-register.md) và [candidate verification](evidence/BE-TRF-04-05-candidate.md).
 
 ## 2. Tài liệu cần đọc và thứ tự nguồn
 
@@ -31,12 +33,12 @@ Theo quy tắc nguồn của thiết kế Transfer, `docs-common/01–11` ưu ti
 | TRF-01.3 | Chốt policy/protocol step-up theo tổng ngày với Identity, Limit, Architect, BA. | Quy định serialization/reservation hoặc thay contract, 428 trước T1, binding, expiry, retry và rollback; có oracle hai key đồng thời quanh ngưỡng (§6). Chưa được duyệt/chứng minh: **chặn release money path**. |
 | TRF-01.4 | Phân xử AC-006 và AC-012 với nhánh sau T1 trong `design/02`. | `AC-012` yêu cầu FAILED khi debit xong và credit lỗi, trong khi `design/02` xử lý lỗi credit technical bằng rollback về PENDING. BA/QA/Architect và Account/Transfer thống nhất oracle cho lỗi thấy trước T1, thay đổi sau T1 và lỗi credit technical; đồng bộ nguồn trước nghiệm thu. Không giả định `FAILED` sau T1 đã thỏa AC-006. |
 | TRF-01.5 | Chốt TTL/purge và recovery PENDING bất thường. | Product/BA/Security/BE duyệt retention và hướng dẫn retry/query sau TTL; Transfer/Ledger/Audit/Ops duyệt tiêu chuẩn bằng chứng, thao tác atomic status/idempotency/response, retry/escalation và runbook. `T-REC-02` phải hoàn tất không duplicate khi đủ bằng chứng theo protocol đã chứng minh; trước khi protocol được duyệt, hoặc bằng chứng thiếu/lệch, giữ nguyên và alert/manual; không tự sửa ledger. Không purge PENDING. |
-| TRF-01.6 | Theo dõi `OI-CON-02–13`, `MOD-OI-01–09` và audit C2/C1. | Bảng §5 có owner, ảnh hưởng và trạng thái; chốt phương án audit flag C2 cùng C1, lock audit cuối, rollback khi audit lỗi. Policy, version, throughput, multi-instance, notification và correlation chưa quyết định chặn AC tương ứng. |
+| TRF-01.6 | Theo dõi `OI-CON-02–13`, `MOD-OI-01–09` và audit C2/C1. | Bảng §5 có owner, ảnh hưởng và trạng thái; chốt phương án audit flag C2 cùng C1, lock audit cuối, rollback khi audit lỗi. Policy, version, throughput, multi-instance, notification và correlation đã chọn tại DEC-TRF-009–012; review và evidence còn thiếu chặn AC tương ứng. |
 | TRF-01.7 | Chuẩn bị contract suite, integration plan và hồ sơ bàn giao. | Provider/consumer thống nhất vector và oracle §6; xác định test fake và test PostgreSQL/provider thật, owner, evidence và blocker. Mỗi quyết định được liên kết `DECISIONS.md`, nguồn cập nhật, reviewer và bằng chứng; không đánh dấu task hoàn thành khi thiếu AC hoặc review. |
 
 ## 4. Matrix giao tiếp cần chốt
 
-Các operation dưới đây đã được mô tả trong `05. Modules contract`; tên/chữ ký phần lớn vẫn là **đề xuất**, không phải xác nhận runtime hoặc sign-off. Transfer gọi public API của provider, không ghi trực tiếp bảng thuộc module khác. T1/T2 phải tham gia cùng PostgreSQL transaction theo contract, không gọi HTTP/broker trong T2.
+Các operation dưới đây và baseline v1 đã được mô tả tại `05. Modules contract` §§5–11, §13.4; đây không phải xác nhận runtime hoặc sign-off provider. Transfer gọi public API của provider, không ghi trực tiếp bảng thuộc module khác. T1/T2 phải tham gia cùng PostgreSQL transaction theo contract, không gọi HTTP/broker trong T2.
 
 | Provider / owner theo kế hoạch | Transfer cần | Boundary và điểm cần xác nhận | Nguồn |
 |---|---|---|---|
@@ -45,16 +47,16 @@ Các operation dưới đây đã được mô tả trong `05. Modules contract`
 | Ledger — Phương | Post double-entry; đọc evidence reconciliation | Ledger sở hữu entries; post cùng T2, cân bằng và append-only; phân biệt absent/error/mismatch khi đọc | `05` §9; MOD-OI-03 |
 | Limit — Vũ | Lock/check và tăng usage | CUSTOMER trước ACCOUNT, check/increment cùng T2; date, config version và race step-up cần quyết định | `05` §10; MOD-OI-01/06 |
 | Audit — Thịnh | CREATED C1 trong T1; completion/failure C1 và fraud flag C2 trong T2; conflict C3; evidence | Mandatory audit fail-closed, audit chain lock cuối; chốt staging/batch C2+C1, xử lý lỗi và thứ tự | `05` §11.1; MOD-OI-03/05 |
-| Fraud — Thịnh | Evaluate in-process, flag/auto-block | Engine lỗi fail-open với savepoint; lỗi mandatory audit không được nuốt; chốt count window/version | `05` §11.2; MOD-OI-05/06 |
+| Fraud — Thịnh | Evaluate in-process, flag/auto-block | Engine lỗi fail-open với savepoint; lỗi mandatory audit không được nuốt; review count window/version theo DEC-TRF-009 | `05` §11.2; MOD-OI-05/06 |
 | Notification — Thịnh | Enqueue outbox trong T2; delivery sau commit T3 | Notification sở hữu outbox/worker; lease, retry, dedupe và lỗi gateway; không giữ OTP plaintext | `05` §11.3; MOD-OI-07 |
 | Common — Phương | Problem, request context, canonicalization/hash, masking, Clock/security | Dùng API common hiện có; xác nhận mapping, correlation và kiểm thử tích hợp thực tế | `05` §12.2; MOD-OI-08/09 |
 | API / FE / QA / Ops | POST/GET, retry/receipt, oracle và xử lý incident | Chốt status/body/header, quyền đọc, hướng dẫn sau TTL và runbook; phân công reviewer theo từng quyết định | `07` §5, §8.3; `05` §13–§14 |
 
-Với contract đã ghi nhưng chưa chốt chi tiết, dùng quy trình review `05` §13 thay vì tự tạo chữ ký riêng. Nếu provider chưa sẵn sàng, consumer có thể dùng mock/fake trong test/dev theo cùng contract và vector; không đưa stub vào production hoặc coi mock là bằng chứng integration/lock/rollback.
+Consumer dùng baseline `05` §13.4 và quy trình compatibility/review §13; không tự tạo chữ ký production thay provider. Nếu provider chưa sẵn sàng, consumer dùng mock/fake trong test/dev theo cùng contract và vector; không đưa stub vào production hoặc coi mock là bằng chứng integration/lock/rollback.
 
 ## 5. Danh mục quyết định và rủi ro cần theo dõi
 
-Trạng thái dưới đây là **mở/chờ xác nhận** tại thời điểm lập task; owner là đầu mối theo tài liệu, không biểu thị đã chấp thuận. Theo dõi `MOD-OI-01–09` tại `05` §14, gồm cả OTP lifecycle, quyền đọc và interface/version chưa chốt. Trước khi chốt một mục, kiểm tra quyết định mới nhất và ghi link evidence/reviewer vào hồ sơ thực hiện.
+Trạng thái dưới đây là **mở/chờ xác nhận** tại thời điểm lập task; owner là đầu mối theo tài liệu, không biểu thị đã chấp thuận. Theo dõi `MOD-OI-01–09` tại `05` §14, gồm cả OTP lifecycle, quyền đọc và interface/version đã chọn tại DEC-TRF-011/012 nhưng chưa được review/kiểm chứng. Trước khi chốt một mục, kiểm tra quyết định mới nhất và ghi link evidence/reviewer vào hồ sơ thực hiện.
 
 | ID | Vấn đề và ảnh hưởng | Đầu mối | Liên kết / AC bị ảnh hưởng |
 |---|---|---|---|
@@ -79,13 +81,13 @@ Các số `02–09` ở cột cuối là task `BE-TRF-02–09`; chúng chỉ ra 
 | Tình huống | Oracle cần các owner thống nhất / kiểm chứng |
 |---|---|
 | Idempotency | Cùng actor/key/hash terminal replay đúng status/body gốc và header replay; hash hoặc actor khác conflict, không lộ dữ liệu; live trả 409, stale xử lý theo contract được duyệt. Kiểm tra cả 201 và 422, `T-IDEM-01–06` và vector canonicalization theo `07` §5.2. |
-| Step-up đồng thời | Hai key khác nhau cùng dưới ngưỡng khi đọc riêng nhưng tổng vượt ngưỡng: protocol được duyệt phải đảm bảo policy và 428 trước T1; kiểm tra DB không transfer/idempotency/ledger cho nhánh 428, binding, expiry, consume một lần và rollback. Không định trước kết quả cụ thể khi policy chưa chốt. |
+| Step-up đồng thời | Hai key khác nhau cùng dưới ngưỡng khi đọc riêng nhưng tổng vượt ngưỡng: protocol được duyệt phải đảm bảo policy và 428 trước T1; kiểm tra DB không transfer/idempotency/ledger cho nhánh 428, binding, expiry, consume một lần và rollback. Kỳ vọng cụ thể theo DEC-TRF-001/002/008. |
 | Validation và money | Tách lỗi đã tồn tại ở preflight, thay đổi sau T1 và credit lỗi technical; assert response, transfer, balance, ledger, usage và audit theo oracle BA/QA duyệt. `T-CON-01–04` dùng nhiều connection PostgreSQL, kiểm lock và invariant. |
 | Audit/fraud | Inject lỗi engine và lỗi ghi C2/C1 riêng; engine fail-open theo contract, lỗi audit bắt buộc rollback T2, không false success. Chứng minh savepoint, thứ tự audit và transaction thật (`T-AUD-06/07`). |
 | Recovery | `T-REC-01–04`: không ledger; đủ ledger/audit; thiếu, partial hoặc mismatch; nhiều worker/crash. Đủ evidence chỉ hoàn tất theo protocol đã duyệt và đồng bộ response/idempotency, không duplicate; thiếu/lệch giữ nguyên và alert. |
 | Notification và TTL | Outbox atomic cùng terminal, gateway lỗi/retry/duplicate và worker lease (`T-OUT-01/02`); terminal đủ điều kiện purge theo policy, PENDING không purge, mô tả rủi ro key thành yêu cầu mới sau purge. |
 
-Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàng chạy integration với implementation thật. PostgreSQL thật, connection độc lập và failure injection là bắt buộc để chứng minh lock, unique, savepoint và atomicity; mock/H2 không đủ. Evidence theo `09` §10: revision, lệnh, môi trường, test ID, kết quả, artifact synthetic không chứa PII/secret, owner và reviewer. Các test ở đây là kế hoạch, chưa có kết quả thực thi.
+Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàng chạy integration với implementation thật. PostgreSQL thật, connection độc lập và failure injection là bắt buộc để chứng minh lock, unique, savepoint và atomicity; mock/H2 không đủ. Evidence theo `09` §10: revision, lệnh, môi trường, test ID, kết quả, artifact synthetic không chứa PII/secret, owner và reviewer. Đây là oracle; các test candidate đã chạy, phạm vi và giới hạn xem [evidence](evidence/BE-TRF-04-05-candidate.md), không coi đó là kết quả provider thật.
 
 ## 7. Bàn giao và điều kiện đóng task
 
@@ -95,6 +97,8 @@ Dùng cùng vector cho fake và provider contract suite; khi provider sẵn sàn
 
 ## Change Log
 
-| Phiên bản | Ngày | Thay đổi |
-|---|---|---|
-| v1.0 | 15/11/2026 | Chi tiết phạm vi, dependency, quyết định mở, oracle và điều kiện nghiệm thu BE-TRF-01. |
+| Phiên bản | Ngày       | Thay đổi                                                                               |
+| --------- | ---------- | -------------------------------------------------------------------------------------- |
+| v1.0      | 15/11/2026 | Chi tiết phạm vi, dependency, quyết định mở, oracle và điều kiện nghiệm thu BE-TRF-01. |
+| v1.1      | 16/11/2026 | Liên kết DEC-TRF-001–012 và trạng thái review/evidence; chưa nghiệm thu.               |
+| v1.2 | 16/11/2026 | Chốt baseline v1 theo DEC-TRF-015 và tách bàn giao thiết kế độc lập khỏi review/integration. |
