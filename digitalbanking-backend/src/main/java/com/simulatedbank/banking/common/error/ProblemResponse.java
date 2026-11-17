@@ -31,9 +31,16 @@ public record ProblemResponse(URI type, String title, int status, String detail,
 
     static Map<String, Object> checkedExtensions(ErrorCode code, Map<String, Object> extensions) {
         Map<String, Object> copy = Map.copyOf(extensions);
-        Set<String> allowed = Set.of("challenge", "reference", "transferStatus", "failureCode", "lockedUntil");
+        Set<String> allowed = Set.of("challenge", "reference", "transferStatus", "failureCode", "lockedUntil",
+                "retryAfterSeconds");
         if (!allowed.containsAll(copy.keySet())) {
             throw new IllegalArgumentException("Unsupported problem extension");
+        }
+        if (copy.containsKey("retryAfterSeconds") && (code != ErrorCode.RATE_LIMITED
+                || !(copy.get("retryAfterSeconds") instanceof Long retrySeconds)
+                || retrySeconds < 1 || retrySeconds > 86_400)) {
+            // 07 §2.8: Retry-After tính giây, chỉ dành cho 429; giá trị do limiter trả về.
+            throw new IllegalArgumentException("Retry window requires RATE_LIMITED and second granularity");
         }
         if (copy.containsKey("challenge") != (code == ErrorCode.STEP_UP_REQUIRED)) {
             throw new IllegalArgumentException("Challenge requires STEP_UP_REQUIRED and vice versa");

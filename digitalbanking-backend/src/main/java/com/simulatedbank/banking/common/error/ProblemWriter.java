@@ -81,7 +81,11 @@ public class ProblemWriter {
             headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"digital-banking\"");
         }
         ErrorCode code = ErrorCode.valueOf(problem.code());
-        if (code == ErrorCode.IDEMPOTENCY_IN_PROGRESS || code == ErrorCode.RATE_LIMITED
+        Object retry = problem.extensions().get("retryAfterSeconds");
+        if (code == ErrorCode.RATE_LIMITED && retry instanceof Long retrySeconds && retrySeconds > 0) {
+            // 07 §2.8/BE-API-12: giá trị thật từ limiter; lỗi khác giữ fallback 2s mặc định.
+            headers.set(HttpHeaders.RETRY_AFTER, retrySeconds.toString());
+        } else if (code == ErrorCode.IDEMPOTENCY_IN_PROGRESS || code == ErrorCode.RATE_LIMITED
                 || code == ErrorCode.SERVICE_UNAVAILABLE) {
             // 2 seconds is within design/02 §7.10's proposed 1–5 second range.
             headers.set(HttpHeaders.RETRY_AFTER, "2");

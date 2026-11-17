@@ -47,8 +47,11 @@ final class RequestRateLimitFilter extends OncePerRequestFilter {
                             limits.transferPerCustomerPerMinute(), Duration.ofMinutes(1));
                 } else if (session != null && path.equals("/api/v1/auth/step-up/verify")) {
                     retry = limiter.acquire("step-up", session.userId(), limits.stepUpPerUserPer5Minutes(), Duration.ofMinutes(5));
-                } else if (session != null && path.equals("/api/v1/auth/otp/verify")) {
-                    retry = limiter.acquire("otp-user", session.userId(), limits.otpVerifyPerUserPerMinute(), Duration.ofMinutes(1));
+                } else if (path.equals("/api/v1/auth/otp/verify")) {
+                    // Login MFA is public: before authentication there is no trusted user bucket.
+                    retry = limiter.acquire(session == null ? "otp-ip" : "otp-user",
+                            session == null ? request.getRemoteAddr() : session.userId(),
+                            limits.otpVerifyPerUserPerMinute(), Duration.ofMinutes(1));
                 }
             } else if (retry == 0 && session != null && request.getMethod().equals("GET")
                     && path.equals("/api/v1/audit/export")) {
