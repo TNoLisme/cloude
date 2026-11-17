@@ -3,6 +3,8 @@
 > **Ngày:** 17/11/2026 · **Branch:** `datht-backend-rework`
 > **Trạng thái:** **PARTIAL** — toàn bộ regression thuộc Customer chạy được đã PASS; các tiêu chí toàn hệ thống còn phụ thuộc Account, Admin data-scope/Maker-Checker, Notification và durable Audit.
 > **Baseline khi chạy:** `199e33e8fed19361a6727c80f236e784364d5daa`.
+> **Implementation/evidence commit:** `46be4fdeffa465bb1b13832da7b81a8b51efb900` (tracked DB regression + report/index/checklist).
+> API/security assertions sửa trên các test IMP-05–07 đang là pre-existing untracked shared work; giữ trong working tree, không lấy toàn bộ file của developer khác vào commit selective.
 
 ## A. Nguồn yêu cầu đã đối chiếu
 
