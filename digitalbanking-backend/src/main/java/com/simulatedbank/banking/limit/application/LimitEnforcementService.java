@@ -2,7 +2,7 @@ package com.simulatedbank.banking.limit.application;
 
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.application.port.LimitStore;
 import com.simulatedbank.banking.limit.api.ApplicableLimits;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitEnforcement;
@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.transaction.IllegalTransactionStateException;
@@ -23,17 +24,11 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
+@RequiredArgsConstructor
 public class LimitEnforcementService implements LimitEnforcement {
-    private final LimitJdbcRepository repository;
+    private final LimitStore repository;
     private final ZoneId businessZoneId;
     private final EntityManagerFactory entityManagerFactory;
-
-    public LimitEnforcementService(LimitJdbcRepository repository, ZoneId businessZoneId,
-            EntityManagerFactory entityManagerFactory) {
-        this.repository = repository;
-        this.businessZoneId = businessZoneId;
-        this.entityManagerFactory = entityManagerFactory;
-    }
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY, noRollbackFor = BankingBusinessException.class)

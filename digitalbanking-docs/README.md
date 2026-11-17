@@ -133,7 +133,7 @@ digitalbanking-docs/
 
 | Tài liệu | Nội dung | Trạng thái |
 |---|---|---|
-| [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Đã có — v1.0.0; cần đối chiếu `07` |
+| [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Đã có — v1.0.1; cần đối chiếu `07` |
 | [[digitalbanking-docs/docs-backend/README.md]] | Tài liệu triển khai backend (15 tài liệu chuyên biệt) | Hoàn thành — v1.0 |
 | [[digitalbanking-docs/docs-frontend/README.md]] | Phạm vi, tracker, 8 đặc tả, design theo màn hình, hướng dẫn và bằng chứng FE | Hoàn thành — v1.2, FE xác nhận 09/11/2026 |
 | [[digitalbanking-docs/docs-common/work/README.md]] | Kế hoạch và nhật ký công việc theo tuần | Đang viết |

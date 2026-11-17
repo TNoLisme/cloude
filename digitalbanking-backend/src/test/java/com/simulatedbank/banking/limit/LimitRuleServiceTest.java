@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.application.port.LimitStore;
 import com.simulatedbank.banking.limit.api.ApplicableLimits;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitRules.CheckOutcome;
@@ -23,7 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class LimitRuleServiceTest {
     private static final Instant NOW = Instant.parse("2026-11-15T00:00:00Z");
-    private final LimitJdbcRepository repository = mock(LimitJdbcRepository.class);
+    private final LimitStore repository = mock(LimitStore.class);
     private final LimitRuleService service = new LimitRuleService(repository);
 
     @Test

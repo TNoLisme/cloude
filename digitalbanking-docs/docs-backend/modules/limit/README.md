@@ -1,5 +1,7 @@
 # Module `limit`
 
+> **E3 / LIM-06:** API tra cứu đã được triển khai và kiểm thử với PostgreSQL và provider test double; tích hợp provider thật và transfer còn chờ. Xem [kiểm chứng E3](E3-verification.md).
+
 > **Nền hiện tại:** codex/limit trên dev2 sạch. Audit production cũ không được mang sang; chỉ giữ AuditModuleApi contract, thiếu provider thì fail-closed503. Kết quả hiện tại213 tests; xem [chuyển nền dev2](DEV2-MIGRATION.md) và [báo cáo E4](E4-verification.md). Những kết quả audit thật ở ghi chú lịch sử bên dưới thuộc nền phuong/limit cũ.
 
 Nguồn ưu tiên: **docs-common/01–11 → docs-common/design → docs-backend**. Nguồn mô hình là 04 §4.5.1–4.5.2; ngữ nghĩa chọn hạn mức là 07 §8.5.1 và validation là §8.5.2. Không dùng GLOBAL/scope_type/scope_id từ bản tóm tắt cũ.

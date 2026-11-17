@@ -2,7 +2,7 @@ package com.simulatedbank.banking.limit.application;
 
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.application.port.LimitStore;
 import com.simulatedbank.banking.limit.api.LimitChanges;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitConfiguration.Status;
@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManagerFactory;
 import java.time.Instant;
 import java.time.ZoneId;
 import org.springframework.orm.jpa.EntityManagerHolder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,20 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY, noRollbackFor = BankingBusinessException.class)
 public class LimitChangeService implements LimitChanges {
-    private final LimitJdbcRepository repository;
+    private final LimitStore repository;
     private final LimitChangePolicy policy;
     private final ZoneId businessZoneId;
     private final EntityManagerFactory entityManagerFactory;
-
-    public LimitChangeService(LimitJdbcRepository repository, LimitChangePolicy policy, ZoneId businessZoneId,
-            EntityManagerFactory entityManagerFactory) {
-        this.repository = repository;
-        this.policy = policy;
-        this.businessZoneId = businessZoneId;
-        this.entityManagerFactory = entityManagerFactory;
-    }
 
     @Override
     @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)

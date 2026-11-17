@@ -2,9 +2,9 @@
 
 > **Dự án:** Digital Banking MVP
 > **Tệp:** `digital-banking-v1.yaml`
-> **Phiên bản:** 1.0.0
+> **Phiên bản:** 1.0.1
 > **Trạng thái:** Đã có — cần đối chiếu `07. API contracts`
-> **Cập nhật:** 03/11/2026
+> **Cập nhật:** 17/11/2026
 
 ## 1. Mục đích
 

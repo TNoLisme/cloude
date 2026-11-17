@@ -10,7 +10,7 @@ import com.simulatedbank.banking.support.SqlAuditFixture;
 import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.adapter.out.LimitJpaAdapter;
 import com.simulatedbank.banking.limit.api.LimitEnforcement;
 import com.simulatedbank.banking.limit.api.LimitRules;
 import com.simulatedbank.banking.limit.api.LimitChanges;
@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -50,7 +50,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
-@Import(SqlAuditFixture.class)
+@Import({SqlAuditFixture.class, SqlFixture.class})
 @ActiveProfiles("test")
 @Testcontainers
 class LimitChangesIT {
@@ -72,12 +72,12 @@ class LimitChangesIT {
 
     @Autowired LimitChanges changes;
     @Autowired TransactionTemplate transactions;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired SqlFixture jdbc;
     @Autowired LimitRules rules;
     @Autowired LimitEnforcement enforcement;
     @Autowired AuditModuleApi audit;
     @Autowired ZoneId businessZoneId;
-    @MockitoSpyBean LimitJdbcRepository repository;
+    @MockitoSpyBean LimitJpaAdapter repository;
 
     @BeforeEach
     void reset() throws Exception {
@@ -334,7 +334,7 @@ class LimitChangesIT {
         assertThat(repository.findConfiguration(pending.limitId())).contains(pending);
         assertThat(usage()).isEqualTo(before);
         var tomorrow = LocalDate.now(businessZoneId).plusDays(1).atStartOfDay(businessZoneId).toInstant();
-        doReturn(tomorrow).when(org.springframework.test.util.AopTestUtils.<LimitJdbcRepository>getUltimateTargetObject(repository)).currentTime();
+        doReturn(tomorrow).when(org.springframework.test.util.AopTestUtils.<LimitJpaAdapter>getUltimateTargetObject(repository)).currentTime();
         var active = transactions.execute(tx -> changes.approve(82, 2));
         assertThat(active.effectiveFrom()).isEqualTo(tomorrow);
         assertThat(rules.resolve(11, 21, tomorrow).items()).extracting(LimitConfiguration::accountId).contains(null, 21L);

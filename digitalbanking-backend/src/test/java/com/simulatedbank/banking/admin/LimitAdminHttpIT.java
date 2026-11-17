@@ -38,7 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -56,7 +56,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-@Import({LimitAdminHttpIT.FakeProviders.class, SqlAuditFixture.class})
+@Import({SqlFixture.class, LimitAdminHttpIT.FakeProviders.class, SqlAuditFixture.class})
 class LimitAdminHttpIT {
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -81,7 +81,7 @@ class LimitAdminHttpIT {
     private static final String REJECT = "{\"decision\":\"REJECT\",\"decisionNote\":\"Chưa phù hợp\"}";
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired SqlFixture jdbc;
     @Autowired TestPorts ports;
     @Autowired TransactionTemplate transactions;
     @Autowired LimitEnforcement enforcement;
@@ -399,7 +399,7 @@ class LimitAdminHttpIT {
     /** Fake only: no OTP/user/account production implementation is supplied by this fixture. */
     @TestConfiguration
     static class FakeProviders {
-        @Bean TestPorts testPorts(JdbcTemplate jdbc, TransactionTemplate transactions) { return new TestPorts(jdbc, transactions); }
+        @Bean TestPorts testPorts(SqlFixture jdbc, TransactionTemplate transactions) { return new TestPorts(jdbc, transactions); }
         @Bean CustomerQuery customerQuery() {
             return id -> id == 11 ? Optional.of(new CustomerQuery.CustomerSnapshot(id)) : Optional.empty();
         }
@@ -423,11 +423,11 @@ class LimitAdminHttpIT {
 
     /** Test-only SQL fake verifies contract vectors and caller transaction wiring, never real identity. */
     static class TestPorts implements StepUpChallengePort, StaffDirectory {
-        private final JdbcTemplate jdbc;
+        private final SqlFixture jdbc;
         private final TransactionTemplate transactions;
         private String responsePurpose = "SENSITIVE_ACTION";
         public void setResponsePurpose(String purpose) { responsePurpose = purpose; }
-        TestPorts(JdbcTemplate jdbc, TransactionTemplate transactions) { this.jdbc = jdbc; this.transactions = transactions; }
+        TestPorts(SqlFixture jdbc, TransactionTemplate transactions) { this.jdbc = jdbc; this.transactions = transactions; }
 
         @Override public Challenge requestChallenge(ActionBinding binding) {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();

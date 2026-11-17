@@ -19,3 +19,10 @@
 - **Lý do và phương án:** chọn phương án đã được Security ghi `OI-SEC-02` Resolved tại `design/04` §4.4/§13, khớp default step-up hiện có và tránh thay đổi ngưỡng bảo mật đã mô tả; `design/03` từng nêu OTP trên 5 triệu, nay không áp dụng làm trigger OTP riêng. Cả hai là thiết kế mô phỏng; SRS/API yêu cầu ngưỡng cấu hình, không ấn định con số. Không tuyên bố đây là quy định ngân hàng thực tế hay thay thế đánh giá rủi ro.
 - **Ngoài phạm vi:** scope customer/account, ngày nghiệp vụ/timezone, PIN, hạn mức tối thiểu/tối đa từng giao dịch, daily cap, phương thức xác thực khác, rule fraud/velocity, và protocol xử lý đồng thời không được quyết định tại đây. Xác thực và lỗi vẫn theo `07` §6; việc triển khai, versioning cấu hình và phối hợp provider phải review/test.
 - **Nguồn và ảnh hưởng:** `03. SRS.md` §2.13.6, AC-033; `07. API contracts.md` §6; `design/03. fraud-detection-rules.md` §§4–6, 11; `design/04. security.md` §§4.4, 13; `design/05. Modules contract.md` §10.1; `docs-backend/deployment/configuration.md` và Transfer BE-TRF-01. Không tự đóng MOD-OI-01: guard/reservation, race `428`, scope/ngày và evidence provider/PostgreSQL vẫn cần được chứng minh.
+
+## DEC-LIM-001 — Phạm vi GET limits khi không chọn account
+
+- **Ngày:** 17/11/2026. **Người quyết định:** người điều hành trong phiên triển khai E3/LIM-06.
+- **Quyết định:** `GET /api/v1/limits` không có `accountId` chỉ trả cấu hình CUSTOMER của customer trong phiên. Khi có `accountId` thuộc customer, trả cấu hình CUSTOMER và ACCOUNT tương ứng đang hiệu lực; effective tính trên các scope được trả.
+- **Lý do:** hạn mức từng account chỉ có ý nghĩa khi biết account được chọn; không trộn account khác vào một effective chung.
+- **Nguồn và ảnh hưởng:** `07` §7.2.13/§8.5.1; OpenAPI `/limits`; E3/LIM-06. Không quyết định policy enforcement hay timezone nghiệm thu.

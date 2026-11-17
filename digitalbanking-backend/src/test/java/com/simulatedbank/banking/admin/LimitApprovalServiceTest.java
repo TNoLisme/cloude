@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 import com.simulatedbank.banking.account.api.AccountQuery;
-import com.simulatedbank.banking.admin.adapter.out.ApprovalJdbcRepository;
+import com.simulatedbank.banking.admin.application.port.ApprovalStore;
 import com.simulatedbank.banking.admin.application.LimitApprovalBinding;
 import com.simulatedbank.banking.admin.application.LimitApprovalService;
 import com.simulatedbank.banking.audit.api.AuditModuleApi;
@@ -33,7 +33,7 @@ class LimitApprovalServiceTest {
     @ValueSource(ints = {0, 1, 2, 3, 4})
     @SuppressWarnings("unchecked")
     void absentRequiredProviderRefusesBeforeAnyBusinessMutation(int missing) {
-        var approvals = mock(ApprovalJdbcRepository.class);
+        var approvals = mock(ApprovalStore.class);
         var limits = mock(LimitChanges.class);
         var audit = mock(AuditModuleApi.class);
         var identity = mock(StepUpChallengePort.class);

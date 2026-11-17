@@ -8,7 +8,7 @@ import com.simulatedbank.banking.support.SqlAuditFixture;
 import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.adapter.out.LimitJpaAdapter;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitEnforcement;
 import com.simulatedbank.banking.limit.api.LimitRules;
@@ -28,7 +28,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -40,7 +40,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
-@Import(SqlAuditFixture.class)
+@Import({SqlAuditFixture.class, SqlFixture.class})
 @ActiveProfiles("test")
 @Testcontainers
 class LimitEnforcementIT {
@@ -59,10 +59,10 @@ class LimitEnforcementIT {
     }
 
     @Autowired LimitEnforcement enforcement;
-    @Autowired LimitJdbcRepository repository;
+    @Autowired LimitJpaAdapter repository;
     @Autowired LimitRules rules;
     @Autowired TransactionTemplate transactions;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired SqlFixture jdbc;
     @Autowired AuditModuleApi audit;
 
     @BeforeEach

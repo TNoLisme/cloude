@@ -6,7 +6,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.adapter.out.LimitJpaAdapter;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitEnforcement;
 import com.simulatedbank.banking.limit.application.LimitEnforcementService;
@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@org.springframework.context.annotation.Import(SqlFixture.class)
 @ActiveProfiles("test")
 @Testcontainers
 class LimitBusinessDateIT {
@@ -51,12 +52,12 @@ class LimitBusinessDateIT {
     }
 
     @Autowired LimitEnforcement enforcement;
-    @MockitoSpyBean LimitJdbcRepository repository;
+    @MockitoSpyBean LimitJpaAdapter repository;
     @Autowired TransactionTemplate transactions;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired SqlFixture jdbc;
     @Autowired ZoneId businessZoneId;
     @Autowired jakarta.persistence.EntityManagerFactory entityManagerFactory;
-    private LimitJdbcRepository timeSource;
+    private LimitJpaAdapter timeSource;
 
     @BeforeEach
     void reset() throws Exception {

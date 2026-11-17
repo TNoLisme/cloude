@@ -1,7 +1,7 @@
 package com.simulatedbank.banking.admin.application;
 
 import com.simulatedbank.banking.account.api.AccountQuery;
-import com.simulatedbank.banking.admin.adapter.out.ApprovalJdbcRepository;
+import com.simulatedbank.banking.admin.application.port.ApprovalStore;
 import com.simulatedbank.banking.admin.domain.ApprovalRequest;
 import com.simulatedbank.banking.audit.api.AuditModuleApi;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
@@ -28,7 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class LimitApprovalService {
-    private final ApprovalJdbcRepository approvals;
+    private final ApprovalStore approvals;
     private final LimitChanges limits;
     private final LimitRules rules;
     private final ObjectProvider<AuditModuleApi> audits;
@@ -39,7 +39,7 @@ public class LimitApprovalService {
     private final ObjectProvider<AccountQuery> accounts;
     private final TransactionTemplate transactions;
 
-    public LimitApprovalService(ApprovalJdbcRepository approvals, LimitChanges limits, LimitRules rules, ObjectProvider<AuditModuleApi> audits,
+    public LimitApprovalService(ApprovalStore approvals, LimitChanges limits, LimitRules rules, ObjectProvider<AuditModuleApi> audits,
             LimitApprovalBinding bindings, ObjectProvider<StepUpChallengePort> stepUps, ObjectProvider<StaffDirectory> staff,
             ObjectProvider<CustomerQuery> customers, ObjectProvider<AccountQuery> accounts, PlatformTransactionManager manager) {
         this.approvals = approvals; this.limits = limits; this.rules = rules; this.audits = audits; this.bindings = bindings;

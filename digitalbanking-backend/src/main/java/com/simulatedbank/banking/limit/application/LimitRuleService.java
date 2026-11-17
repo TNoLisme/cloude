@@ -2,25 +2,23 @@ package com.simulatedbank.banking.limit.application;
 
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.application.port.LimitStore;
 import com.simulatedbank.banking.limit.api.ApplicableLimits;
 import com.simulatedbank.banking.limit.api.LimitRules;
 import com.simulatedbank.banking.limit.domain.LimitAmounts;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
 public class LimitRuleService implements LimitRules {
-    private final LimitJdbcRepository repository;
-
-    public LimitRuleService(LimitJdbcRepository repository) {
-        this.repository = repository;
-    }
+    private final LimitStore repository;
 
     @Override
     public ApplicableLimits resolve(long customerId, long sourceAccountId, Instant asOf) {

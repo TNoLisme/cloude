@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
-import com.simulatedbank.banking.limit.adapter.out.LimitJdbcRepository;
+import com.simulatedbank.banking.limit.adapter.out.LimitJpaAdapter;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitConfiguration.Status;
 import com.simulatedbank.banking.limit.api.LimitRules;
@@ -24,7 +24,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -35,6 +35,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@org.springframework.context.annotation.Import(SqlFixture.class)
 @ActiveProfiles("test")
 @Testcontainers
 class LimitRulesIT {
@@ -57,10 +58,10 @@ class LimitRulesIT {
         registry.add("spring.flyway.password", () -> "test_migrator");
     }
 
-    @Autowired LimitJdbcRepository repository;
+    @Autowired LimitJpaAdapter repository;
     @Autowired LimitRules rules;
     @Autowired TransactionTemplate transactions;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired SqlFixture jdbc;
     @Autowired ApplicationContext context;
 
     @BeforeEach
@@ -208,6 +209,42 @@ class LimitRulesIT {
             assertThatThrownBy(() -> repository.insertUsage(usage)).hasRootCauseInstanceOf(IllegalArgumentException.class);
             tx.setRollbackOnly();
         });
+    }
+
+    @Test
+    void proposalWithDatabaseGeneratedTimestampsRemainsAtomicOnApprovalConflict() {
+        var proposal = new LimitConfiguration(null, 11, null, new BigDecimal("100.00"), new BigDecimal("1000.00"),
+                "VND", START, null, Status.PENDING_APPROVAL, 1, 1, null, 81L, null, null, null);
+        transactions.executeWithoutResult(tx -> {
+            var saved = repository.insertProposal(proposal).orElseThrow();
+            assertThat(saved.createdAt()).isNotNull();
+            assertThat(saved.updatedAt()).isNotNull();
+            assertThat(saved.effectiveTo()).isNull();
+            assertThat(saved.approvedAt()).isNull();
+            assertThat(repository.insertProposal(proposal)).isEmpty();
+            assertThat(repository.findConfiguration(saved.limitId())).contains(saved);
+        });
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void nullCurrencyOrStatusNeverTurnIntoDatabaseDefaults() {
+        var valid = config(11, null, Status.PENDING_APPROVAL, START, null, "100.00");
+        var noCurrency = new LimitConfiguration(null, valid.customerId(), null, valid.perTransactionLimit(),
+                valid.dailyLimit(), null, valid.effectiveFrom(), null, valid.status(), valid.version(),
+                valid.createdBy(), null, null, null, null, null);
+        var noStatus = new LimitConfiguration(null, valid.customerId(), null, valid.perTransactionLimit(),
+                valid.dailyLimit(), "VND", valid.effectiveFrom(), null, null, valid.version(),
+                valid.createdBy(), null, null, null, null, null);
+        var usage = new LimitUsage(null, 11, null, DATE, null, BigDecimal.ZERO, 0, null);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> repository.insertConfiguration(noCurrency)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> repository.insertConfiguration(noStatus)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> repository.insertUsage(usage)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.limit_usage", Integer.class)).isZero();
     }
 
     private static LimitConfiguration config(long customer, Long account, Status status,

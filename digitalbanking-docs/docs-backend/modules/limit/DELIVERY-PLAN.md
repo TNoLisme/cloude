@@ -223,3 +223,68 @@ Retry POST admin có thể tạo đề xuất trùng đang là **Open** `OI-API-
 | **F** | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Test strategy, evidence và tiêu chí nghiệm thu; không phải kết quả test |
 | **Kế hoạch/nhân sự** | [[digitalbanking-docs/docs-common/10 Master timelines.md]], [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Mốc, phân công và điểm phối hợp |
 | **Bổ trợ** | [[digitalbanking-docs/openapi/digital-banking-v1.yaml]], [[digitalbanking-docs/docs-backend/deployment/configuration.md]] | Bản máy đọc phải khớp D; cấu hình triển khai phải khớp nguồn chuẩn |
+
+## 11. Phase bổ sung — Chuẩn hóa code và persistence của `limit`
+
+> **Trạng thái:** Đã thực hiện refactor và kiểm thử trong phạm vi code hiện có; tích hợp provider thật và nghiệm thu money path vẫn Blocked. Xem [REF-VERIFICATION.md](REF-VERIFICATION.md).
+> **Phạm vi:** Code `limit` của E1–E4, kể cả E3 đã làm; phần approval/endpoint của E4 thuộc `admin` được phối hợp với owner `admin`. Các module khác chỉ thay đổi khi cần contract chung đã được thống nhất. Phase này không tự mở rộng nghiệp vụ hoặc nhận thay việc phát triển module khác.
+
+### 11.1. Kết quả rà soát hiện tại
+
+| Vấn đề | Bằng chứng trong source hiện tại | Việc cần xử lý |
+|---|---|---|
+| Persistence dùng JDBC | `limit/adapter/out/LimitJdbcRepository.java` dùng `JdbcTemplate` cho config, usage, lock và lifecycle; `admin/adapter/out/ApprovalJdbcRepository.java` dùng `JdbcTemplate` cho approval của E4. | Chuyển toàn bộ đường persistence production trong phạm vi sang Spring Data JPA, kể cả native query. Các test limit/admin cũng còn dùng `JdbcTemplate` và cần được rà soát, chuyển theo kế hoạch kiểm thử bên dưới. |
+| Entity/mapping chưa đầy đủ | E1/E2/E4 map `ResultSet` trực tiếp sang record; `LimitConfiguration`, `LimitUsage` và `ApprovalRequest` không phải JPA entity. Entity đọc của E3 `LimitReadEntity` chỉ ánh xạ `limit_id`, còn dữ liệu trả qua native projection. | Ánh xạ đầy đủ các cột cần thiết của `limit_config`, `limit_usage` và, với owner admin, `approval_request`; kiểm chứng ID, nullable, enum, tiền, thời gian và JSONB theo `04`/schema thật. Không coi projection ID hiện có là entity mapping đầy đủ. |
+| Mapping và boilerplate chưa nhất quán | Các service cũ tự khai báo constructor; `LimitJdbcRepository`/`ApprovalJdbcRepository` tự map từng trường và `LimitAdminController.ApprovalResponse.from` tự dựng response. E3 đã có MapStruct/Lombok nhưng chưa thống nhất với phần cũ. | Dùng Lombok cho boilerplate phù hợp và MapStruct cho các chuyển đổi entity ↔ snapshot/DTO và response phù hợp; giữ record bất biến khi có ích, không ép Lombok lên mọi record, không dùng `@Data` cho JPA entity. |
+| Ranh giới lớp trong module | `LimitRuleService`, `LimitEnforcementService`, `LimitChangeService` phụ thuộc trực tiếp `LimitJdbcRepository`; `LimitCustomerService` và `LimitViewMapper` của E3 phụ thuộc `LimitReadRepository`/`Row` của adapter-out. `LimitAdminController` tự map response. | Application làm việc qua outbound port và model/snapshot của chính module; adapter-out sở hữu JPA entity/repository; web DTO và mapper ở adapter-in, theo `06` §6.1 và convention backend. Không lộ entity/projection persistence qua `api` hoặc HTTP. |
+| Bảo vệ ranh giới chưa đầy đủ | `ModuleBoundaryArchTest` kiểm tra `common` một chiều, domain, inbound → outbound và cycle; chưa kiểm tra tổng quát import sang package ngoài `api` của module khác hoặc application → adapter-out. Rà soát import trực tiếp hiện thấy `admin`/`limit` gọi module khác qua `*.api`, chưa có bằng chứng để kết luận toàn bộ cross-module đã được enforce. | Bổ sung rule phù hợp cho module đang sửa, có kiểm chứng cả generated code và ngoại lệ SPI `common` được tài liệu hóa; không gọi tắt sang repository/entity module khác. |
+| Rủi ro transaction khi thay cơ chế persistence | `LimitJdbcRepository` hiện có `ON CONFLICT`, `RETURNING`, `FOR UPDATE`, advisory lock, kiểm tra isolation/transaction và conditional update; E2 có guard handle hết hiệu lực trước/ở `afterCommit`. E4 dựa vào transaction chung giữa admin, limit, step-up và audit. | Kiểm chứng ngữ nghĩa trên PostgreSQL trước khi chuyển từng đường ghi; JPA flush, persistence context và native update không được làm thay đổi lock order, snapshot, rollback hoặc thứ tự audit. |
+
+`05. Technical stack` §5.2.2 có cho phép JDBC ở một số trường hợp, nhưng chỉ đạo hiện tại của người điều hành **chặt hơn**: phase này không dùng `JdbcTemplate` cho persistence; native SQL phải được thực hiện qua Spring Data JPA repository và mapping/projection phù hợp. `06` yêu cầu domain thuần, không mang JPA/Spring vào domain; các liên kết sang bảng module khác dùng ID/contract, không tạo quan hệ JPA để truy cập chéo ownership.
+
+### 11.2. Thứ tự thực hiện và tiêu chí cho từng phần
+
+Mỗi phần dưới đây là một đơn vị thực hiện/kiểm thử có thể review riêng; chạy baseline trước khi sửa và không đánh dấu hoàn thành nếu invariant hoặc dependency thuộc phần đó chưa được chứng minh. Có thể chia PR theo thứ tự, nhưng không để thay đổi JPA dở dang phá luồng đang dùng.
+
+#### LIM-REF-01 — Baseline và hợp đồng cần giữ
+
+- Lập danh sách operation, query và caller của hai repository cũ; ánh xạ tới `LIM-01–10`, contract `limit.api`, response của `07` và các test hiện có. Chụp baseline build/test, schema/migration, API response/error và dữ liệu kiểm thử trước khi thay thế.
+- Ghi rõ các behavior cần giữ: hiệu lực hai scope, `NOT_CONFIGURED` không cho phép tự động chuyển tiền, usage theo ngày, lifecycle/version, maker/checker, policy, ownership và các giới hạn tích hợp hiện tại. Đối chiếu quyết định đã phản ánh trong nguồn chuẩn, gồm `07` §8.5.2–8.5.3 và `DEC-LIM-001`; không tự chốt các điểm còn mở hoặc âm thầm thay quyết định D1–D5 đã có.
+- Kiểm tra contract với Transfer/Admin/Account/Identity/Audit tại `design/05`; nếu thiếu dependency/operation thì nêu phương án, cập nhật contract theo chỉ dẫn dự án và mock theo contract khi provider chưa sẵn sàng. Không tạo bean giả trong production.
+- **Nghiệm thu:** có ma trận operation → nguồn → test/bằng chứng, lệnh và kết quả baseline; các blocker được ghi rõ. Không dùng kết quả lịch sử thay cho baseline trên revision thực tế.
+
+#### LIM-REF-02 — Entity, JPA repository và mapping dữ liệu `limit`
+
+- Tạo mapping persistence cho `limit_config`, `limit_usage` theo `04` §4.5.1–4.5.2 và migration hiện hành; tách model/snapshot `api` và domain khỏi JPA entity. Chọn một mapping nhất quán cho E1/E2/E3/E4, tránh hai entity quản lý cùng bảng/identity khi không cần. Thiết kế MapStruct mapping đầy đủ hai chiều và projection read khi cần; không làm mất precision/scale, enum, null, version, thời gian hay giá trị DB sinh.
+- Thay `LimitJdbcRepository` bằng Spring Data JPA repository/adapter thông qua port thuộc `limit`; truy vấn thường dùng JPA, truy vấn PostgreSQL đặc thù dùng native query qua Spring Data JPA. Chứng minh cách xử lý `ON CONFLICT` với partial unique index, insert/update có `RETURNING`, row/advisory lock, conditional update, affected rows, `transaction_timestamp()` và `clock_timestamp()` trên stack thực tế; nếu một dạng `RETURNING` không hỗ trợ trong Spring Data JPA, chọn cách tương đương vẫn giữ atomicity và kiểm thử race, không quay lại `JdbcTemplate`.
+- Kiểm soát flush/clear/refresh, thứ tự phát SQL và first-level cache khi trộn entity với native DML; không overwrite dữ liệu mới bằng entity cũ. Không đổi DDL, grant hay migration chỉ để làm ORM chạy; nếu thực sự cần migration, thiết kế forward-only, đối chiếu `04`/`08`, test nâng cấp dữ liệu và quyền DB trước khi áp dụng.
+- Hợp nhất hoặc điều chỉnh read path E3 để dùng cùng model/adapter phù hợp; giữ một câu đọc snapshot nhất quán, không tạo/khóa usage, JSON/nullable và semantics `DEC-LIM-001`.
+- **Nghiệm thu:** PostgreSQL round-trip và constraint/precision/nullability theo `04`; không còn `JdbcTemplate`/manual `ResultSet` trong persistence production của `limit`; test E1 và E3 đạt, bao gồm hiệu lực biên, usage thiếu, remaining và không có side effect.
+
+#### LIM-REF-03 — Enforcement và thay đổi cấu hình an toàn trong transaction
+
+- Chuyển `LimitRuleService`, `LimitEnforcementService`, `LimitChangeService` và policy sang port/model/mapping mới; dùng Lombok có chọn lọc và tái sử dụng error, clock, context/config của `common`. Đặt transaction boundary ở application; provider JOIN caller, không commit riêng trong T2 hay approval.
+- Giữ `READ COMMITTED`, thời điểm và business date cố định của T2; giữ guard cấu hình/activation hiện có, thứ tự khóa, upsert counter và kiểm tra cả customer/account. Giữ conditional increment, số dòng cập nhật, single-use handle, chống dùng sau commit/khác transaction và xử lý business rejection/technical failure đúng contract. Không tự loại bỏ guard hiện có chỉ vì có `@Transactional`.
+- Giữ policy/revalidation, pending/active/superseded/rejected, expected version, no future effective, guard bật account giữa ngày, không reset/backfill usage và không tự duyệt theo các quyết định đã phản ánh trong `07`. Không chuyển quyền sở hữu approval sang limit.
+- **Nghiệm thu:** test PostgreSQL với transaction/connection độc lập chứng minh race tạo usage lần đầu, đồng thời cùng/khác account, ngưỡng bằng/vượt, conditional increment nhiều handle, rollback sau increment/audit failure, transaction đã hoàn tất/`afterCommit`, thời điểm qua nửa đêm và cạnh tranh activation/config. Các test `LimitEnforcementIT`, `LimitBusinessDateIT`, `LimitChangesIT` và case tương đương phải giữ hoặc tăng coverage, không xóa/giảm oracle để làm xanh test.
+
+#### LIM-REF-04 — Tích hợp E4 trong `admin` và response/DTO
+
+- Phối hợp owner `admin` chuyển `approval_request` của workflow LIMIT_CHANGE từ `ApprovalJdbcRepository` sang entity/repository Spring Data JPA do admin sở hữu; map JSONB, state, ID, timestamp và DTO qua mapping phù hợp. Không dùng entity của `admin` trong `limit`, không để `limit` ghi trực tiếp bảng approval, không thay các workflow admin ngoài phạm vi.
+- Tách request/response DTO và MapStruct web mapper khỏi logic điều phối trong controller; dùng common Problem/error, request context, security và validation hiện có. Duy trì signature/semantics contract liên module và JSON/status/Location/error của `07`/OpenAPI, trừ khi phát hiện mâu thuẫn phải đưa owner quyết định.
+- Kiểm chứng approval + pending config + consume challenge + audit C2 cùng transaction và thứ tự ghi đúng; `FOR UPDATE`, stale version, cạnh tranh checker, rollback, fail-closed khi provider thiếu và C3 denial theo contract. Reuse provider API của identity/account/customer/audit; test double chỉ ở test.
+- **Nghiệm thu:** không còn `JdbcTemplate`/manual `ResultSet` trong persistence production của phần admin liên quan; PostgreSQL test cho insert/JSONB, lock/decide, rollback và quyền DB; HTTP/contract test giữ nguyên 201/200, 403/404/409/422/428/503, CSRF, step-up và response của E4.
+
+#### LIM-REF-05 — Enforce boundary, hồi quy và bàn giao
+
+- Bổ sung ArchUnit cho `limit` và phần admin liên quan: không import module khác ngoài `api`/SPI được công bố; không lộ entity/JPA repository ra API/HTTP; domain thuần; inbound không phụ thuộc outbound; application dùng port thay adapter-out; không tạo cycle hoặc `common` → business. Test rule bằng ví dụ vi phạm có kiểm soát để tránh rule chạy xanh vì không match class; kiểm tra MapStruct-generated code.
+- Chuyển các test `limit`/`admin` còn phụ thuộc `JdbcTemplate` sang test helper/repository phù hợp với yêu cầu JPA; giữ oracle độc lập cho constraint, grant, lock và rollback bằng fixture SQL/connection PostgreSQL riêng khi cần. Dữ liệu/SQL phục vụ setup và quan sát test không được trở thành persistence production hoặc fake module production.
+- Chạy lại baseline tương ứng, toàn bộ test limit/admin/common bị ảnh hưởng, ArchUnit, contract/OpenAPI và `./gradlew check`; test cạnh tranh phải dùng PostgreSQL thật, các connection/transaction độc lập và kiểm tra DB sau commit/rollback. Lưu revision, lệnh, môi trường, số test, kết quả và evidence theo `09` §10; phân biệt baseline, kết quả sau sửa và test mock/provider thật.
+- Rà `rg` và build để bảo đảm không còn `JdbcTemplate`, `NamedParameterJdbcTemplate`, manual `ResultSet` trong persistence production của các phần thuộc phase, kể cả native query; kiểm tra DI, Lombok/MapStruct processors và entity validation. Rà diff, tài liệu/contract bị ảnh hưởng và bảo đảm không thay API/schema/behavior ngoài phạm vi được duyệt.
+- **Nghiệm thu:** tất cả test/rule trên revision cuối đạt; không suy kết quả integration thật từ mock. Báo cáo riêng phần chưa tích hợp Transfer/LIM-05, session/account/identity/audit thật, C3 alert và timezone D2 cho đến khi có provider/quyết định và bằng chứng tương ứng.
+
+### 11.3. Phụ thuộc và điều kiện kết thúc
+
+- Thứ tự: **REF-01 → REF-02 → REF-03 → REF-04 → REF-05**; test và contract liên quan chạy cùng từng phần. REF-04 cần phối hợp owner `admin`; REF-05 tổng hợp sau khi các phần trước đạt.
+- Việc thay persistence là refactor có rủi ro đối với money path: không kết luận giữ nguyên transaction chỉ bằng unit test, mock hoặc build pass. Nếu Spring Data JPA không tái hiện an toàn một operation PostgreSQL hiện có, dừng phần phụ thuộc, ghi rõ bằng chứng và hỏi người điều hành thay vì tự nới quy tắc JPA hay sửa invariant.
+- Các kết quả E2/E3/E4 trước đây là bằng chứng của revision cũ; phase chỉ hoàn thành khi có bằng chứng mới trên code sau refactor. Các integration chưa có provider thật vẫn giữ **Blocked**, không coi phase refactor làm hoàn tất LIM-05 hay sign-off thay owner.

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -26,13 +26,13 @@ class LimitPersistenceIT {
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
             .withInitScript("limit/init-roles.sql");
 
-    static JdbcTemplate jdbc;
+    static SqlFixture jdbc;
 
     @BeforeAll
     static void migrate() {
         Flyway.configure().dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load().migrate();
-        jdbc = new JdbcTemplate(new DriverManagerDataSource(
+        jdbc = new SqlFixture(new DriverManagerDataSource(
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword()));
     }
 
@@ -71,7 +71,7 @@ class LimitPersistenceIT {
         var baseline = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").target("1").load();
         assertThat(baseline.migrate().migrationsExecuted).isEqualTo(1);
-        var upgradeJdbc = new JdbcTemplate(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
+        var upgradeJdbc = new SqlFixture(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
         upgradeJdbc.execute("COMMENT ON SCHEMA banking IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
@@ -141,7 +141,7 @@ class LimitPersistenceIT {
 
     @Test
     void applicationRoleCanPersistAndReadButCannotHardDeleteHistory() {
-        var app = new JdbcTemplate(new DriverManagerDataSource(postgres.getJdbcUrl(), "banking_app", "test_app"));
+        var app = new SqlFixture(new DriverManagerDataSource(postgres.getJdbcUrl(), "banking_app", "test_app"));
         app.update(configSql("NULL", "DEFAULT", "DEFAULT", "NULL", "NULL", "100", "1000"));
         app.update("INSERT INTO banking.limit_usage(customer_id,usage_date) VALUES (11,'2026-11-15')");
         assertThat(app.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isEqualTo(1);

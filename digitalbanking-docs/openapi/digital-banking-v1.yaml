@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Digital Banking API
-  version: 1.0.0
+  version: 1.0.1
   summary: Hợp đồng API MVP cho Digital Banking
   description: >-
     Hợp đồng máy đọc được của Digital Banking MVP. Tài liệu ngữ nghĩa và quy tắc
@@ -744,6 +744,7 @@ paths:
     get:
       tags: [Limit]
       summary: Hạn mức hiện tại và còn lại
+      description: Không có accountId chỉ trả scope CUSTOMER; có accountId thuộc customer trả scope CUSTOMER và ACCOUNT đã chọn. Effective tính theo các scope được trả.
       operationId: getLimits
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -767,6 +768,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
         '503':
