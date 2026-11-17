@@ -1,8 +1,10 @@
 package com.simulatedbank.banking.transfer.application;
 
+import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.transfer.domain.IdempotencyDecision;
 import com.simulatedbank.banking.transfer.domain.IdempotencyStatus;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
+import com.simulatedbank.banking.transfer.domain.TransferStatus;
 import com.simulatedbank.banking.transfer.application.TransferRequestHash.Destination;
 import com.simulatedbank.banking.transfer.application.TransferRequestHash.DestinationType;
 import java.util.Objects;
@@ -18,8 +20,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public final class TransferPreflightCandidate {
     private final Ports ports;
     private final TransferRequestHash hasher;
+    private final TransferTelemetry telemetry;
 
     public TransferPreflightCandidate(Ports ports, TransferRequestHash hasher) {
+        this(ports, hasher, TransferTelemetry.DISABLED);
+    }
+
+    public TransferPreflightCandidate(Ports ports, TransferRequestHash hasher, TransferTelemetry telemetry) {
+        this.telemetry = Objects.requireNonNull(telemetry);
         this.ports = Objects.requireNonNull(ports, "ports");
         this.hasher = Objects.requireNonNull(hasher, "hasher");
     }
@@ -49,8 +57,8 @@ public final class TransferPreflightCandidate {
         verifyCommandBinding(request, requestHash, destinationId, command);
         TransferIntentCandidate.Result intent = Objects.requireNonNull(ports.createIntent(command), "T1 result");
         if (intent instanceof TransferIntentCandidate.ChallengeRequired challenge) {
-            // Challenge dispatch must occur after the guard transaction has returned.
-            return new ChallengeRequired(challenge.policyVersion());
+            // Challenge dispatch must occur after the guard transaction has returned; the hash binds T0.
+            return new ChallengeRequired(challenge.policyVersion(), requestHash);
         }
         if (intent instanceof TransferIntentCandidate.Existing) {
             // T1 has ended before looking up a concurrent winner and any replay body.
@@ -60,9 +68,10 @@ public final class TransferPreflightCandidate {
         }
         long transferId = ((TransferIntentCandidate.Created) intent).transferId();
         if (transferId <= 0) throw new IllegalStateException("Invalid T1 transfer ID");
+        telemetry.idempotency(IdempotencyDecision.NEW);
         // The settlement adapter must claim a durable fence and return only after T2 commit.
-        TransferSettlementCandidate.Outcome outcome = Objects.requireNonNull(ports.settleCreated(transferId), "T2 outcome");
-        return new Settled(transferId, outcome);
+        Settlement settlement = Objects.requireNonNull(ports.settleCreated(transferId), "T2 settlement");
+        return new Settled(transferId, settlement);
     }
 
     private Optional<Stored> lookup(Request request) {
@@ -77,6 +86,7 @@ public final class TransferPreflightCandidate {
     private Result classify(Request request, String requestHash, Stored stored) {
         IdempotencyDecision decision = IdempotencyDecision.classify(request.actorId(), request.customerId(),
                 requestHash, Optional.of(stored.identity()));
+        telemetry.idempotency(decision);
         return switch (decision) {
             case CONFLICT -> new Conflict();
             case IN_PROGRESS -> new InProgress();
@@ -92,6 +102,7 @@ public final class TransferPreflightCandidate {
         if (command.identity().initiatedByUserId() != request.actorId()
                 || command.identity().customerId() != request.customerId()
                 || !command.idempotencyKey().equals(request.idempotencyKey())
+                || (request.correlationId() != null && !request.correlationId().equals(command.correlationId()))
                 || !command.requestHash().equals(requestHash)
                 || command.identity().sourceAccountId() != request.payload().sourceAccountId()
                 || command.identity().destinationAccountId() != destinationId
@@ -110,8 +121,9 @@ public final class TransferPreflightCandidate {
         Preflight preflight(Request request, String requestHash, long destinationId);
         /** Returns after T1 commit or rollback; errors propagate. */
         TransferIntentCandidate.Result createIntent(TransferIntentCandidate.Command command);
-        /** Claim a durable attempt and execute T2; unknown commit and other errors propagate. */
-        TransferSettlementCandidate.Outcome settleCreated(long transferId);
+        /** Claim a durable attempt and execute T2; return the terminal outcome and masked receipt only
+         * after commit. Unknown commit and other errors propagate. */
+        Settlement settleCreated(long transferId);
     }
 
     public record Payload(long sourceAccountId, Destination destination, TransferAmount amount, String description) {
@@ -128,13 +140,20 @@ public final class TransferPreflightCandidate {
         @Override public String toString() { return "Payload[redacted]"; }
     }
 
-    public record Request(long actorId, long customerId, String idempotencyKey, Payload payload) {
+    public record Request(long actorId, long customerId, String idempotencyKey, Payload payload, String correlationId) {
+        public Request(long actorId, long customerId, String idempotencyKey, Payload payload) {
+            this(actorId, customerId, idempotencyKey, payload, null);
+        }
+
         public Request {
             if (actorId <= 0 || customerId <= 0 || idempotencyKey == null
                     || !idempotencyKey.matches("[A-Za-z0-9._:~\\-]{1,255}")) {
                 throw new IllegalArgumentException("Invalid transfer request binding");
             }
             Objects.requireNonNull(payload, "payload");
+            if (correlationId != null && !RequestContext.isValidCorrelationId(correlationId)) {
+                throw new IllegalArgumentException("Invalid transfer request correlation");
+            }
         }
         @Override public String toString() { return "Request[redacted]"; }
     }
@@ -180,6 +199,33 @@ public final class TransferPreflightCandidate {
         public Replay { Objects.requireNonNull(response, "response"); }
     }
     public record PreflightDenied(RejectionReason reason) implements Result { }
-    public record ChallengeRequired(String policyVersion) implements Result { }
-    public record Settled(long transferId, TransferSettlementCandidate.Outcome outcome) implements Result { }
+    /** Carries the canonical hash so T0 can bind the challenge; never exposed to the HTTP boundary. */
+    public record ChallengeRequired(String policyVersion, String requestHash) implements Result {
+        public ChallengeRequired {
+            Objects.requireNonNull(policyVersion, "policyVersion");
+            if (requestHash == null || !requestHash.matches("[0-9a-f]{64}")) {
+                throw new IllegalArgumentException("Invalid challenge request hash");
+            }
+        }
+        @Override public String toString() { return "ChallengeRequired[redacted]"; }
+    }
+    public record Settled(long transferId, Settlement settlement) implements Result {
+        public Settled { Objects.requireNonNull(settlement, "settlement"); }
+    }
+
+    /** Terminal T2 outcome paired with the masked receipt stored for replay; the two must agree. */
+    public record Settlement(TransferSettlementCandidate.Outcome outcome, TransferView receipt) {
+        public Settlement {
+            Objects.requireNonNull(outcome, "outcome");
+            Objects.requireNonNull(receipt, "receipt");
+            boolean failed = outcome.failure().isPresent();
+            TransferStatus expected = failed ? TransferStatus.FAILED : TransferStatus.COMPLETED;
+            if (receipt.status() != expected) {
+                throw new IllegalArgumentException("Settlement receipt status does not match the outcome");
+            }
+            if (failed && !receipt.failureCode().name().equals(outcome.failure().orElseThrow().name())) {
+                throw new IllegalArgumentException("Settlement receipt failure code does not match the outcome");
+            }
+        }
+    }
 }

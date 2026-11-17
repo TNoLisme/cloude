@@ -22,7 +22,8 @@ public final class TransferCreateService {
     public TransferCreateOutcome create(TransferActor actor, TransferCreateInput.Validated input) {
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(input, "input");
-        if (actor.customerId() == null || !actor.hasAuthority("TRANSFER_CREATE")) {
+        if (actor.customerId() == null || !actor.hasAuthority("ROLE_CUSTOMER")
+                || !actor.hasAuthority("TRANSFER_CREATE")) {
             denyAudit.accessDenied(actor, "TRANSFER", null, "PERMISSION_DENIED", "TRANSFER_CREATE");
             throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
         }

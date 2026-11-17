@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
@@ -20,16 +21,19 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class TransferIntentCandidateTest {
     private static final String HASH = "a".repeat(64);
+    private static final UUID CHALLENGE_REF = UUID.fromString("11111111-2222-4333-8444-555555555555");
     private final FakePorts ports = new FakePorts();
     private final FakeTransactions transactions = new FakeTransactions(ports);
     private final TransferIntentCandidate candidate = new TransferIntentCandidate(transactions, ports);
 
     @Test
-    void createsReservationAndConsumesChallengeBeforeAuditInOneTransaction() {
+    void createsReservationConsumesUuidThenAttachesBigintForeignKeyBeforeAudit() {
         ports.challengeRequired = true;
-        assertThat(candidate.create(command(9L))).isEqualTo(new TransferIntentCandidate.Created(7));
-        assertThat(ports.calls).containsExactly("begin", "guard", "lookup", "evaluate", "insert:9", "reserve", "consume", "flush", "audit", "commit");
+        assertThat(candidate.create(command(CHALLENGE_REF))).isEqualTo(new TransferIntentCandidate.Created(7));
+        assertThat(ports.calls).containsExactly("begin", "guard", "lookup", "evaluate", "insert", "reserve",
+                "consume", "attach:9", "flush", "audit", "commit");
         assertThat(ports.effects).containsExactly("transfer", "key", "reservation", "challenge", "audit");
+        assertThat(ports.attachedTransferId).isEqualTo(7);
     }
 
     @Test
@@ -53,26 +57,50 @@ class TransferIntentCandidateTest {
     void auditFailureRollsBackIntentReservationAndChallenge() {
         ports.challengeRequired = true;
         ports.failAudit = true;
-        assertThatThrownBy(() -> candidate.create(command(9L))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF)))
+                .isInstanceOf(TransferIntentCandidate.AuditWriteException.class);
         assertThat(ports.effects).isEmpty();
         assertThat(ports.calls).endsWith("audit", "rollback");
     }
 
     @Test
-    void staleOrMismatchedChallengeRollsBackAllWrites() {
+    void mismatchedChallengeRejectionRollsBackAllWritesBeforeAttachAndAudit() {
         ports.challengeRequired = true;
-        ports.consumedId = 10;
-        assertThatThrownBy(() -> candidate.create(command(9L))).isInstanceOf(IllegalStateException.class);
+        ports.challengeRejection = TransferIntentCandidate.ChallengeRejectedException.Reason.MISMATCH;
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF)))
+                .isInstanceOf(TransferIntentCandidate.ChallengeRejectedException.class)
+                .satisfies(ex -> assertThat(((TransferIntentCandidate.ChallengeRejectedException) ex).reason())
+                        .isEqualTo(TransferIntentCandidate.ChallengeRejectedException.Reason.MISMATCH));
         assertThat(ports.effects).isEmpty();
-        assertThat(ports.calls).endsWith("consume", "rollback");
-        assertThat(ports.calls).doesNotContain("audit");
+        assertThat(ports.calls).endsWith("consume", "rollback").doesNotContain("attach:9", "audit");
+    }
+
+    @Test
+    void expiredChallengeRejectionRollsBackAllWrites() {
+        ports.challengeRequired = true;
+        ports.challengeRejection = TransferIntentCandidate.ChallengeRejectedException.Reason.EXPIRED;
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF)))
+                .isInstanceOf(TransferIntentCandidate.ChallengeRejectedException.class)
+                .satisfies(ex -> assertThat(((TransferIntentCandidate.ChallengeRejectedException) ex).reason())
+                        .isEqualTo(TransferIntentCandidate.ChallengeRejectedException.Reason.EXPIRED));
+        assertThat(ports.effects).isEmpty();
+        assertThat(ports.calls).endsWith("consume", "rollback").doesNotContain("attach:9", "audit");
+    }
+
+    @Test
+    void nonPositiveConsumedChallengeIdFailsClosedBeforeAttach() {
+        ports.challengeRequired = true;
+        ports.consumedId = 0;
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF))).isInstanceOf(IllegalStateException.class);
+        assertThat(ports.effects).isEmpty();
+        assertThat(ports.calls).endsWith("consume", "rollback").doesNotContain("attach:0", "audit");
     }
 
     @Test
     void reservationFailureRollsBackIntentBeforeChallengeAndAudit() {
         ports.challengeRequired = true;
         ports.failReserve = true;
-        assertThatThrownBy(() -> candidate.create(command(9L))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF))).isInstanceOf(IllegalStateException.class);
         assertThat(ports.effects).isEmpty();
         assertThat(ports.calls).endsWith("reserve", "rollback").doesNotContain("consume", "audit");
     }
@@ -81,7 +109,7 @@ class TransferIntentCandidateTest {
     void challengeConsumptionFailureRollsBackIntentAndReservation() {
         ports.challengeRequired = true;
         ports.failConsume = true;
-        assertThatThrownBy(() -> candidate.create(command(9L))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF))).isInstanceOf(IllegalStateException.class);
         assertThat(ports.effects).isEmpty();
         assertThat(ports.calls).endsWith("consume", "rollback").doesNotContain("audit");
     }
@@ -92,7 +120,8 @@ class TransferIntentCandidateTest {
         ports.winnerAfterRollback = Optional.of(new IdempotencyDecision.Existing(2, 1, HASH, IdempotencyStatus.RECEIVED));
         assertThat(candidate.create(command(null)))
                 .isEqualTo(new TransferIntentCandidate.Existing(IdempotencyDecision.IN_PROGRESS));
-        assertThat(ports.calls).containsExactly("begin", "guard", "lookup", "evaluate", "insert:null", "rollback", "begin", "lookup", "commit");
+        assertThat(ports.calls).containsExactly("begin", "guard", "lookup", "evaluate", "insert", "rollback",
+                "begin", "lookup", "commit");
         assertThat(ports.effects).isEmpty();
     }
 
@@ -108,18 +137,37 @@ class TransferIntentCandidateTest {
     void refusesOuterTransactionsAndIgnoresUnneededChallenge() {
         TransactionSynchronizationManager.setActualTransactionActive(true);
         try {
-            assertThatThrownBy(() -> candidate.create(command(9L))).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> candidate.create(command(CHALLENGE_REF))).isInstanceOf(IllegalStateException.class);
         } finally {
             TransactionSynchronizationManager.setActualTransactionActive(false);
         }
-        assertThat(candidate.create(command(9L))).isEqualTo(new TransferIntentCandidate.Created(7));
-        assertThat(ports.calls).contains("insert:null").doesNotContain("consume");
+        assertThat(candidate.create(command(CHALLENGE_REF))).isEqualTo(new TransferIntentCandidate.Created(7));
+        assertThat(ports.calls).contains("insert").doesNotContain("consume", "attach:9");
     }
 
-    private static TransferIntentCandidate.Command command(Long challenge) {
+    @Test
+    void invalidTtlSnapshotIsRejectedBeforeAnyWrite() {
+        assertThatThrownBy(() -> command(CHALLENGE_REF, 86399, "ttl-v1")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> command(CHALLENGE_REF, 86400, " ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> command(CHALLENGE_REF, 86400, "v".repeat(129))).isInstanceOf(IllegalArgumentException.class);
+        assertThat(ports.calls).isEmpty();
+    }
+
+    @Test
+    void commandCannotPreSetTheChallengeForeignKey() {
+        assertThatThrownBy(() -> new TransferIntentCandidate.Command(new TransferIdentity("R", 1, 2, 3, 4, 9L),
+                new TransferAmount(new BigDecimal("1.00"), "VND"), null, "correlation", "key", HASH,
+                86400, "ttl-v1", CHALLENGE_REF)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static TransferIntentCandidate.Command command(UUID challengeRef) {
+        return command(challengeRef, 86400, "ttl-v1");
+    }
+
+    private static TransferIntentCandidate.Command command(UUID challengeRef, long ttlSeconds, String ttlVersion) {
         return new TransferIntentCandidate.Command(new TransferIdentity("R", 1, 2, 3, 4, null),
                 new TransferAmount(new BigDecimal("1.00"), "VND"), null, "correlation", "key", HASH,
-                86400, "ttl-v1", challenge);
+                ttlSeconds, ttlVersion, challengeRef);
     }
 
     private static final class FakePorts implements TransferIntentCandidate.Ports {
@@ -133,6 +181,8 @@ class TransferIntentCandidateTest {
         boolean failConsume;
         boolean race;
         long consumedId = 9;
+        long attachedTransferId;
+        TransferIntentCandidate.ChallengeRejectedException.Reason challengeRejection;
 
         @Override public void lockStepUpGuard(long customerId) { calls.add("guard"); }
         @Override public Optional<IdempotencyDecision.Existing> findExistingOnPrimary(String key) {
@@ -143,8 +193,8 @@ class TransferIntentCandidateTest {
             calls.add("evaluate");
             return new TransferIntentCandidate.Assessment(challengeRequired, LocalDate.of(2026, 11, 16), "v1");
         }
-        @Override public long insertPendingAndKey(TransferIntentCandidate.Command command, Long challengeId) {
-            calls.add("insert:" + challengeId);
+        @Override public long insertPendingAndKey(TransferIntentCandidate.Command command) {
+            calls.add("insert");
             effects.add("transfer");
             if (race) throw new TransferIntentCandidate.DuplicateKeyRace();
             effects.add("key");
@@ -155,15 +205,19 @@ class TransferIntentCandidateTest {
             calls.add("reserve"); effects.add("reservation");
             if (failReserve) throw new IllegalStateException("reservation failed");
         }
-        @Override public long consumeVerified(TransferIntentCandidate.Command command, long challengeId) {
+        @Override public long consumeVerified(TransferIntentCandidate.Command command, UUID challengeRef) {
             calls.add("consume"); effects.add("challenge");
             if (failConsume) throw new IllegalStateException("challenge failed");
+            if (challengeRejection != null) throw new TransferIntentCandidate.ChallengeRejectedException(challengeRejection);
             return consumedId;
+        }
+        @Override public void attachChallenge(long transferId, long challengeId) {
+            calls.add("attach:" + challengeId); attachedTransferId = transferId;
         }
         @Override public void flushBusinessWrites() { calls.add("flush"); }
         @Override public void recordCreated(TransferIdentity identity, TransferAmount amount, String correlationId, long transferId) {
             calls.add("audit");
-            if (failAudit) throw new IllegalStateException("audit failed");
+            if (failAudit) throw new TransferIntentCandidate.AuditWriteException();
             effects.add("audit");
         }
     }

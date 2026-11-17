@@ -15,6 +15,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        "app.identity.enabled=false",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
