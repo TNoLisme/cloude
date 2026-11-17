@@ -4,7 +4,7 @@
 >
 > **Phạm vi:** thiết kế, hợp đồng và kế hoạch triển khai module `admin`
 >
-> **Trạng thái:** **PARTIAL** — domain/persistence, Checker step-up, Admin idempotency (V7) và ROLE_CHANGE proposal/decision end-to-end đã triển khai, kiểm chứng; LIMIT_CHANGE proposal/approve và durable Audit còn BLOCKED
+> **Trạng thái:** **PARTIAL** — domain/persistence (gồm read model list/detail), Checker step-up, Admin idempotency (V7) và ROLE_CHANGE proposal/decision end-to-end đã triển khai, kiểm chứng; REST approval list/detail + data scope, LIMIT_CHANGE proposal/approve và durable Audit còn BLOCKED
 >
 > **Baseline tham chiếu:** nhánh `datht-backend-rework`
 >
@@ -16,6 +16,9 @@
 - [Chốt hợp đồng BE-ADM-CON-01](BE-ADM-CON-01.md)
 - [Step-up binding BE-ADM-CON-02](BE-ADM-CON-02.md)
 - [Idempotency BE-ADM-CON-03](BE-ADM-CON-03.md)
+- [Resolve schema conflicts BE-ADM-CON-04](BE-ADM-CON-04.md)
+- [Migration `approval_request` BE-ADM-DB-01](BE-ADM-DB-01.md)
+- [Entity/repository/projection BE-ADM-DB-02](BE-ADM-DB-02.md)
 - [Idempotency persistence/concurrency BE-ADM-DB-03](BE-ADM-DB-03.md)
 - [Task breakdown và checklist](tasks/README.md)
 
@@ -23,6 +26,8 @@
 
 - `admin` là **orchestrator** của workflow Maker-Checker, sở hữu write-model `banking.approval_request`; `identity` và `limit` vẫn là write-owner của dữ liệu bị thay đổi.
 - **Đã triển khai:** `admin.domain` (`ApprovalRequest`, typed payload, state machine), `admin.application.port.ApprovalRequestStore`, JPA entity/repository/store, Flyway `V6__create_approval_request_table.sql`; test unit + PostgreSQL 16 pass.
+- **Đã xác minh (DB-01):** `V6` canonical — 13 cột, PK identity, 2 FK RESTRICT, 8 CHECK, 5 index; fresh PostgreSQL 16 chạy `V1`–`V7`, metadata và positive/negative DML PASS. Không có partial index canonical; `ADM-OI-03` là extension chưa duyệt, cần migration mới. Chi tiết: [BE-ADM-DB-01.md](BE-ADM-DB-01.md).
+- **Đã triển khai (DB-02, persistence):** `ApprovalRequestReader` + `ApprovalQueryService` read-only, `ApprovalSummaryProjection`/`ApprovalDetailProjection`/`ApprovalPage`; list query không đọc JSONB `payload`, detail mask bỏ `expectedVersion`; filter `requestType/status/makerId/checkerId/from/to`, page 0/20/100, sort whitelist `createdAt` (default `desc`) và tie-breaker `approvalId`; `FOR UPDATE` chờ trong transaction `MANDATORY`, lock timeout `55P03` không bị nuốt. REST list/detail + data scope vẫn BLOCKED ở `BE-ADM-API-03`/`ADM-OI-06`; `ApprovalDetail.result` chưa persist. Chi tiết: [BE-ADM-DB-02.md](BE-ADM-DB-02.md).
 - **Đã kiểm chứng (DB-03):** `V7` metadata thật trên PostgreSQL 16 fresh database — 13 cột/type/length/nullability/identity/default, PK, 2 FK `RESTRICT`, 10 CHECK, unique `uq_admin_idempotency_scope (actor_id, operation, scope_key, idempotency_key)`, 3 index phụ non-partial; positive/negative DML (23505/23514/23503/22001) PASS. Concurrency/rollback: winner rollback → loser đang block nhận ownership; failure tại response-persistence rollback cả approval + claim rồi retry cùng key; `RECEIVED` hết hạn không bị purge và vẫn `409 IDEMPOTENCY_IN_PROGRESS`. Cross-tenant vẫn BLOCKED vì schema v1 không có tenant. Chi tiết: [BE-ADM-DB-03.md](BE-ADM-DB-03.md).
 - **Đã triển khai (CON-02):** `ApprovalStepUpBinding` (SHA-256 canonical v1 + `bindingKey=approvalId`), `ApprovalStepUpService` (428 bind + consume JOIN), `ApprovalDecisionService` (entry point transition duy nhất: lock, Maker–Checker, consume, provider role, audit C2), `AdminAuthorization`; 31 test mới (7 unit binding, 7 unit gate, 17 PostgreSQL/Identity) PASS.
 - **Đã triển khai (CON-03):** `admin_idempotency_record` V7 unique `(actor_id, operation, scope_key, idempotency_key)`; `AdminIdempotencyService` insert-first (`ON CONFLICT DO NOTHING`), replay/conflict/in-progress, TTL 24h + purge terminal-only; `AdminRequestHasher` JCS SHA-256; Maker step-up bind idempotency key + proposal hash; `RoleAdminController`/`LimitAdminController`; 40 test mới. ROLE_CHANGE proposal/decision end-to-end; LIMIT_CHANGE proposal/approve fail-closed 503.
@@ -34,6 +39,6 @@
 
 ## Phạm vi tài liệu
 
-`design.md` giữ thiết kế/khảo sát ban đầu. `BE-ADM-CON-01.md` chốt scope, actor/scope matrix, payload schema, state machine, DB, transaction/failure, dependency và test evidence. `BE-ADM-CON-02.md` chốt canonical request hash, binding key, 428 flow, decision gate, failure/concurrency và ma trận 16 kịch bản. `BE-ADM-CON-03.md` chốt idempotency scope/hash/TTL/replay/conflict/in-progress, Maker step-up và evidence 40 test mới. `tasks/README.md` là checklist triển khai theo dependency.
+`design.md` giữ thiết kế/khảo sát ban đầu. `BE-ADM-CON-01.md` chốt scope, actor/scope matrix, payload schema, state machine, DB, transaction/failure, dependency và test evidence. `BE-ADM-CON-02.md` chốt canonical request hash, binding key, 428 flow, decision gate, failure/concurrency và ma trận 16 kịch bản. `BE-ADM-CON-03.md` chốt idempotency scope/hash/TTL/replay/conflict/in-progress, Maker step-up và evidence 40 test mới. `BE-ADM-CON-04.md` rà soát và giải quyết xung đột schema (BIGINT/UUID, APPROVED/APPLIED, expiration, challenge columns, migration compatibility), cập nhật `_overview/10-admin.md` và `design/04. security.md` cho khớp canonical `04` §4.5.3/§4.5.4. `BE-ADM-DB-01/02/03.md` là evidence persistence: schema `approval_request`, read model list/detail, và idempotency record/unique race/replay/retention. `tasks/README.md` là checklist triển khai theo dependency.
 
 Các quyết định chưa được phân xử trong `docs-common` được giữ là **BLOCKED/OPEN**, không được biến thành hành vi production bằng cách suy diễn trong tài liệu module. Khi provider chưa có, chỉ dùng fixture/fake ở test theo `Modules contract §13.1`; không đưa fake thành production bean.
