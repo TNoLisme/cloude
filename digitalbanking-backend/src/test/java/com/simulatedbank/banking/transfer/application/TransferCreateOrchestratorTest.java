@@ -179,6 +179,19 @@ class TransferCreateOrchestratorTest {
     }
 
     @Test
+    void terminalAuditWriteFailureMapsToSafeAuditProblem() {
+        ports.reads.add(Optional.empty());
+        ports.intent = new TransferIntentCandidate.Created(10);
+        ports.settlementFailure = new TransferSettlementCandidate.AuditWriteException(
+                new IllegalStateException("provider details"));
+        assertThatThrownBy(() -> orchestrator.create(new TransferCreateCommand(actor, input)))
+                .isInstanceOfSatisfying(BankingBusinessException.class, ex -> {
+                    assertThat(ex.code()).isEqualTo(ErrorCode.AUDIT_WRITE_FAILED);
+                    assertThat(ex.safeDetail()).doesNotContain("provider details");
+                });
+    }
+
+    @Test
     void systemFailurePropagatesWithoutBeingSwallowed() {
         ports.reads.add(Optional.empty());
         ports.intentFailure = new IllegalStateException("commit unknown");
@@ -235,6 +248,7 @@ class TransferCreateOrchestratorTest {
         Preflight preflightOverride;
         TransferIntentCandidate.Result intent;
         RuntimeException intentFailure;
+        RuntimeException settlementFailure;
         Settlement settlement;
         final OptionalLong resolved = OptionalLong.of(4);
 
@@ -261,6 +275,7 @@ class TransferCreateOrchestratorTest {
         }
         @Override public Settlement settleCreated(long transferId) {
             calls.add("T2");
+            if (settlementFailure != null) throw settlementFailure;
             return settlement;
         }
     }

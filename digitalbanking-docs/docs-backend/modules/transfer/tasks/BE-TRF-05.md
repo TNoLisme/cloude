@@ -30,7 +30,7 @@ Phạm vi gồm T2 thành công, business rejection sau T1, phân loại technic
 | Fraud | `TRFC-FR-01`: evaluate, flag và decision | JOIN T2; savepoint, rule/version và transaction/persistence context cần chứng minh. |
 | Audit | `TRFC-AU-01`: C2/C1 `recordInTransaction` | JOIN/MANDATORY, fail-closed, audit phase cuối; cần proof chain lock và rollback. |
 | Notification | `TRFC-NO-01`: enqueue outcome đã mask | JOIN T2; delivery sau commit do Notification sở hữu; lỗi insert rollback T2. |
-| BE-TRF-06 / Ops | Durable claim/fence, evidence và xử lý unknown commit | Claim/recovery protocol, provider evidence và runbook còn thiếu; không dùng lease expiry làm proof rollback. |
+| BE-TRF-06 / Ops | Durable claim/fence, evidence và xử lý unknown commit | Claim/recovery protocol và runbook có ở [candidate BE-TRF-06](BE-TRF-06.md). Provider evidence, Tfail và rollout còn Blocked. Lease expiry chuyển MANUAL khi outcome chưa rõ. |
 
 `05` §13.4 đã có baseline và phương án phát triển độc lập: consumer-owned seam cùng fake theo contract chỉ trong test/dev, provider-owned DTO/API khi ghép; không tạo fake production bean. Nếu thiếu provider hoặc transaction proof, giữ money path **Blocked**. Không cần thêm dependency liên module mới trong task này.
 
@@ -107,7 +107,7 @@ Mỗi evidence theo `09` §10: test ID và phạm vi, revision, lệnh, môi tr�
 |---|---|
 | Provider APIs và JOIN T2 | Account, Limit, Ledger, Fraud, Audit, Notification: review DTO v1, error/propagation và contract suite; provider thật, migration và rollback proof. |
 | Savepoint / persistence context | Fraud, Account, Transfer, DBA: chứng minh rollback phần fraud và credit, context usable, failure injection và không deferred write sau audit. |
-| Fencing, Tfail và unknown commit | Transfer, BE-TRF-06, Ops/DBA: durable protocol, evidence per-transfer, stale worker, crash và runbook; thiếu proof giữ Blocked. |
+| Fencing, Tfail và unknown commit | Transfer, [BE-TRF-06](BE-TRF-06.md), Ops/DBA: candidate có durable claim và fixture stale worker/crash; Tfail và evidence provider thật vẫn Blocked. |
 | Lock order / snapshot / business date | Limit, Account, DBA, QA: config/version, lock/FK/trigger, midnight, concurrency và clock primary. |
 | Audit C2/C1 và outbox | Audit, Fraud, Notification, QA: chain lock cuối, transaction rollback, policy/template, masking và delivery sau commit. |
 | Candidate so với baseline | Transfer/Fraud: sửa kiểu `ruleVersion`, triển khai các gap đã nêu và test lại; không kích hoạt candidate như production khi thiếu provider/review. |

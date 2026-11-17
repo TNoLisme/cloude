@@ -13,17 +13,17 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 
 ## 1. Checklist và thứ tự phụ thuộc
 
-| Trạng thái | ID / ưu tiên / mốc         | Task                                                     | Phụ thuộc                                                           |
-| ---------- | -------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
-| [ ]        | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module                  | API, BA, Identity, Limit, Ledger, Audit, QA, Security               |
+| Trạng thái | ID / ưu tiên / mốc         | Task                                                             | Phụ thuộc                                                           |
+| ---------- | -------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [ ]        | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module                          | API, BA, Identity, Limit, Ledger, Audit, QA, Security               |
 | [ ]        | **BE-TRF-02 / P0 / W4**    | Schema, migration và state domain (candidate; xem task/evidence) | 01 (schema/key); migration Account/Identity và FK                   |
-| [ ]        | **BE-TRF-03 / P0 / W4**    | API, validation, authorization và query/receipt          | 01; identity/account thật; 02 cho persistence                       |
-| [ ]        | **BE-TRF-04 / P0 / W4**    | Idempotency, canonical hash, T1 và step-up               | 01–03; identity challenge, audit C1, common crypto                  |
-| [ ]        | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
-| [ ]        | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge                        | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL             |
-| [ ]        | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification              | 03–06; identity/audit/notification/common và Ops                    |
-| [ ]        | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure         | 02–07; PostgreSQL và module thật                                    |
-| [ ]        | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao                   | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần    |
+| [ ]        | **BE-TRF-03 / P0 / W4**    | API, validation, authorization và query/receipt                  | 01; identity/account thật; 02 cho persistence                       |
+| [ ]        | **BE-TRF-04 / P0 / W4**    | Idempotency, canonical hash, T1 và step-up                       | 01–03; identity challenge, audit C1, common crypto                  |
+| [ ]        | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox         | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
+| [ ]        | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge (candidate, xem evidence)      | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL             |
+| [ ]        | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification                      | 03–06; identity/audit/notification/common và Ops                    |
+| [ ]        | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure                 | 02–07; PostgreSQL và module thật                                    |
+| [ ]        | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao                           | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần    |
 
 Đường găng: 01 → 02/03 → 04 → 05 → 06/07 → 08 → 09. Contract tests và thiết kế test chuẩn bị song song từ 01; test cụ thể viết cùng mỗi task, không đợi 08. Thiếu dependency ghi **Blocked** cho AC bị ảnh hưởng, không thay production module bằng stub để tuyên bố tích hợp xong.
 
@@ -89,9 +89,11 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - Fraud engine lỗi fail-open có savepoint thực sự; auto-block commit FAILED trước money. Audit `FRAUD_FLAG_CREATED` C2 theo flag ID tăng rồi C1 sau business flush, fail-closed; lỗi audit không bị savepoint nuốt. Outcome nghiệp vụ FAILED commit audit/outbox/response, không ledger/usage; nếu T2 rollback được xác nhận thì PENDING/RECEIVED, còn commit chưa rõ thì xác minh primary và không suy đoán trạng thái.
 - Status/idempotency response/outbox và audit completion cùng commit; không terminal state transition sai; retry deadlock/lock timeout bounded trên toàn transaction mới. Test PostgreSQL với failure injection và các owner thật, xác nhận transaction propagation.
 
-### BE-TRF-06 — Recovery, reconciliation và purge
+### [BE-TRF-06 — Recovery, reconciliation và purge](BE-TRF-06.md)
 
 **Mô tả:** Job startup/định kỳ claim PENDING quá ngưỡng, đối soát và dùng lại T2; phối hợp runbook với Ops, ledger và audit.
+
+**Trạng thái:** Candidate triển khai và kiểm thử độc lập theo [evidence](evidence/BE-TRF-06-candidate.md). Activation/AC với provider thật, rearm, Tfail và review Ops vẫn Blocked.
 
 **AC:**
 
@@ -99,9 +101,11 @@ Các task dưới đây mô tả công việc và bằng chứng còn cần đ�
 - T-REC-01–04 đạt, bao gồm hoàn tất PENDING khi đủ evidence per-transfer Account/Ledger/Limit/Audit, mode và response theo DEC-TRF-006; đồng bộ idempotency/response không tạo ledger kép. Thiếu/lệch/error hoặc outcome không rõ giữ nguyên trạng thái thực tế và alert/manual; terminal không bị ghi đè.
 - Purge chỉ record terminal đủ điều kiện; TTL mặc định/tối thiểu 24h từ `completed_at` theo DEC-TRF-005; không purge PENDING kể cả quá TTL. Test long-PENDING, concurrent purge/retry và key sau purge có thể thành yêu cầu mới. Cung cấp runbook và evidence crash/restart, audit failure, nhiều worker.
 
-### BE-TRF-07 — Security, observability và notification
+### [BE-TRF-07 — Security, observability và notification](BE-TRF-07.md)
 
 **Mô tả:** Kết nối common context, audit, outbox và metrics; chốt vận hành liên module.
+
+**Đặc tả chi tiết:** [BE-TRF-07](BE-TRF-07.md) gồm context/replay/worker, security và audit, meters/alerts, mapping Notification T2/T3, test vectors và gate provider thật. Candidate phía Transfer đã có scope port, context, telemetry và mapping outbox với provider synthetic. Xem [evidence](evidence/BE-TRF-07-candidate.md) và [rules](ops/README.md). Nghiệm thu provider/policy và diễn tập Ops còn Blocked, checklist giữ `[ ]`.
 
 **AC:**
 
@@ -149,7 +153,5 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 | 1.3 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
 | 1.4 | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
 | 1.5 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-04; không thay đổi AC hay trạng thái task. |
-<<<<<<< HEAD
 | 1.6 | 17/11/2026 | Qoder | Ghi seam orchestrator BE-TRF-04, boundary challenge UUID, port T0 và reference generator (DEC-TRF-017); 28 test mới, check 366 backend/163 Transfer xanh; AC vẫn Blocked chờ provider thật/review. |
-=======
->>>>>>> origin/dev2
+| 1.7 | 17/11/2026 | Codex | Liên kết đặc tả BE-TRF-07 và mapping contract Notification; giữ AC/chưa nghiệm thu. Giữ nội dung changelog 1.6 khi dọn marker merge còn sót. |

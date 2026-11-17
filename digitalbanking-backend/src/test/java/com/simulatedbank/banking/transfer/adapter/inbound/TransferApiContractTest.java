@@ -10,7 +10,6 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Comp
 import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Failed;
 import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.domain.TransferStatus;
-import com.simulatedbank.transfercandidate.web.TransferHttpConfiguration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -25,21 +24,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.yaml.snakeyaml.Yaml;
 
 /** Contract suite (07 §10, CT-API-006/011/017): real responses must match the machine-readable OpenAPI. */
-@SpringBootTest(properties = {
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
-})
+@SpringBootTest(classes = TransferControllerHttpTest.HttpTestApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TransferHttpConfiguration.class, TransferControllerHttpTest.Fakes.class})
 class TransferApiContractTest {
     private static final String REF = "TXN20261116A1B2C3D4";
     private static final String VALID = """

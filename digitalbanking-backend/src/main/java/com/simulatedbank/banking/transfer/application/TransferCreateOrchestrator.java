@@ -56,14 +56,14 @@ public final class TransferCreateOrchestrator implements TransferOrchestrator {
             throw new IllegalStateException("Transfer orchestration requires no outer transaction");
         }
         Request request = new Request(actor.userId(), actor.customerId(), input.idempotencyKey(),
-                new Payload(input.sourceAccountId(), input.destination(), input.amount(), input.description()));
+                new Payload(input.sourceAccountId(), input.destination(), input.amount(), input.description()), actor.correlationId());
         try {
             return mapResult(actor, input, preflight.create(request));
         } catch (TransferIntentCandidate.ChallengeRejectedException ex) {
             ErrorCode code = ex.reason() == TransferIntentCandidate.ChallengeRejectedException.Reason.EXPIRED
                     ? ErrorCode.AUTH_OTP_EXPIRED : ErrorCode.STEP_UP_CHALLENGE_MISMATCH;
             throw new BankingBusinessException(code, code.detail(), Map.of(), ex);
-        } catch (TransferIntentCandidate.AuditWriteException ex) {
+        } catch (TransferIntentCandidate.AuditWriteException | TransferSettlementCandidate.AuditWriteException ex) {
             throw new BankingBusinessException(ErrorCode.AUDIT_WRITE_FAILED, ErrorCode.AUDIT_WRITE_FAILED.detail(), Map.of(), ex);
         } catch (OtpDispatchException ex) {
             throw new BankingBusinessException(ErrorCode.OTP_DISPATCH_FAILED, ErrorCode.OTP_DISPATCH_FAILED.detail(), Map.of(), ex);

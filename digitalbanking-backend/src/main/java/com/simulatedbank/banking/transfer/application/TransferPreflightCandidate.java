@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.transfer.application;
 
+import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.transfer.domain.IdempotencyDecision;
 import com.simulatedbank.banking.transfer.domain.IdempotencyStatus;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
@@ -19,8 +20,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public final class TransferPreflightCandidate {
     private final Ports ports;
     private final TransferRequestHash hasher;
+    private final TransferTelemetry telemetry;
 
     public TransferPreflightCandidate(Ports ports, TransferRequestHash hasher) {
+        this(ports, hasher, TransferTelemetry.DISABLED);
+    }
+
+    public TransferPreflightCandidate(Ports ports, TransferRequestHash hasher, TransferTelemetry telemetry) {
+        this.telemetry = Objects.requireNonNull(telemetry);
         this.ports = Objects.requireNonNull(ports, "ports");
         this.hasher = Objects.requireNonNull(hasher, "hasher");
     }
@@ -61,6 +68,7 @@ public final class TransferPreflightCandidate {
         }
         long transferId = ((TransferIntentCandidate.Created) intent).transferId();
         if (transferId <= 0) throw new IllegalStateException("Invalid T1 transfer ID");
+        telemetry.idempotency(IdempotencyDecision.NEW);
         // The settlement adapter must claim a durable fence and return only after T2 commit.
         Settlement settlement = Objects.requireNonNull(ports.settleCreated(transferId), "T2 settlement");
         return new Settled(transferId, settlement);
@@ -78,6 +86,7 @@ public final class TransferPreflightCandidate {
     private Result classify(Request request, String requestHash, Stored stored) {
         IdempotencyDecision decision = IdempotencyDecision.classify(request.actorId(), request.customerId(),
                 requestHash, Optional.of(stored.identity()));
+        telemetry.idempotency(decision);
         return switch (decision) {
             case CONFLICT -> new Conflict();
             case IN_PROGRESS -> new InProgress();
@@ -93,6 +102,7 @@ public final class TransferPreflightCandidate {
         if (command.identity().initiatedByUserId() != request.actorId()
                 || command.identity().customerId() != request.customerId()
                 || !command.idempotencyKey().equals(request.idempotencyKey())
+                || (request.correlationId() != null && !request.correlationId().equals(command.correlationId()))
                 || !command.requestHash().equals(requestHash)
                 || command.identity().sourceAccountId() != request.payload().sourceAccountId()
                 || command.identity().destinationAccountId() != destinationId
@@ -130,13 +140,20 @@ public final class TransferPreflightCandidate {
         @Override public String toString() { return "Payload[redacted]"; }
     }
 
-    public record Request(long actorId, long customerId, String idempotencyKey, Payload payload) {
+    public record Request(long actorId, long customerId, String idempotencyKey, Payload payload, String correlationId) {
+        public Request(long actorId, long customerId, String idempotencyKey, Payload payload) {
+            this(actorId, customerId, idempotencyKey, payload, null);
+        }
+
         public Request {
             if (actorId <= 0 || customerId <= 0 || idempotencyKey == null
                     || !idempotencyKey.matches("[A-Za-z0-9._:~\\-]{1,255}")) {
                 throw new IllegalArgumentException("Invalid transfer request binding");
             }
             Objects.requireNonNull(payload, "payload");
+            if (correlationId != null && !RequestContext.isValidCorrelationId(correlationId)) {
+                throw new IllegalArgumentException("Invalid transfer request correlation");
+            }
         }
         @Override public String toString() { return "Request[redacted]"; }
     }

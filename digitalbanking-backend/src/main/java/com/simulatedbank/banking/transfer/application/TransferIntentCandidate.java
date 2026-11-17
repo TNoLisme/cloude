@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.transfer.application;
 
+import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.transfer.domain.IdempotencyDecision;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferIdentity;
@@ -27,8 +28,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 public final class TransferIntentCandidate {
     private final Ports ports;
     private final TransactionTemplate tx;
+    private final TransferTelemetry telemetry;
 
     public TransferIntentCandidate(PlatformTransactionManager manager, Ports ports) {
+        this(manager, ports, TransferTelemetry.DISABLED);
+    }
+
+    public TransferIntentCandidate(PlatformTransactionManager manager, Ports ports, TransferTelemetry telemetry) {
+        this.telemetry = Objects.requireNonNull(telemetry);
         this.ports = Objects.requireNonNull(ports, "ports");
         tx = new TransactionTemplate(Objects.requireNonNull(manager, "transaction manager"));
         tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -40,12 +47,24 @@ public final class TransferIntentCandidate {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("T1 must not run inside an outer transaction");
         }
+        long started = System.nanoTime();
+        Result result;
         try {
-            return Objects.requireNonNull(tx.execute(status -> createUnderGuard(command)));
+            result = Objects.requireNonNull(tx.execute(status -> {
+                Result attempted = createUnderGuard(command);
+                if (attempted instanceof Created) telemetry.intentAfterCommit();
+                return attempted;
+            }));
         } catch (DuplicateKeyRace ex) {
+            telemetry.attempt(TransferTelemetry.Phase.T1, TransferTelemetry.Attempt.ERROR, started);
             // execute has already rolled back T1. Never read within the failed transaction.
             return Objects.requireNonNull(tx.execute(status -> existingAfterRollback(command)));
+        } catch (RuntimeException failure) {
+            telemetry.attempt(TransferTelemetry.Phase.T1, TransferTelemetry.Attempt.ERROR, started);
+            throw failure;
         }
+        telemetry.attempt(TransferTelemetry.Phase.T1, TransferTelemetry.Attempt.RETURNED, started);
+        return result;
     }
 
     private Result createUnderGuard(Command command) {
@@ -76,7 +95,8 @@ public final class TransferIntentCandidate {
         // Flush all business writes before acquiring the audit chain lock.
         ports.flushBusinessWrites();
         // Audit is last; a failure propagates and rolls back every preceding write.
-        ports.recordCreated(identity, command.amount(), command.correlationId(), transferId);
+        telemetry.requiredAudit(TransferTelemetry.AuditClass.C1,
+                () -> ports.recordCreated(identity, command.amount(), command.correlationId(), transferId));
         return new Created(transferId);
     }
 
@@ -134,7 +154,7 @@ public final class TransferIntentCandidate {
             Objects.requireNonNull(identity, "identity");
             Objects.requireNonNull(amount, "amount");
             if (identity.stepUpChallengeId() != null
-                    || correlationId == null || correlationId.isEmpty() || correlationId.length() > 64
+                    || !RequestContext.isValidCorrelationId(correlationId)
                     || idempotencyKey == null || !idempotencyKey.matches("[A-Za-z0-9._:~\\-]{1,255}")
                     || requestHash == null || !requestHash.matches("[0-9a-f]{64}")
                     || ttlSeconds < 86400 || ttlConfigVersion == null || ttlConfigVersion.isBlank()

@@ -24,7 +24,9 @@ public interface TransferJpaRepository extends Repository<TransferEntity, Long> 
             update TransferEntity t
                set t.status = com.simulatedbank.banking.transfer.domain.TransferStatus.COMPLETED,
                    t.completedAt = :at, t.failedAt = null, t.failureCode = null,
-                   t.failureMessage = null, t.updatedAt = :at
+                   t.failureMessage = null, t.updatedAt = :at, t.attemptState = 'DONE',
+                   t.attemptToken = null, t.attemptOwner = null, t.attemptLeaseExpiresAt = null,
+                   t.recoveryNextAttemptAt = null
              where t.id = :id and t.status = com.simulatedbank.banking.transfer.domain.TransferStatus.PENDING
                    and t.attemptState = 'CLAIMED' and t.attemptEpoch = :epoch and t.attemptToken = :token
                    and :at >= t.createdAt
@@ -39,7 +41,9 @@ public interface TransferJpaRepository extends Repository<TransferEntity, Long> 
             update TransferEntity t
                set t.status = com.simulatedbank.banking.transfer.domain.TransferStatus.FAILED,
                    t.failedAt = :at, t.completedAt = null, t.failureCode = :code,
-                   t.failureMessage = null, t.updatedAt = :at
+                   t.failureMessage = null, t.updatedAt = :at, t.attemptState = 'DONE',
+                   t.attemptToken = null, t.attemptOwner = null, t.attemptLeaseExpiresAt = null,
+                   t.recoveryNextAttemptAt = null
              where t.id = :id and t.status = com.simulatedbank.banking.transfer.domain.TransferStatus.PENDING
                    and t.attemptState = 'CLAIMED' and t.attemptEpoch = :epoch and t.attemptToken = :token
                    and :at >= t.createdAt
