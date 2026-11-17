@@ -79,7 +79,7 @@ class PasswordLoginServiceTest {
                         10000, 10000),
                 new AppProperties.Security.Http(65536, 10000),
                 null);
-        return new AppProperties("Asia/Ho_Chi_Minh", null, security, null, null, null);
+        return new AppProperties("Asia/Ho_Chi_Minh", null, security, null, null, null, null);
     }
 
     private static UserAccountRepository.AppUserSnapshot user(String status, int failed, Instant lockedUntil,
@@ -419,7 +419,7 @@ class PasswordLoginServiceTest {
                         List.of("http://localhost:5173"), new AppProperties.Security.Session(15, 8),
                         new AppProperties.Security.Lockout(5, 10), null, null,
                         new AppProperties.Security.Http(65536, 0), null),
-                null, null, null);
+                null, null, null, null);
         var tinyLimiter = new com.simulatedbank.banking.common.config.RequestRateLimiter(
                 Clock.fixed(NOW, ZoneId.of("UTC")), capacityProps, meterRegistry);
         var service = new PasswordLoginService(users, devices, challenges, audit, hasher,

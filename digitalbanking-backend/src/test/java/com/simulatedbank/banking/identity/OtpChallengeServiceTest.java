@@ -76,7 +76,7 @@ class OtpChallengeServiceTest {
                 new AppProperties.Security.Http(65536, 10000),
                 new AppProperties.Security.StepUp(new java.math.BigDecimal("10000000"),
                         new java.math.BigDecimal("20000000")));
-        return new AppProperties("Asia/Ho_Chi_Minh", null, security, null, null, null);
+        return new AppProperties("Asia/Ho_Chi_Minh", null, security, null, null, null, null);
     }
 
     private static ChallengeRepository.ChallengeSnapshot snapshot(String status, int attemptCount,

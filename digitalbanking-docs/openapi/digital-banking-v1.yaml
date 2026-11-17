@@ -777,11 +777,17 @@ paths:
       tags: [Limit, Approval]
       summary: Maker tạo yêu cầu thay đổi hạn mức
       description: >-
-        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
-        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+        Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428
+        SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal
+        hash); verify rồi retry với X-Step-Up-Challenge. Cùng key + cùng payload
+        replay 201 gốc với Idempotent-Replayed: true; payload khác trả 409
+        IDEMPOTENCY_CONFLICT. Chưa tạo approval/idempotency record trước khi
+        verify hoặc khi payload/validation fail. LIMIT_CHANGE vẫn fail-closed
+        503 khi Limit provider chưa có runtime.
       operationId: createLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
       requestBody:
@@ -792,12 +798,14 @@ paths:
               $ref: '#/components/schemas/LimitChangeRequest'
       responses:
         '201':
-          description: Approval LIMIT_CHANGE đã tạo
+          description: Approval LIMIT_CHANGE đã tạo hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -810,6 +818,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
         '428':
@@ -826,11 +836,16 @@ paths:
       tags: [Limit, Approval]
       summary: Checker duyệt/từ chối yêu cầu hạn mức
       description: >-
-        Path id là approvalId của LIMIT_CHANGE. Yêu cầu privilege CHECKER,
-        maker khác checker và step-up SENSITIVE_ACTION.
+        Path id là approvalId của LIMIT_CHANGE. Idempotency-Key bắt buộc. Yêu cầu
+        privilege CHECKER, maker khác checker và step-up SENSITIVE_ACTION.
+        Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409
+        IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
+        APPROVE vẫn fail-closed 503 khi Limit provider chưa có runtime; REJECT
+        hoạt động và idempotent.
       operationId: approveLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
         - $ref: '#/components/parameters/LimitApprovalIdPath'
@@ -842,10 +857,12 @@ paths:
               $ref: '#/components/schemas/LimitApprovalRequest'
       responses:
         '200':
-          description: Approval đã được xử lý
+          description: Approval đã được xử lý hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1092,11 +1109,17 @@ paths:
       tags: [Role, Approval]
       summary: Maker tạo yêu cầu role/privilege
       description: >-
-        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
-        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+        Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428
+        SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal
+        hash, gồm expectedVersion server-capture); verify rồi retry với
+        X-Step-Up-Challenge. Cùng key + cùng payload replay 201 gốc với
+        Idempotent-Replayed: true; payload khác trả 409 IDEMPOTENCY_CONFLICT.
+        Chưa tạo approval/idempotency record trước khi verify hoặc khi payload
+        fail. expectedVersion không nằm trong request/response public.
       operationId: createRoleChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
       requestBody:
@@ -1107,12 +1130,14 @@ paths:
               $ref: '#/components/schemas/RoleChangeRequest'
       responses:
         '201':
-          description: Approval ROLE_CHANGE đã tạo
+          description: Approval ROLE_CHANGE đã tạo hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1141,11 +1166,14 @@ paths:
       tags: [Role, Approval]
       summary: Checker duyệt/từ chối yêu cầu role/privilege
       description: >-
-        Path id là approvalId của ROLE_CHANGE. Yêu cầu privilege CHECKER,
-        maker khác checker và step-up SENSITIVE_ACTION.
+        Path id là approvalId của ROLE_CHANGE. Idempotency-Key bắt buộc. Yêu cầu privilege
+        CHECKER, maker khác checker và step-up SENSITIVE_ACTION. Cùng key + cùng
+        decision/note replay 200 gốc; payload khác trả 409 IDEMPOTENCY_CONFLICT;
+        record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
       operationId: approveRoleChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
         - $ref: '#/components/parameters/RoleApprovalIdPath'
@@ -1157,10 +1185,12 @@ paths:
               $ref: '#/components/schemas/RoleApprovalRequest'
       responses:
         '200':
-          description: Approval đã được xử lý
+          description: Approval đã được xử lý hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1303,7 +1333,13 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Bắt buộc cho POST /transfers; 1-255 ký tự, không chứa PII
+      description: >-
+        Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255
+        ký tự, pattern hợp lệ, không chứa PII. Admin scope là
+        actor + operation + resource (empty resource cho proposal, approvalId
+        cho decision); cùng key + cùng canonical hash replay response gốc,
+        khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là
+        409 IDEMPOTENCY_IN_PROGRESS.
       schema:
         type: string
         minLength: 1

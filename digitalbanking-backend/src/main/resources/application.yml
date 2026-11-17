@@ -162,3 +162,8 @@ app:
     audit-verify-incremental-cron: "0 */15 * * * *"
     audit-verify-full-cron: "0 0 2 * * *"
     retention-cleanup-cron: "0 0 3 * * *"
+
+  admin:
+    # Canonical IDEMPOTENCY_RECORD retention (04 §9.6, BRL-013/OI-001).
+    idempotency-ttl-hours: ${APP_ADMIN_IDEMPOTENCY_TTL_HOURS:24}
+    idempotency-purge-batch-size: ${APP_ADMIN_IDEMPOTENCY_PURGE_BATCH_SIZE:500}

@@ -38,4 +38,19 @@ class FlywayMigrationTest {
             assertThat(sql).contains("WHERE purpose = 'TRANSFER_STEP_UP'");
         }
     }
+
+    @Test
+    void adminIdempotencyMigrationDeclaresScopedUniqueRecord() throws IOException {
+        try (var stream = getClass().getClassLoader()
+                .getResourceAsStream("db/migration/V7__create_admin_idempotency_record_table.sql")) {
+            assertThat(stream).isNotNull();
+            var sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(sql).contains("CREATE TABLE banking.admin_idempotency_record (");
+            assertThat(sql).contains("uq_admin_idempotency_scope");
+            assertThat(sql).contains("(actor_id, operation, scope_key, idempotency_key)");
+            assertThat(sql).contains("ck_admin_idempotency_terminal_fields");
+            assertThat(sql).contains("ck_admin_idempotency_received_fields");
+            assertThat(sql).doesNotContain("tenant_id");
+        }
+    }
 }

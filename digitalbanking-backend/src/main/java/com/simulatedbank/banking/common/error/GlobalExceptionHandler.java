@@ -43,6 +43,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         // An owner-classified failure takes precedence over its JDBC/framework cause, even when wrapped.
         Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         for (Throwable cause = exception; cause != null && seen.add(cause); cause = cause.getCause()) {
+            if (cause instanceof BankingValidationException validation) {
+                return writer.response(writer.create(validation.code(), validation.safeDetail(), request,
+                        List.of(new ProblemResponse.FieldError(validation.field(), "INVALID",
+                                "Giá trị không hợp lệ.")), validation.extensions()));
+            }
             if (cause instanceof BankingBusinessException business) {
                 return writer.response(writer.create(business.code(), business.safeDetail(), request,
                         List.of(), business.extensions()));
