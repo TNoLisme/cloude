@@ -173,6 +173,97 @@ class AdminIdempotencyPostgreSqlIntegrationTest {
     }
 
     @Test
+    void winnerRollbackReleasesTheKeyToTheBlockedConcurrentRequest() throws Exception {
+        AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(actor,
+                AdminIdempotencyOperation.CREATE_ROLE_PROPOSAL);
+        java.util.concurrent.CountDownLatch claimed = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch loserStarted = new java.util.concurrent.CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<java.util.Optional<AdminIdempotencyRecord>> winner = executor.submit(() -> tx.execute(status -> {
+                java.util.Optional<AdminIdempotencyRecord> record = store.claim(scope, KEY, HASH,
+                        Instant.now(), Instant.now().plusSeconds(3600));
+                claimed.countDown();
+                await(loserStarted);
+                // The loser is now blocked on the unique index of this uncommitted row.
+                sleep(200);
+                throw new IllegalStateException("simulated crash after acquisition");
+            }));
+            Future<java.util.Optional<AdminIdempotencyRecord>> loser = executor.submit(() -> {
+                await(claimed);
+                loserStarted.countDown();
+                return tx.execute(status -> store.claim(scope, KEY, HASH,
+                        Instant.now(), Instant.now().plusSeconds(3600)));
+            });
+
+            assertThatThrownBy(() -> winner.get(20, TimeUnit.SECONDS))
+                    .hasCauseInstanceOf(IllegalStateException.class);
+            assertThat(loser.get(20, TimeUnit.SECONDS))
+                    .as("the loser must acquire the scope after the winner rolled back").isPresent();
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM banking.admin_idempotency_record WHERE actor_id = ?", Integer.class,
+                    actor)).isEqualTo(1);
+            assertThat(jdbc.queryForObject(
+                    "SELECT status FROM banking.admin_idempotency_record WHERE actor_id = ?", String.class,
+                    actor)).isEqualTo("RECEIVED");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void responsePersistenceFailureRollsBackApprovalAndClaimThenSameKeyRetries() {
+        AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(actor,
+                AdminIdempotencyOperation.CREATE_ROLE_PROPOSAL);
+
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            long recordId = ((Claim.Claimed) service.claim(scope, KEY, HASH)).recordId();
+            long approvalId = approval(actor);
+            // Losing the claimed row at the response-persistence boundary must abort the whole transaction.
+            service.complete(recordId + 1_000_000L, 201, Map.of("approvalId", Long.toString(approvalId)),
+                    approvalId);
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(approvalCount()).isZero();
+        assertThat(recordCount()).isZero();
+        assertThat(service.precheck(scope, KEY, HASH)).isInstanceOf(Precheck.Absent.class);
+
+        Map<String, Object> stored = tx.execute(status -> {
+            long recordId = ((Claim.Claimed) service.claim(scope, KEY, HASH)).recordId();
+            long created = approval(actor);
+            return service.complete(recordId, 201, Map.of("approvalId", Long.toString(created)), created);
+        });
+
+        assertThat(stored.get("approvalId")).isInstanceOf(String.class);
+        assertThat(jdbc.queryForObject("SELECT approval_id FROM banking.approval_request", Long.class))
+                .isEqualTo(Long.valueOf((String) stored.get("approvalId")));
+        assertThat(service.precheck(scope, KEY, HASH)).isInstanceOfSatisfying(Precheck.Replay.class,
+                replay -> assertThat(replay.record().requiredResponseBody()).isEqualTo(stored));
+        assertThat(approvalCount()).isEqualTo(1);
+        assertThat(recordCount()).isEqualTo(1);
+    }
+
+    @Test
+    void expiredInProgressRecordIsRetainedAndStillBlocksExecution() {
+        AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(actor,
+                AdminIdempotencyOperation.CREATE_ROLE_PROPOSAL);
+        Instant past = Instant.now().minus(48, ChronoUnit.HOURS);
+        insertRecord(KEY, actor, "CREATE_ROLE_PROPOSAL", "", HASH, "RECEIVED",
+                past, past.plus(1, ChronoUnit.HOURS), null, null, null);
+
+        // PENDING ownership is never deleted: expiry alone does not make the key reusable.
+        assertThat(service.purgeExpired(100)).isZero();
+        assertInProgress(() -> service.precheck(scope, KEY, HASH));
+        assertInProgress(() -> tx.executeWithoutResult(status -> service.claim(scope, KEY, HASH)));
+
+        assertThat(recordCount()).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM banking.admin_idempotency_record WHERE idempotency_key = ?", String.class,
+                KEY)).isEqualTo("RECEIVED");
+        assertThat(approvalCount()).isZero();
+    }
+
+    @Test
     void completionExtendsExpiryFromCompletionTime() {
         AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(actor,
                 AdminIdempotencyOperation.CREATE_ROLE_PROPOSAL);
@@ -258,6 +349,34 @@ class AdminIdempotencyPostgreSqlIntegrationTest {
                 """, key, actorId, operation, scopeKey, hash, status, responseStatus, responseBody,
                 java.sql.Timestamp.from(createdAt), java.sql.Timestamp.from(expiresAt),
                 completedAt == null ? null : java.sql.Timestamp.from(completedAt)));
+    }
+
+    private int approvalCount() {
+        return jdbc.queryForObject("SELECT count(*) FROM banking.approval_request", Integer.class);
+    }
+
+    private int recordCount() {
+        return jdbc.queryForObject("SELECT count(*) FROM banking.admin_idempotency_record", Integer.class);
+    }
+
+    private static void await(java.util.concurrent.CountDownLatch latch) {
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Concurrent test latch timed out");
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Concurrent test interrupted", interrupted);
+        }
+    }
+
+    private static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Concurrent test interrupted", interrupted);
+        }
     }
 
     private List<String> keys() {
