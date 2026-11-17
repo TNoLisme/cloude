@@ -149,4 +149,7 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 | 1.3 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
 | 1.4 | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
 | 1.5 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-04; không thay đổi AC hay trạng thái task. |
+<<<<<<< HEAD
 | 1.6 | 17/11/2026 | Qoder | Ghi seam orchestrator BE-TRF-04, boundary challenge UUID, port T0 và reference generator (DEC-TRF-017); 28 test mới, check 366 backend/163 Transfer xanh; AC vẫn Blocked chờ provider thật/review. |
+=======
+>>>>>>> origin/dev2
