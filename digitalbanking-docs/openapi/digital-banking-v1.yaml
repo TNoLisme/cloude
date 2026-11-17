@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Digital Banking API
-  version: 1.0.0
+  version: 1.0.1
   summary: Hợp đồng API MVP cho Digital Banking
   description: >-
     Hợp đồng máy đọc được của Digital Banking MVP. Tài liệu ngữ nghĩa và quy tắc
@@ -48,10 +48,22 @@ paths:
       tags: [Auth]
       summary: Đăng nhập bằng password
       description: >-
-        Xác thực username/password. Thiết bị tin cậy trả session; thiết bị mới
-        trả 202 kèm challenge OTP. Không trả password/token trong body.
+        API-AUTH-01. DEC-ID-008 requires MFA for every valid password login:
+        return 202 without a session, even for trusted device metadata. deviceRef
+        and fingerprint are identification metadata, never proof or an OTP bypass.
+        The advertised 200 branch remains inactive pending an approved device-proof
+        protocol. Dispatch failure returns 503 OTP_DISPATCH_FAILED, never a session.
       operationId: login
       security: []
+      x-runtime-status: partial
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_INVALID_CREDENTIALS]
+        '403': [AUTH_FORBIDDEN]
+        '423': [AUTH_ACCOUNT_LOCKED]
+        '429': [RATE_LIMITED]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [OTP_DISPATCH_FAILED, SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -72,7 +84,7 @@ paths:
                   deviceFingerprint: opaque-device-fingerprint
       responses:
         '200':
-          description: Session được tạo
+          description: Advertised trusted-device session; inactive under DEC-ID-008
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -86,7 +98,7 @@ paths:
                 success:
                   $ref: '#/components/examples/LoginSuccessExample'
         '202':
-          description: Cần OTP cho thiết bị mới
+          description: Password accepted; OTP required for every login, no session cookie
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -116,8 +128,24 @@ paths:
     post:
       tags: [Auth]
       summary: Đăng nhập bằng passcode trên thiết bị tin cậy
+      description: >-
+        API-AUTH-02 preserves its advertised 200 AuthResponse contract. Positive
+        login is BLOCKED under DEC-ID-009 preserve_contracts: metadata and a trusted
+        row do not prove device possession. Current valid requests fail closed with
+        403 AUTH_DEVICE_NOT_TRUSTED before credential verification or session creation.
+        An approved enrollment/device-proof/expiry protocol is required; use password
+        plus OTP instead. No new device-proof endpoint is implied.
       operationId: loginPasscode
       security: []
+      x-runtime-status: blocked-positive
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_INVALID_CREDENTIALS]
+        '403': [AUTH_DEVICE_NOT_TRUSTED, AUTH_FORBIDDEN]
+        '423': [AUTH_ACCOUNT_LOCKED]
+        '429': [RATE_LIMITED]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -129,7 +157,7 @@ paths:
               $ref: '#/components/schemas/PasscodeLoginRequest'
       responses:
         '200':
-          description: Session được tạo
+          description: Advertised session contract; positive flow blocked by DEC-ID-009
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -159,10 +187,28 @@ paths:
       tags: [Auth]
       summary: Đăng nhập FIDO/WebAuthn (begin/finish)
       description: >-
-        Begin: gửi username + deviceRef để nhận 202 challenge/WebAuthn options.
-        Finish: gửi challengeId + fido assertion để nhận session.
+        API-AUTH-03. Begin requires username and deviceRef with neither challengeId
+        nor fido; finish requires both challengeId and a nested assertion. Requires
+        an active trusted credential provisioned outside this API. DEC-ID-010 requires
+        user verification, exact RP ID and configured origin, signature, single-use
+        nonce and counter verification (0 to 0 is valid; otherwise counter increases).
+        Verification is opt-in; enrollment and production Audit remain dependencies.
+        On cancellation/unavailability/failure start a fresh password + OTP login;
+        never convert this challenge to OTP or carry FIDO assurance to fallback.
       operationId: loginFido
       security: []
+      x-runtime-status: partial
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_INVALID_CREDENTIALS]
+        '403': [AUTH_DEVICE_NOT_TRUSTED, AUTH_FORBIDDEN]
+        '404': [AUTH_CHALLENGE_NOT_FOUND]
+        '409': [INVALID_STATE_TRANSITION]
+        '410': [AUTH_CHALLENGE_EXPIRED]
+        '423': [AUTH_ACCOUNT_LOCKED, AUTH_CHALLENGE_LOCKED]
+        '429': [RATE_LIMITED]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -220,8 +266,25 @@ paths:
     post:
       tags: [Auth]
       summary: Xác thực OTP thiết bị mới
+      description: >-
+        API-AUTH-04. Public proof is challengeId plus OTP, not the reference alone.
+        Only a dispatched SENT OTP for LOGIN_NEW_DEVICE may activate a session
+        (DEC-ID-006). User/device come from the stored challenge, never request data.
+        Success verifies and consumes the challenge and creates a session atomically.
+        DEC-ID-008 forbids automatic persistent trust; deviceTrusted remains false.
       operationId: verifyOtp
       security: []
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_OTP_INVALID]
+        '403': [AUTH_FORBIDDEN, AUTH_DEVICE_NOT_TRUSTED]
+        '404': [AUTH_CHALLENGE_NOT_FOUND]
+        '409': [INVALID_STATE_TRANSITION]
+        '410': [AUTH_OTP_EXPIRED]
+        '423': [AUTH_CHALLENGE_LOCKED, AUTH_ACCOUNT_LOCKED]
+        '429': [RATE_LIMITED]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -247,6 +310,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -266,7 +331,29 @@ paths:
     post:
       tags: [Auth]
       summary: Xác thực step-up cho transfer hoặc hành động nhạy cảm
+      description: >-
+        API-AUTH-05. Requires an active session and ownership of a TRANSFER_STEP_UP
+        or SENSITIVE_ACTION challenge. Select exactly the credential required by
+        method; method must match the stored challenge. Current runtime verifies
+        OTP only; advertised FIDO/PASSCODE proofs cannot produce success and return
+        409 STEP_UP_CHALLENGE_MISMATCH for an unsupported/mismatched stored method.
+        Verification never creates a login session, transfer or ledger entry.
+        Cookie-authenticated POST requires CSRF; bearer-only authentication is exempt.
       operationId: verifyStepUp
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_SESSION_EXPIRED, AUTH_OTP_INVALID, AUTH_INVALID_CREDENTIALS]
+        '403': [AUTH_FORBIDDEN]
+        '404': [AUTH_CHALLENGE_NOT_FOUND]
+        '409': [STEP_UP_CHALLENGE_MISMATCH, INVALID_STATE_TRANSITION]
+        '410': [AUTH_OTP_EXPIRED, AUTH_CHALLENGE_EXPIRED]
+        '423': [AUTH_CHALLENGE_LOCKED]
+        '429': [RATE_LIMITED]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -314,7 +401,21 @@ paths:
     post:
       tags: [Auth]
       summary: Logout và vô hiệu hóa session
+      description: >-
+        API-AUTH-06. No request body. Revoke the current active session and clear
+        DB_SESSION (Max-Age=0); 204 has no body. Cookie authentication requires
+        X-CSRF-Token; bearer-only authentication is exempt. An already invalid or
+        logged-out token may return 401 without revealing session details.
       operationId: logout
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      x-error-codes:
+        '400': [VALIDATION_ERROR]
+        '401': [AUTH_SESSION_EXPIRED]
+        '403': [AUTH_FORBIDDEN]
+        '500': [INTERNAL_ERROR, AUDIT_WRITE_FAILED]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -326,6 +427,8 @@ paths:
               $ref: '#/components/headers/XCorrelationId'
             Set-Cookie:
               $ref: '#/components/headers/SetCookie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -339,7 +442,19 @@ paths:
     get:
       tags: [Auth]
       summary: Lấy session hiện tại
+      description: >-
+        API-AUTH-07. Requires an active cookie or bearer session. Returns the
+        current authorities and session metadata, rotating the session-bound CSRF
+        token. No opaque session token in JSON. GET does not require CSRF.
       operationId: getSession
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      x-error-codes:
+        '400': [VALIDATION_ERROR]
+        '401': [AUTH_SESSION_EXPIRED]
+        '500': [INTERNAL_ERROR]
+        '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -352,6 +467,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -365,13 +482,48 @@ paths:
       summary: Gửi lại OTP cho challenge
       description: >-
         Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge
-        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge.
+        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge, cooldown
+        mặc định 60 giây và TTL 5 phút; xoay OTP và generation, không reset
+        số lần nhập sai. 202 chỉ sau ACK và lưu SENT cho generation hiện tại;
+        lỗi hoặc kết quả dispatch không rõ trả 503 OTP_DISPATCH_FAILED.
+        API-AUTH-08 advertised contract, NOT an implemented route. DEC-ID-006 blocks
+        runtime until an approved forward schema and generation/fencing protocol
+        provides durable resend count, last resend/cooldown and safe in-flight send
+        invalidation (MOD-OI-07). Do not treat this specification as runtime support.
       operationId: resendChallenge
-      security: []
+      security:
+        - {}
+        - sessionCookie: []
+        - bearerAuth: []
+      x-runtime-status: blocked-no-route
+      x-security-by-purpose:
+        LOGIN_NEW_DEVICE: public-challenge-proof
+        TRANSFER_STEP_UP: authenticated-owner
+        SENSITIVE_ACTION: authenticated-owner
+      x-error-codes:
+        '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
+        '401': [AUTH_SESSION_EXPIRED]
+        '403': [AUTH_FORBIDDEN]
+        '404': [AUTH_CHALLENGE_NOT_FOUND]
+        '409': [INVALID_STATE_TRANSITION]
+        '410': [AUTH_CHALLENGE_EXPIRED]
+        '423': [AUTH_CHALLENGE_LOCKED]
+        '429': [RATE_LIMITED]
+        '503': [OTP_DISPATCH_FAILED, SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/ChallengeIdPath'
+      requestBody:
+        required: false
+        description: Optional only when multichannel support is available
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel:
+                  $ref: '#/components/schemas/ChallengeChannel'
       responses:
         '202':
           description: OTP đã gửi lại
@@ -560,6 +712,12 @@ paths:
       description: >-
         Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED,
         428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency.
+        Cùng actor/key/hash terminal replay nguyên status/body gốc 201 hoặc 422
+        kèm Idempotent-Replayed; record chưa terminal trả 409 Retry-After,
+        worker recovery nội bộ xử lý. Record terminal hết TTL nhưng chưa purge
+        vẫn replay/conflict; sau purge key có thể tạo yêu cầu mới. Step-up chỉ trả
+        428 sau gateway ACK và SENT được lưu cho generation hiện tại; lỗi
+        dispatch hoặc quota store không sẵn sàng trả 503.
       operationId: createTransfer
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -582,24 +740,18 @@ paths:
                   currency: VND
                   description: Chuyển tiền tháng 11
       responses:
-        '200':
-          description: Replay kết quả cũ
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationId'
-            Idempotent-Replayed:
-              $ref: '#/components/headers/IdempotentReplayed'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransferResponse'
         '201':
-          description: Transfer COMPLETED
+          description: Transfer COMPLETED; replay giữ 201 và body gốc
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
           content:
             application/json:
               schema:
@@ -629,7 +781,31 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+          description: >-
+            Vi phạm business rule; nếu terminal FAILED thì replay giữ nguyên
+            422 và body gốc, với Idempotent-Replayed true. Lỗi trước T1 không
+            có reference/transferStatus và không phải terminal replay. Account
+            inactive/not-found sau T1 dùng code TRANSFER_FAILED cùng failureCode
+            ACCOUNT_INACTIVE/ACCOUNT_NOT_FOUND; trước T1 dùng 409/404 tương ứng.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                insufficientBalance:
+                  $ref: '#/components/examples/InsufficientBalanceExample'
+                transferFailed:
+                  $ref: '#/components/examples/TransferFailedExample'
+                accountInactiveAfterT1:
+                  $ref: '#/components/examples/AccountInactiveAfterT1Example'
         '428':
           $ref: '#/components/responses/StepUpRequired'
         '429':
@@ -2014,9 +2190,57 @@ components:
           type: integer
           minimum: 0
         fidoRequestOptions:
-          type: [object, 'null']
-          additionalProperties: true
-          description: WebAuthn request options khi methods có FIDO
+          anyOf:
+            - $ref: '#/components/schemas/FidoRequestOptions'
+            - type: 'null'
+      allOf:
+        - if:
+            properties:
+              methods:
+                contains:
+                  const: FIDO
+          then:
+            required: [fidoRequestOptions]
+            properties:
+              fidoRequestOptions:
+                $ref: '#/components/schemas/FidoRequestOptions'
+    FidoRequestOptions:
+      type: object
+      required: [challenge, rpId, allowCredentials, timeout, userVerification]
+      properties:
+        challenge:
+          type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+$'
+        rpId:
+          type: string
+          minLength: 1
+        allowCredentials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [type, id]
+            properties:
+              type:
+                type: string
+                const: public-key
+              id:
+                type: string
+                minLength: 1
+                pattern: '^[A-Za-z0-9_-]+$'
+              transports:
+                type: array
+                items:
+                  type: string
+        timeout:
+          type: integer
+          minimum: 1
+          description: Milliseconds; default 30000, configurable with the challenge TTL
+        userVerification:
+          type: string
+          const: required
+          description: Required by DEC-ID-010; preferred is not an accepted policy
     ChallengeRequiredResponse:
       type: object
       required: [code, message, challenge, correlationId]
@@ -2087,13 +2311,15 @@ components:
           minLength: 1
           maxLength: 128
         deviceRef:
-          $ref: '#/components/schemas/UUID'
+          anyOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
         deviceName:
-          type: string
+          type: [string, 'null']
           minLength: 1
           maxLength: 100
         deviceFingerprint:
-          type: string
+          type: [string, 'null']
           minLength: 1
           maxLength: 512
     PasscodeLoginRequest:
@@ -2113,7 +2339,6 @@ components:
         deviceFingerprint:
           type: string
           minLength: 1
-          maxLength: 512
     FidoBeginRequest:
       type: object
       additionalProperties: false
@@ -2125,6 +2350,10 @@ components:
           maxLength: 64
         deviceRef:
           $ref: '#/components/schemas/UUID'
+        challengeId:
+          type: 'null'
+        fido:
+          type: 'null'
     FidoVerifyRequest:
       type: object
       additionalProperties: false
@@ -2147,14 +2376,24 @@ components:
       properties:
         credentialId:
           type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+={0,2}$'
         clientDataJSON:
           type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+={0,2}$'
         authenticatorData:
           type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+={0,2}$'
         signature:
           type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+={0,2}$'
         userHandle:
-          type: string
+          type: [string, 'null']
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+={0,2}$'
     OtpVerifyRequest:
       type: object
       additionalProperties: false
@@ -2178,6 +2417,10 @@ components:
         otp:
           type: string
           pattern: '^[0-9]{6,8}$'
+        passcode:
+          type: [string, 'null']
+        fido:
+          type: [object, 'null']
     StepUpPasscodeRequest:
       type: object
       additionalProperties: false
@@ -2191,6 +2434,10 @@ components:
         passcode:
           type: string
           pattern: '^[0-9]{6,8}$'
+        otp:
+          type: [string, 'null']
+        fido:
+          type: [object, 'null']
     StepUpFidoRequest:
       type: object
       additionalProperties: false
@@ -2203,6 +2450,10 @@ components:
           const: FIDO
         fido:
           $ref: '#/components/schemas/FidoAssertion'
+        otp:
+          type: [string, 'null']
+        passcode:
+          type: [string, 'null']
     StepUpVerifyResponse:
       type: object
       required: [challengeId, status, purpose, verifiedAt, expiresAt, correlationId]
@@ -3058,6 +3309,21 @@ components:
         reference: TXN20261103A1B2C3D4
         transferStatus: FAILED
         failureCode: PROCESSING_ERROR
+    AccountInactiveAfterT1Example:
+      summary: Account inactive sau khi tạo intent T1
+      value:
+        type: https://api.demo.local/problems/transfer-failed
+        title: Transfer failed
+        status: 422
+        detail: Giao dịch không hoàn tất vì tài khoản không còn hoạt động.
+        instance: /api/v1/transfers
+        code: TRANSFER_FAILED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-16T10:15:30Z'
+        retryable: false
+        reference: TXN20261103A1B2C3D4
+        transferStatus: FAILED
+        failureCode: ACCOUNT_INACTIVE
     StepUpRequiredExample:
       summary: Step-up required
       value:
