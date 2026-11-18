@@ -40,8 +40,8 @@ public class JdbcAuditWriter implements AuditChainWriter {
             INSERT INTO banking.audit_log
                 (occurred_at, actor_type, actor_user_id, actor_role, action, entity_type, entity_id,
                  before_state, after_state, amount, currency, correlation_id, request_id, outcome,
-                 client_info_masked, prev_hash, record_hash, hash_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
+                 client_info_masked, prev_hash, record_hash, hash_version, canonical_payload)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb)
             RETURNING audit_id
             """;
 
@@ -80,7 +80,8 @@ public class JdbcAuditWriter implements AuditChainWriter {
                 jsonb(event.clientInfoMasked()),
                 prevHash,
                 recordHash,
-                event.hashVersion());
+                event.hashVersion(),
+                event.canonicalJson());
         if (auditId == null) {
             throw new IllegalStateException("Audit insert returned no identifier");
         }

@@ -46,7 +46,8 @@ class LimitCustomerServiceTest {
         ObjectProvider<AccountQuery> accounts = mock(ObjectProvider.class);
         var account = mock(AccountQuery.class);
         when(accounts.getIfAvailable()).thenReturn(account);
-        when(account.findById(21)).thenReturn(Optional.of(new AccountQuery.AccountSnapshot(22, 11, "VND")));
+        when(account.findAccount(21)).thenReturn(Optional.of(new AccountQuery.AccountSnapshot(22, 11,
+                AccountQuery.Status.ACTIVE, "VND", "**** **** 1234", "1234")));
         var repository = mock(LimitReadPort.class);
         var reporter = mock(LimitSecurityDenialReporter.class);
         var service = new LimitCustomerService(repository, accounts, reporter,

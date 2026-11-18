@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.event.KeyValuePair;
 
 /** Fail-closed stdout boundary: never serialize arbitrary messages, arguments, MDC or throwables. */
@@ -63,26 +64,35 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 && event.getMessage().equals("HTTP_REQUEST_COMPLETED");
         boolean securityAudit = AUDIT_LOGGERS.contains(event.getLoggerName())
                 && AUDIT_EVENTS.contains(event.getMessage());
+        boolean securityGap = SecurityAuditGapLogger.class.getName().equals(event.getLoggerName())
+                && "SECURITY_AUDIT_GAP".equals(event.getMessage());
+        boolean securityFallback = SecurityAuditFallbackLog.class.getName().equals(event.getLoggerName())
+                && SecurityAuditFallbackLog.EVENT.equals(event.getMessage());
         boolean workflow = WORKFLOW_LOGGER.equals(event.getLoggerName())
                 && WORKFLOW_EVENT.equals(event.getMessage());
         fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
+                : securityGap ? "SECURITY_AUDIT_GAP"
+                : securityFallback ? SecurityAuditFallbackLog.EVENT
                 : securityAudit ? event.getMessage()
                 : workflow ? WORKFLOW_EVENT : "APPLICATION_LOG");
-        if (completion && event.getKeyValuePairs() != null) {
+        if ((completion || securityGap || securityFallback) && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;
                 boolean allowed = switch (pair.key) {
-                    case "route" -> value instanceof String s && s.length() <= 256
+                    case "route" -> completion && value instanceof String s && s.length() <= 256
                             && s.matches("[A-Za-z0-9/{}_.:*?-]+");
-                    case "method" -> value instanceof String s && s.matches("GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|OTHER");
-                    case "status" -> value instanceof Integer n && n >= 100 && n <= 599;
-                    case "latency_ms" -> value instanceof Long n && n >= 0;
+                    case "method" -> completion && value instanceof String s && s.matches("GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|OTHER");
+                    case "status" -> completion && value instanceof Integer n && n >= 100 && n <= 599;
+                    case "latency_ms" -> completion && value instanceof Long n && n >= 0;
                     case "user_id" -> value instanceof String s && s.matches("sha256:[0-9a-f]{64}");
                     case "action" -> (completion && "HTTP_REQUEST".equals(value))
-                            || (securityGap && "SECURITY_ACCESS_DENIED".equals(value));
+                            || (securityGap && "SECURITY_ACCESS_DENIED".equals(value))
+                            || (securityFallback && ("SECURITY_ACCESS_DENIED".equals(value)
+                                    || "SECURITY_IDEMPOTENCY_CONFLICT".equals(value)));
                     case "outcome" -> completion && ("SUCCESS".equals(value) || "CLIENT_ERROR".equals(value) || "SERVER_ERROR".equals(value))
-                            || securityGap && "REJECTED".equals(value);
-                    case "error_code" -> value instanceof String s && isErrorCode(s);
+                            || securityGap && "REJECTED".equals(value)
+                            || securityFallback && "REJECTED".equals(value);
+                    case "error_code" -> completion && value instanceof String s && isErrorCode(s);
                     default -> false;
                 };
                 if (allowed) fields.put(pair.key, value);

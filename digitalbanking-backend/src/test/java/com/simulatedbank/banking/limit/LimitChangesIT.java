@@ -6,7 +6,9 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.doReturn;
 
 import com.simulatedbank.banking.audit.api.AuditModuleApi;
+import com.simulatedbank.banking.audit.api.AuditAction;
 import com.simulatedbank.banking.support.SqlAuditFixture;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
@@ -84,6 +86,7 @@ class LimitChangesIT {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config, banking.limit_usage RESTART IDENTITY");
+            IntegratedLimitReferences.seed(connection, true);
         }
     }
 
@@ -258,7 +261,7 @@ class LimitChangesIT {
                 default -> changes.reject(81, 2);
             }
             try {
-                audit.recordInTransaction(auditEvent("UNKNOWN_ACTION"));
+                audit.recordInTransaction(null);
             } catch (IllegalArgumentException expected) {
                 // The audit contract double marks the caller rollback-only even when the caller catches it.
             }
@@ -509,10 +512,7 @@ class LimitChangesIT {
         catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
     }
 
-    private static AuditModuleApi.ApprovalEvent auditEvent(String action) {
-        return new AuditModuleApi.ApprovalEvent(action, 81, 1, "OPERATIONS", "CUSTOMER", "11", 1,
-                action.equals("LIMIT_CHANGE_REQUESTED") ? null : 2L,
-                action.equals("LIMIT_CHANGE_REQUESTED") ? null : "APPROVE", null,
-                action.equals("LIMIT_CHANGE_REQUESTED") ? "PENDING" : "APPLIED", "limit-e4-correlation", "limit-e4-request");
+    private static com.simulatedbank.banking.audit.api.AuditEvent auditEvent(String action) {
+        return SqlAuditFixture.approvalEvent(AuditAction.valueOf(action), "limit-e4-correlation");
     }
 }

@@ -3,6 +3,7 @@ package com.simulatedbank.banking.notification.application;
 import com.simulatedbank.banking.notification.api.NotificationOutboxPort;
 import com.simulatedbank.banking.notification.application.port.NotificationPersistencePort;
 import com.simulatedbank.banking.notification.domain.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.List;
  * Enqueues immutable transfer notification notices inside the caller's T2 transaction.
  */
 @Service
+@ConditionalOnProperty(name = "app.notification.enabled", havingValue = "true", matchIfMissing = true)
 public class NotificationOutboxService implements NotificationOutboxPort {
 
     private final NotificationPersistencePort repository;

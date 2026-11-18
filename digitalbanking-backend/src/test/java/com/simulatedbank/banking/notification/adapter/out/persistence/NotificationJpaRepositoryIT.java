@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.simulatedbank.banking.support.IntegratedProviderReferences;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -61,7 +62,7 @@ class NotificationJpaRepositoryIT {
     private TransactionTemplate transactions;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         if (!schemaInitialized) {
             DriverManagerDataSource migratorDs = new DriverManagerDataSource();
             migratorDs.setUrl(postgres.getJdbcUrl());
@@ -70,6 +71,9 @@ class NotificationJpaRepositoryIT {
             ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
             populator.addScript(new ClassPathResource("notification/notification-schema.sql"));
             populator.execute(migratorDs);
+            try (var connection = migratorDs.getConnection()) {
+                IntegratedProviderReferences.seed(connection);
+            }
             schemaInitialized = true;
         }
 

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -65,6 +66,7 @@ class LimitBusinessDateIT {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY");
+            IntegratedLimitReferences.seed(connection, false);
         }
         transactions.executeWithoutResult(tx -> {
             for (Long account : new Long[]{null, 21L}) {

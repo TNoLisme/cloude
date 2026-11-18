@@ -719,3 +719,31 @@
 - **PII:** không thêm regex phát hiện PII production; AC PII giữ Blocked (BA/Security).
 - **C3 deny audit:** best-effort `recordStandalone` qua `AuditEventPort` + fallback security log + metric counter; lỗi audit không đổi response deny. Validation error trước tạo transfer không ghi audit (design/01 §5.7).
 - **Nguồn và ảnh hưởng:** `07` §§2–8, `05` §§8/13.4, `00. architecture & conventions` BE-CON-21–26/53/55, design/01 §5.6–5.7, DEC-TRF-003/004/012/015; BE-TRF-03. Kiểm chứng còn thiếu: session/Account/Audit thật, PostgreSQL, orchestrator 04/05, quota shared đa instance, review API/FE/QA và policy PII/scope staff vẫn Blocked.
+
+## DEC-INT-001 — Tách ID hai operation reservation của Limit
+
+- **Ngày / người quyết định:** 18/11/2026; người điều hành trả lời BE-INT-01: “Approve the proposed IDs”. Quyết định này chốt định danh contract.
+- **Quyết định:** giữ `TRFC-LI-05` cho `reserveForPendingTransfer` trong T1; dùng `TRFC-LI-07` cho `settleOrReleaseReservation` trong T2/Tfail/recovery. Hai operation giữ nguyên input/output, transaction và ngữ nghĩa đã mô tả tại `digitalbanking-docs/docs-common/design/05. Modules contract.md` §13.4. `TRFC-LI-06` tiếp tục dành cho recovery evidence; không tái dùng ID.
+- **Lý do:** §13.4 trước đây dùng `TRFC-LI-05` cho cả reserve và settle/release, làm ma trận/test vector và versioning mơ hồ. ID riêng cho phép provider và consumer review/trace từng operation.
+- **Giới hạn / việc tiếp theo:** người điều hành đối chiếu signature, version, DTO, rollback, migration và chạy vector trên PostgreSQL trước production wiring. ID đã chốt không tự chứng minh G0/G2.
+
+## DEC-INT-002 — Quyền chốt BE-INT-01 thuộc người merge
+
+- **Ngày / người quyết định:** 18/11/2026; người điều hành trực tiếp xác nhận: “Tôi là người merge, tôi sẽ chốt, không cần ai chốt cả”.
+- **Quyết định:** đối với BE-INT-01, người điều hành/merge owner là người duy nhất quyết định chốt ma trận hợp đồng và trạng thái task. Chữ ký hoặc sign-off của hai provider owner không còn là điều kiện bắt buộc. Đạt, Phương, Thịnh là nguồn thông tin kỹ thuật và người thực hiện dependency tương ứng, không có quyền phủ quyết chốt task này.
+- **Giới hạn:** quyết định về thẩm quyền không biến API còn thiếu thành tương thích, không thay kết quả compile/test, migration hay bằng chứng PostgreSQL. G0/G1/G2/G3 và production wiring phải giữ trạng thái theo bằng chứng thực tế. Ma trận và vector BE-INT-01 được trình người điều hành với các gap rõ ràng để tự chốt; không ghi PASS cho case chưa chạy.
+- **Nguồn cập nhật:** `digitalbanking-docs/docs-backend/workofteam/integration modules/README.md`, `BE-INT-01.md`, `BE-INT-01-verification.md` và `docs-common/design/05. Modules contract.md` §13.1 (ngoại lệ BE-INT-01).
+
+## DEC-INT-003 — Một người toàn quyền thực hiện integration modules
+
+- **Ngày / người quyết định:** 18/11/2026; người điều hành/merge owner xác nhận mọi module đã phát triển độc lập và giao toàn quyền sửa source, API, adapter, test, migration và tài liệu liên quan để tích hợp, tự quyết định merge/chốt, không cần cá nhân khác chốt.
+- **Quyết định:** toàn bộ `BE-INT-01..12` do người điều hành/merge owner thực hiện và chốt. Tên module chỉ quyền sở hữu logic/dữ liệu trong code, không phải bước phê duyệt của con người. Khi phát hiện lệch contract, người điều hành tự đối chiếu nguồn ưu tiên, ghi quyết định ở đây và cập nhật `05. Modules contract.md`; dependency thiếu được hiện thực ở provider hoặc dùng mock đúng contract trong test cho đến khi có runtime thật.
+- **Áp dụng ngay BE-INT-01:** bỏ luồng Admin LIMIT cũ trùng với ApprovalProposal/Decision; đồng bộ `AuditModuleApi` generic `AuditEvent`/`AuditRecordRef`/`recordStandalone` với provider Audit và adapter Admin; Limit customer read dùng `AccountQuery.findAccount`. Chuỗi Flyway tích hợp chọn V1–V11 canonical hiện hành, lưu các file V2–V6 trùng tên/version trong `db/migration-legacy`, thêm V12 `limit_usage`, V13 Transfer/idempotency, V14 Ledger, V15 Fraud, V16 Notification, V17 bridge `audit_log.canonical_payload` cho Audit writer cũ. Hai writer Audit dùng cùng advisory lock. Đây là đường fresh DB/upgrade từ chuỗi canonical; DB từng áp dụng migration module-local trùng version cần đánh giá checksum và chuyển dữ liệu riêng, không dùng `repair` để che schema khác biệt.
+- **Giới hạn:** thẩm quyền tự chốt không thay test hay điều kiện an toàn. Không bật money path cho đến khi guard/reservation, API evidence và JOIN/rollback theo contract được hiện thực và kiểm chứng trên PostgreSQL.
+
+## DEC-INT-004 — Xử lý lịch sử Flyway module-local V2–V6
+
+- **Ngày / thẩm quyền:** 18/11/2026; người điều hành/merge owner thực hiện BE-INT-02 theo DEC-INT-003.
+- **Quyết định:** Chuỗi `db/migration` V1–V17 là chuỗi duy nhất cho DB tích hợp mới và DB đã chạy các migration canonical. Các file `db/migration-legacy` V2–V6 có cùng số version nhưng DDL và checksum khác; không dùng `flyway repair`, sửa `flyway_schema_history`, đổi nội dung migration đã áp dụng hay cho ứng dụng tự khởi động trên DB lịch sử legacy. Flyway `validate-on-migrate` phải chặn các lịch sử đó trước khi có business write.
+- **Phương án thay thế cho dependency dữ liệu còn thiếu:** dựng DB canonical mới, sao lưu/restore DB nguồn và lập bảng ánh xạ ID từ nguồn Identity/Customer/Account được xác thực; chỉ sau đó viết và chạy công cụ copy dữ liệu theo thứ tự tham chiếu, giữ ID, hash/audit chain và đối chiếu số dòng, FK, số dư trên bản sao. Không tạo user/customer/account giả để thỏa FK. Chỉ chuyển lưu lượng sau khi đối chiếu và diễn tập restore đạt. Trường hợp môi trường không có dữ liệu cần giữ, khởi tạo DB canonical mới; giữ bản sao legacy để truy vết. Chưa nhận được inventory `flyway_schema_history`/nguồn tham chiếu của môi trường thật, nên đường chuyển dữ liệu thật còn BLOCKED.
+- **Bằng chứng:** `LegacyModuleMigrationPostgreSqlIntegrationTest` dựng từng prefix legacy V2–V6 trên PostgreSQL 16, chứng minh Flyway canonical từ chối trước mutation; bản sao `pg_dump` của V6 được `pg_restore` sang DB khác và giữ history/dữ liệu giả lập. Bài test này không chứng minh chuyển dữ liệu legacy vào canonical khi thiếu nguồn parent hợp lệ. `BE-INT-02.md` lưu checksum, thủ tục và giới hạn.

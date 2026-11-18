@@ -43,12 +43,24 @@ class AuditWriterIT {
     }
 
     @Autowired AuditRecorder recorder;
+    @Autowired com.simulatedbank.banking.audit.api.AuditModuleApi moduleAudit;
     @Autowired TransactionTemplate transactions;
     @Autowired JdbcTemplate jdbc;
+
+    @org.junit.jupiter.api.BeforeEach
+    void seedActor() throws Exception {
+        try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
+             var statement = connection.createStatement()) {
+            statement.execute("INSERT INTO banking.app_user(user_id,username,password_hash,user_type) "
+                    + "OVERRIDING SYSTEM VALUE VALUES (7,'audit-test-actor','test-only','CUSTOMER') "
+                    + "ON CONFLICT (user_id) DO NOTHING");
+        }
+    }
 
     @Test
     void writesHashChainedRecordsInsideCallerTransaction() {
         String reference = "TXN20261103A1B2C3D4";
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM banking.app_user WHERE user_id=7", Integer.class)).isEqualTo(1);
         transactions.executeWithoutResult(status -> {
             recorder.recordInTransaction(event(reference), Instant.parse("2026-11-03T10:15:31.123456Z"));
             recorder.recordInTransaction(event(reference), Instant.parse("2026-11-03T10:15:32.123456Z"));
@@ -57,6 +69,24 @@ class AuditWriterIT {
         assertThat(rows).hasSize(2);
         assertThat(rows.get(1).get("prev_hash")).isEqualTo(rows.get(0).get("record_hash"));
         assertThat(jdbc.queryForObject("SELECT current_user", String.class)).isEqualTo("banking_app");
+    }
+
+    @Test
+    void bothAuditWritersPreserveOneVerifiableChain() {
+        transactions.executeWithoutResult(status -> recorder.recordInTransaction(
+                event("TXN20261103MIXEDA"), Instant.parse("2026-11-03T10:15:31Z")));
+        transactions.executeWithoutResult(status -> moduleAudit.recordInTransaction(
+                new com.simulatedbank.banking.audit.api.AuditEvent(
+                        com.simulatedbank.banking.audit.api.AuditAction.TRANSFER_COMPLETED,
+                        com.simulatedbank.banking.audit.api.AuditActorType.USER,
+                        7L, "CUSTOMER", "TRANSFER", "TXN20261103MIXEDB",
+                        Map.of("status", "PENDING"), Map.of("status", "COMPLETED"),
+                        new BigDecimal("12.00"), "VND",
+                        com.simulatedbank.banking.audit.api.AuditOutcome.SUCCESS,
+                        "corr-mixed-audit", "req-mixed-audit", null,
+                        Instant.parse("2026-11-03T10:15:32Z"))));
+        assertThat(new com.simulatedbank.banking.audit.adapter.out.AuditChainJdbcVerifier(jdbc)
+                .verify().status()).isEqualTo(com.simulatedbank.banking.audit.verification.AuditChainVerifier.Status.PASS);
     }
 
     @Test
@@ -179,7 +209,7 @@ class AuditWriterIT {
         try (var blocker = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator")) {
             blocker.setAutoCommit(false);
             try (var statement = blocker.createStatement()) {
-                statement.execute("SELECT pg_advisory_xact_lock(hashtextextended('audit:chain', 0))");
+                statement.execute("SELECT pg_advisory_xact_lock(" + com.simulatedbank.banking.audit.domain.AuditChain.CHAIN_LOCK_KEY + ")");
                 assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
                     jdbc.execute("SET LOCAL lock_timeout = '100ms'");
                     jdbc.update("INSERT INTO audit_test.business_probe(id) VALUES (706)");
@@ -206,7 +236,7 @@ class AuditWriterIT {
             for (String sql : java.util.List.of("UPDATE banking.audit_log SET actor_role='FORGED' WHERE audit_id=" + ref.auditId(),
                     "DELETE FROM banking.audit_log WHERE audit_id=" + ref.auditId(), "TRUNCATE banking.audit_log")) {
                 assertThatThrownBy(() -> statement.execute(sql)).isInstanceOf(java.sql.SQLException.class)
-                        .satisfies(error -> assertThat(((java.sql.SQLException) error).getSQLState()).isEqualTo("42501"));
+                        .satisfies(error -> assertThat(((java.sql.SQLException) error).getSQLState()).isEqualTo("23000"));
             }
         }
         assertThat(jdbc.queryForObject("SELECT record_hash FROM banking.audit_log WHERE audit_id=?", String.class, ref.auditId()))

@@ -32,6 +32,7 @@ import java.util.Optional;
  *    predictable SQL execution and tie-break ordering.
  */
 @Repository
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.audit.enabled", havingValue = "true", matchIfMissing = true)
 public class AuditQueryJdbcStore implements AuditQueryPort {
     private final NamedParameterJdbcTemplate jdbc;
     private final Clock clock;

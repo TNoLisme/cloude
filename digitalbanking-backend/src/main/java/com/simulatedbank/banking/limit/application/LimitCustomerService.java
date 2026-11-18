@@ -43,7 +43,7 @@ public class LimitCustomerService {
         if (accountId != null) {
             var provider = accounts.getIfAvailable();
             if (provider == null) throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE);
-            var account = provider.findById(accountId)
+            var account = provider.findAccount(accountId)
                     .orElseThrow(() -> new BankingBusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
             if (account.accountId() != accountId || account.customerId() != customerId) {
                 denialReporter.report(authentication, "/api/v1/limits", "ACCOUNT_SCOPE", accountId.toString());

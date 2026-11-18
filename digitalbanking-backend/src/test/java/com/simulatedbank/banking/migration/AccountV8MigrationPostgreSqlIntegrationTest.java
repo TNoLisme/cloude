@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class AccountV8MigrationPostgreSqlIntegrationTest {
 
-    private static final int EXPECTED_MIGRATIONS = 11;
+    private static final int EXPECTED_MIGRATIONS = 17;
 
     private static final String INSERT_ACCOUNT = """
             INSERT INTO banking.account (customer_id, account_no_enc, account_no_hash, account_no_last4)
@@ -61,7 +61,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
     @Test
     void freshMigrationAppliesV8OnceAndValidationSucceeds() throws Exception {
         assertThat(migration.migrationsExecuted).isEqualTo(EXPECTED_MIGRATIONS);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("17");
         assertThatCode(flyway::validate).doesNotThrowAnyException();
         try (Connection connection = connection()) {
             assertThat(queryInt(connection,
@@ -71,7 +71,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17");
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL GROUP BY version HAVING count(*) > 1"))
@@ -445,8 +445,8 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
 
         Flyway upgrade = flywayAt(url).load();
         MigrateResult toV8 = upgrade.migrate();
-        assertThat(toV8.migrationsExecuted).isEqualTo(4);
-        assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("11");
+        assertThat(toV8.migrationsExecuted).isEqualTo(10);
+        assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("17");
         assertThatCode(upgrade::validate).doesNotThrowAnyException();
 
         try (Connection connection = DriverManager.getConnection(
@@ -454,7 +454,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17");
             assertThat(queryInt(connection,
                     "SELECT count(*) FROM banking.customer WHERE customer_id = ?", legacyCustomerId))
                     .isEqualTo(1);

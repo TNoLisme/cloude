@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -37,8 +38,11 @@ class LimitPersistenceIT {
     }
 
     @BeforeEach
-    void reset() {
+    void reset() throws Exception {
         jdbc.execute("TRUNCATE banking.limit_config, banking.limit_usage RESTART IDENTITY");
+        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
+            IntegratedLimitReferences.seed(connection, false);
+        }
     }
 
     @Test

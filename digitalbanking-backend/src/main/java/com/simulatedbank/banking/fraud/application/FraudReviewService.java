@@ -6,6 +6,7 @@ import com.simulatedbank.banking.fraud.application.dto.ReviewFraudFlagRequest;
 import com.simulatedbank.banking.fraud.application.port.FraudPersistencePort;
 import com.simulatedbank.banking.fraud.domain.*;
 import jakarta.validation.Valid;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.time.Instant;
  * Application service for fraud flag review workflow.
  */
 @Service
+@ConditionalOnProperty(name = "app.fraud.enabled", havingValue = "true", matchIfMissing = true)
 public class FraudReviewService {
 
     private final FraudPersistencePort repository;

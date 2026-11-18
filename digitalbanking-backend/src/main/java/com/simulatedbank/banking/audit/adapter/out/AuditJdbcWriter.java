@@ -3,9 +3,11 @@ package com.simulatedbank.banking.audit.adapter.out;
 import com.simulatedbank.banking.audit.application.port.AuditRecordRef;
 import com.simulatedbank.banking.audit.application.port.AuditRecordWriterPort;
 import com.simulatedbank.banking.audit.domain.AuditCanonicalJson;
+import com.simulatedbank.banking.audit.domain.AuditChain;
 import com.simulatedbank.banking.audit.domain.AuditEvent;
 import com.simulatedbank.banking.audit.domain.AuditHashing;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
@@ -24,6 +26,7 @@ import java.util.Objects;
  *    ORM entity lifecycle or dirty checking.
  */
 @Component
+@ConditionalOnProperty(name = "app.audit.enabled", havingValue = "true", matchIfMissing = true)
 public class AuditJdbcWriter implements AuditRecordWriterPort {
 
     private final JdbcTemplate jdbc;
@@ -38,7 +41,7 @@ public class AuditJdbcWriter implements AuditRecordWriterPort {
         if (!"read committed".equals(jdbc.queryForObject("SHOW transaction_isolation", String.class))) {
             throw new IllegalArgumentException("Audit chain writer requires READ COMMITTED isolation");
         }
-        jdbc.execute("SELECT pg_advisory_xact_lock(hashtextextended('audit:chain', 0))");
+        jdbc.query("SELECT pg_advisory_xact_lock(?)", rs -> null, AuditChain.CHAIN_LOCK_KEY);
         var canonical = AuditHashing.canonicalPayload(event, occurredAt);
         var previousRows = jdbc.query("SELECT record_hash FROM banking.audit_log ORDER BY audit_id DESC LIMIT 1",
                 (rs, row) -> rs.getString(1));

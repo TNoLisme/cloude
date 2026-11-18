@@ -2,8 +2,10 @@ package com.simulatedbank.banking.limit;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.*;
 
 import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
 import java.sql.DriverManager;
 import java.time.Clock;
@@ -55,6 +57,7 @@ class LimitCustomerHttpIT {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY CASCADE");
+            IntegratedLimitReferences.seed(connection, false);
             statement.execute("""
                 INSERT INTO banking.limit_config(customer_id,account_id,per_transaction_limit,daily_limit,currency,
                   effective_from,effective_to,status,version,created_by,approved_by,approved_at)
@@ -191,19 +194,20 @@ class LimitCustomerHttpIT {
     @TestConfiguration
     static class Providers {
         @Bean @Primary Clock testClock() { return Clock.fixed(Instant.parse("2026-11-16T18:00:00Z"), ZoneOffset.UTC); }
-        @Bean SessionAuthenticator sessions() {
+        @Bean @Primary SessionAuthenticator sessions() {
             return token -> switch (token) {
                 case "customer" -> Optional.of(new SessionAuthenticator.Session("1", "11", Set.of("ROLE_CUSTOMER", "LIMIT_READ_SELF"), "0".repeat(64)));
                 case "no-permission" -> Optional.of(new SessionAuthenticator.Session("1", "11", Set.of("ROLE_CUSTOMER"), "0".repeat(64)));
                 default -> Optional.empty();
             };
         }
-        @Bean AccountQuery accounts() {
-            return id -> switch ((int) id) {
-                case 21 -> Optional.of(new AccountQuery.AccountSnapshot(21, 11, "VND"));
-                case 22 -> Optional.of(new AccountQuery.AccountSnapshot(22, 12, "VND"));
-                default -> Optional.empty();
-            };
+        @Bean @Primary AccountQuery accounts() {
+            AccountQuery provider = mock(AccountQuery.class);
+            when(provider.findAccount(21)).thenReturn(Optional.of(new AccountQuery.AccountSnapshot(21, 11,
+                    AccountQuery.Status.ACTIVE, "VND", "**** **** 0021", "0021")));
+            when(provider.findAccount(22)).thenReturn(Optional.of(new AccountQuery.AccountSnapshot(22, 12,
+                    AccountQuery.Status.ACTIVE, "VND", "**** **** 0022", "0022")));
+            return provider;
         }
     }
 }

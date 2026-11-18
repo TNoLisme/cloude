@@ -3,28 +3,33 @@ package com.simulatedbank.banking;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.simulatedbank.banking.common.config.AppProperties;
+import com.simulatedbank.banking.common.config.TimeConfig;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = {
-        "app.identity.enabled=false",
-        "app.customer.enabled=false",
-        "app.account.enabled=false",
-        "app.admin.enabled=false",
-        "app.audit.enabled=false",
-        "app.limit.enabled=false",
-        "spring.autoconfigure.exclude="
-        + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-        + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-        + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
-})
+@SpringBootTest(classes = BackendApplicationContextTest.FoundationConfig.class,
+        webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class BackendApplicationContextTest {
+
+    @Configuration
+    @EnableAutoConfiguration(excludeName = {
+            "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
+            "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
+            "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
+    })
+    @EnableConfigurationProperties(AppProperties.class)
+    @Import(TimeConfig.class)
+    static class FoundationConfig { }
 
     @Autowired
     private Clock clock;

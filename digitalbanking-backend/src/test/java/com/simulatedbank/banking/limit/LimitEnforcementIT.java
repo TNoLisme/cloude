@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.simulatedbank.banking.audit.api.AuditModuleApi;
+import com.simulatedbank.banking.audit.api.AuditAction;
 import com.simulatedbank.banking.support.SqlAuditFixture;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import org.springframework.context.annotation.Import;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
@@ -70,6 +72,7 @@ class LimitEnforcementIT {
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY");
+            IntegratedLimitReferences.seed(connection, true);
         }
         try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
              var statement = connection.createStatement()) {
@@ -459,8 +462,8 @@ class LimitEnforcementIT {
                     jdbc.update("INSERT INTO limit_test.business_probe(id) VALUES (1)");
                     enforcement.recordCompleted(check);
                     try {
-                        audit.recordInTransaction(new AuditModuleApi.ApprovalEvent("LIMIT_CHANGE_APPROVED", 1, 1, "OPERATIONS",
-                                "CUSTOMER", "11", 2, 1L, "APPROVE", "PENDING", "APPLIED", "E2-CORR", "E2-REQ"));
+                        audit.recordInTransaction(SqlAuditFixture.approvalEvent(AuditAction.LIMIT_CHANGE_APPROVED,
+                                "E2-CORR"));
                     } catch (org.springframework.dao.DataAccessException expected) { }
                 })).isInstanceOf(UnexpectedRollbackException.class);
             } finally {

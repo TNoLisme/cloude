@@ -23,6 +23,7 @@ import java.util.Objects;
  * Interacts with persistence exclusively via AuditRecordWriterPort.
  */
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.audit.enabled", havingValue = "true", matchIfMissing = true)
 public class AuditRecorder {
     private final AuditRecordWriterPort writerPort;
 

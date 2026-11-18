@@ -21,6 +21,7 @@ import java.util.Optional;
  * Interacts with persistence exclusively through AuditQueryPort.
  */
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.audit.enabled", havingValue = "true", matchIfMissing = true)
 public class AuditQueryService {
 
     private final AuditQueryPort port;

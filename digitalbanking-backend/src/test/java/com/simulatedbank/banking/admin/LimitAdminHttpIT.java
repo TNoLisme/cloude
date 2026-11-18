@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
 import com.simulatedbank.banking.common.crypto.HmacService;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
@@ -98,12 +99,13 @@ class LimitAdminHttpIT {
             statement.execute("CREATE SCHEMA IF NOT EXISTS e4_test");
             statement.execute("""
                     CREATE TABLE IF NOT EXISTS e4_test.challenge(
-                      id UUID PRIMARY KEY, user_id BIGINT, action TEXT, approval_id BIGINT, request_hash TEXT,
+                      id UUID PRIMARY KEY, user_id BIGINT, action TEXT, binding_key TEXT, request_hash TEXT,
                       status TEXT, expires_at TIMESTAMPTZ, purpose TEXT)
                     """);
             statement.execute("GRANT USAGE ON SCHEMA e4_test TO banking_app");
             statement.execute("GRANT SELECT,INSERT,UPDATE ON e4_test.challenge TO banking_app");
-            statement.execute("TRUNCATE e4_test.challenge, banking.approval_request, banking.limit_config, banking.limit_usage RESTART IDENTITY");
+            statement.execute("TRUNCATE e4_test.challenge, banking.approval_request, banking.limit_config, banking.limit_usage RESTART IDENTITY CASCADE");
+            IntegratedLimitReferences.seed(connection, false);
         }
     }
 
@@ -114,7 +116,7 @@ class LimitAdminHttpIT {
         var body = body(response);
         assertThat(body.path("status").asText()).isEqualTo("PENDING");
         assertThat(body.path("requestType").asText()).isEqualTo("LIMIT_CHANGE");
-        assertThat(body.path("maker").path("displayName").asText()).isEqualTo("Ops 1");
+        assertThat(body.path("maker").path("displayName").asText()).isEqualTo("limit-fixture-1");
         assertThat(body.has("payload")).isFalse();
         assertThat(body.path("correlationId").asText()).isEqualTo(correlation);
         assertThat(jdbc.queryForList("SELECT status FROM banking.approval_request", String.class)).containsExactly("PENDING");
@@ -372,12 +374,19 @@ class LimitAdminHttpIT {
     }
     private MvcResult send(String actor, String path, String payload, UUID challenge, int expected) throws Exception {
         var result = request(actor, path, payload, challenge);
+        if (result.getResponse().getStatus() != expected && result.getResolvedException() != null) {
+            throw new AssertionError("Unexpected HTTP status " + result.getResponse().getStatus(),
+                    result.getResolvedException());
+        }
         assertThat(result.getResponse().getStatus()).describedAs("%s %s: %s", actor, path, result.getResponse().getContentAsString())
                 .isEqualTo(expected);
         return result;
     }
     private MvcResult request(String actor, String path, String payload, UUID challenge) throws Exception {
+        String idempotencyKey = "limit-admin-" + UUID.nameUUIDFromBytes(
+                (actor + "|" + path + "|" + payload).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         var request = post(path).header("Authorization", "Bearer " + actor).header("X-Correlation-ID", correlation)
+                .header("Idempotency-Key", idempotencyKey)
                 .contentType("application/json").content(payload);
         if (challenge != null) request.header("X-Step-Up-Challenge", challenge.toString());
         return mvc.perform(request).andReturn();
@@ -399,14 +408,30 @@ class LimitAdminHttpIT {
     /** Fake only: no OTP/user/account production implementation is supplied by this fixture. */
     @TestConfiguration
     static class FakeProviders {
-        @Bean TestPorts testPorts(SqlFixture jdbc, TransactionTemplate transactions) { return new TestPorts(jdbc, transactions); }
-        @Bean CustomerQuery customerQuery() {
-            return id -> id == 11 ? Optional.of(new CustomerQuery.CustomerSnapshot(id)) : Optional.empty();
+        @Bean @org.springframework.context.annotation.Primary TestPorts testPorts(SqlFixture jdbc, TransactionTemplate transactions) { return new TestPorts(jdbc, transactions); }
+        @Bean @org.springframework.context.annotation.Primary CustomerQuery customerQuery() {
+            CustomerQuery provider = org.mockito.Mockito.mock(CustomerQuery.class);
+            org.mockito.Mockito.when(provider.findByCustomerId(11))
+                    .thenReturn(Optional.of(new CustomerQuery.CustomerIdentity(11, 1, CustomerQuery.Status.ACTIVE)));
+            return provider;
         }
-        @Bean AccountQuery accountQuery() {
-            return id -> id == 21 || id == 22 ? Optional.of(new AccountQuery.AccountSnapshot(id, id == 21 ? 11 : 12, "VND")) : Optional.empty();
+        @Bean @org.springframework.context.annotation.Primary AccountQuery accountQuery() {
+            AccountQuery provider = org.mockito.Mockito.mock(AccountQuery.class);
+            org.mockito.Mockito.doAnswer(call -> {
+                long accountId = call.getArgument(0);
+                long customerId = call.getArgument(1);
+                if (accountId != 21 && accountId != 22) {
+                    throw new BankingBusinessException(ErrorCode.ACCOUNT_NOT_FOUND);
+                }
+                if ((accountId == 21 ? 11 : 12) != customerId) {
+                    throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+                }
+                return null;
+            }).when(provider).assertOwnership(org.mockito.ArgumentMatchers.anyLong(),
+                    org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
+            return provider;
         }
-        @Bean SessionAuthenticator sessionAuthenticator() {
+        @Bean @org.springframework.context.annotation.Primary SessionAuthenticator sessionAuthenticator() {
             return token -> {
                 long id = switch (token) { case "maker" -> 1; case "checker", "no-checker" -> 2; case "checker2" -> 3; default -> 4; };
                 Set<String> permissions = switch (token) {
@@ -435,7 +460,7 @@ class LimitAdminHttpIT {
             Instant expiry = Instant.now().plusSeconds(300);
             transactions.executeWithoutResult(tx -> jdbc.update("""
                     INSERT INTO e4_test.challenge VALUES (?,?,?,?,?,'PENDING',?,'SENSITIVE_ACTION')
-                    """, id, request.userId(), "SENSITIVE_ACTION", request.bindingKey() == null ? null : Long.parseLong(request.bindingKey()),
+                    """, id, request.userId(), "SENSITIVE_ACTION", request.bindingKey(),
                     request.requestHash(), java.sql.Timestamp.from(expiry)));
             return new StepUpChallengePort.ChallengeView(id.toString(),
                     StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, "OTP", "SMS", expiry, 5, 5);
@@ -450,7 +475,7 @@ class LimitAdminHttpIT {
             var row = rows.getFirst();
             if (!"SENSITIVE_ACTION".equals(row.get("purpose"))) throw new BankingBusinessException(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
             if (!row.get("user_id").equals(command.userId())
-                    || !java.util.Objects.equals(row.get("approval_id"), command.bindingKey() == null ? null : Long.parseLong(command.bindingKey()))
+                    || !java.util.Objects.equals(row.get("binding_key"), command.bindingKey())
                     || !row.get("request_hash").equals(command.requestHash())) throw new BankingBusinessException(ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
             if (((java.sql.Timestamp) row.get("expires_at")).toInstant().isBefore(Instant.now())) throw new BankingBusinessException(ErrorCode.AUTH_CHALLENGE_EXPIRED);
             if (!"VERIFIED".equals(row.get("status"))) throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);

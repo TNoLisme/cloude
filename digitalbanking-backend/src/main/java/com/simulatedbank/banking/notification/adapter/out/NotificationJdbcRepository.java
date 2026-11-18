@@ -12,6 +12,7 @@ import com.simulatedbank.banking.notification.domain.NotificationItem;
 import com.simulatedbank.banking.notification.domain.NotificationStatus;
 import com.simulatedbank.banking.notification.domain.NotificationType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -33,6 +34,7 @@ import java.util.Optional;
  * and fencing token status updates) are retained via JdbcTemplate with explicit technical justification.
  */
 @Repository
+@ConditionalOnProperty(name = "app.notification.enabled", havingValue = "true", matchIfMissing = true)
 public class NotificationJdbcRepository implements NotificationPersistencePort {
 
     private final JdbcTemplate jdbc;

@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import com.simulatedbank.banking.support.IntegratedLimitReferences;
 import com.simulatedbank.banking.support.SqlFixture;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -69,6 +70,7 @@ class LimitRulesIT {
         try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY");
+            IntegratedLimitReferences.seed(connection, false);
         }
     }
 
