@@ -1,0 +1,5 @@
+{
+  "digitalbanking-docs/openapi/digital-banking-v1.yaml": "71efc546fb6645be128ec83d391706343a6ff6b1fa6991910e42770d62ef796a",
+  "digitalbanking-docs/openapi/digital-banking-v2.yaml": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4",
+  "digitalbanking-frontend/src/mocks/v2-auth.ts": "66459540e29d81efd009d4878e8c69a1fe433b94e3915b133caa40b0d1924722"
+}

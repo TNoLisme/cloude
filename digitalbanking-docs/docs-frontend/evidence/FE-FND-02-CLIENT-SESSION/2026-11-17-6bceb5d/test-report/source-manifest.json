@@ -1,0 +1,29 @@
+{
+  "baseline": "6bceb5dc9f83e56530ddb04042e0eedd17ffcdcc",
+  "scope": "working-tree source, not committed; unit/MSW only",
+  "tests": 119,
+  "newTransportTests": 27,
+  "newSessionTests": 20,
+  "gates": [
+    "lint",
+    "typecheck",
+    "api:check",
+    "format:check",
+    "test",
+    "build"
+  ],
+  "finishedUTC": "2026-11-17T08:52:45.494Z",
+  "sourceHashes": {
+    "digitalbanking-frontend/src/shared/api/client.ts": "88921d05451b5e5b9b21dd588a058b28386440fbd83ddeb431a054b37b3833c7",
+    "digitalbanking-frontend/src/shared/api/client.test.ts": "b01dcde1f74d365b47e1616dc0590fe121905b1687ed2190d0b9269bf7910b24",
+    "digitalbanking-frontend/src/shared/auth/contracts.ts": "e467e060e722bc74e15f330449072b43abb3618d79f205f1f4749426edeb1bd3",
+    "digitalbanking-frontend/src/shared/auth/session.ts": "b259b9fab8109da8bcb5a066b7900ac6777df18f79f2717df18811cb0caa7ef2",
+    "digitalbanking-frontend/src/shared/auth/session-sync.ts": "a79bab9dceb88e9fcb77ca0bd43272ef3e0d0544fae733b129dc3af5eb238acb",
+    "digitalbanking-frontend/src/shared/auth/session.test.ts": "5f2bd5c3efff918ba55705027fe39878ea327ebda8b2c11a8328dde230a7419e",
+    "digitalbanking-frontend/package.json": "393a7d159fc82419b96e80966d430abbe9cfdca2ef7254f4855b319167956e70",
+    "digitalbanking-frontend/pnpm-lock.yaml": "d790e7358f1777c88ce2598ecb7565bd4fe79f273e309ccbfa134ba8a3857a6e",
+    "digitalbanking-docs/openapi/digital-banking-v1.yaml": "71efc546fb6645be128ec83d391706343a6ff6b1fa6991910e42770d62ef796a",
+    "digitalbanking-docs/openapi/digital-banking-v2.yaml": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4",
+    "digitalbanking-frontend/src/mocks/v2-auth.ts": "66459540e29d81efd009d4878e8c69a1fe433b94e3915b133caa40b0d1924722"
+  }
+}
