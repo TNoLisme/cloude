@@ -1,0 +1,16 @@
+[
+  {
+    "class": "com.simulatedbank.banking.admin.LimitAdminHttpIT",
+    "tests": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.admin.LimitAdminMissingProviderIT",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]

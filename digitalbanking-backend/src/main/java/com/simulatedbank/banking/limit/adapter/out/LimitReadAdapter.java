@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.adapter.out;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.limit.application.port.LimitReadPort;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 class LimitReadAdapter implements LimitReadPort {
     private final LimitReadRepository repository;

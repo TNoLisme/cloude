@@ -1,0 +1,161 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+> Task :bootJar
+
+> Task :compileTestJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+LimitAdminHttpIT > approveProducesDetailAndActualLimitEnforcementUsesNewConfiguration() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > makerCreatesRealApprovalPendingConfigAndAuditFixtureWithoutChangingAllowance() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > futureEffectiveFromIsPreservedByCanonicalProposal() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > makerBindingRejectsChangedPayloadWrongActorExpiryAndReplay() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > checkerBindingRejectsChangedDecisionAndUnknownApprovalIs404() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > databaseConstraintsAndApplicationPrivilegesProtectApprovalHistory() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > auditUnavailableDoesNotTurnSelfDenialIntoApproval() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > sqlAuditFixtureFailureRollsBackRealApprovalConfigAndTestIdentityConsumption(boolean) > [1] decision=true FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > rejectKeepsCurrentConfigurationAndUsageAndCannotBeAppliedAgain() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > staleConfigurationRejectsApplicationAndRollsBackChallengeConsumption() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > numericInstantAndNumericDecisionDoNotCoerceIntoAcceptedWireValues() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > selfDecisionReturns409AndCallsStandaloneAuditFixture() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > newAccountScopeDoesNotResetCustomerUsage() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > missingCustomerAccountAndOwnershipAreDistinctAndDoNotCreateData() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > authenticationRolesCheckerPrivilegeAndCookieCsrfAreEnforced() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > twoCheckersCompeteAndOnlyOneDecisionConsumesItsChallenge() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminHttpIT > policyAndOversizedNotesAreRejectedBeforeMutation() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:399
+        Caused by: org.springframework.dao.InvalidDataAccessResourceUsageException at LimitAdminHttpIT.java:412
+            Caused by: org.hibernate.exception.SQLGrammarException at LimitAdminHttpIT.java:412
+                Caused by: org.postgresql.util.PSQLException at LimitAdminHttpIT.java:412
+
+LimitAdminMissingProviderIT > authenticatedRequestWithoutRequiredProvidersFailsClosed() FAILED
+    java.lang.AssertionError at LimitAdminMissingProviderIT.java:64
+
+{"timestamp":"2026-11-18T14:58:45.173Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.174Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.175Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.179Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.179Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.180Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.181Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.183Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.307Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.308Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.314Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.315Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.315Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.318Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.319Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.319Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.322Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.323Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T14:58:45.323Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+
+> Task :test
+
+116 tests completed, 18 failed
+
+> Task :test FAILED
+
+[Incubating] Problems report is available at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 1m 40s
+7 actionable tasks: 6 executed, 1 up-to-date

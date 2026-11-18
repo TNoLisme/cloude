@@ -32,6 +32,7 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Step
 import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.application.TransferOrchestrator;
 import com.simulatedbank.banking.transfer.application.TransferReadPort;
+import com.simulatedbank.banking.transfer.application.TransferStaffScope;
 import com.simulatedbank.banking.transfer.application.TransferView;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferStatus;
@@ -301,6 +302,13 @@ class TransferControllerHttpTest {
                 .andExpect(jsonPath("$.fraudFlags[0].ruleVersion").value(3));
     }
 
+    @Test
+    void staffOutsideServerSideScopeIsDeniedWithAudit() throws Exception {
+        problem(mvc.perform(get("/api/v1/transfers/" + REF)
+                .header("Authorization", "Bearer staff-out-of-scope")).andReturn(), 403, "AUTH_FORBIDDEN");
+        assertThat(fakes.events).anySatisfy(event -> assertThat(event.action()).isEqualTo("SECURITY_ACCESS_DENIED"));
+    }
+
     private void problem(MvcResult result, int status, String code) throws Exception {
         assertThat(result.getResponse().getStatus()).isEqualTo(status);
         assertThat(result.getResponse().getContentType()).startsWith("application/problem+json");
@@ -339,6 +347,7 @@ class TransferControllerHttpTest {
                 case "customer-c" -> session("3", "13", "csrf-c", "ROLE_CUSTOMER", "TRANSFER_CREATE", "TRANSACTION_READ_SELF");
                 case "staff-read" -> session("4", null, "csrf-d", "ROLE_OPERATIONS", "TRANSACTION_READ");
                 case "staff-fraud" -> session("5", null, "csrf-e", "ROLE_ADMIN", "TRANSACTION_READ", "FRAUD_READ");
+                case "staff-out-of-scope" -> session("6", null, "csrf-f", "ROLE_OPERATIONS", "TRANSACTION_READ");
                 default -> null;
             });
         }
@@ -349,6 +358,9 @@ class TransferControllerHttpTest {
             return command -> { orchestratorCalls.incrementAndGet(); return outcome.get(); };
         }
         @Bean TransferReadPort readPort() { return reference -> stored.get(); }
+        @Bean TransferStaffScope staffScope() {
+            return (userId, transferId) -> (userId == 4 || userId == 5) && transferId == 9001;
+        }
         @Bean AccountOwnershipPort ownershipPort() {
             return (customerId, accountId) -> (customerId == 11L && accountId == 3001L)
                     || (customerId == 12L && accountId == 3002L) ? Ownership.OWNED : Ownership.FORBIDDEN;

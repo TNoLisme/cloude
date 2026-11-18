@@ -54,7 +54,7 @@ Các dòng trên là kiểm kê source, chưa xác nhận bean production hoặc
 | `db/migration` từng trùng version **V2–V6** và trùng bảng Audit/Limit/Admin. | Đã lưu các script module-local trong `db/migration-legacy`, giữ V1–V11 canonical và thêm V12–V17. Fresh DB/upgrade canonical V7→V17 đã test; DB dùng script module-local cần lộ trình dữ liệu/checksum riêng. | Người điều hành |
 | Transfer/Ledger candidate SQL trước đây ở ngoài `db/migration`. | Đã promote thành V13 Transfer/idempotency rồi V14 Ledger; V15 Fraud, V16 Notification, V17 Audit bridge. Chưa có bằng chứng T1/T2 production wiring. | Người điều hành |
 | `05` §13.4 từng ghi `Flag.ruleVersion String` và `verifiedChallengeId BIGINT` là gap, trong khi Transfer candidate đã dùng `int` và UUID snapshot → consume → BIGINT FK. | Đã đồng bộ narrative candidate trong `05`; vector provider vẫn chưa PASS, không đánh dấu G0/G2 đạt. | Người điều hành |
-| `05` §14 `MOD-OI-10/11` từng viết như câu hỏi mở, còn DEC-ADM-003 và `07` §5.6 đã chọn Maker binding/idempotency. | Đã cập nhật trạng thái/runtime trong `05`; build PASS, Admin HTTP class có 11/27 test FAIL ở lần chạy riêng trước thay đổi grant V12, chưa chạy lại nên chưa coi gate PASS. | Người điều hành |
+| `05` §14 `MOD-OI-10/11` từng viết như câu hỏi mở, còn DEC-ADM-003 và `07` §5.6 đã chọn Maker binding/idempotency. | Đã cập nhật trạng thái/runtime trong `05`; build PASS; lỗi Admin HTTP 11/27 lịch sử đã xử lý trong BE-INT-02: `LimitAdminHttpIT` 28/28 PASS, full build 2.285 test/202 class. Xem [report BE-INT-02](BE-INT-02-verification.md); không suy thành G0/G2 PASS. | Người điều hành |
 
 ## 4. Các quyết định mở và điều kiện kỹ thuật
 
@@ -84,7 +84,7 @@ Các dòng trên là kiểm kê source, chưa xác nhận bean production hoặc
 | MOD-OI-07 | DEC-TRF-011 chọn OTP/outbox/contact at-least-once; CU-02/NO-01 còn lệch/thiếu. | CU-NO-01, dispatch/lease/privacy. |
 | MOD-OI-08 | DEC-TRF-004/012 chọn replay correlation và read permissions; staff scope còn mở. | Principal, IDOR, scope test. |
 | MOD-OI-09 | DEC-TRF-012/015 chọn provider-owned v1 boundary; nhiều DTO/signature chưa có. | Duyệt §2 từng dòng, boundary tests. |
-| MOD-OI-10 | DEC-ADM-002/003 đã chọn Maker hash + key, Checker approvalId; Admin runtime source và build đã qua. | Người điều hành chạy lại ADM-01/02; lần chạy riêng trước thay đổi grant V12 có 11/27 test Admin LIMIT FAIL, chưa dùng làm gate PASS. |
+| MOD-OI-10 | DEC-ADM-002/003 đã chọn Maker hash + key, Checker approvalId; Admin runtime source và build đã qua. | BE-INT-02 đã xử lý regression Admin LIMIT, 28/28 PASS trong full build; vẫn cần ADM-01/02 với provider/consumer thật để đóng G0/G2. |
 | MOD-OI-11 | DEC-ADM-003 đã chọn Admin idempotency riêng và TTL; runtime source và build đã qua. | Người điều hành kiểm concurrent/purge/HTTP và schema trên test mới; không suy từ build thành PASS. |
 
 ## 5. Contract vectors và bằng chứng cần nộp

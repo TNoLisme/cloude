@@ -1,0 +1,47 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava UP-TO-DATE
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+> Task :bootJar
+
+> Task :compileTestJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: /home/phuong/workspace/cloude/digitalbanking-backend/src/test/java/com/simulatedbank/banking/transfer/adapter/inbound/TransferApiContractTest.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+{"timestamp":"2026-11-18T15:18:30.304Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.305Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.306Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.310Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.310Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.310Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.313Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.314Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.315Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.318Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.318Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.319Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.324Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.324Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.325Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.327Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.328Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.328Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.331Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.331Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:18:30.332Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+
+> Task :jacocoTestReport
+
+[Incubating] Problems report is available at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 27s
+8 actionable tasks: 6 executed, 2 up-to-date

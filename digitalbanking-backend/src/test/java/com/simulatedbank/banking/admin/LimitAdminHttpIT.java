@@ -71,8 +71,8 @@ class LimitAdminHttpIT {
         properties.add("spring.flyway.url", postgres::getJdbcUrl);
         properties.add("spring.flyway.user", () -> "banking_migrator");
         properties.add("spring.flyway.password", () -> "test_migrator");
-        properties.add("app.limit.policy.max-per-transaction-vnd", () -> "1000");
-        properties.add("app.limit.policy.max-daily-vnd", () -> "2000");
+        properties.add("app.limit.policy.max-per-transaction", () -> "1000");
+        properties.add("app.limit.policy.max-daily", () -> "2000");
     }
 
     private static final String CHANGE = """
@@ -142,7 +142,8 @@ class LimitAdminHttpIT {
         mvc.perform(post("/api/v1/admin/limits").cookie(new Cookie("DB_SESSION", "maker"))
                 .contentType("application/json").content(CHANGE)).andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/admin/limits").cookie(new Cookie("DB_SESSION", "maker"))
-                .header("X-CSRF-Token", "csrf").contentType("application/json").content(CHANGE))
+                .header("X-CSRF-Token", "csrf").header("Idempotency-Key", "cookie-proposal")
+                .contentType("application/json").content(CHANGE))
                 .andExpect(status().isPreconditionRequired());
         create(CHANGE);
         send("no-checker", "/api/v1/admin/limits/1/approve", APPROVE, null, 403);
@@ -155,7 +156,7 @@ class LimitAdminHttpIT {
             "{\"customerId\":\"9223372036854775808\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\"}",
             "{\"customerId\":\"11\",\"perTransactionLimit\":\"3.00\",\"dailyLimit\":\"2.00\"}",
             "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"makerId\":\"99\"}",
-            "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"reason\":\"otp=123456\"}"})
+            "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"reason\":\"bad\\u0001note\"}"})
     void wireValidationRejectsMalformedRequestsBeforeAnyApproval(String invalid) throws Exception {
         send("maker", "/api/v1/admin/limits", invalid, null, 400);
         assertThat(count("banking.approval_request")).isZero();
@@ -164,18 +165,36 @@ class LimitAdminHttpIT {
 
     @Test
     void missingCustomerAccountAndOwnershipAreDistinctAndDoNotCreateData() throws Exception {
-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"11\"", "\"99\""), null, 404);
-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"99\""), null, 404);
-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"22\""), null, 403);
+        String missingCustomer = CHANGE.replace("\"11\"", "\"99\"");
+        String missingAccount = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"99\"");
+        String wrongOwner = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"22\"");
+        for (String payload : List.of(missingCustomer, missingAccount, wrongOwner)) {
+            UUID challenge = verified("maker", "/api/v1/admin/limits", payload);
+            send("maker", "/api/v1/admin/limits", payload, challenge, payload.equals(wrongOwner) ? 403 : 404);
+            assertThat(jdbc.queryForObject("SELECT status FROM e4_test.challenge WHERE id=?", String.class, challenge))
+                    .isEqualTo("VERIFIED");
+        }
         assertThat(count("banking.approval_request")).isZero();
+        assertThat(count("banking.limit_config")).isZero();
     }
 
     @Test
-    void policyFutureAndUnsafeNotesAreRejectedBeforeMutation() throws Exception {
-        send("maker", "/api/v1/admin/limits", CHANGE.replace("100.00", "1001.00").replace("200.00", "2000.00"), null, 422);
-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"reason\"", "\"effectiveFrom\":\"2099-01-01T00:00:00Z\",\"reason\""), null, 400);
+    void policyAndOversizedNotesAreRejectedBeforeMutation() throws Exception {
+        String outsidePolicy = CHANGE.replace("100.00", "1001.00").replace("200.00", "2000.00");
+        UUID challenge = verified("maker", "/api/v1/admin/limits", outsidePolicy);
+        send("maker", "/api/v1/admin/limits", outsidePolicy, challenge, 422);
         send("maker", "/api/v1/admin/limits", CHANGE.replace("Điều chỉnh theo yêu cầu", "x".repeat(501)), null, 400);
         assertThat(count("banking.approval_request")).isZero();
+        assertThat(count("banking.limit_config")).isZero();
+    }
+
+    @Test
+    void futureEffectiveFromIsPreservedByCanonicalProposal() throws Exception {
+        create(CHANGE.replace("\"reason\"", "\"effectiveFrom\":\"2099-01-01T00:00:00Z\",\"reason\""));
+        assertThat(jdbc.queryForObject("SELECT effective_from FROM banking.limit_config", java.sql.Timestamp.class)
+                .toInstant()).isEqualTo(Instant.parse("2099-01-01T00:00:00Z"));
+        assertThat(jdbc.queryForObject("SELECT status FROM banking.limit_config", String.class))
+                .isEqualTo("PENDING_APPROVAL");
     }
 
     @Test
@@ -188,7 +207,8 @@ class LimitAdminHttpIT {
         send("maker", "/api/v1/admin/limits", CHANGE, challenge, 410);
         UUID fresh = verified("maker", "/api/v1/admin/limits", CHANGE);
         send("maker", "/api/v1/admin/limits", CHANGE, fresh, 201);
-        send("maker", "/api/v1/admin/limits", CHANGE, fresh, 409);
+        var replay = send("maker", "/api/v1/admin/limits", CHANGE, fresh, 201);
+        assertThat(replay.getResponse().getHeader("Idempotent-Replayed")).isEqualTo("true");
         assertThat(count("banking.approval_request")).isEqualTo(1);
     }
 
@@ -277,7 +297,7 @@ class LimitAdminHttpIT {
     @Test
     void checkerBindingRejectsChangedDecisionAndUnknownApprovalIs404() throws Exception {
         create(CHANGE);
-        create(CHANGE);
+        create(CHANGE.replace("Điều chỉnh theo yêu cầu", "Đề xuất khác"));
         UUID challenge = verified("checker", "/api/v1/admin/limits/1/approve", APPROVE);
         send("checker", "/api/v1/admin/limits/1/approve", REJECT, challenge, 409);
         send("checker2", "/api/v1/admin/limits/1/approve", APPROVE, challenge, 409);
@@ -299,14 +319,14 @@ class LimitAdminHttpIT {
     }
 
     @Test
-    void newAccountScopeCannotBeEnabledAfterCustomerUsage() throws Exception {
+    void newAccountScopeDoesNotResetCustomerUsage() throws Exception {
         create(CHANGE); decide("checker", 1, APPROVE); complete("10.00");
         String accountChange = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"21\"");
         create(accountChange);
         UUID challenge = verified("checker", "/api/v1/admin/limits/2/approve", APPROVE);
-        send("checker", "/api/v1/admin/limits/2/approve", APPROVE, challenge, 409);
+        send("checker", "/api/v1/admin/limits/2/approve", APPROVE, challenge, 200);
         assertThat(jdbc.queryForObject("SELECT used_amount FROM banking.limit_usage", java.math.BigDecimal.class)).isEqualByComparingTo("10.00");
-        assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request WHERE approval_id=2", String.class)).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request WHERE approval_id=2", String.class)).isEqualTo("APPLIED");
     }
 
     @ParameterizedTest
@@ -437,7 +457,7 @@ class LimitAdminHttpIT {
                 Set<String> permissions = switch (token) {
                     case "maker", "checker", "checker2" -> Set.of("ROLE_OPERATIONS", "LIMIT_MAKER", "CHECKER");
                     case "no-checker" -> Set.of("ROLE_OPERATIONS", "LIMIT_MAKER");
-                    case "auditor" -> Set.of("ROLE_AUDITOR", "LIMIT_MAKER", "CHECKER");
+                    case "auditor" -> Set.of("ROLE_AUDITOR");
                     case "customer" -> Set.of("ROLE_CUSTOMER");
                     default -> Set.of();
                 };
@@ -463,7 +483,7 @@ class LimitAdminHttpIT {
                     """, id, request.userId(), "SENSITIVE_ACTION", request.bindingKey(),
                     request.requestHash(), java.sql.Timestamp.from(expiry)));
             return new StepUpChallengePort.ChallengeView(id.toString(),
-                    StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, "OTP", "SMS", expiry, 5, 5);
+                    StepUpChallengePort.ChallengePurpose.valueOf(responsePurpose), "OTP", "SMS", expiry, 5, 5);
         }
 
         @Override

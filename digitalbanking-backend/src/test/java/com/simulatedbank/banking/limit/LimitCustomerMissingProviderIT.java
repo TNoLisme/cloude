@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
+import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.common.error.BankingBusinessException;
+import com.simulatedbank.banking.common.error.ErrorCode;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -43,9 +47,12 @@ class LimitCustomerMissingProviderIT {
     }
 
     @Autowired MockMvc mvc;
+    @MockitoBean AccountQuery accounts;
 
     @Test
     void selectedAccountWithoutProviderFailsClosed() throws Exception {
+        org.mockito.Mockito.when(accounts.findAccount(21))
+                .thenThrow(new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE));
         mvc.perform(get("/api/v1/limits").param("accountId", "21").header("Authorization", "Bearer customer"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
@@ -54,7 +61,7 @@ class LimitCustomerMissingProviderIT {
 
     @TestConfiguration
     static class SessionProvider {
-        @Bean SessionAuthenticator sessions() {
+        @Bean @org.springframework.context.annotation.Primary SessionAuthenticator sessions() {
             return token -> Optional.of(new SessionAuthenticator.Session("1", "11",
                     Set.of("ROLE_CUSTOMER", "LIMIT_READ_SELF"), "0".repeat(64)));
         }

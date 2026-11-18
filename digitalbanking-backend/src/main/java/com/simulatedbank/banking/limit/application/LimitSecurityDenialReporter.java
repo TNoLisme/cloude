@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.application;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.audit.api.AccessDeniedAudit;
 import com.simulatedbank.banking.common.config.SecurityDenialReporter;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
@@ -12,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class LimitSecurityDenialReporter implements SecurityDenialReporter {
     private final ObjectProvider<AccessDeniedAudit> audits;

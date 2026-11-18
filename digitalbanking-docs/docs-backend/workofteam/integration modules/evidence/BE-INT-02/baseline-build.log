@@ -1,0 +1,122 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+> Task :bootJar UP-TO-DATE
+> Task :jar
+> Task :assemble
+> Task :compileTestJava UP-TO-DATE
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :test
+
+LimitAdminHttpIT > invalidProviderChallengePurposeIsNotPresentedAsSensitiveApprovalChallenge() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > makerBindingRejectsChangedPayloadWrongActorExpiryAndReplay() FAILED
+    org.opentest4j.AssertionFailedError at LimitAdminHttpIT.java:382
+
+LimitAdminHttpIT > wireValidationRejectsMalformedRequestsBeforeAnyApproval(String) > [1] invalid={"customerId":11,"perTransactionLimit":"1.00","dailyLimit":"2.00"} FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > wireValidationRejectsMalformedRequestsBeforeAnyApproval(String) > [2] invalid={"customerId":"11","perTransactionLimit":1,"dailyLimit":"2.00"} FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > wireValidationRejectsMalformedRequestsBeforeAnyApproval(String) > [7] invalid={"customerId":"11","perTransactionLimit":"1.00","dailyLimit":"2.00","reason":"otp=123456"} FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > checkerBindingRejectsChangedDecisionAndUnknownApprovalIs404() FAILED
+    org.opentest4j.AssertionFailedError at LimitAdminHttpIT.java:382
+
+LimitAdminHttpIT > databaseConstraintsAndApplicationPrivilegesProtectApprovalHistory() FAILED
+    org.opentest4j.AssertionFailedError at LimitAdminHttpIT.java:353
+
+LimitAdminHttpIT > newAccountScopeCannotBeEnabledAfterCustomerUsage() FAILED
+    org.opentest4j.AssertionFailedError at LimitAdminHttpIT.java:382
+
+LimitAdminHttpIT > missingCustomerAccountAndOwnershipAreDistinctAndDoNotCreateData() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > authenticationRolesCheckerPrivilegeAndCookieCsrfAreEnforced() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminHttpIT > policyFutureAndUnsafeNotesAreRejectedBeforeMutation() FAILED
+    java.lang.AssertionError at LimitAdminHttpIT.java:379
+        Caused by: com.simulatedbank.banking.common.error.BankingBusinessException at LimitAdminHttpIT.java:392
+
+LimitAdminMissingProviderIT > authenticatedRequestWithoutRequiredProvidersFailsClosed() FAILED
+    java.lang.AssertionError at LimitAdminMissingProviderIT.java:55
+
+HttpSecurityServletTest > realChunkedBodiesRespect65536ByteBoundaryWithoutContentLength() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                    Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+HttpSecurityServletTest > noIdentityAdapterFailsClosedAndSecurityFiltersAreNotDoubleRegistered() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > anonymousExpiredAndDeniedUseProblemAndTraceWithNoRedirect() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                    Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+HttpSecurityTest > stepUpAndOtpUserQuotasDoNotBecomePerSessionQuotas() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > expiredAmbientCookieDoesNotPreventPublicLoginButActiveCookieStillNeedsCsrf() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > loginIpGlobalAndAuditExportQuotasAreActuallyEnforced() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > corsAllowsOnlyConfiguredOriginMethodsHeadersAndExposesContractHeaders() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > headersAlsoCoverPreSecurityErrorsAndHstsRequiresActualSecureTransport() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > transferQuotaIsSharedAcrossSessionsAndUsersOfOneCustomerWithRealRetryAfter() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > permissionAndCheckerGatesApplyBeforeOwnersBusinessChecks() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > bodyBoundaryUsesBytesAndDoesNotLeakRejectedBody() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HttpSecurityTest > cookieMutationsRequireMatchingSessionCsrfWhileAuthenticatedBearerDoesNot() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+ContextServletTest > actualServletRegistrationRunsOnceBeforeProductionSecurityAndIgnoresForwardHeaders() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                    Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+CryptoOperationsTest > realOperationalEndpointsDoNotExposeKeysAndBeansWorkTogether() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+HealthEndpointTest > protectedEndpointRejectsUnauthenticatedAccess() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+                    Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+HealthEndpointTest > actuatorHealthReturnsUpWithSecurityHeaders() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145

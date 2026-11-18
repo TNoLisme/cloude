@@ -11,6 +11,8 @@ Ghép các module đã phát triển độc lập thành **một ứng dụng Sp
 
 Quyền chốt là quyền quyết định kỹ thuật và merge, **không thay bằng chứng chạy**. Không gọi fake là provider thật, không đánh dấu test `PASS` khi chưa chạy, không bật money path khi thiếu JOIN/rollback/evidence hoặc migration chưa sạch. Khi module thiếu operation, người điều hành tự hiện thực trong package provider hoặc chọn phương án thay thế đã ghi ở Modules contract; mock chỉ dùng trong test. Giữ migration forward-only đối với DB đã áp dụng.
 
+**Phạm vi test local — DEC-INT-007:** mặc định chỉ chạy method/class liên quan trực tiếp và dependency bị ảnh hưởng, giới hạn bằng `--tests` và ghi lý do chọn. Khi PASS thì dừng; chỉ mở rộng khi lỗi/thay đổi mới tạo căn cứ cụ thể. Không tự chạy toàn suite hoặc lệnh `build`/`check`/`clean build` kéo toàn bộ test. Full suite chỉ chạy khi người điều hành yêu cầu rõ; các mục “full regression” bên dưới là công việc cần lên phạm vi/thời điểm, không phải lệnh tự chạy trên local.
+
 ## 2. Gate kỹ thuật
 
 | Gate | Điều kiện đạt | Khi chưa đạt |
@@ -30,7 +32,7 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 | T2 | Hợp nhất migration, boot ứng dụng; nối Identity/Customer/Account/Limit read và T0/T1. Chạy binding, 428, race, rollback. |
 | T3 | Nối Account/Ledger/Limit/Fraud/Audit trong T2; chạy lock order, debit/credit, limit usage, savepoint và audit rollback PostgreSQL. |
 | T4 | Nối Notification/Customer destination, Admin approval và recovery evidence; chạy outbox/retry, maker/checker, claim/fence. |
-| T5 | Chạy full regression, OpenAPI/security, D1–D5; ghi report, known issues và tự quyết định merge/release dựa trên evidence. |
+| T5 | Chạy regression theo phạm vi đã chốt, OpenAPI/security, D1–D5; full suite theo yêu cầu rõ của người điều hành (DEC-INT-007). Ghi report, known issues và quyết định merge/release dựa trên evidence. |
 
 ## 4. Backlog một owner
 
@@ -39,7 +41,7 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 | Task | Phạm vi | Bằng chứng đóng task |
 |---|---|---|
 | `BE-INT-01` | Ma trận design ↔ Java API ↔ consumer ↔ migration cho mọi `TRFC-*`, `MOD-OI-*`, port dùng chung; xử lý gap DTO/ID/TX/lỗi. Phần ma trận/định danh đã DONE; G0 còn BLOCKED theo gap trong task. | Ma trận, quyết định, vector và report có kết quả/giới hạn trung thực; người điều hành chốt. G0 chỉ PASS khi contract/API liên quan được kiểm chứng. |
-| `BE-INT-02` | Compile và fresh Flyway V1–V17 đã PASS; tiếp tục đường nâng cấp DB từng áp dụng migration module-local V2–V6, kiểm checksum/restore và full regression. | Build, fresh migration, Hibernate validate và checksum/upgrade report cho từng lịch sử DB. |
+| `BE-INT-02` | **DONE / G1 VERIFIED cho DB canonical mới** theo DEC-INT-005/006; full clean build PASS **2.285 test / 202 class**, fresh/upgrade V1–V19, Hibernate/packaged boot và legacy fail-closed/restore PASS. V18 giới hạn quyền approval, V19 chặn NaN; V1–V17 giữ nguyên. Copy dữ liệu legacy thật N/A cho môi trường này. | [Task/checklist](BE-INT-02.md), [verification report](BE-INT-02-verification.md); build exit 0, Hibernate validate, checksum/upgrade và artifact gắn source manifest. |
 | `BE-INT-03` | Nối session, Customer, Account read/ownership/staff scope. | HTTP/PostgreSQL 401/403/404, masking, IDOR, session thật. |
 | `BE-INT-04` | Hoàn thiện Limit guard, snapshot, reservation/settlement, Admin mutation và recovery evidence. | Race theo customer, ngày nghiệp vụ, version, rollback, no double count. |
 | `BE-INT-05` | Nối Transfer T0/T1 với Identity/Audit/Limit; idempotency trước preflight. | 428 không tạo business row, binding/expiry/single-use, T1 rollback và replay. |
@@ -54,7 +56,7 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 ## 5. Quy tắc thực thi và báo cáo
 
 1. Trước khi sửa contract, đọc nguồn ưu tiên, xác định conflict và ghi quyết định vào `DECISIONS.md`; cập nhật `05. Modules contract.md` nếu có operation/alternative mới.
-2. Sửa từng lát nhỏ: compile → contract/unit test → PostgreSQL integration test → ghi bằng chứng. Khi dependency chưa có, dùng fake theo contract **chỉ trong test**, rồi thay bằng provider thật trước khi đánh dấu G2.
+2. Sửa từng lát nhỏ: compile → contract/unit test liên quan → PostgreSQL integration test liên quan → ghi bằng chứng. Chọn method/class nhỏ nhất đủ kiểm thay đổi và dependency, ghi lý do; PASS thì dừng. Tuân DEC-INT-007, không tự kéo toàn suite qua `build`/`check`. Khi dependency chưa có, dùng fake theo contract **chỉ trong test**, rồi thay bằng provider thật trước khi đánh dấu G2.
 3. Mỗi kết quả test ghi source revision, môi trường, lệnh, expected/actual, artifact và giới hạn theo [Test Plan §10](../../../docs-common/09.%20Test%20plan.md). Kết quả cũ không chứng minh source mới.
 4. Người điều hành tự quyết định merge và release. Giữ trạng thái `BLOCKED` cho gate kỹ thuật chưa đạt; không yêu cầu chữ ký cá nhân khác để cập nhật task hoặc tài liệu.
 
@@ -63,3 +65,4 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 | Ngày | Nội dung |
 |---|---|
 | 18/11/2026 | Viết lại kế hoạch theo chỉ đạo người điều hành: một người có toàn quyền sửa và chốt mọi module integration; bỏ phân công/sign-off theo cá nhân, giữ gate kỹ thuật theo evidence. |
+| 18/11/2026 | DEC-INT-007: chỉ chạy test liên quan trên local; full suite cần yêu cầu rõ của người điều hành, không tự suy từ mục “full regression”. |
