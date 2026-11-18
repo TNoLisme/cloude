@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * Read-only receipt query (API-TRF-02). Customer participants are verified through the Account
  * provider (source OR destination ownership), never inferred from stored FK/customer_id. Staff read
- * follows the 07 §3.5 matrix; the server-side data-scope mechanism is still pending (Blocked).
+ * follows the 07 §3.5 matrix and delegates the data-scope decision to a server-side port.
  * Fraud flags are exposed only to staff holding FRAUD_READ/FRAUD_REVIEW. Existing-but-out-of-scope
  * yields 403 + C3; absent yields 404 (DEC-TRF-012).
  */
@@ -17,20 +17,25 @@ public final class TransferQueryService {
     private final AccountOwnershipPort ownershipPort;
     private final FraudFlagReadPort fraudPort;
     private final SecurityDenyAudit denyAudit;
+    private final TransferStaffScope staffScope;
 
     public TransferQueryService(TransferReadPort readPort, AccountOwnershipPort ownershipPort,
-                                FraudFlagReadPort fraudPort, SecurityDenyAudit denyAudit) {
+                                FraudFlagReadPort fraudPort, SecurityDenyAudit denyAudit, TransferStaffScope staffScope) {
         this.readPort = Objects.requireNonNull(readPort, "readPort");
         this.ownershipPort = Objects.requireNonNull(ownershipPort, "ownershipPort");
         this.fraudPort = Objects.requireNonNull(fraudPort, "fraudPort");
         this.denyAudit = Objects.requireNonNull(denyAudit, "denyAudit");
+        this.staffScope = Objects.requireNonNull(staffScope, "staffScope");
     }
 
     public TransferDetailView get(String reference, TransferActor actor) {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
-        boolean staff = actor.hasAuthority("TRANSACTION_READ");
-        boolean customerSelf = actor.customerId() != null && actor.hasAuthority("TRANSACTION_READ_SELF");
+        boolean staff = actor.hasAuthority("TRANSACTION_READ")
+                && (actor.hasAuthority("ROLE_OPERATIONS") || actor.hasAuthority("ROLE_ADMIN")
+                    || actor.hasAuthority("ROLE_AUDITOR"));
+        boolean customerSelf = actor.customerId() != null && actor.hasAuthority("ROLE_CUSTOMER")
+                && actor.hasAuthority("TRANSACTION_READ_SELF");
         if (!staff && !customerSelf) {
             denyAudit.accessDenied(actor, "TRANSFER", reference, "PERMISSION_DENIED", "TRANSACTION_READ");
             throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
@@ -38,7 +43,10 @@ public final class TransferQueryService {
         TransferView view = readPort.findByReference(reference)
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.TRANSFER_NOT_FOUND));
         if (staff) {
-            // Server-side data-scope mechanism is still pending (DEC-TRF-012); 07 §3.5 matrix allows read.
+            if (!staffScope.allowsRead(actor.userId(), view.transferId())) {
+                denyAudit.accessDenied(actor, "TRANSFER", reference, "SCOPE_DENIED", "TRANSACTION_READ");
+                throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+            }
             boolean fraudVisible = actor.hasAuthority("FRAUD_READ") || actor.hasAuthority("FRAUD_REVIEW");
             List<FraudFlagView> flags = fraudVisible ? fraudPort.findByTransfer(view.transferId()) : List.of();
             return new TransferDetailView(view, flags);

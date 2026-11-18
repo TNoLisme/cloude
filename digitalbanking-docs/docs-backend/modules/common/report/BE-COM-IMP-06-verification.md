@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản:** [BE-COM-IMP-06](../tasks/BE-COM-IMP-06.md), v1.0 ngày 12/11/2026
-> **Ngày / người thực hiện:** 2026-11-12T18:47:03+07:00; Codex theo yêu cầu owner
+> **Ngày / người thực hiện:** 2026-11-12T18:47:03+07:00; Phương (`common`)
 > **Trạng thái task:** Done — phạm vi common/local
 > **Kết luận verification:** Verified — 9/9 AC trong phạm vi task; không phải nghiệm thu identity, Cloud hoặc toàn bộ NFR-025
 > **Reviewer / sign-off:** Chưa review

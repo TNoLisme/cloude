@@ -4,7 +4,7 @@
 > **Mã tài liệu:** BE-COM-IMP-01-VERIFICATION
 > **Task / phiên bản task:** [BE-COM-IMP-01](../tasks/BE-COM-IMP-01.md), v1.0 ngày 12/11/2026; snapshot/hash tại E05
 > **Phiên bản:** v1.0
-> **Ngày / người thực hiện:** 2026-11-12T13:55:08+07:00 — Codex, theo yêu cầu của Phương
+> **Ngày / người thực hiện:** 2026-11-12T13:55:08+07:00 — Phương (`common`)
 > **Owner:** Phương
 > **Trạng thái task:** Done — implementer verified
 > **Kết luận verification:** Verified trong phạm vi cấu hình nền và thời gian
@@ -94,7 +94,7 @@ XML cuối là bản sao từ Gradle, chỉ redact dòng password Spring sinh ch
 
 | ID | AC ảnh hưởng | Gap/lỗi và tác động | Trạng thái | Đầu mối / điều kiện tiếp tục | Quyết định hoặc evidence liên quan |
 |---|---|---|---|---|---|
-| ASSERT-PATH | AC01/G03 | 6 assertion lần đầu tìm kebab-case thay vì camelCase của Bean Validation; không phải validation thiếu | Fixed và retested | Codex; E02/E03 pass | E01–E03 |
+| ASSERT-PATH | AC01/G03 | 6 assertion lần đầu tìm kebab-case thay vì camelCase của Bean Validation; không phải validation thiếu | Fixed và retested | Phương; E02/E03 pass | E01–E03 |
 | OI-001 / OI-API-06 | Không chặn AC02/05: task yêu cầu giữ nhãn | Lockout/rate limit, session/OTP/threshold còn Đề xuất; không tự phê duyệt policy | Open tại nguồn | Phương phối hợp Đạt/Vũ và owner Security theo nguồn; chốt trước release policy | SRS §8.5; API §11.2–11.3 |
 | OI-API-12 | Không chặn AC02/05 | Nhiều session được cho phép; revoke theo device/user Deferred; không áp cap mới | Deferred tại nguồn | Đạt/identity + Security, theo trigger API source | API §3.2/§11.3 |
 | OI-COM-05 | Ngoài IMP-01 | Multi-key rotation còn thiếu thiết kế; `previousKeys` chỉ là field config hiện có, không cơ chế rotation | Open | IMP-04/Phương + Security và account/customer; không tự thêm format/schema | common §1.5 |

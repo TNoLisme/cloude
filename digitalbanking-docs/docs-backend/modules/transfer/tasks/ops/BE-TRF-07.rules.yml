@@ -1,0 +1,49 @@
+# Candidate rules. Load only in an environment with the Transfer meters enabled and environment label set.
+groups:
+  - name: transfer-candidate
+    rules:
+      - alert: TransferRequiredAuditFailure
+        expr: sum by (environment, class) (increase(transfer_audit_required_failure_total[5m])) > 0
+        labels:
+          severity: high
+          owner: audit-transfer-ops
+        annotations:
+          summary: Required Transfer audit write failed
+          runbook: R-AUD-01
+      - alert: TransferSecurityAuditFallback
+        expr: sum by (environment) (increase(transfer_security_deny_fallback_total[5m])) > 0
+        labels:
+          severity: medium
+          owner: security-transfer-ops
+        annotations:
+          summary: Transfer security audit used fallback
+          runbook: R-CON-05
+      - alert: TransferPendingTooOld
+        expr: |
+          max by (environment) (
+            transfer_pending_age_seconds
+            and (transfer_pending_snapshot_available == 1)
+            and (transfer_pending_snapshot_age_seconds <= 120)
+          ) > 300
+        labels:
+          severity: high
+          owner: transfer-ops
+        annotations:
+          summary: Transfer primary snapshot contains PENDING older than 300 seconds
+          runbook: R-CON-01
+      - alert: TransferRecoveryIncident
+        expr: sum by (environment, reason) (increase(transfer_recovery_incident_total[5m])) > 0
+        labels:
+          severity: high
+          owner: transfer-ops
+        annotations:
+          summary: Transfer recovery needs investigation
+          runbook: R-CON-01
+      - alert: TransferPendingSnapshotStale
+        expr: transfer_pending_snapshot_available == 0 or transfer_pending_snapshot_age_seconds > 120
+        labels:
+          severity: medium
+          owner: transfer-ops
+        annotations:
+          summary: Transfer pending snapshot unavailable or stale
+          runbook: R-CON-01

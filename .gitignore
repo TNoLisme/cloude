@@ -19,7 +19,6 @@ frontend/*.tsbuildinfo
 .qoder
 
 digitalbanking-docs/docs-references
-specs/
 docs/
 .agents/
 .idea/

@@ -1,0 +1,65 @@
+rule_files:
+  - BE-TRF-07.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'transfer_audit_required_failure_total{environment="test",class="C1",instance="a"}'
+        values: '0 0 1 1 1 1 1 1 1'
+      - series: 'transfer_security_deny_fallback_total{environment="test",instance="a"}'
+        values: '0 0 1 1 1 1 1 1 1'
+      - series: 'transfer_recovery_incident_total{environment="test",reason="FENCE_UNSAFE",instance="a"}'
+        values: '0 0 1 1 1 1 1 1 1'
+      - series: 'transfer_pending_age_seconds{environment="test",instance="a"}'
+        values: '0 310 321 321 0 0 0 0 0'
+      - series: 'transfer_pending_age_seconds{environment="test",instance="b"}'
+        values: '120 200 250 0 0 0 0 0 0'
+      - series: 'transfer_pending_snapshot_available{environment="test",instance="a"}'
+        values: '1 1 1 1 1 1 1 1 1'
+      - series: 'transfer_pending_snapshot_available{environment="test",instance="b"}'
+        values: '1 1 1 1 1 1 1 1 1'
+      - series: 'transfer_pending_snapshot_age_seconds{environment="test",instance="a"}'
+        values: '0 0 0 130 0 0 0 0 0'
+      - series: 'transfer_pending_snapshot_age_seconds{environment="test",instance="b"}'
+        values: '0 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: TransferRequiredAuditFailure
+        exp_alerts:
+          - exp_labels: {environment: test, class: C1, severity: high, owner: audit-transfer-ops}
+            exp_annotations: {summary: Required Transfer audit write failed, runbook: R-AUD-01}
+      - eval_time: 2m
+        alertname: TransferSecurityAuditFallback
+        exp_alerts:
+          - exp_labels: {environment: test, severity: medium, owner: security-transfer-ops}
+            exp_annotations: {summary: Transfer security audit used fallback, runbook: R-CON-05}
+      - eval_time: 2m
+        alertname: TransferRecoveryIncident
+        exp_alerts:
+          - exp_labels: {environment: test, reason: FENCE_UNSAFE, severity: high, owner: transfer-ops}
+            exp_annotations: {summary: Transfer recovery needs investigation, runbook: R-CON-01}
+      - eval_time: 2m
+        alertname: TransferPendingTooOld
+        exp_alerts:
+          - exp_labels: {environment: test, severity: high, owner: transfer-ops}
+            exp_annotations: {summary: Transfer primary snapshot contains PENDING older than 300 seconds, runbook: R-CON-01}
+      - eval_time: 3m
+        alertname: TransferPendingTooOld
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: TransferPendingSnapshotStale
+        exp_alerts:
+          - exp_labels: {environment: test, instance: a, severity: medium, owner: transfer-ops}
+            exp_annotations: {summary: Transfer pending snapshot unavailable or stale, runbook: R-CON-01}
+      - eval_time: 8m
+        alertname: TransferPendingSnapshotStale
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: TransferRequiredAuditFailure
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: TransferSecurityAuditFallback
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: TransferRecoveryIncident
+        exp_alerts: []

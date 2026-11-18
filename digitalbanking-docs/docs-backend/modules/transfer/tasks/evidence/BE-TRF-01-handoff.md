@@ -1,6 +1,6 @@
 # BE-TRF-01 — Hồ sơ bàn giao và trạng thái nghiệm thu
 
-**Trạng thái: baseline thiết kế v1 đã chốt theo ủy quyền; review và bằng chứng tích hợp cần thiết chưa có.** [DEC-TRF-001–015](../../../../../../DECISIONS.md) ghi các lựa chọn về ngưỡng, retry, validation, recovery, audit và concurrency theo chỉ đạo người điều hành; không thay review của provider/QA. Mốc rà soát 16/11/2026; kiểm tra revision và working tree khi tạo evidence thực thi.
+**Trạng thái: baseline thiết kế v1 đã chốt theo ủy quyền; review và bằng chứng tích hợp cần thiết chưa có.** [DEC-TRF-001–015](../../../../../../DECISIONS.md) ghi các lựa chọn về ngưỡng, retry, validation, recovery, audit và concurrency theo thống nhất của dự án; không thay review của provider/QA. Mốc rà soát 16/11/2026; kiểm tra revision và working tree khi tạo evidence thực thi.
 
 ## Tài liệu bàn giao
 

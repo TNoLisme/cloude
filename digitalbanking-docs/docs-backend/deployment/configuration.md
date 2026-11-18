@@ -2,11 +2,12 @@
 
 > **Dự án:** Digital Banking MVP (Single-Bank, Core Simulated)
 > **Mã tài liệu:** `BE-DEP-02`
-> **Phiên bản:** v1.3 — dự thảo review
-> **Ngày cập nhật:** 15/11/2026
-> **Trạng thái:** Draft — Cấu hình nền/thời gian đã verified tại BE-COM-IMP-01; phần triển khai khác chưa xác nhận runtime
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§3–§9), [[digitalbanking-docs/docs-common/05. Technical stack.md]] (§5.1.6, §5.2, §5.4, §5.7, §5.8), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§5, §8.8, §9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2.8, §3.2–§3.3, §3.7, §6.1, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] (§3.3, §4–§6, §8–§9), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§7.6, §10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §10.3, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§6, §8–§9)
-> **Tài liệu liên quan:** [[digitalbanking-docs/docs-backend/deployment/README.md]] (hướng dẫn triển khai & vận hành), [[digitalbanking-docs/docs-backend/README.md]] (chỉ mục Backend)
+> **Phiên bản:** 1.4
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Hoàn thành (Chuẩn hóa Baseline v1.1 theo `DEC-DOC-001` & `DEC-COM-001`)
+> **Owner:** Phương (`common`), phối hợp các Module Owners
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§3–§9), [[digitalbanking-docs/docs-common/05. Technical stack.md]] (§5.1.6, §5.2, §5.4, §5.7, §5.8), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§5, §8.8, §9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2.8, §3.2–§3.3, §3.7, §6.1, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]] (§3.3, §4–§6, §8–§9), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§7.6, §10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §10.3, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§6, §8–§9), [[DECISIONS.md]]
+> **Tài liệu liên quan:** [[digitalbanking-docs/docs-backend/deployment/README.md]] (hướng dẫn triển khai & vận hành), [[digitalbanking-docs/docs-backend/deployment/common-readiness.md]], [[digitalbanking-docs/docs-backend/README.md]] (chỉ mục Backend)
 
 ---
 
@@ -112,8 +113,7 @@ Nguồn: `05` §3.1, `06` §11.1, `08` §3.2.
 
 ### 4.1. Danh mục biến môi trường
 
-BE-COM-IMP-08 bổ sung `application-demo.yml`: cookie Secure=true và CORS origin bắt buộc cấp tường minh; nhãn log mặc định demo. Base YAML bên dưới vẫn là cấu hình chung/local, không phải bản deploy Cloud hoàn chỉnh. Chỉ profile demo, không kết hợp local/test; không dùng Compose local với secret mẫu cho Cloud. [Readiness/runbook ứng dụng](common-readiness.md) ghi artifact, secret references, restart/rollback và gate chưa đạt; [report 08](../modules/common/report/BE-COM-IMP-08-verification.md) giữ kết quả thực chạy.
-
+Cấu hình `application.yml` cung cấp giá trị nền dùng chung; `application-demo.yml` áp dụng cho môi trường `demo`/Cloud (bắt buộc `cookie.secure = true`, khai báo origin CORS tường minh và nạp khóa mật mã/mật khẩu DB từ secret store). Chi tiết kiểm tra sẵn sàng và vận hành gói ứng dụng xem tại [common-readiness.md](common-readiness.md) và [báo cáo kiểm chứng BE-COM-IMP-08](../modules/common/report/BE-COM-IMP-08-verification.md).
 
 | Biến | Bắt buộc | Giá trị mặc định | Ý nghĩa |
 |---|---|---|---|
@@ -184,12 +184,16 @@ APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost:8443
 ### 4.3. Quy tắc secret
 
 - Không commit `.env`, mật khẩu, khóa AES/HMAC hoặc token vào Git/image (`08` §6.1, `design/04` §6.4).
-- `APP_PII_AES_KEY_BASE64` và `APP_HMAC_KEY_BASE64` phải giải mã Base64 thành đúng **32 byte (256 bit)**; sai độ dài hoặc dùng placeholder trên `demo` phải **fail-fast** (`design/04` §6.4).
-- Runtime `CryptoConfig` (IMP-04) từ chối thiếu/sai Base64/độ dài và hai khóa trùng nhau ở mọi profile. Khóa synthetic công khai và khóa lặp một byte chỉ được dùng khi mọi profile đều là local/test; demo/prod/cloud hoặc profile trộn đều từ chối. Validation không chứng minh entropy; tạo riêng mỗi khóa bằng `openssl rand -base64 32`. Không echo/log/serialize key accessors, không expose actuator env/configprops.
-- `previous-keys` khác rỗng bị fail-fast vì chưa hỗ trợ rotation; `aes-key-id` chỉ là metadata, không thêm vào blob. Xem [verification IMP-04](../modules/common/report/BE-COM-IMP-04-verification.md).
+- `APP_PII_AES_KEY_BASE64` và `APP_HMAC_KEY_BASE64` phải giải mã Base64 thành đúng **32 byte (256 bit)** và là hai khóa độc lập nhau; thiếu khóa, sai độ dài hoặc trùng khóa ở bất kỳ profile nào đều **fail-fast** lúc khởi động (`CryptoConfig`, `design/04` §6.4). Khóa mẫu chỉ được phép dùng trên profile `local`/`test`; trên `demo`/Cloud phải sinh khóa ngẫu nhiên riêng bằng `openssl rand -base64 32`.
+- Danh sách `previous-keys` hiện phải giữ rỗng (xoay vòng nhiều khóa đồng thời thuộc phạm vi mở rộng sau MVP); `aes-key-id` đóng vai trò metadata phiên bản khóa. Xem [báo cáo kiểm chứng BE-COM-IMP-04](../modules/common/report/BE-COM-IMP-04-verification.md).
 - `banking_app` và `banking_migrator` phải có mật khẩu khác nhau; không dùng tài khoản migration cho runtime (`design/04` §6.5).
 - Trên `demo`/Cloud, ưu tiên Docker Secret hoặc secret store của nền tảng; không đưa secret vào biến môi trường hiển thị trong log/CI (`08` §6.1).
 - Không ghi secret, cookie, OTP, token hoặc khóa vào log/evidence (`NFR-020`, `design/04` §9).
+
+### 4.4. Ngữ cảnh request và ranh giới Reverse Proxy
+
+- Mặc định ứng dụng đặt `server.forward-headers-strategy: none`, tức bỏ qua các header `Forwarded` / `X-Forwarded-*` do client gửi trực tiếp và lấy địa chỉ peer từ socket kết nối, chỉ lưu IPv4 đã che octet cuối (`203.0.113.***`) vào `RequestContext`.
+- Khi đặt sau Nginx reverse proxy, chỉ bật xử lý forwarded headers sau khi đã cấu hình và kiểm chứng Nginx chặn truy cập trực tiếp vào cổng backend nội bộ và ghi đè hoàn toàn `X-Forwarded-For` / `X-Forwarded-Proto`. Xem hướng dẫn chi tiết tại [backend README](../../../digitalbanking-backend/README.md#request-context-and-propagation) và [báo cáo kiểm chứng BE-COM-IMP-03](../modules/common/report/BE-COM-IMP-03-verification.md).
 
 ---
 
@@ -262,69 +266,82 @@ management:
 app:
   timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
 
+  identity:
+    otp-expiry-sweep-delay: ${APP_OTP_EXPIRY_SWEEP_DELAY:PT1M} # Chu kỳ quét hết hạn OTP challenge (DEC-ID-006)
+    fido:
+      enabled: ${APP_FIDO_ENABLED:false}
+      rp-id: ${APP_FIDO_RP_ID:}
+      allowed-origins: ${APP_FIDO_ALLOWED_ORIGINS:}
+      challenge-ttl: ${APP_FIDO_CHALLENGE_TTL:PT30S}           # Thời hạn FIDO assertion challenge (DEC-ID-010)
+
   crypto:
     aes-key-id: ${APP_PII_AES_KEY_ID:k-v1}
     aes-key-base64: ${APP_PII_AES_KEY_BASE64}
     hmac-key-base64: ${APP_HMAC_KEY_BASE64}
-    previous-keys: []                              # Rotation chưa đủ thiết kế: common OI-COM-05; không tự bật
+    previous-keys: []                              # Giữ rỗng trong MVP
 
   security:
     cookie:
-      name: DB_SESSION                              # Theo 07 §3.2, ưu tiên hơn cookie khác trong design/04
+      name: DB_SESSION                              # Theo 07 §3.2 (DEC-DOC-001)
       secure: ${APP_COOKIE_SECURE:false}
       same-site: Strict
       path: /
       max-age-seconds: 28800                        # 8 giờ; khớp absolute timeout
     cors-allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
     session:
-      idle-timeout-minutes: 15                     # 07 §3.7, Đề xuất
-      absolute-timeout-hours: 8                    # 07 §3.7, Đề xuất
-      # Theo 07 §3.2 cho phép nhiều session; không áp trần 3/1 từ design/04.
-      # Thu hồi theo device/user là Deferred; đã bỏ keys trần session trong IMP-01.
+      idle-timeout-minutes: 15                     # 07 §3.7
+      absolute-timeout-hours: 8                    # 07 §3.7
+    password:
+      history-size: 3                              # 04 §4.2.7 / BRL-006: không trùng 3 mật khẩu gần nhất (DEC-ID-009)
+      min-length: 8
+      max-length: 128
     lockout:
-      max-failed-attempts: ${APP_LOCKOUT_MAX_FAILED_ATTEMPTS:5} # 07 §3.7, Đề xuất
-      lock-duration-minutes: ${APP_LOCKOUT_DURATION_MINUTES:10} # 07 §3.7, Đề xuất
+      max-failed-attempts: ${APP_LOCKOUT_MAX_FAILED_ATTEMPTS:5} # 07 §3.7 (DEC-DOC-001)
+      lock-duration-minutes: ${APP_LOCKOUT_DURATION_MINUTES:10} # 07 §3.7 (DEC-DOC-001)
     otp:
-      ttl-seconds: 300                             # LOGIN_MFA/TRANSFER_STEP_UP/SENSITIVE_ACTION
+      ttl-seconds: 300                             # LOGIN_NEW_DEVICE/TRANSFER_STEP_UP/SENSITIVE_ACTION
       recovery-ttl-seconds: 120                    # Baseline OTP recovery (design/03 §4.1)
       max-verify-attempts: 5
-      resend-cooldown-seconds: 60                  # Đề xuất vận hành; common chưa chốt
-      max-resend-count: 3                          # 07 §8.1.8
+      resend-cooldown-seconds: 60                  # 07 §8.1.8 (DEC-ID-012)
+      max-resend-count: 3                          # 07 §8.1.8 (DEC-ID-012)
+    http:
+      max-request-body-bytes: ${APP_MAX_REQUEST_BODY_BYTES:65536}
+      max-rate-limit-buckets: ${APP_MAX_RATE_LIMIT_BUCKETS:10000}
     rate-limit:
-      login-per-ip-per-minute: 10                  # design/04 §8.3
-      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}             # design/04 §8.3
-      step-up-per-user-per-5-minutes: 10            # design/04 §8.3
-      otp-verify-per-user-per-minute: 20            # 07 §2.8
-      transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30} # 07 §2.8, Đề xuất
-      audit-export-per-user-per-hour: 5              # design/04 §8.3
-      read-per-user-per-minute: 120                  # design/04 §8.3
+      login-per-ip-per-minute: ${APP_LOGIN_PER_IP_PER_MINUTE:10}                 # design/04 §8.3
+      login-per-username-per-minute: ${APP_LOGIN_PER_USERNAME_PER_MINUTE:10}     # 07 §2.8 (DEC-ID-013)
+      step-up-per-user-per-5-minutes: ${APP_STEP_UP_PER_USER_PER_5_MINUTES:10}   # design/04 §8.3
+      otp-verify-per-user-per-minute: ${APP_OTP_VERIFY_PER_USER_PER_MINUTE:20}   # 07 §2.8
+      transfer-per-customer-per-minute: ${APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE:30} # 07 §2.8 (DEC-DOC-001)
+      audit-export-per-user-per-hour: ${APP_AUDIT_EXPORT_PER_USER_PER_HOUR:5}     # design/04 §8.3
+      read-per-user-per-minute: ${APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE:120}      # design/04 §8.3
     step-up:
       single-amount-vnd: 10000000                  # T0: amount >= 10.000.000 VND (DEC-TRF-002)
       daily-amount-vnd: 20000000                   # T0: tổng dự kiến > 20.000.000 VND (DEC-TRF-001/002)
 
   transfer:
-    min-amount-vnd: 2000                           # Default hiện có; policy chưa duyệt
-    max-amount-vnd: 10000000                       # Default hiện có; policy chưa duyệt
-    pin-otp-threshold-vnd: 5000000                 # Legacy trong source hiện tại; không dùng để kích hoạt OTP
-    daily-cap-vnd: 50000000                        # Default hiện có; policy chưa duyệt
-    idempotency-ttl-hours: 24
+    min-amount-vnd: 2000
+    max-amount-vnd: 10000000
+    pin-otp-threshold-vnd: 5000000                 # Thuộc tính tương thích cũ; ngưỡng step-up chính thức dùng app.security.step-up.*
+    daily-cap-vnd: 50000000
+    idempotency-ttl-hours: 24                      # Tối thiểu 24 giờ từ completed_at (DEC-TRF-005)
     t2-lock-timeout-ms: 2000                       # SET LOCAL lock_timeout = '2s'
     t2-statement-timeout-ms: 5000                  # SET LOCAL statement_timeout = '5s'
     fraud-eval-timeout-ms: 1000                    # Ngân sách tối đa cho fraud engine trong T2
 
   fraud:
-    velocity-count: 3                              # design/03 §4.2: giao dịch thứ 3
-    velocity-window-seconds: 120                   # trong 120 giây
+    velocity-count: 5                              # DEC-TRF-009 / 04 §4.7.1: > 5 lệnh chuyển tiền
+    velocity-window-seconds: 600                   # trong cửa sổ trượt 600 giây (10 phút)
     warning-ttl-minutes: 15                        # design/03 §6.1
     review-timeout-minutes: 30                     # design/03 §6.1
 
   jobs:
     reconciliation-on-startup: true
-    reconciliation-interval-ms: 60000              # Đề xuất 1 phút; common cho phép 1–5 phút
-    reconciliation-pending-age-seconds: 300        # PENDING > 5 phút (design/02 §10.3)
-    outbox-poll-interval-ms: 2000                  # Đề xuất vận hành; common chưa chốt
-    outbox-batch-size: 50                           # Đề xuất vận hành; common chưa chốt
-    outbox-lease-seconds: 30                        # Đề xuất vận hành; common chưa chốt
+    reconciliation-interval-ms: 60000              # 60 giây / 1 phút (DEC-TRF-010)
+    reconciliation-pending-age-seconds: 300        # PENDING >= 300 giây / 5 phút (DEC-TRF-010)
+    outbox-poll-interval-ms: 2000                  # 2 giây (DEC-TRF-011)
+    outbox-batch-size: 50                           # Lô 50 bản ghi (DEC-TRF-011)
+    outbox-lease-seconds: 30                        # Lease 30 giây (DEC-TRF-011)
     audit-verify-incremental-cron: "0 */15 * * * *" # design/01 §7.6
     audit-verify-full-cron: "0 0 2 * * *"          # Hằng ngày, off-peak
     retention-cleanup-cron: "0 0 3 * * *"          # Hằng ngày (design/01 §7.6)
@@ -333,37 +350,29 @@ app:
 ### 5.2. Ghi chú cấu hình quan trọng
 
 - `spring.jpa.open-in-view: false` và `ddl-auto: validate` là **bắt buộc** theo `05` §5.2.3 và `06` §8.8.
-- `spring.flyway.user/password` là tài khoản migration; `spring.datasource.username/password` là tài khoản runtime. Không dùng chung (`design/04` §6.5).
+- `spring.flyway.user/password` là tài khoản migration (`banking_migrator`); `spring.datasource.username/password` là tài khoản runtime (`banking_app`). Không dùng chung (`DEC-COM-002`, `design/04` §6.5).
 - `spring.jackson.deserialization.fail-on-unknown-properties=true` chống Mass Assignment (`design/04` §8.1).
-- `management.endpoint.health.show-details=never` và chỉ public `/actuator/health`; không public metrics/prometheus (`06` §12.3, `08` §3.3).
-- Các giá trị `(đề xuất)` về pool, outbox poll/batch/lease, resend cooldown chỉ là baseline vận hành; phải chốt bằng benchmark/evidence trước khi coi là cam kết.
-- Theo DEC-TRF-002, nguồn ngưỡng tiền dự kiến duy nhất cho step-up Transfer là `app.security.step-up.single-amount-vnd` (`>= 10.000.000 VND`) và `app.security.step-up.daily-amount-vnd` (`> 20.000.000 VND`), đánh giá T0 trước T1. Tổng ngày theo DEC-TRF-001, không tính trùng; các tín hiệu rủi ro khác vẫn theo policy được duyệt. Hai property là cấu hình dự kiến, việc bind property không chứng minh decision engine hoặc challenge đã hoạt động.
-- `app.transfer.pin-otp-threshold-vnd=5000000` còn tồn tại trong YAML và `AppProperties` tại thời điểm rà soát; đây là **legacy**, không phải ngưỡng OTP thứ hai. Không dùng nó làm điều kiện challenge hay tự suy ra PIN + OTP là policy đã duyệt. Trước khi tích hợp Transfer phải thống nhất loại bỏ/deprecate property, kiểm tra profile/env/consumer và compatibility; nếu source chưa được đồng bộ thì ghi blocker, không tuyên bố runtime đã thực thi quyết định. Các default `min-amount-vnd`, `max-amount-vnd`, `daily-cap-vnd` và policy PIN riêng cũng chưa được DEC-TRF-002 phê duyệt.
-- `AppProperties` cung cấp nested defaults cả khi không có YAML; profile override base YAML, env/CLI override theo Spring Boot. Ba biến lockout/transfer ở §4.1 và `APP_TIMEZONE` được chuyển tiếp trong Compose. Khởi động lại sau đổi cấu hình. Các trường số vừa nêu phải là số nguyên dương; timezone rỗng/sai làm khởi động thất bại với thông báo không echo giá trị timezone hoặc key.
-- Consumer bỏ `transfer-per-user-per-minute` và keys `max-concurrent-sessions-customer/staff`; dùng `transferPerCustomerPerMinute()` và định danh customer. Không suy ra cap session mới. BE-COM-IMP-04 đã triển khai validation khóa; rotation vẫn Open (OQ-15/OI-COM-05), HTTP layer/enforcement common đã có ở 05; identity/transfer integration còn Blocked trong 05/07; task 01 chỉ bind config, không chạy session/OTP/rate limit/job.
-- Inject `Clock` UTC và `ZoneId businessZoneId`: `clock.instant()` cho timestamp/TTL, `LocalDate.now(clock.withZone(businessZoneId))` cho ngày nghiệp vụ; test inject primary `Clock.fixed`. Hợp đồng và ví dụ override tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
+- `management.endpoint.health.show-details=never` và chỉ public `/actuator/health`; không public `/actuator/metrics` và `/actuator/prometheus` ra Internet (`06` §12.3, `08` §3.3).
+- Ngưỡng tiền kích hoạt Step-up cho giao dịch chuyển tiền được quy định duy nhất tại `app.security.step-up.single-amount-vnd` (`>= 10.000.000 VND`) và `app.security.step-up.daily-amount-vnd` (`> 20.000.000 VND`) theo `DEC-TRF-001/002/008`. Thuộc tính `app.transfer.pin-otp-threshold-vnd` chỉ giữ để tương thích cấu hình cũ và không dùng làm điều kiện kích hoạt OTP.
+- `AppProperties` cung cấp giá trị mặc định an toàn và kiểm tra tính hợp lệ lúc khởi động (các trường giới hạn/timeout phải là số nguyên dương; `APP_TIMEZONE` phải là `ZoneId` hợp lệ). Inject `Clock` UTC (`clock.instant()`) cho mọi mốc thời gian hệ thống và `ZoneId businessZoneId` (`LocalDate.now(clock.withZone(businessZoneId))`) cho ngày nghiệp vụ; xem hướng dẫn tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
 
----
+### 5.3. Cấu hình bảo mật HTTP và giới hạn tần suất (Rate Limiting)
 
-### HTTP security — hiện trạng BE-COM-IMP-05
+Module `common` và `identity` thực thi giới hạn kích thước request body và giới hạn tần suất theo thuật toán Token Bucket (hợp đồng chi tiết tại [backend README](../../../digitalbanking-backend/README.md#http-security-and-identity-integration) và [báo cáo kiểm chứng BE-COM-IMP-05](../modules/common/report/BE-COM-IMP-05-verification.md)):
 
-Common đã enforce body/token-bucket limits trong một process; identity thật và luồng cookie/session vẫn **Blocked**. Không xem cấu hình hoặc adapter test là bằng chứng persistence/xác thực thật. Contract/handoff: [backend README](../../../digitalbanking-backend/README.md#http-security-and-identity-integration); [verification](../modules/common/report/BE-COM-IMP-05-verification.md).
-
-| Cấu hình | Env | Baseline / trách nhiệm |
+| Cấu hình | Biến môi trường | Giá trị chuẩn & Phạm vi áp dụng |
 |---|---|---|
-| `app.security.http.max-request-body-bytes` | `APP_MAX_REQUEST_BODY_BYTES` | 65536 bytes, Đề xuất 07 §2.8; check cả Content-Length và stream/chunked |
-| `app.security.http.max-rate-limit-buckets` | `APP_MAX_RATE_LIMIT_BUCKETS` | 10000, state bounded trong process; hết capacity trả 503 |
-| `login-per-ip-per-minute` | `APP_LOGIN_PER_IP_PER_MINUTE` | 10, Đề xuất, HTTP enforce theo peer socket IP |
-| `login-per-username-per-minute` | `APP_LOGIN_PER_USERNAME_PER_MINUTE` | 10 theo 07, thay baseline design 5; identity normalize và gọi limiter, chưa tích hợp |
-| `step-up-per-user-per-5-minutes` | `APP_STEP_UP_PER_USER_PER_5_MINUTES` | 10, Đề xuất, sau xác thực |
-| `otp-verify-per-user-per-minute` | `APP_OTP_VERIFY_PER_USER_PER_MINUTE` | 20, Đề xuất, HTTP sau xác thực; identity phụ trách user/challenge khi pre-login |
-| `transfer-per-customer-per-minute` | `APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE` | 30, Đề xuất, không tách theo session/user |
-| `audit-export-per-user-per-hour` | `APP_AUDIT_EXPORT_PER_USER_PER_HOUR` | 5, Đề xuất |
-| `read-per-user-per-minute` | `APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE` | 120, Đề xuất; key cũ dùng làm quota global API/user hoặc IP khi anonymous |
+| `app.security.http.max-request-body-bytes` | `APP_MAX_REQUEST_BODY_BYTES` | `65536` bytes (64 KB, `07` §2.8); kiểm tra cả `Content-Length` và luồng dữ liệu chunked (`413 REQUEST_TOO_LARGE`). |
+| `app.security.http.max-rate-limit-buckets` | `APP_MAX_RATE_LIMIT_BUCKETS` | `10000` buckets tối đa trong bộ nhớ tiến trình; khi đầy trả về `503 SERVICE_UNAVAILABLE`. |
+| `login-per-ip-per-minute` | `APP_LOGIN_PER_IP_PER_MINUTE` | `10` req/phút/IP (`design/04` §8.3). |
+| `login-per-username-per-minute` | `APP_LOGIN_PER_USERNAME_PER_MINUTE` | `10` req/phút/username đã chuẩn hóa chữ thường (`07` §2.8, `DEC-ID-013`). |
+| `step-up-per-user-per-5-minutes` | `APP_STEP_UP_PER_USER_PER_5_MINUTES` | `10` req/5 phút/user (`design/04` §8.3). |
+| `otp-verify-per-user-per-minute` | `APP_OTP_VERIFY_PER_USER_PER_MINUTE` | `20` req/phút/user (`07` §2.8). |
+| `transfer-per-customer-per-minute` | `APP_TRANSFER_RATE_LIMIT_PER_CUSTOMER_PER_MINUTE` | `30` req/phút/customer (`07` §2.8, `DEC-DOC-001`). |
+| `audit-export-per-user-per-hour` | `APP_AUDIT_EXPORT_PER_USER_PER_HOUR` | `5` req/giờ/user (`design/04` §8.3). |
+| `read-per-user-per-minute` | `APP_GLOBAL_API_PER_SUBJECT_PER_MINUTE` | `120` req/phút/user (hoặc theo IP đối với endpoint công khai, `design/04` §8.3). |
 
-Các rate key ở dưới `app.security.rate-limit`. YAML, Compose và `.env.example` đồng bộ; giá trị enforced phải dương. Token bucket khởi đầu đầy, refill liên tục, Retry-After = ceil thời gian chờ token tiếp theo; không phải thời gian còn lại của phút cố định. Process restart reset quotas; triển khai nhiều replica cần edge/shared quota trước release, không claim cluster enforcement từ test local. Không tin Forwarded/X-Forwarded-For; khi sau proxy bucket IP là proxy cho đến task 08 xác minh trust boundary. Session resolver reject trước HTTP limiter; identity/edge cần chống flood lookup token.
-
-CORS fail startup nếu wildcard/origin sai dạng; methods GET/POST/OPTIONS, credentials true, headers theo 07. Security/cache headers cả lỗi; HSTS chỉ request HTTPS thực. SPA CSP đầy đủ, redirect HTTP→HTTPS, proxy stripping, cookie Secure/HttpOnly/SameSite/Path/Max-Age qua identity và Cloud TLS còn cần kiểm chứng owner/08. `SessionCsrfTokens` chỉ đọc hash do identity trả; source schema session chưa có CSRF field, không tự thêm migration trong common.
+Khi vượt ngưỡng, hệ thống trả về `429 RATE_LIMITED` kèm header `Retry-After` (số giây làm tròn lên tới thời điểm có token tiếp theo). Cấu hình CORS từ chối khởi động nếu origin chứa wildcard `*` hoặc sai định dạng URI; các header bảo mật (`Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`) được gắn trên mọi phản hồi API kể cả phản hồi lỗi.
 
 ## 6. Cấu hình Database, Flyway và phân quyền
 
@@ -375,24 +384,23 @@ CORS fail startup nếu wildcard/origin sai dạng; methods GET/POST/OPTIONS, cr
 - Ứng dụng chỉ chạy `ddl-auto=validate`; migration failure chặn release (`08` §8.1).
 - Không khẳng định tên file migration cụ thể trong tài liệu này. Tên file chính xác thuộc phạm vi implementation (`08` §8.1, `OI-DEP-03`).
 
-### 6.2. Thứ tự migration theo `08` §8.1
+### 6.2. Thứ tự Flyway migration chuẩn (`DEC-COM-001`, `DEC-ID-001`)
 
-| Thứ tự | Nội dung | Ghi chú |
-|---:|---|---|
-| 1 | Tạo schema `banking`, metadata migration, extension/hàm tiện ích | `pgcrypto` chỉ thêm nếu thực sự cần |
-| 2 | Bảng identity và RBAC | `app_user`, `role`, `permission`, `user_role`, `role_permission`, `user_privilege`, `device`, `session`, `auth_challenge`, `auth_attempt`, `password_history` |
-| 3 | Bảng customer và account | Ràng buộc `available_balance >= 0`, `ledger_balance >= 0`, `available_balance <= ledger_balance` |
-| 4 | Bảng transfer, ledger, idempotency | Ràng buộc cặp bút toán kép `(transfer_id, entry_seq)` |
-| 5 | Bảng limit, usage, approval, fraud | `limit_config`, `limit_usage`, `approval_request`, `fraud_rule_config`, `fraud_flag` |
-| 6 | Bảng audit, notification, retention, legal hold | `audit_log`, `audit_chain_checkpoint`, `legal_hold`, `retention_policy`, `notification` |
-| 7 | Foreign key và ràng buộc xuyên domain | Thêm sau khi bảng được tham chiếu đã tồn tại |
-| 8 | Trigger bất biến và bảo vệ append-only | `ledger_entry`, `audit_log`; trigger chặn UPDATE/DELETE/TRUNCATE |
-| 9 | Index | Partial unique index, composite index theo query pattern |
-| 10 | Seed dữ liệu synthetic | Repeatable migration `R__synthetic_demo_seed.sql`; chỉ `local`/`demo` |
-| 11 | Backfill | Migration riêng, resumable, có evidence |
-| 12 | Không sửa migration đã áp dụng | Mọi thay đổi phải là migration forward-only mới |
+| Phiên bản | File migration tại `classpath:db/migration` | Nội dung chính |
+|---|---|---|
+| `V1` | `V1__init_schema.sql` | Khởi tạo schema `banking`. |
+| `V2` | `V2__create_identity_and_rbac_tables.sql` | Bảng `app_user`, `device`, `session` (`csrf_token_hash`), `auth_challenge` (`resend_count`), `auth_attempt`, `password_history`, `role`, `permission`, `user_role`, `role_permission`, `user_privilege` và **seed danh mục RBAC chuẩn** (`DEC-ID-001`, gồm `CUSTOMER_READ` & `FRAUD_READ` cho `AUDITOR`). |
+| `V3` | `V3__add_fido_verification_material.sql` | Bổ sung các cột xác thực FIDO2/WebAuthn trên `device` và `auth_challenge` (`DEC-ID-010`). |
+| `V4` | `V4__add_role_assignment_version.sql` | Bổ sung `app_user.role_assignment_version` (`DEC-ID-011`). |
+| `V5` | `V5__create_audit_log.sql` | Bảng `audit_log` (`canonical_payload`), `audit_chain_checkpoint`, `legal_hold`, `retention_policy`, trigger chặn `UPDATE/DELETE/TRUNCATE` và phân quyền `banking_app` (đánh số lại từ `V2__create_audit_log.sql` khi ghép tích hợp). |
+| `V6` | `V6__create_customer_and_account_tables.sql` | Bảng `customer` và `account` (`available_balance >= 0`, `ledger_balance >= 0`). |
+| `V7` | `V7__create_transfer_and_idempotency_tables.sql` | Bảng `transfer` (kèm cột fencing/recovery) và `idempotency_record` (kèm cột TTL snapshot) — chuyển từ `db/transfer-candidate/V2__transfer.sql` khi ghép tích hợp. |
+| `V8` | `V8__create_ledger_entry.sql` | Bảng `ledger_entry`, unique `(transfer_id, entry_seq)`, trigger append-only và phân quyền `banking_app` — chuyển từ `db/ledger-candidate/V2__create_ledger_entry.sql` khi ghép tích hợp. |
+| `V9` | `V9__create_limit_and_approval_tables.sql` | Bảng `limit_config`, `limit_usage`, `limit_reservation` và `approval_request`. |
+| `V10` | `V10__create_fraud_and_notification_tables.sql` | Bảng `fraud_rule_config`, `fraud_flag` và `notification`. |
+| `R` | `db/seed/R__synthetic_demo_seed.sql` | Repeatable migration chỉ dùng cho `local`/`demo` (dữ liệu khách hàng, tài khoản, hạn mức và quy tắc gian lận mẫu). |
 
-Nguồn: `08` §8.1, `04` §3–§8, `06` §8.1–§8.8. Tên bảng vật lý lấy theo `04`/`06` (`app_user`, `device`); `design/04` dùng `users`/`user_device` — cần đồng bộ thuật ngữ trong `docs-common/`.
+Nguồn: `08` §8.1, `04` §3–§8, `DEC-COM-001`, `DEC-ID-001`. Trong giai đoạn phát triển độc lập từng module, SQL của `transfer` và `ledger` được đặt tại `db/transfer-candidate` và `db/ledger-candidate` để kiểm thử độc lập trước khi hợp nhất vào chuỗi `V1`–`V10`.
 
 ### 6.3. Tài khoản DB và quyền tối thiểu
 
@@ -433,11 +441,10 @@ REVOKE UPDATE, DELETE, TRUNCATE ON banking.ledger_entry, banking.audit_log FROM 
 
 Nguồn: `design/04` §6.5, `04` §9.2, `06` §8.5. Không hard-code mật khẩu trong script; cấp mật khẩu qua secret store/init mechanism.
 
-### 6.5. Seed dữ liệu demo
+### 6.5. Seed dữ liệu RBAC và dữ liệu demo (`DEC-ID-001`)
 
-- Seed synthetic gồm role/permission tối thiểu, global limit, fraud rule, customer/staff mẫu và tài khoản demo.
-- Chỉ chạy trên `local`/`demo`; không dùng PII thật (`NFR-032`, `CON-006`).
-- Dùng repeatable migration hoặc profile demo có kiểm soát; không đưa seed vào migration versioned dùng cho mọi môi trường (`05` §5.2.5, `08` §8.1).
+- **Danh mục RBAC chuẩn (`role`, `permission`, `role_permission`):** được seed cố định ngay trong migration `V2__create_identity_and_rbac_tables.sql` cho mọi môi trường (`4` role: `CUSTOMER`, `OPERATIONS`, `ADMIN`, `AUDITOR` và `15` permission chuẩn theo `04` Appendix A.2, bao gồm `CUSTOMER_READ` và `FRAUD_READ` cho `AUDITOR`).
+- **Dữ liệu mẫu (`R__synthetic_demo_seed.sql`):** gồm hạn mức mặc định, cấu hình quy tắc gian lận, hồ sơ khách hàng/nhân viên và tài khoản synthetic; chỉ chạy trên môi trường `local`/`demo` và tuyệt đối không chứa PII thật (`NFR-032`, `CON-006`).
 
 ### 6.6. Backup và phục hồi
 
@@ -469,9 +476,7 @@ Mọi log ra `stdout` ở dạng JSON một dòng, tối thiểu gồm:
 
 **Cấm log:** mật khẩu, PIN, OTP, raw session/CSRF token, raw idempotency key, khóa AES/HMAC, số tài khoản/CCCD/số điện thoại/email đầy đủ, full payload chuyển tiền (`NFR-020`, `08` §9.2, `design/02` §13.2).
 
-BE-COM-IMP-06 đã triển khai stdout qua `logback-spring.xml`/`SafeJsonLogEncoder`: event `HTTP_REQUEST_COMPLETED` dùng route template (fallback `UNMATCHED`), status/latency và trace trước cleanup; user ID nội bộ được SHA-256 mask. Đặt `APP_ENVIRONMENT` theo môi trường triển khai; profile test đặt `test`. Encoder chỉ nhận trường được phép của event HTTP, bỏ raw message/arguments, arbitrary MDC, exception message/stack trace và unknown structured fields cho cả third-party logger. Log chung còn logger/level/exception type; richer coded events của owner cần tích hợp được review, không bật raw fallback. Không coi technical log là audit/C3 fallback hoàn chỉnh.
-
-Health API đã có `HealthResponse` gồm database/application; không giả lập outbox. Probe public có thể thêm tên nhóm liveness/readiness nhưng không có components/details. `/actuator/metrics` và `/actuator/prometheus` chỉ nhận Admin/Auditor qua SPI identity. HTTP histogram đã bật cho p95/p99; business metrics trong bảng dưới là hợp đồng owner, không phải tuyên bố đã emit. Xem [hướng dẫn runtime](../../../digitalbanking-backend/README.md#logs-http-metrics-and-health) và [verification 06](../modules/common/report/BE-COM-IMP-06-verification.md).
+Hệ thống xuất JSON log qua `logback-spring.xml` và `SafeJsonLogEncoder`: sự kiện `HTTP_REQUEST_COMPLETED` ghi nhận route template (fallback `UNMATCHED`), HTTP status, độ trễ (`latency_ms`) và `correlation_id`/`request_id`; `user_id` nội bộ được băm ẩn danh `SHA-256`; sự kiện dự phòng kiểm toán bảo mật `SECURITY_AUDIT_FALLBACK` được ghi qua `SecurityAuditFallbackLog` và lọc qua `LogRedaction`. Encoder chỉ chấp nhận các trường trong allowlist và tự động loại bỏ thông điệp văn bản tự do, stack trace thô hoặc MDC tùy ý. Health API nghiệp vụ (`/api/v1/health`) trả về `HealthResponse` (trạng thái `database` và `application`); `/actuator/metrics` và `/actuator/prometheus` yêu cầu quyền `ADMIN` hoặc `AUDITOR`. Xem hướng dẫn chi tiết tại [backend README](../../../digitalbanking-backend/README.md#logs-http-metrics-and-health) và [báo cáo kiểm chứng BE-COM-IMP-06](../modules/common/report/BE-COM-IMP-06-verification.md).
 
 ### 7.3. Metrics chuẩn
 
@@ -557,27 +562,27 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 | Transfer rate | `07` §2.8: 30/phút/customer, Đề xuất; design/04 §8.3: 20/phút/user | Theo `07`: 30/customer/phút, giữ Đề xuất; IMP-01 đã đổi key/accessor thành transfer-per-customer-per-minute/30, chưa enforcement |
 | Session đồng thời | `design/04` §4.3: Customer 3, Staff 1; `07` §3.2: nhiều session, thu hồi theo device/user Deferred | Theo `07`; IMP-01 bỏ keys trần 3/1 trong Java/YAML, không triển khai session/revocation |
 | Cookie session | `07` §3.2: `DB_SESSION`, `Path=/`, `Max-Age=28800`; design/04: `SESSION_TOKEN`, `Path=/api` | Đã phân xử theo `07`; không chờ chọn lại tên/path, không tự đóng issue ở tài liệu nguồn |
-| Step-up theo số tiền | DEC-TRF-002 chọn `>= 10.000.000` mỗi lệnh hoặc tổng ngày dự kiến `> 20.000.000`; thành phần tổng theo DEC-TRF-001. `design/03` trước đây nêu `> 5.000.000` với PIN+OTP. | `app.security.step-up.*` là cấu hình mục tiêu duy nhất cho hai ngưỡng tiền; property `app.transfer.pin-otp-threshold-vnd` còn là legacy trong source cần xử lý. Chưa có Transfer/Identity runtime để chứng minh enforcement hay protocol concurrency; PIN policy riêng chưa chốt. |
-| Fraud velocity | `design/03` §4.2/§5: giao dịch thứ 3 trong 120 giây; `06` §7.6: > 5 giao dịch/10 phút | Theo `design/03` 3/120 giây; cần đồng bộ `06` |
-| Tài khoản DB | `design/04` §6.5: `banking_app`/`banking_migrator`; `04` §9.2: `app_rw`/`audit_writer`/`auditor_ro`/`migration` | Dùng 2 credential theo `design/04`; ánh xạ vai trò logic, tách đầy đủ là mục tiêu |
-| Tên bảng | `04`/`06`: `app_user`, `device`; `design/04`: `users`, `user_device` | Theo `04`/`06` cho schema vật lý; cần đồng bộ `design/04` |
-| Reconciliation | `design/02` §10.3: scheduler 1–5 phút; PENDING > 5 phút | Sửa từ 30 giây/15 giây sang 1 phút/5 phút |
-| Audit/retention job | `design/01` §7.6: incremental 15 phút, full verify hằng ngày, retention hằng ngày | Sửa retention từ hằng giờ sang hằng ngày; thêm full verify |
-| Metric names | `design/01` §12.2, `design/02` §13.1 dùng `transfer_*`, `idempotency_*`, `audit_*`, `db_*`; `design/04` §9.2 dùng `banking_audit_chain_tamper_detected_total` | Bỏ tiền tố `banking_*` tự đặt; dùng tên chuẩn `design/01`/`design/02`; cần đồng bộ tên metric audit với `design/04` |
-| Trạng thái tài liệu | `08` v0.2 là Draft, chưa xác nhận runtime | Backend deployment docs để trạng thái Draft, không tuyên bố production-ready |
+| Step-up theo số tiền | `DEC-TRF-001/002/008`: `>= 10.000.000 VND`/lệnh hoặc tổng ngày dự kiến `> 20.000.000 VND` dưới customer guard. | `app.security.step-up.*` là cấu hình chuẩn duy nhất cho hai ngưỡng tiền; thuộc tính `app.transfer.pin-otp-threshold-vnd` chỉ giữ để tương thích cấu hình cũ. |
+| Fraud velocity | `DEC-TRF-009` & `04` §4.7.1: `> 5` lệnh chuyển tiền trong cửa sổ trượt `600 giây` (10 phút). | Đặt `app.fraud.velocity-count: 5` và `app.fraud.velocity-window-seconds: 600` theo `DEC-TRF-009`. |
+| Tài khoản DB | `DEC-COM-002` & `design/04` §6.5: `banking_app` / `banking_migrator`; `04` §9.2: `app_rw` / `audit_writer` / `auditor_ro` / `migration`. | Dùng 2 tài khoản `banking_app` (runtime least-privilege) và `banking_migrator` (Flyway DDL). |
+| Tên bảng | `DEC-DOC-001` & `04`/`06`: `app_user`, `device`, `session`, `auth_challenge`. | Sử dụng thống nhất tên bảng số ít chuẩn của `04`. |
+| Reconciliation | `DEC-TRF-010` & `design/02` §10.3: chu kỳ `60 giây` (`60000 ms`); quét `PENDING` có tuổi `>= 300 giây` (5 phút). | Đồng bộ `reconciliation-interval-ms: 60000` và `reconciliation-pending-age-seconds: 300`. |
+| Audit/retention job | `design/01` §7.6: incremental 15 phút, full verify hằng ngày, retention hằng ngày. | Cấu hình cron chuẩn tại `app.jobs.*`. |
+| Metric names | `design/01` §12.2, `design/02` §13.1 dùng `transfer_*`, `idempotency_*`, `audit_*`, `db_*`. | Sử dụng tên metric chuẩn không gắn nhãn cardinality cao (`BE-OBS-18`). |
+| Chuỗi Flyway Migration | `DEC-COM-001` & `DEC-ID-001`: chuỗi `V1`–`V10` và seed RBAC tại `V2`. | Đánh số chuẩn `V1` (schema) → `V2`–`V4` (identity/RBAC/FIDO/role version) → `V5` (audit) → `V6` (customer/account) → `V7` (transfer/idempotency) → `V8` (ledger) → `V9` (limit/approval) → `V10` (fraud/notification). |
 
 ---
 
 ## 10. Traceability cấu hình
 
-Các quyết định liên quan `common` được chốt tại [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5. BE-COM-IMP-01 đã đồng bộ lockout 5/10, transfer 30/customer/phút và bỏ trần session trong application.yml/AppProperties; xem [verification](../modules/common/report/BE-COM-IMP-01-verification.md). Các phần khác của mẫu vẫn cần verification theo task sở hữu, không mặc nhiên là runtime đã hoạt động. Các khác biệt ngoài 8 nhóm common chưa được audit lại trong lần cập nhật này.
+Các quyết định cấu hình nền tảng được ghi nhận tại [[DECISIONS.md]] và [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]] §1.5.
 
 | Yêu cầu | Cấu hình liên quan | Mục |
 |---|---|---|
-| `TC-001` Spring Boot + PostgreSQL | Runtime, datasource, Flyway | §3, §5, §6 |
-| `TC-002` REST/JSON/HTTPS | Nginx TLS, CORS, security headers | §3.2 |
+| `TC-001` Spring Boot + PostgreSQL | Runtime, datasource, Flyway `V1`–`V10` | §3, §5, §6 |
+| `TC-002` REST/JSON/HTTPS | Nginx TLS, CORS, security headers | §3.2, §5.3 |
 | `NFR-007` RTO/RPO | Backup/restore, retention | §6.6, README §5 |
-| `NFR-013`–`NFR-020` security | TLS, AES/HMAC, session, OTP, lockout, rate limit, secret | §4, §5, §6.3 |
+| `NFR-013`–`NFR-020` security | TLS, AES/HMAC, session, password, FIDO, OTP, lockout, rate limit, secret | §4, §5, §6.3 |
 | `NFR-021`–`NFR-023` audit | Audit DB role, retention, verification job | §6, §7.4, §7.5 |
 | `NFR-025` observability | Health, log, metrics, alert | §7 |
 | `NFR-032` synthetic data | Seed demo, environment isolation | §2.2, §6.5 |
@@ -587,6 +592,8 @@ Các quyết định liên quan `common` được chốt tại [[digitalbanking-
 
 ## 11. Tài liệu tham chiếu
 
+- [[DECISIONS.md]]
+- [[digitalbanking-docs/docs-common/04. Database design & analysis.md]]
 - [[digitalbanking-docs/docs-common/05. Technical stack.md]]
 - [[digitalbanking-docs/docs-common/06. System architecture.md]]
 - [[digitalbanking-docs/docs-common/07. API contracts.md]]
@@ -596,17 +603,13 @@ Các quyết định liên quan `common` được chốt tại [[digitalbanking-
 - [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]]
 - [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]]
 - [[digitalbanking-docs/docs-common/design/04. security.md]]
-- [[digitalbanking-docs/docs-common/04. Database design & analysis.md]]
 - [[digitalbanking-docs/openapi/digital-banking-v1.yaml]]
 
 ## Change Log
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
-| v1.1 | 12/11/2026 | Đồng bộ các mục common về lockout/rate limit scope customer/session/cookie và giới hạn rotation theo ưu tiên 01–11; giữ nhãn Đề xuất, không sửa runtime |
-| v1.2 | 12/11/2026 | BE-COM-IMP-01: đồng bộ lockout/transfer/session config, env override, validation/time contract và liên kết verification; giữ Đề xuất và giới hạn runtime |
-| v1.3 draft | 15/11/2026 | Đồng bộ ngưỡng tiền theo DEC-TRF-001/002; đánh dấu cấu hình OTP legacy, các giá trị min/max/cap và khoảng cách đến runtime cần review. |
-
-### Request context / proxy boundary — BE-COM-IMP-03
-
-Runtime bỏ qua Forwarded/X-Forwarded-*; context dùng socket peer, chỉ giữ IPv4 masked; IPv6/unknown là null. Sau Nginx, peer này là proxy, không phải IP end-user để rate-limit/audit. Chỉ bật hỗ trợ forwarded headers sau khi kiểm chứng ingress strip/overwrite header, chặn truy cập backend trực tiếp và HTTPS redirect (IMP-05/08); không dùng metadata masked làm khóa IP limiter. Xem [usage](../../../digitalbanking-backend/README.md#request-context-and-propagation) và [verification](../modules/common/report/BE-COM-IMP-03-verification.md).
+| `v1.1` | 12/11/2026 | Đồng bộ các mục `common` về lockout, rate limit theo phạm vi customer, session/cookie và quy tắc khóa mật mã theo `docs-common/01–11`. |
+| `v1.2` | 12/11/2026 | Đồng bộ cấu hình lockout/transfer/session, biến môi trường, validation/time contract và liên kết báo cáo kiểm chứng `BE-COM-IMP-01..08`. |
+| `v1.3` | 15/11/2026 | Đồng bộ ngưỡng tiền Step-up theo `DEC-TRF-001/002`. |
+| `v1.4` | 18/11/2026 | Chuẩn hóa Baseline v1.1: chuyển mục ngữ cảnh request/proxy về §4.4; bổ sung `app.identity.fido.*`, `app.identity.otp-expiry-sweep-delay`, `app.security.password.*`; cập nhật ngưỡng `app.fraud.velocity-*` (`5 / 600s` theo `DEC-TRF-009`); đồng bộ chuỗi Flyway `V1`–`V10` và seed RBAC tại `V2` (`DEC-COM-001`, `DEC-ID-001`). |

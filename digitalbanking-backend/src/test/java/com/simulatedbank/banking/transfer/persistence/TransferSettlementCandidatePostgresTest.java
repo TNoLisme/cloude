@@ -4,13 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate;
+import com.simulatedbank.banking.transfer.application.TransferNotifications;
+import com.simulatedbank.banking.transfer.application.TransferTelemetry;
+import com.simulatedbank.banking.transfer.domain.TransferAmount;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Context;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Failure;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Flag;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.FraudResult;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Outcome;
-import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Ports;
+import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.NotificationPorts;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -75,6 +79,7 @@ class TransferSettlementCandidatePostgresTest {
         jdbc.execute("CREATE TABLE transfer_t2_fixture.outbox (transfer_id BIGINT PRIMARY KEY)");
         jdbc.execute("CREATE TABLE transfer_t2_fixture.audit (transfer_id BIGINT PRIMARY KEY, outcome TEXT NOT NULL)");
         jdbc.execute("CREATE TABLE transfer_t2_fixture.caller_work (id BIGINT PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE transfer_t2_fixture.fraud_flag (id BIGINT PRIMARY KEY)");
         jdbc.update("INSERT INTO transfer_t2_fixture.customer_guard VALUES (7)");
         jdbc.update("INSERT INTO transfer_t2_fixture.transfer VALUES (3,7,?,'PENDING',1,?)", Timestamp.from(CREATED), TOKEN);
         jdbc.update("INSERT INTO transfer_t2_fixture.account VALUES (10,100.00),(20,40.00)");
@@ -105,9 +110,43 @@ class TransferSettlementCandidatePostgresTest {
     }
 
     @Test
+    void terminalMetricFollowsOuterCommitAndAuditFailureSurvivesRollback() {
+        var manager = new DataSourceTransactionManager(dataSource);
+        var meters = new SimpleMeterRegistry();
+        var telemetry = new TransferTelemetry(meters);
+        var failing = new TransferSettlementCandidate(manager, new FakePorts(jdbc, FailurePoint.AFTER_AUDIT),
+                ZoneId.of("Asia/Ho_Chi_Minh"), telemetry);
+        assertThatThrownBy(() -> failing.settle(3, CLAIM)).isInstanceOf(IllegalStateException.class);
+        assertThat(meters.get("transfer.audit.required.failure").tag("class", "C1").counter().count()).isEqualTo(1);
+        assertThat(meters.find("banking.transfer").counter()).isNull();
+        assertUnchanged();
+
+        var successful = new TransferSettlementCandidate(manager, new FakePorts(jdbc, FailurePoint.NONE),
+                ZoneId.of("Asia/Ho_Chi_Minh"), telemetry);
+        new TransactionTemplate(manager).executeWithoutResult(status -> {
+            successful.settleInRecoveryTransaction(new Context(3, 7, CREATED, "intent-correlation"), CLAIM);
+            assertThat(meters.find("banking.transfer").counter()).isNull();
+        });
+        assertThat(meters.get("banking.transfer").tags("status", "COMPLETED", "failure_code", "NONE")
+                .counter().count()).isEqualTo(1);
+        assertThat(meters.get("transfer.t2.duration").tag("outcome", "COMMITTED").timer().count()).isEqualTo(1);
+        assertThat(meters.get("transfer.t2.duration").tag("outcome", "ROLLED_BACK").timer().count()).isEqualTo(1);
+    }
+
+    @Test
+    void fraudEngineFailureRollsBackPartialFlagBeforeContinuing() {
+        assertThat(candidate(new FakePorts(jdbc, FailurePoint.FRAUD_ENGINE)).settle(3, CLAIM))
+                .isEqualTo(Outcome.completed());
+        assertThat(count("fraud_flag")).isZero();
+        assertMoney("70.00", "70.00");
+        assertThat(count("ledger")).isEqualTo(2);
+        assertThat(value("transfer", "status")).isEqualTo("COMPLETED");
+    }
+
+    @Test
     void technicalFailureAfterEachMoneyPhaseRollsBackEveryWrite() {
         for (FailurePoint point : List.of(FailurePoint.AFTER_DEBIT, FailurePoint.AFTER_CREDIT,
-                FailurePoint.AFTER_LEDGER, FailurePoint.AFTER_AUDIT)) {
+                FailurePoint.AFTER_LEDGER, FailurePoint.AFTER_OUTBOX, FailurePoint.AFTER_AUDIT)) {
             assertThatThrownBy(() -> candidate(new FakePorts(jdbc, point)).settle(3, CLAIM))
                     .as("failure at %s", point).isInstanceOf(IllegalStateException.class);
             assertUnchanged();
@@ -123,7 +162,7 @@ class TransferSettlementCandidatePostgresTest {
             var caller = new TransactionTemplate(manager);
             assertThatThrownBy(() -> caller.executeWithoutResult(status -> {
                 jdbc.update("INSERT INTO transfer_t2_fixture.caller_work VALUES (1)");
-                assertThatThrownBy(() -> recovery.settleInRecoveryTransaction(new Context(3, 7, CREATED), CLAIM))
+                assertThatThrownBy(() -> recovery.settleInRecoveryTransaction(new Context(3, 7, CREATED, "intent-correlation"), CLAIM))
                         .isInstanceOf(IllegalStateException.class);
                 assertThat(status.isRollbackOnly()).isTrue();
                 jdbc.update("INSERT INTO transfer_t2_fixture.caller_work VALUES (2)");
@@ -223,10 +262,10 @@ class TransferSettlementCandidatePostgresTest {
         return jdbc.queryForObject("SELECT count(*) FROM transfer_t2_fixture." + table, Integer.class);
     }
 
-    private enum FailurePoint { NONE, AFTER_DEBIT, AFTER_CREDIT, AFTER_LEDGER, AFTER_AUDIT }
+    private enum FailurePoint { NONE, AFTER_DEBIT, AFTER_CREDIT, AFTER_LEDGER, AFTER_OUTBOX, AFTER_AUDIT, FRAUD_ENGINE }
 
     /** All fake writes intentionally use the same JdbcTemplate/DataSource as the transaction manager. */
-    private static final class FakePorts implements Ports {
+    private static final class FakePorts implements NotificationPorts {
         private final JdbcTemplate jdbc;
         private final FailurePoint failure;
         private final CountDownLatch firstHasGuard;
@@ -247,7 +286,7 @@ class TransferSettlementCandidatePostgresTest {
         }
         @Override public Context readContextOnPrimary(long id) {
             return jdbc.queryForObject("SELECT id, customer_id, created_at FROM transfer_t2_fixture.transfer WHERE id=?",
-                    (rs, row) -> new Context(rs.getLong(1), rs.getLong(2), rs.getObject(3, OffsetDateTime.class).toInstant()), id);
+                    (rs, row) -> new Context(rs.getLong(1), rs.getLong(2), rs.getObject(3, OffsetDateTime.class).toInstant(), "intent-correlation"), id);
         }
         @Override public void lockStepUpGuard(long customerId) {
             boolean first = firstGuardCall.getAndSet(false);
@@ -282,7 +321,18 @@ class TransferSettlementCandidatePostgresTest {
             jdbc.queryForObject("SELECT customer_id FROM transfer_t2_fixture.usage WHERE customer_id=? FOR UPDATE", Long.class, context.customerId());
         }
         @Override public Optional<Failure> validateLockedState(Context context, LocalDate date) { return Optional.empty(); }
-        @Override public FraudResult evaluateFraud(Context context, Instant terminalAt) { return new FraudResult(false, List.of()); }
+        @Override public boolean fraudSavepointSupported() { return failure == FailurePoint.FRAUD_ENGINE; }
+        @Override public boolean fraudContextUsableAfterRollback() {
+            return jdbc.queryForObject("SELECT 1", Integer.class) == 1;
+        }
+        @Override public void recordFraudFailOpen() { }
+        @Override public FraudResult evaluateFraud(Context context, Instant terminalAt) {
+            if (failure == FailurePoint.FRAUD_ENGINE) {
+                jdbc.update("INSERT INTO transfer_t2_fixture.fraud_flag VALUES (1)");
+                throw new TransferSettlementCandidate.FraudEngineException("synthetic engine failure");
+            }
+            return new FraudResult(false, List.of());
+        }
         @Override public boolean debitConditional(Context context) {
             int updated = jdbc.update("UPDATE transfer_t2_fixture.account SET balance=balance-? WHERE id=10 AND balance>=?", AMOUNT, AMOUNT);
             if (updated == 1 && failure == FailurePoint.AFTER_DEBIT) throw new IllegalStateException("after debit");
@@ -307,12 +357,23 @@ class TransferSettlementCandidatePostgresTest {
             if (jdbc.update("UPDATE transfer_t2_fixture.reservation SET status='RELEASED' WHERE transfer_id=? AND status='PENDING'", context.transferId()) != 1)
                 throw new IllegalStateException("reservation not pending");
         }
-        @Override public void writeTerminalAndOutbox(Context context, Outcome outcome, Instant at) {
+        @Override public TransferNotifications.Facts writeTerminal(Context context, Outcome outcome, Instant at) {
             String status = outcome.failure().isPresent() ? "FAILED" : "COMPLETED";
             if (jdbc.update("UPDATE transfer_t2_fixture.transfer SET status=? WHERE id=? AND status='PENDING'", status, context.transferId()) != 1)
                 throw new IllegalStateException("transfer not pending");
             jdbc.update("UPDATE transfer_t2_fixture.idempotency SET status=? WHERE transfer_id=?", status, context.transferId());
-            jdbc.update("INSERT INTO transfer_t2_fixture.outbox VALUES (?)", context.transferId());
+            return new TransferNotifications.Facts(context.transferId(), "TXN20261117A1B2C3D4",
+                    context.customerId(), context.customerId(), new TransferAmount(AMOUNT, "VND"),
+                    "**** **** 0010", "**** **** 0020", context.correlationId());
+        }
+        @Override public TransferNotifications notifications() {
+            var sender = new TransferNotifications.Recipient(7, TransferNotifications.Channel.IN_APP, "OUTCOME_SENDER");
+            return new TransferNotifications((facts, outcome) -> List.of(sender, sender), notices -> {
+                for (var notice : notices) {
+                    jdbc.update("INSERT INTO transfer_t2_fixture.outbox VALUES (?)", notice.transferId());
+                }
+                if (failure == FailurePoint.AFTER_OUTBOX) throw new IllegalStateException("after outbox");
+            });
         }
         @Override public void flushBusinessWrites() { }
         @Override public void recordFraudFlagAudit(Context context, Flag flag, Instant terminalAt) { throw new AssertionError("no flags in fixture"); }

@@ -12,7 +12,9 @@ import com.simulatedbank.banking.transfer.domain.IdempotencyDecision;
 import com.simulatedbank.banking.transfer.domain.IdempotencyStatus;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferIdentity;
+import com.simulatedbank.banking.transfer.domain.TransferStatus;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /** Consumer logic only: fake primary reads and ports are not concurrency or integration evidence. */
 class TransferPreflightCandidateTest {
+    private static final Instant NOW = Instant.parse("2026-11-16T00:00:00Z");
     private final TransferRequestHash hasher = new TransferRequestHash(new ObjectMapper(), new JcsCanonicalizer());
     private final FakePorts ports = new FakePorts();
     private final TransferPreflightCandidate candidate = new TransferPreflightCandidate(ports, hasher);
@@ -82,7 +85,8 @@ class TransferPreflightCandidateTest {
         ports.reads.add(Optional.empty());
         ports.preflight = new Accepted(command(2, 1, "key", hash, 3, 4, "1", ""));
         ports.intent = new TransferIntentCandidate.Created(7);
-        assertThat(candidate.create(request)).isEqualTo(new Settled(7, TransferSettlementCandidate.Outcome.completed()));
+        ports.settlement = new Settlement(TransferSettlementCandidate.Outcome.completed(), receipt(TransferStatus.COMPLETED, null));
+        assertThat(candidate.create(request)).isEqualTo(new Settled(7, ports.settlement));
         assertThat(ports.calls).containsExactly("lookup", "preflight", "T1", "T2");
         FakePorts race = new FakePorts();
         race.reads.add(Optional.empty());
@@ -91,6 +95,32 @@ class TransferPreflightCandidateTest {
         race.intent = new TransferIntentCandidate.Existing(IdempotencyDecision.IN_PROGRESS);
         assertThat(new TransferPreflightCandidate(race, hasher).create(request)).isEqualTo(new InProgress());
         assertThat(race.calls).containsExactly("lookup", "preflight", "T1", "lookup");
+    }
+
+    @Test
+    void challengeRequiredFromT1CarriesPolicyVersionAndRequestHashWithoutSettling() {
+        ports.reads.add(Optional.empty());
+        ports.preflight = new Accepted(command(2, 1, "key", hash, 3, 4, "1", ""));
+        ports.intent = new TransferIntentCandidate.ChallengeRequired("v1");
+        Result result = candidate.create(request);
+        assertThat(result).isEqualTo(new ChallengeRequired("v1", hash));
+        assertThat(result.toString()).doesNotContain(hash);
+        assertThat(ports.calls).containsExactly("lookup", "preflight", "T1");
+    }
+
+    @Test
+    void settlementReceiptMustMatchTheTerminalOutcome() {
+        TransferView completed = receipt(TransferStatus.COMPLETED, null);
+        TransferView failed = receipt(TransferStatus.FAILED, TransferFailureCode.INSUFFICIENT_BALANCE);
+        assertThat(new Settlement(TransferSettlementCandidate.Outcome.completed(), completed).receipt()).isEqualTo(completed);
+        assertThatThrownBy(() -> new Settlement(TransferSettlementCandidate.Outcome.completed(), failed))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Settlement(
+                TransferSettlementCandidate.Outcome.failed(TransferSettlementCandidate.Failure.INSUFFICIENT_BALANCE), completed))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Settlement(
+                TransferSettlementCandidate.Outcome.failed(TransferSettlementCandidate.Failure.FRAUD_BLOCKED), failed))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -195,6 +225,13 @@ class TransferPreflightCandidateTest {
                         : Optional.empty());
     }
 
+    private static TransferView receipt(TransferStatus status, TransferFailureCode failureCode) {
+        boolean failed = status == TransferStatus.FAILED;
+        return new TransferView(7, "TXN20261116A1B2C3D4", status, new TransferAmount(new BigDecimal("1.00"), "VND"), "",
+                new MaskedAccount(3, "**** **** 3001", "3001"), new MaskedAccount(4, "**** **** 6789", "6789"),
+                "correlation", NOW, failed ? null : NOW, failed ? NOW : null, failureCode, failed ? "failed" : null);
+    }
+
     private static TransferIntentCandidate.Command command(long actor, long customer, String key, String hash,
             long source, long destination, String amount, String description) {
         return new TransferIntentCandidate.Command(new TransferIdentity("R", customer, actor, source, destination, null),
@@ -211,6 +248,7 @@ class TransferPreflightCandidateTest {
         OptionalLong resolved = OptionalLong.of(4);
         Preflight preflight;
         TransferIntentCandidate.Result intent;
+        Settlement settlement;
         @Override public Optional<Stored> findExistingOnPrimary(String key) {
             calls.add("lookup");
             if (++readCount == failRead) throw new IllegalStateException("primary unavailable");
@@ -227,10 +265,10 @@ class TransferPreflightCandidateTest {
         @Override public TransferIntentCandidate.Result createIntent(TransferIntentCandidate.Command command) {
             calls.add("T1"); return intent;
         }
-        @Override public TransferSettlementCandidate.Outcome settleCreated(long transferId) {
+        @Override public Settlement settleCreated(long transferId) {
             calls.add("T2");
             if (failSettlement) throw new IllegalStateException("commit unknown");
-            return TransferSettlementCandidate.Outcome.completed();
+            return settlement;
         }
     }
 }

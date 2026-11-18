@@ -31,7 +31,8 @@ class IdempotencyRetentionTest {
         }
         for (IdempotencyStatus status : new IdempotencyStatus[]{IdempotencyStatus.COMPLETED, IdempotencyStatus.FAILED}) {
             assertThat(IdempotencyRetention.eligibleForPurge(status, expiry, expiry.minusNanos(1))).isFalse();
-            assertThat(IdempotencyRetention.eligibleForPurge(status, expiry, expiry)).isTrue();
+            assertThat(IdempotencyRetention.eligibleForPurge(status, expiry, expiry)).isFalse();
+            assertThat(IdempotencyRetention.eligibleForPurge(status, expiry, expiry.plusNanos(1))).isTrue();
         }
     }
 

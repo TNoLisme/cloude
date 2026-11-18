@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản:** [BE-COM-IMP-08](../tasks/BE-COM-IMP-08.md), v1.0 ngày 12/11/2026; giữ nguyên mọi AC
-> **Ngày / người thực hiện:** 2026-11-12T19:25:26+07:00 / Codex theo yêu cầu Phương
+> **Ngày / người thực hiện:** 2026-11-12T19:25:26+07:00 / Phương (`common`)
 > **Trạng thái task:** **Blocked — W6 local readiness đã hoàn thiện; chưa có release candidate/Cloud/owner hạ tầng**
 > **Kết luận verification:** **6/10 AC Verified, 4/10 Blocked**; chưa có Cloud verification hoặc nghiệm thu W7/W8
 > **Reviewer / sign-off:** Chưa review
