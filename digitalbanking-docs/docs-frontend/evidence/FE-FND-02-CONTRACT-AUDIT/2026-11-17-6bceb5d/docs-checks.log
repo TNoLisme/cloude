@@ -1,0 +1,2 @@
+PASS: 6 Markdown files, 108 local wikilink targets, 9 pinned Git source paths, 3 relative artifacts; balanced fences
+git diff --check -- digitalbanking-docs/docs-frontend: exit 0

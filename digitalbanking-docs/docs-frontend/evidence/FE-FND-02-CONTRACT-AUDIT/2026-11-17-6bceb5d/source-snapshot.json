@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-17 Asia/Bangkok",
+  "refs": {
+    "HEAD": "6bceb5dc9f83e56530ddb04042e0eedd17ffcdcc",
+    "origin/main": "d1efbc6b89418ccd5c3c8ac9af455a71caa4ae49",
+    "origin/dev": "0371bfc5547118a6722a403d4e61f94267995f97",
+    "origin/dev2": "bb6f23f33ccdad3fedd13582c46882ed1ed85c07",
+    "origin/datht-backend-rework": "159e08fb4ab85cf67f14cc97e4dd1299adb37a70",
+    "origin/datht-identity-pr": "da4a4bae27d31c22e17e4c6cdf0947af39d0d607",
+    "origin/feature/be-trf-01-02-transfer": "a5e010c07fb0cab220822a87cb34ebeacd97cafe"
+  },
+  "initialWorkingTree": "tracker modified + evidence/FE-FND-02-DEV-REVIEW/2026-11-16-6bceb5d untracked from prior audit",
+  "level": "source/docs only; not runtime"
+}
