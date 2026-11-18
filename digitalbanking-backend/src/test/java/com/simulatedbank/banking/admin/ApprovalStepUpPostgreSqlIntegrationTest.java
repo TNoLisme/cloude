@@ -132,6 +132,7 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
     private long maker;
     private long checker;
     private long otherChecker;
+    private long nonChecker;
     private long target;
     private final ListAppender<ILoggingEvent> auditLog = new ListAppender<>();
 
@@ -141,17 +142,18 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
             jdbc.update("DELETE FROM banking.auth_challenge");
             jdbc.update("DELETE FROM banking.user_role WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con02-%')");
             jdbc.update("DELETE FROM banking.user_privilege WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con02-%')");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-con02-%'");
         });
         maker = staff("adm-con02-maker-" + suffix, "ADMIN", false);
         checker = staff("adm-con02-checker-" + suffix, "ADMIN", true);
         otherChecker = staff("adm-con02-checker2-" + suffix, "ADMIN", true);
+        nonChecker = staff("adm-con02-nochecker-" + suffix, "ADMIN", false);
         target = staff("adm-con02-target-" + suffix, "OPERATIONS", false);
         issuedOtps.clear();
         Logger logger = (Logger) LoggerFactory.getLogger("com.simulatedbank.banking.admin.AUDIT");
@@ -428,7 +430,146 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
         assertThat(auditActions()).contains("ROLE_CHANGE_REJECTED");
     }
 
+    // ------------------------------------------------------------------ 17–21. APP-02 decision gates
+
+    @Test
+    void missingChallengeIsNotAuditedAsAnAccessDenial() {
+        long approvalId = roleApproval(maker, assignRole("AUDITOR"));
+
+        expectCode(() -> decideAs(checker, approvalId, ApprovalDecision.APPROVE, "approved", null),
+                ErrorCode.STEP_UP_REQUIRED);
+
+        assertThat(status(approvalId)).isEqualTo("PENDING");
+        assertThat(challengeCount()).isEqualTo(1);
+        assertThat(auditActions()).doesNotContain("SECURITY_ACCESS_DENIED");
+    }
+
+    @Test
+    void makerSelfRejectionWithoutChallengeIsAudited() {
+        long approvalId = roleApproval(maker, assignRole("AUDITOR"));
+        authenticate(maker);
+
+        assertCode(() -> decisions.decide(new DecisionCommand(approvalId, ApprovalRequestType.ROLE_CHANGE,
+                ApprovalDecision.REJECT, "denied", null, CORRELATION, REQUEST_ID,
+                IDEMPOTENCY_KEY + "-maker-reject")), ErrorCode.ROLE_CONFLICT);
+
+        assertThat(status(approvalId)).isEqualTo("PENDING");
+        assertThat(challengeCount()).isZero();
+        assertThat(auditActions()).contains("SECURITY_ACCESS_DENIED");
+    }
+
+    @Test
+    void checkerWithoutPrivilegeIsDeniedBeforeAnyLockOrChallenge() {
+        long approvalId = roleApproval(maker, assignRole("AUDITOR"));
+        authenticate(nonChecker, Set.of("ROLE_ADMIN", "ROLE_MANAGE"));
+
+        assertCode(() -> decisions.decide(new DecisionCommand(approvalId, ApprovalRequestType.ROLE_CHANGE,
+                ApprovalDecision.APPROVE, "approved", UUID.randomUUID().toString(), CORRELATION, REQUEST_ID,
+                IDEMPOTENCY_KEY + "-no-checker")), ErrorCode.AUTH_FORBIDDEN);
+
+        assertThat(status(approvalId)).isEqualTo("PENDING");
+        assertThat(challengeCount()).isZero();
+        assertThat(recordCount()).isZero();
+        // The HTTP security chain audits the 403; the service entry point fails closed before any state.
+    }
+
+    @Test
+    void twoCheckersRacingApproveApplyTheRoleOnce() throws Exception {
+        long approvalId = roleApproval(maker, assignRole("AUDITOR"));
+        String firstChallenge = verifiedChallengeFor(checker, approvalId, ApprovalDecision.APPROVE, "approved");
+        String secondChallenge = verifiedChallengeFor(otherChecker, approvalId, ApprovalDecision.APPROVE,
+                "approved");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        try {
+            Future<ErrorCode> first = executor.submit(() -> attemptDecision(checker, approvalId,
+                    ApprovalDecision.APPROVE, "approved", firstChallenge, IDEMPOTENCY_KEY + "-checker-a",
+                    barrier));
+            Future<ErrorCode> second = executor.submit(() -> attemptDecision(otherChecker, approvalId,
+                    ApprovalDecision.APPROVE, "approved", secondChallenge, IDEMPOTENCY_KEY + "-checker-b",
+                    barrier));
+            List<ErrorCode> outcomes = java.util.Arrays.asList(first.get(20, TimeUnit.SECONDS),
+                    second.get(20, TimeUnit.SECONDS));
+
+            assertThat(outcomes).filteredOn(java.util.Objects::isNull).hasSize(1);
+            assertThat(outcomes).filteredOn(java.util.Objects::nonNull)
+                    .allMatch(code -> code == ErrorCode.APPROVAL_ALREADY_DECIDED
+                            || code == ErrorCode.INVALID_STATE_TRANSITION
+                            || code == ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
+            assertThat(status(approvalId)).isEqualTo("APPLIED");
+            assertThat(roleCodes(target)).contains("AUDITOR");
+            assertThat(version(target)).isEqualTo(1L);
+            assertThat(recordCount()).isEqualTo(1);
+            assertThat(auditActions()).filteredOn("ROLE_CHANGE_APPROVED"::equals).hasSize(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void concurrentApproveAndRejectLeaveOneTerminalDecision() throws Exception {
+        long approvalId = roleApproval(maker, assignRole("AUDITOR"));
+        String approveChallenge = verifiedChallengeFor(checker, approvalId, ApprovalDecision.APPROVE,
+                "approved");
+        String rejectChallenge = verifiedChallengeFor(otherChecker, approvalId, ApprovalDecision.REJECT,
+                "denied");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        try {
+            Future<ErrorCode> approve = executor.submit(() -> attemptDecision(checker, approvalId,
+                    ApprovalDecision.APPROVE, "approved", approveChallenge, IDEMPOTENCY_KEY + "-race-approve",
+                    barrier));
+            Future<ErrorCode> reject = executor.submit(() -> attemptDecision(otherChecker, approvalId,
+                    ApprovalDecision.REJECT, "denied", rejectChallenge, IDEMPOTENCY_KEY + "-race-reject",
+                    barrier));
+            List<ErrorCode> outcomes = java.util.Arrays.asList(approve.get(20, TimeUnit.SECONDS),
+                    reject.get(20, TimeUnit.SECONDS));
+
+            assertThat(outcomes).filteredOn(java.util.Objects::isNull).hasSize(1);
+            assertThat(outcomes).filteredOn(java.util.Objects::nonNull)
+                    .allMatch(code -> code == ErrorCode.APPROVAL_ALREADY_DECIDED
+                            || code == ErrorCode.INVALID_STATE_TRANSITION
+                            || code == ErrorCode.STEP_UP_CHALLENGE_MISMATCH);
+
+            String terminal = status(approvalId);
+            assertThat(terminal).isIn("APPLIED", "REJECTED");
+            if ("APPLIED".equals(terminal)) {
+                assertThat(roleCodes(target)).contains("AUDITOR");
+                assertThat(version(target)).isEqualTo(1L);
+                assertThat(consumed(approveChallenge)).isTrue();
+                assertThat(consumed(rejectChallenge)).isFalse();
+                assertThat(auditActions()).contains("ROLE_CHANGE_APPROVED");
+                assertThat(auditActions()).doesNotContain("ROLE_CHANGE_REJECTED");
+            } else {
+                assertThat(roleCodes(target)).doesNotContain("AUDITOR");
+                assertThat(version(target)).isZero();
+                assertThat(consumed(rejectChallenge)).isTrue();
+                assertThat(consumed(approveChallenge)).isFalse();
+                assertThat(auditActions()).contains("ROLE_CHANGE_REJECTED");
+                assertThat(auditActions()).doesNotContain("ROLE_CHANGE_APPROVED");
+            }
+            assertThat(recordCount()).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private ErrorCode attemptDecision(long actor, long approvalId, ApprovalDecision decision, String note,
+            String challengeRef, String idempotencyKey, CyclicBarrier barrier) throws Exception {
+        authenticate(actor);
+        try {
+            barrier.await(10, TimeUnit.SECONDS);
+            decisions.decide(new DecisionCommand(approvalId, ApprovalRequestType.ROLE_CHANGE, decision, note,
+                    challengeRef, CORRELATION, REQUEST_ID, idempotencyKey));
+            return null;
+        } catch (BankingBusinessException rejection) {
+            return rejection.code();
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
 
     private ErrorCode attempt(long actor, long approvalId, String challengeRef, CyclicBarrier barrier,
             String idempotencyKey) {
@@ -455,9 +596,13 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
     }
 
     private String verifiedChallenge(long approvalId, ApprovalDecision decision, String note) {
-        authenticate(checker);
+        return verifiedChallengeFor(checker, approvalId, decision, note);
+    }
+
+    private String verifiedChallengeFor(long actor, long approvalId, ApprovalDecision decision, String note) {
+        authenticate(actor);
         ChallengeView view = stepUp.requestDecisionChallenge(approvalId, decision, note, CORRELATION);
-        verifyChallenge(view.challengeRef(), checker, ChallengePurpose.SENSITIVE_ACTION);
+        verifyChallenge(view.challengeRef(), actor, ChallengePurpose.SENSITIVE_ACTION);
         return view.challengeRef();
     }
 
@@ -484,7 +629,10 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
     }
 
     private void authenticate(long userId) {
-        Set<String> claims = Set.of("ROLE_ADMIN", "ROLE_MANAGE", "CHECKER");
+        authenticate(userId, Set.of("ROLE_ADMIN", "ROLE_MANAGE", "CHECKER"));
+    }
+
+    private void authenticate(long userId, Set<String> claims) {
         var session = new SessionAuthenticator.Session(Long.toString(userId), null, claims, HASH);
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
                 session, null, claims.stream().map(SimpleGrantedAuthority::new).toList()));
@@ -542,15 +690,21 @@ class ApprovalStepUpPostgreSqlIntegrationTest {
                 Long.class, userId);
     }
 
+    private long recordCount() {
+        Long count = jdbc.queryForObject("SELECT count(*) FROM banking.admin_idempotency_record", Long.class);
+        return count == null ? 0 : count;
+    }
+
     private List<String> roleCodes(long userId) {
         return jdbc.queryForList("SELECT r.role_code FROM banking.user_role ur "
                 + "JOIN banking.role r ON r.role_id = ur.role_id WHERE ur.user_id = ?", String.class, userId);
     }
 
     private List<String> auditActions() {
-        return auditLog.list.stream().map(ILoggingEvent::getFormattedMessage)
-                .filter(message -> message.contains("action="))
-                .map(message -> message.replaceAll("(?s).*action=([A-Z_]+).*", "$1"))
+        return auditLog.list.stream()
+                .flatMap(event -> event.getKeyValuePairs().stream())
+                .filter(pair -> "action".equals(pair.key))
+                .map(pair -> String.valueOf(pair.value))
                 .toList();
     }
 

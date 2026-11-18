@@ -1,7 +1,7 @@
 # Admin module — Thiết kế triển khai (`BE-ADM-DOC-01`)
 
-> **Trạng thái:** PARTIAL — DOC-01 đã được cập nhật bởi `BE-ADM-CON-01/02/03`: Admin domain/persistence, Checker step-up, idempotency (V7) và ROLE_CHANGE proposal/decision đã triển khai; LIMIT_CHANGE proposal/approve, durable Audit và HTTP security contract đầy đủ còn BLOCKED.  
-> **Baseline:** nhánh `datht-backend-rework`; source hiện tại được rà soát để tránh lặp lại implementation đã có.  
+> **Trạng thái:** PARTIAL — DOC-01 đã được cập nhật bởi `BE-ADM-CON-01/02/03` và `BE-ADM-APP-02/03`: Admin domain/persistence, Checker step-up, idempotency (V7), ROLE_CHANGE proposal/decision, checker lock/revalidate/rollback và Identity provider integration đã triển khai; LIMIT_CHANGE proposal/approve, durable Audit và HTTP security contract đầy đủ còn BLOCKED.
+> **Baseline:** nhánh `datht-backend-rework`; source hiện tại được rà soát để tránh lặp lại implementation đã có.
 > **Thẩm quyền:** `docs-common/01–11` > `docs-common/design/` > `docs-backend/`; mâu thuẫn chưa được chốt phải đi qua owner/reviewer tương ứng.
 
 ## 1. Căn cứ và nguyên tắc nguồn
@@ -37,8 +37,9 @@ Nguồn bắt buộc:
 | Error catalog | Common đã có `APPROVAL_NOT_FOUND`, `APPROVAL_ALREADY_DECIDED`, `ROLE_CONFLICT`, `STEP_UP_*` và Problem pipeline | Không tạo error handler/catalog thứ hai; map provider outcome qua Common |
 | Step-up | `identity.api.StepUpChallengePort` có `SENSITIVE_ACTION`, binding hash/key, `consumeVerified` JOIN/MANDATORY; CON-02 đã bind Checker theo `approvalId` + canonical hash | Checker binding DONE; Maker binding trước proposal chưa chốt (`MOD-OI-10`) |
 | Role mutation | `identity.api.IdentityRoleCommand` và `IdentityRoleCommandService` đã có expected version, role mutation và session revoke | Không tạo role repository/service thứ hai trong Admin; `ApprovalDecisionService` tạo trusted command rồi gọi provider |
-| Customer lookup | Exact-ID masked `API-ADM-01` đã có nhưng data-scope staff/durable audit còn BLOCKED | Không duplicate controller/customer PII service; chỉ tích hợp sau khi scope contract được chốt |
-| Account/Limit/Audit | Chưa có runtime đủ cho Admin production path | Dùng provider contract fixture chỉ ở test; không fake production |
+| Customer lookup | Exact-ID masked `API-ADM-01` (Customer adapter) đã kiểm chứng trên PostgreSQL/HTTP thật; `403`+C3 cho CUSTOMER/thiếu quyền, `404 CUSTOMER_NOT_FOUND`; data-scope staff/durable audit còn BLOCKED | Không duplicate controller/customer PII service; integration là provider-owned route + `customer.api` (BE-ADM-API-04) |
+| Account lookup | `API-ADM-02` (Account adapter) masked list/status/ownership runtime thật; `404 CUSTOMER_NOT_FOUND` qua `customer.api.CustomerQuery.findByCustomerId`; staff data scope BLOCKED | Không đọc bảng account từ Admin/Customer; provider contract thật, không fake production (BE-ADM-API-04) |
+| Limit/Audit | Limit provider và durable `AuditModuleApi` vẫn chưa có runtime | Dùng provider contract fixture chỉ ở test; không fake production bean |
 | Tests | CON-01: 29 test Admin/migration; CON-02: 31 test step-up/decision (7 unit binding, 7 unit gate, 17 PostgreSQL/Identity) pass | Bổ sung HTTP/limit/durable-audit tests khi contract gate mở |
 
 ## 3. Scope và trách nhiệm
@@ -123,9 +124,9 @@ Theo `04 §4.5.3`, Admin là write-owner của bảng sau; entity không lộ qu
 | `correlation_id` | Bắt buộc, tối đa 64, không PII |
 | `created_at` / `decided_at` / `applied_at` | UTC `TIMESTAMPTZ`; invariant timestamp theo status |
 
-Index bắt buộc: status+created time, type+status, target, maker, checker. Không hard delete. Partial unique index cho một request `PENDING` trên cùng logical target/type theo overview phải được DB owner chốt cách biểu diễn; không dựa vào application pre-check để chống race.
+Index bắt buộc theo `04` §4.5.3: status+created time, type+status, target, maker, checker; **không** có partial index và không có unique constraint ngoài PK. `ADM-OI-03` (partial unique PENDING trên logical target) là extension ngoài canonical, chưa được DB owner duyệt; nếu duyệt phải thêm migration mới (`V8`), không sửa `V6`. Không dựa vào application pre-check để chống race.
 
-**Đã triển khai:** `V6__create_approval_request_table.sql` + `ApprovalRequestEntity`/`ApprovalRequestJpaRepository`/`JpaApprovalRequestStore`. Constraint/index đúng bảng trên; typed payload JSONB dùng `LimitChangePayload`/`RoleChangePayload`. Chưa có `result`/`idempotency`/version column.
+**Đã triển khai (DB-01):** `V6__create_approval_request_table.sql` + `ApprovalRequestEntity`/`ApprovalRequestJpaRepository`/`JpaApprovalRequestStore`; fresh PostgreSQL 16 metadata + positive/negative tests PASS (`ApprovalRequestV6MigrationPostgreSqlIntegrationTest`). Constraint/index đúng bảng trên; typed payload JSONB dùng `LimitChangePayload`/`RoleChangePayload`. Chưa có `result`/`idempotency`/version column.
 
 ### 6.2. Mâu thuẫn schema — trạng thái sau CON-01
 
@@ -185,7 +186,8 @@ Hợp đồng đầy đủ nằm tại `07 §5.6`; quyết định tại `DEC-AD
    `RECEIVED` không bao giờ bị purge. Record hết hạn vẫn replay cho tới khi purge.
 
 Maker step-up bind `bindingKey=Idempotency-Key` + proposal hash; Checker decision giữ bind `approvalId` của
-CON-02. `LIMIT_CHANGE` proposal/approve vẫn fail-closed 503 vì Limit provider chưa có (`ADM-OI-05`).
+CON-02. `LIMIT_CHANGE` proposal/approve chạy thật qua `limit.api.LimitConfigMutationPort` từ BE-ADM-INT-01
+(`PENDING_APPROVAL`/`ACTIVE`/`SUPERSEDED`/`REJECTED`, `expectedVersion`); policy numeric vẫn chờ OI-API-05.
 
 ## 8. Workflow admin end-to-end
 
@@ -252,6 +254,8 @@ Bất biến:
 
 Read API chỉ dùng transaction read-only, page/sort whitelist và actor scope. Maker chỉ thấy request của mình; Checker/Operations/Admin thấy request được policy cho phép. Không join entity chéo trong write path. Customer/account lookup gọi provider public contract, không lộ approval payload hoặc bypass scope.
 
+**Đã triển khai persistence (`BE-ADM-DB-02`):** `ApprovalQueryService` (`@Transactional(readOnly = true)`) + `ApprovalRequestReader`/`JpaApprovalRequestReader`; list trả `ApprovalPage<ApprovalSummaryProjection>` bằng constructor projection **không đọc JSONB `payload`**, detail trả `ApprovalDetailProjection` với payload typed đã mask/bỏ `expectedVersion`. Filter `requestType/status/makerId/checkerId/from` (inclusive)/`to` (exclusive), `page` 0-based mặc định 0, `size` 1–100 mặc định 20, sort whitelist duy nhất `createdAt` (mặc định `desc`, tie-breaker `approvalId`). Sort/filter sai → `400 VALIDATION_ERROR`; page vượt cuối trả `items: []`. **Đã mở REST (`BE-ADM-API-03`, 18/11/2026):** `ApprovalAdminController` cho `API-APR-01/02`; scope server-side theo `DEC-ADM-009` (maker thấy request của mình; checker thấy loại mình được duyệt) nằm trong JPQL cùng filter và `countQuery`; detail ngoài scope = `404 APPROVAL_NOT_FOUND`; read-only, không audit C2/C3 thường. `ApprovalDetail.result` chưa có nguồn persist canonical (`ADM-OI-11`); phân công checker/tenant vẫn mở (`ADM-OI-06`).
+
 ## 9. Validation, control và failure handling
 
 | Điểm | Kiểm soát | Failure behavior |
@@ -293,6 +297,10 @@ Read API chỉ dùng transaction read-only, page/sort whitelist và actor scope.
 | `SECURITY_ACCESS_DENIED` | C3 | Permission/scope/maker-checker deny sau auth | Standalone; fallback log/metric/alert |
 
 Audit facts tối thiểu: actor, role snapshot, action, entity `APPROVAL_REQUEST`, approval ID, target type/id, before/after đã mask, outcome, correlation ID, request ID, timestamp. Identity không tự ghi duplicate `ROLE_CHANGE_*`; Admin là orchestrator ghi event cuối theo contract. Không audit validation error trước khi có state, read approval thường hoặc health/metrics.
+
+**Đã triển khai (APP-04 → INT-01, 18/11/2026):** `AdminAuditPort` là boundary duy nhất; C2 (`recordInTransaction`) là write cuối transaction quyết định và fail-closed, C3 (`recordStandalone`) best-effort nhưng phát `admin.audit.failures` + `SECURITY_AUDIT_WRITE_FAILED`. Từ BE-ADM-INT-01 adapter production là `DurableAdminAuditAdapter` gọi `audit.api.AuditModuleApi` ghi `banking.audit_log` append-only + hash chain (V10); structured log `SECURITY_AUDIT`/metric `admin.audit.events{action,class,outcome}` chỉ là mirror sau commit. C3 từ security chain dùng entity `APPROVAL_REQUEST` cho `/api/v1/admin/{limits|roles|approvals}[/{id}][/approve]`; 401/428 không audit. Chi tiết: [BE-ADM-APP-04.md](BE-ADM-APP-04.md), [BE-ADM-INT-01.md](BE-ADM-INT-01.md).
+
+**Đã triển khai (SEC-02, 18/11/2026):** `ApiSecurityHeadersFilter` bổ sung `Expires: 0` cạnh `Cache-Control: no-store`/`Pragma: no-cache`; `CorrelationAndRequestIdFilter` trả `X-Request-ID` server-generated (không nhận từ client). `AdminPayloadJsonCodec.publicPayload` và `AdminApprovalView` scrub free-text `reason`/`decisionNote`/payload/result bằng `LogRedaction` (bỏ `expectedVersion`, không echo assignment secret); `ApprovalDecisionService` ghi đúng một C3 khi provider trả `ROLE_CONFLICT` (stale version). Regression: `AdminHttpAuditPostgreSqlIntegrationTest` 9, `AdminDtoValidationTest` 6, `ApprovalDecisionServiceTest` 14. Chi tiết: [BE-ADM-SEC-02.md](BE-ADM-SEC-02.md), [BE-ADM-TST-01.md](BE-ADM-TST-01.md).
 
 ## 11. Package/code plan phù hợp architecture
 
@@ -338,6 +346,8 @@ REST DTO, entity, domain value và provider DTO phải tách biệt. Application
 - **Failure/recovery:** DB outage, provider timeout, audit C2 failure, response timeout after commit, crash before/after approval commit; retry semantics theo idempotency decision.
 - **Observability:** bounded metrics (không userId/approvalId/correlation làm label), structured logs có correlation/request/error, security fallback khi C3 audit fail.
 
+**Đã triển khai (TST-02/TST-03, 18/11/2026):** `AdminPersistencePostgreSqlIntegrationTest` (6 test) phủ duplicate PENDING canonical, unique idempotency scope, FK rollback/no-partial, CHECK không mutate row và C2 audit rollback + retry; `AdminConcurrencyPostgreSqlIntegrationTest` (4 test) dùng connection/transaction độc lập + `CyclicBarrier` cho same key/khác hash, hai PENDING cùng target, hai PENDING apply race và một challenge một consumer. Chi tiết: [BE-ADM-TST-02.md](BE-ADM-TST-02.md), [BE-ADM-TST-03.md](BE-ADM-TST-03.md).
+
 ### 12.2. Acceptance gate cho release Admin
 
 1. Contract API + OpenAPI + error catalog + idempotency semantics được API/BA/Security review.
@@ -355,11 +365,11 @@ REST DTO, entity, domain value và provider DTO phải tách biệt. Application
 |---|---|---:|---|---|
 | `ADM-OI-01` | Step-up Maker theo `07` xảy ra trước approval nhưng Identity binding cho Admin nêu `approvalId` | P0 | API, Identity, Security, Admin | **Đã xử lý bởi CON-03:** binding `SENSITIVE_ACTION` với `bindingKey=Idempotency-Key` + `ADM-PROPOSAL-STEPUP-V1` proposal hash; API/OpenAPI/§5.6 đồng bộ; owner review vẫn cần ký |
 | `ADM-OI-02` | Idempotency Admin proposal/decision (`OI-API-19`) | P0 | API, DB, BA, Admin | **Đã xử lý bởi CON-03:** V7 unique scope, canonical hash, insert-first, replay/conflict/in-progress, TTL/purge, concurrent tests; LIMIT proposal/approve vẫn phụ thuộc `ADM-OI-05` |
-| `ADM-OI-03` | `approval_request` overview vs `04`: UUID/BIGINT, EXPIRED, expiry/challenge columns | P0 | DB, API, Security, Architect | **Đã chốt CON-01:** `04` canonical, V6; reviewer DB/Architect vẫn cần ký |
+| `ADM-OI-03` | `approval_request` overview vs `04`: UUID/BIGINT, EXPIRED, expiry/challenge columns | P0 | DB, API, Security, Architect | **Đã chốt CON-01/DB-01:** `04` canonical, `V6` verified trên fresh PostgreSQL; partial unique PENDING không thuộc canonical, nếu duyệt cần migration mới; reviewer DB/Architect vẫn cần ký |
 | `ADM-OI-04` | Persist `APPROVED` hay synchronous `APPLIED` | P0 | Admin, Limit, Identity, Architect | **Đã chốt CON-01:** synchronous `APPLIED`; `APPROVED` schema-reserved; recovery async chưa mở |
-| `ADM-OI-05` | Limit `expectedVersion` và current snapshot chưa có input public rõ | P0 | Limit, Admin, API | Payload schema đã có ở CON-01; còn provider apply/version/current snapshot + stale test |
+| `ADM-OI-05` | Limit `expectedVersion` và current snapshot chưa có input public rõ | P0 | Limit, Admin, API | **Đã xử lý runtime bởi INT-01:** `LimitConfigMutationPort` + `limit_config` V9, version/current/policy re-check dưới lock, stale test. Còn OPEN: **giá trị numeric policy** (OI-API-05) và sign-off Limit owner |
 | `ADM-OI-06` | Staff data scope cho customer/account/approval chưa có authoritative model | P1 | Admin, Security, BA, Customer, Account | Scope contract, permission/purpose, anti-enumeration và tests |
-| `ADM-OI-07` | Durable AuditModuleApi/audit_log/hash chain chưa có runtime | P0 | Audit, Admin, Security | C2/C3 provider thật + rollback/fallback evidence |
+| `ADM-OI-07` | Durable AuditModuleApi/audit_log/hash chain chưa có runtime | P0 | Audit, Admin, Security | **Đã xử lý runtime bởi INT-01:** `AuditModuleApi` + `audit_log` V10 (append-only, advisory lock, SHA-256 JCS chain), C2 rollback/C3 fallback evidence; search/export/retention vẫn thuộc task Audit |
 | `ADM-OI-08` | Retention/legal-hold workflow/API còn `OI-API-07` | P2 | Audit, Admin, BA | Contract riêng trước khi mở request type/API |
 | `ADM-OI-09` | User/staff lookup cho role proposal chưa có API (`OI-API-18`) | P1 | Identity, Admin, API | Approved read contract hoặc server-side selection policy; không query chéo bảng |
 | `ADM-OI-10` | Limit/Account/Fraud runtime chưa đủ trên baseline | P0/P1 | Provider owners | Contract test → integration thật; fixture không được đóng gate |
@@ -371,7 +381,7 @@ REST DTO, entity, domain value và provider DTO phải tách biệt. Application
 - **Gate B — Data:** canonical DDL/migration/idempotency decision, entity/repository/constraints/indexes, migration tests. **CON-01: DDL canonical + entity/repository + V6 fresh test DONE; idempotency BLOCKED.**
 - **Gate C — Core approval:** proposal service, typed payload, lock/state machine, step-up consume, idempotency, audit port; unit + PostgreSQL transaction tests. **CON-01: typed payload + lock/state machine DONE; service/step-up/idempotency/audit BLOCKED.**
 - **Gate D — Provider integration:** Limit/Identity/Audit thật; rollback/concurrency/session revoke; không fake production. **Identity DONE; Limit/Audit BLOCKED.**
-- **Gate E — REST/read/security:** controllers, Problem mapping, Customer/Account scope, response/log masking, contract/security tests. **Chưa mở.**
-- **Gate F — Recovery/release:** timeout/crash/retry evidence, observability, OpenAPI validation, AC-028/09 test evidence và owner sign-off. **Chưa mở.**
+- **Gate E — REST/read/security:** controllers, Problem mapping, Customer/Account scope, response/log masking, contract/security tests. **Đã mở (18/11/2026): API-01..04, SEC-01/02, TST-01..05 có evidence; tenant scope `ADM-OI-06` vẫn BLOCKED.**
+- **Gate F — Recovery/release:** timeout/crash/retry evidence, observability, OpenAPI validation, AC-028 test evidence và owner sign-off. **Technical evidence PASS (18/11/2026); owner sign-off PENDING → gate BLOCKED.** Xem [BE-ADM-REL-01.md](BE-ADM-REL-01.md).
 
 Thứ tự này là dependency plan, không phải tuyên bố runtime đã sẵn sàng.

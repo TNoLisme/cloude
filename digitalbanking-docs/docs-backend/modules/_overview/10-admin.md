@@ -19,22 +19,34 @@ Module `admin` cung cấp các chức năng vận hành dành cho nhân viên ng
 
 ## 2. Dữ liệu Sở hữu Độc quyền (`Write-Owner` trong Schema `banking`)
 
-Module `admin` sở hữu độc quyền bảng **`banking.approval_request`** (`04. Database design & analysis.md` §4.5.3, migration `V9` theo `DEC-COM-001`):
+Module `admin` sở hữu độc quyền bảng **`banking.approval_request`**. **Nguồn chuẩn (canonical) là `docs-common/04. Database design & analysis.md` §4.5.3; tài liệu này đã được đối chiếu và xóa bỏ các cột/trạng thái chỉ có trong bản nháp overview.**
 
 | Cột chính | Kiểu & Ràng buộc | Quy tắc & Bất biến Maker-Checker |
 |---|---|---|
-| `approval_request_id` | `BIGINT GENERATED ALWAYS AS IDENTITY PK` | Định danh yêu cầu phê duyệt. |
-| `request_type` | `VARCHAR(32) NOT NULL CHECK IN ('LIMIT_CHANGE','ROLE_CHANGE','LEGAL_HOLD_RELEASE', ...)` | Loại thay đổi nhạy cảm cần kiểm soát kép. |
-| `target_type`, `target_id` | `VARCHAR(32) NOT NULL`, `VARCHAR(64) NOT NULL` | Đối tượng chịu tác động (`LIMIT_CONFIG`, `APP_USER`, ...) và định danh mục tiêu. |
-| `payload` | `JSONB NOT NULL` | Chi tiết đề xuất thay đổi (chứa cả snapshot trước, phiên bản `expectedVersion` và giá trị đề xuất mới). |
-| `status` | `VARCHAR(16) NOT NULL CHECK IN ('PENDING','APPROVED','REJECTED','APPLIED','CANCELLED')` | Trạng thái vòng đời yêu cầu phê duyệt (`04` §4.5.3). Khi Checker duyệt và áp dụng thành công trong cùng giao dịch, trạng thái chuyển sang `APPLIED` (`DEC-ID-011`). |
-| `maker_user_id`, `maker_reason` | `BIGINT NOT NULL FK -> app_user`, `VARCHAR(500)` | Nhân viên khởi tạo đề xuất (`Maker`) và lý do đề xuất. |
-| `checker_user_id`, `checker_reason` | `BIGINT NULL FK -> app_user`, `VARCHAR(500)` | Nhân viên phê duyệt/từ chối (`Checker`, bắt buộc có đặc quyền `CHECKER`) và lý do quyết định. |
-| `step_up_challenge_id` | `BIGINT NULL FK -> auth_challenge` | Challenge Step-up (`purpose = 'SENSITIVE_ACTION'`) bắt buộc khi thực hiện thao tác nhạy cảm. |
-| `correlation_id`, `created_at`, `decided_at`, `applied_at` | `VARCHAR(64)`, `TIMESTAMPTZ` | Mã truy vết và các mốc thời gian tạo, quyết định và áp dụng. |
+| `approval_id` | `BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY` | Định danh yêu cầu phê duyệt. API serialize dạng chuỗi `ID`. |
+| `request_type` | `VARCHAR(32) NOT NULL CHECK ('LIMIT_CHANGE','ROLE_CHANGE','RETENTION_HOLD','RETENTION_POLICY_CHANGE')` | Loại thay đổi nhạy cảm cần kiểm soát kép. |
+| `target_type` | `VARCHAR(32) NOT NULL CHECK ('CUSTOMER','ACCOUNT','APP_USER','DATA_SCOPE','RETENTION_POLICY')` | Loại đối tượng chịu tác động. |
+| `target_id` | `VARCHAR(64) NOT NULL CHECK (length 1–64)` | ID đối tượng chịu tác động. |
+| `payload` | `JSONB NOT NULL` | Chi tiết đề xuất thay đổi theo `request_type`; không chứa secret/full PII. |
+| `status` | `VARCHAR(16) NOT NULL DEFAULT 'PENDING' CHECK ('PENDING','APPROVED','REJECTED','APPLIED','CANCELLED')` | Trạng thái vòng đợi yêu cầu phê duyệt. |
+| `maker_id` | `BIGINT NOT NULL FK -> app_user` | Nhân viên khởi tạo đề xuất (`Maker`). |
+| `checker_id` | `BIGINT NULL FK -> app_user` | Nhân viên phê duyệt/từ chối (`Checker`). |
+| `decision_note` | `VARCHAR(500) NULL` | Lý do quyết định của Checker (hoặc lý do đề xuất do Maker ghi trong `payload`). |
+| `correlation_id` | `VARCHAR(64) NOT NULL` | Trace ID xuyên request → approval → provider → audit. |
+| `created_at` | `TIMESTAMPTZ NOT NULL DEFAULT now()` | Thờ điểm tạo. |
+| `decided_at` | `TIMESTAMPTZ NULL` | Thờ điểm quyết định; bắt buộc với `APPROVED`/`REJECTED`/`APPLIED`. |
+| `applied_at` | `TIMESTAMPTZ NULL` | Thờ điểm áp dụng; bắt buộc với `APPLIED`. |
 
-- **Database Constraint bảo vệ nguyên tắc 4 mắt (`INV-MC-01`):** `CHECK (checker_user_id IS NULL OR maker_user_id <> checker_user_id)`.
-- **Partial Unique Index chống đề xuất trùng lặp:** Chỉ cho phép tối đa 1 yêu cầu `status = 'PENDING'` trên cùng một `(request_type, target_type, target_id)`.
+**Những cột KHÔNG có trong schema chuẩn (đã loại bỏ khỏi overview):**
+- `UUID` cho `approval_id`: canonical chọn `BIGINT` theo `04` §4.5.3.
+- `EXPIRED` status: canonical 5 giá trị; hết hạn challenge do `auth_challenge.expires_at` kiểm soát, không phải trạng thái approval.
+- `expires_at` trên `approval_request`: không có trong `04` §4.5.3.
+- `step_up_challenge_id` FK trên `approval_request`: challenge binding được thực hiện qua `auth_challenge.idempotency_key`/`request_hash` (Checker bind `approvalId` + decision hash) theo `BE-ADM-CON-02/03`; không thêm cột FK vào bảng Admin.
+- `maker_reason`/`checker_reason`: lý do đề xuất nằm trong `payload`; lý do quyết định là cột `decision_note`.
+
+- **Database Constraint bảo vệ nguyên tắc 4 mắt (`INV-MC-01`):** `CHECK (checker_id IS NULL OR maker_id <> checker_id)`.
+- **Constraint bất biến timestamp:** `status IN ('APPROVED','REJECTED','APPLIED')` ⇒ `checker_id IS NOT NULL AND decided_at IS NOT NULL`; `status='APPLIED'` ⇒ `applied_at IS NOT NULL`.
+- **Partial Unique Index chống đề xuất trùng lặp:** Chưa được duyệt (`ADM-OI-03`); cần DB owner phê duyệt trước khi thêm vào migration. Hiện tại race được xử lý bằng `SELECT … FOR UPDATE` và idempotency key scope (`BE-ADM-CON-03`).
 
 ---
 
@@ -65,11 +77,7 @@ Module `admin` đóng vai trò điều phối ứng dụng quản trị và gọ
 
 ## 5. Danh sách Công việc & Trạng thái Triển khai
 
-1. [x] Chốt đặc tả phối hợp tích hợp giữa `admin`, `fraud`, `audit` và `identity` (`BE-ADM-01`, `DEC-ID-011`). Phía `identity` đã hoàn tất `IdentityRoleCommandService` và kiểm thử 45 kịch bản phân quyền/thu hồi phiên (`BE-ID-IMP-11`).
-2. [ ] Hiện thực migration `V9` (phần bảng `banking.approval_request`), `ApprovalRequestEntity` và `ApprovalJdbcRepository` với khóa `SELECT ... FOR UPDATE NOWAIT` (`design/02` Pattern A.14).
-3. [ ] Hiện thực `MakerCheckerApprovalService` cưỡng chế kiểm tra `maker_user_id != checker_user_id`, kiểm tra trạng thái `PENDING`, tích hợp `StepUpChallengePort` (`SENSITIVE_ACTION`), `IdentityRoleCommand` và `LimitConfigMutationPort` (`design/02` Pattern B.7).
-4. [ ] Hiện thực các REST Controller quản trị (`API-LIM-02/03`, `API-ROL-01/02`, `API-APR-01/02`, `API-ADM-01/02`) và bộ kiểm thử tích hợp `AC-028` & `CT-API-016` (Maker tự duyệt nhận `409 ROLE_CONFLICT`; Checker thiếu Step-up nhận `428`; hai Checker bấm duyệt cùng lúc chỉ 1 người thành công nhờ `FOR UPDATE NOWAIT`).
-
-**Tài liệu chi tiết module `admin`:**
-- [Chỉ mục Module Admin](../admin/README.md)
-- [BE-ADM-01 — Đề xuất & Hợp đồng Tích hợp Admin – Fraud – Audit](../admin/BE-ADM-01-fraud-audit-integration.md) ([Báo cáo kiểm chứng](../admin/BE-ADM-01-verification-report.md))
+1. [x] Hiện thực `ApprovalRequestEntity`/`ApprovalRequestJpaRepository`/`JpaApprovalRequestStore` với `SELECT ... FOR UPDATE` **chờ** (`PESSIMISTIC_WRITE`, không `NOWAIT`/`SKIP LOCKED`) theo `DEC-ADM-005`; lock timeout `55P03` map `503`.
+2. [x] Hiện thực `ApprovalDecisionService` cưỡng chế `maker_id != checker_id`, trạng thái `PENDING`, Maker–Checker/self-target, Step-up `SENSITIVE_ACTION` single-use và provider JOIN.
+3. [x] Hiện thực controller `RoleAdminController`, `LimitAdminController`, `ApprovalAdminController` và các route provider-owned Customer/Account theo `07`/OpenAPI.
+4. [x] Viết bộ test `AC-028`: `AdminAc028AcceptancePostgreSqlIntegrationTest` 4 test (approve → áp dụng role/limit; reject → không áp dụng; maker = checker bị chặn `409 ROLE_CONFLICT`; audit C2/C3), cùng `ApprovalStepUpPostgreSqlIntegrationTest` (428, race hai checker) và `AdminSecurityMatrixPostgreSqlIntegrationTest`. Ghi nhận: canonical dùng `409 ROLE_CONFLICT`, không phải `403 MAKER_CHECKER_VIOLATION`; lock chờ, không `NOWAIT` (`DEC-ADM-005`).

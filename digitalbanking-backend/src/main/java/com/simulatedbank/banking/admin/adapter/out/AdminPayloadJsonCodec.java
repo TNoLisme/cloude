@@ -10,6 +10,7 @@ import com.simulatedbank.banking.admin.domain.LimitChangePayload;
 import com.simulatedbank.banking.admin.domain.RoleChangeOperation;
 import com.simulatedbank.banking.admin.domain.RoleChangePayload;
 import com.simulatedbank.banking.common.crypto.JcsCanonicalizer;
+import com.simulatedbank.banking.common.logging.LogRedaction;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -57,9 +58,12 @@ class AdminPayloadJsonCodec implements ApprovalPayloadCanonicalizer, ApprovalPay
     @Override
     public Map<String, Object> publicPayload(ChangePayload payload) {
         Map<String, Object> values = new LinkedHashMap<>(encode(payload));
-        if (payload instanceof RoleChangePayload) {
-            values.remove("expectedVersion");
-        }
+        // Provider-captured version state is persisted for concurrency control but is not a client field.
+        values.remove("expectedVersion");
+        // Defence-in-depth: free-text fields (reason, and future payload fields) must never echo a
+        // credential/OTP/token assignment even if input validation missed it. The same central rule used
+        // for logs/audit is applied here; approved business fields are unchanged.
+        values.replaceAll((key, value) -> value instanceof String text ? LogRedaction.redactText(text) : value);
         return Collections.unmodifiableMap(values);
     }
 
@@ -73,6 +77,7 @@ class AdminPayloadJsonCodec implements ApprovalPayloadCanonicalizer, ApprovalPay
                 values.put("dailyLimit", limit.dailyLimit().toPlainString());
                 values.put("currency", limit.currency());
                 values.put("effectiveFrom", limit.effectiveFrom() == null ? null : limit.effectiveFrom().toString());
+                values.put("expectedVersion", limit.expectedVersion());
                 values.put("reason", limit.reason());
             }
             case RoleChangePayload role -> {
@@ -100,7 +105,8 @@ class AdminPayloadJsonCodec implements ApprovalPayloadCanonicalizer, ApprovalPay
                         money(values, "dailyLimit"),
                         string(values, "currency"),
                         instant(values, "effectiveFrom"),
-                        string(values, "reason"));
+                        string(values, "reason"),
+                        optionalNumber(values, "expectedVersion"));
                 case ROLE_CHANGE -> new RoleChangePayload(
                         RoleChangeOperation.valueOf(requiredString(values, "operation")),
                         id(values, "targetUserId"),
@@ -125,6 +131,19 @@ class AdminPayloadJsonCodec implements ApprovalPayloadCanonicalizer, ApprovalPay
 
     private static long number(Map<String, Object> values, String field) {
         Object value = required(values, field);
+        if (value instanceof Integer || value instanceof Long || value instanceof Short
+                || value instanceof BigInteger) {
+            return ((Number) value).longValue();
+        }
+        throw new IllegalArgumentException();
+    }
+
+    /** Server-captured version; absent in rows written before the field existed (treated as 0). */
+    private static long optionalNumber(Map<String, Object> values, String field) {
+        Object value = values.get(field);
+        if (value == null) {
+            return 0L;
+        }
         if (value instanceof Integer || value instanceof Long || value instanceof Short
                 || value instanceof BigInteger) {
             return ((Number) value).longValue();

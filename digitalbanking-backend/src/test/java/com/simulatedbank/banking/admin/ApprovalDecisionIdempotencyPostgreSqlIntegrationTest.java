@@ -2,10 +2,14 @@ package com.simulatedbank.banking.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.simulatedbank.banking.admin.application.AdminAuditPort;
 import com.simulatedbank.banking.admin.application.AdminIdempotencyService;
 import com.simulatedbank.banking.admin.application.AdminRequestHasher;
 import com.simulatedbank.banking.admin.application.ApprovalDecisionService;
@@ -61,6 +65,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -77,7 +82,7 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
     private static final String REQUEST_ID = "6a1c2e3f-4b5d-4e6f-8a9b-0c1d2e3f4a5b";
     private static final String HASH = "a".repeat(64);
     private static final Set<String> CHECKER_AUTHORITIES =
-            Set.of("ROLE_ADMIN", "ROLE_MANAGE", "CHECKER");
+            Set.of("ROLE_ADMIN", "ROLE_MANAGE", "LIMIT_MANAGE", "CHECKER");
 
     @Container
     static final PostgreSQLContainer<?> postgres =
@@ -124,6 +129,7 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private Deque<String> issuedOtps;
+    @MockitoSpyBean private AdminAuditPort audit;
 
     private TransactionTemplate tx;
     private long maker;
@@ -131,6 +137,7 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
     private long otherChecker;
     private long target;
     private long otherTarget;
+    private long customerId;
     private final ListAppender<ILoggingEvent> auditLog = new ListAppender<>();
 
     @BeforeEach
@@ -139,18 +146,29 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
+            jdbc.update("DELETE FROM banking.limit_config");
             jdbc.update("DELETE FROM banking.approval_request");
             jdbc.update("DELETE FROM banking.auth_challenge");
             jdbc.update("DELETE FROM banking.user_role WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con03d-%')");
             jdbc.update("DELETE FROM banking.user_privilege WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con03d-%')");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-con03d-%'");
             maker = staff("adm-con03d-maker-" + suffix, "ADMIN", false);
             checker = staff("adm-con03d-checker-" + suffix, "ADMIN", true);
             otherChecker = staff("adm-con03d-checker2-" + suffix, "ADMIN", true);
             target = staff("adm-con03d-target-" + suffix, "OPERATIONS", false);
             otherTarget = staff("adm-con03d-target2-" + suffix, "OPERATIONS", false);
+            jdbc.update("INSERT INTO banking.app_user (username, password_hash, user_type, status) "
+                    + "VALUES (?, 'synthetic-not-a-real-hash', 'CUSTOMER', 'ACTIVE')",
+                    "adm-con03d-customer-" + suffix);
+            long customerUser = jdbc.queryForObject(
+                    "SELECT user_id FROM banking.app_user WHERE username = ?", Long.class,
+                    "adm-con03d-customer-" + suffix);
+            customerId = jdbc.queryForObject(
+                    "INSERT INTO banking.customer (user_id, full_name_enc, status) "
+                            + "VALUES (?, ?, 'ACTIVE') RETURNING customer_id",
+                    Long.class, customerUser, new byte[] {1, 2, 3});
         });
         issuedOtps.clear();
         Logger logger = (Logger) LoggerFactory.getLogger("com.simulatedbank.banking.admin.AUDIT");
@@ -161,6 +179,7 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
 
     @AfterEach
     void tearDown() {
+        reset(audit);
         Logger logger = (Logger) LoggerFactory.getLogger("com.simulatedbank.banking.admin.AUDIT");
         logger.detachAppender(auditLog);
         SecurityContextHolder.clearContext();
@@ -344,29 +363,40 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
     }
 
     @Test
-    void limitApproveFailsClosedAndRejectIsIdempotent() {
+    @SuppressWarnings("unchecked")
+    void limitApproveAppliesOnceAndRejectIsIdempotent() {
         long approvalId = limitApproval();
         String approveKey = "key-limit-approve";
         String approveChallenge = verifiedChallenge(checker, approvalId, ApprovalDecision.APPROVE, "approved");
 
-        assertCode(() -> decideAs(checker, approvalId, ApprovalRequestType.LIMIT_CHANGE,
-                ApprovalDecision.APPROVE, "approved", approveChallenge, approveKey),
-                ErrorCode.SERVICE_UNAVAILABLE);
-        assertThat(status(approvalId)).isEqualTo("PENDING");
-        assertThat(recordCount()).isZero();
-        assertThat(challengeStatus(approveChallenge)).isEqualTo("VERIFIED");
+        DecisionResult applied = decideAs(checker, approvalId, ApprovalRequestType.LIMIT_CHANGE,
+                ApprovalDecision.APPROVE, "approved", approveChallenge, approveKey);
+        assertThat(applied.approval().status()).isEqualTo(ApprovalStatus.APPLIED);
+        assertThat((Map<String, Object>) applied.responseBody().get("result"))
+                .containsEntry("version", 1).containsEntry("perTransactionLimit", "5000000.00");
+        assertThat(limitStatus(approvalId)).isEqualTo("ACTIVE");
+        assertThat(recordCount()).isEqualTo(1);
 
+        DecisionResult replay = decideAs(checker, approvalId, ApprovalRequestType.LIMIT_CHANGE,
+                ApprovalDecision.APPROVE, "approved", null, approveKey);
+        assertThat(replay.replayed()).isTrue();
+        assertThat(recordCount()).isEqualTo(1);
+        assertThat(limitStatus(approvalId)).isEqualTo("ACTIVE");
+
+        long rejectId = limitApproval();
         String rejectKey = "key-limit-reject";
-        String rejectChallenge = verifiedChallenge(checker, approvalId, ApprovalDecision.REJECT, "denied");
-        DecisionResult rejected = decideAs(checker, approvalId, ApprovalRequestType.LIMIT_CHANGE,
+        String rejectChallenge = verifiedChallenge(checker, rejectId, ApprovalDecision.REJECT, "denied");
+        DecisionResult rejected = decideAs(checker, rejectId, ApprovalRequestType.LIMIT_CHANGE,
                 ApprovalDecision.REJECT, "denied", rejectChallenge, rejectKey);
         assertThat(rejected.approval().status()).isEqualTo(ApprovalStatus.REJECTED);
         assertThat(rejected.responseBody()).doesNotContainKey("result");
+        assertThat(limitStatus(rejectId)).isEqualTo("REJECTED");
+        assertThat(recordCount()).isEqualTo(2);
 
-        DecisionResult replay = decideAs(checker, approvalId, ApprovalRequestType.LIMIT_CHANGE,
+        DecisionResult rejectReplay = decideAs(checker, rejectId, ApprovalRequestType.LIMIT_CHANGE,
                 ApprovalDecision.REJECT, "denied", null, rejectKey);
-        assertThat(replay.replayed()).isTrue();
-        assertThat(recordCount()).isEqualTo(1);
+        assertThat(rejectReplay.replayed()).isTrue();
+        assertThat(recordCount()).isEqualTo(2);
     }
 
     @Test
@@ -412,6 +442,25 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
         assertThat(version(target)).isEqualTo(1L);
     }
 
+    @Test
+    void c2AuditFailureRollsBackApprovalProviderAndChallengeConsumption() {
+        long approvalId = roleApproval(target, 0L);
+        String key = "key-audit-fail";
+        String challenge = verifiedChallenge(checker, approvalId, ApprovalDecision.APPROVE, "approved");
+        doThrow(new IllegalStateException("C2 audit unavailable")).when(audit).recordInTransaction(any());
+
+        assertThatThrownBy(() -> decideAs(checker, approvalId, ApprovalRequestType.ROLE_CHANGE,
+                ApprovalDecision.APPROVE, "approved", challenge, key))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("C2 audit unavailable");
+
+        assertThat(status(approvalId)).isEqualTo("PENDING");
+        assertThat(recordCount()).isZero();
+        assertThat(challengeStatus(challenge)).isEqualTo("VERIFIED");
+        assertThat(version(target)).isZero();
+        assertThat(roleCodes(target)).doesNotContain("AUDITOR");
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private DecisionResult decideAs(long actor, long approvalId, ApprovalRequestType type,
@@ -442,13 +491,34 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
         return id;
     }
 
+    /**
+     * Real LIMIT_CHANGE approval: a pending limit configuration exists in the same schema as the Maker proposal
+     * would create it, so the provider can apply/reject it. The expected version is the ACTIVE version at
+     * proposal time.
+     */
     private long limitApproval() {
-        Long id = tx.execute(status -> approvals.insert(ApprovalRequest.propose(
-                new LimitChangePayload(2001L, null, new BigDecimal("5000000.00"),
-                        new BigDecimal("20000000.00"), "VND", null, "limit"), maker,
-                "adm-con03-decision", Instant.now())).approvalId());
+        Long id = tx.execute(status -> {
+            long expectedVersion = jdbc.queryForObject(
+                    "SELECT COALESCE(max(version), 0) FROM banking.limit_config "
+                            + "WHERE customer_id = ? AND account_id IS NULL AND status = 'ACTIVE'",
+                    Integer.class, customerId);
+            ApprovalRequest approval = approvals.insert(ApprovalRequest.propose(
+                    new LimitChangePayload(customerId, null, new BigDecimal("5000000.00"),
+                            new BigDecimal("20000000.00"), "VND", Instant.now(), "limit", expectedVersion),
+                    maker, "adm-con03-decision", Instant.now()));
+            jdbc.update("INSERT INTO banking.limit_config (customer_id, per_transaction_limit, daily_limit, "
+                            + "currency, effective_from, status, version, created_by, approval_id) "
+                            + "VALUES (?, 5000000.00, 20000000.00, 'VND', now(), 'PENDING_APPROVAL', ?, ?, ?)",
+                    customerId, expectedVersion + 1, maker, approval.approvalId());
+            return approval.approvalId();
+        });
         assertThat(id).isNotNull();
         return id;
+    }
+
+    private String limitStatus(long approvalId) {
+        return jdbc.queryForObject("SELECT status FROM banking.limit_config WHERE approval_id = ?",
+                String.class, approvalId);
     }
 
     private String verifiedChallenge(long actor, long approvalId, ApprovalDecision decision, String note) {
@@ -510,8 +580,9 @@ class ApprovalDecisionIdempotencyPostgreSqlIntegrationTest {
     }
 
     private long auditCount(String action) {
-        return auditLog.list.stream().map(ILoggingEvent::getFormattedMessage)
-                .filter(message -> message.contains("action=" + action + " "))
+        return auditLog.list.stream()
+                .flatMap(event -> event.getKeyValuePairs().stream())
+                .filter(pair -> "action".equals(pair.key) && action.equals(pair.value))
                 .count();
     }
 

@@ -78,8 +78,8 @@ class TransferCandidateMigrationPostgresTest {
         clean.migrate();
         assertThatCode(clean::validate).doesNotThrowAnyException();
         assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version "
-                + "IN ('1', '1.4', '2', '3', '4', '5', '5.5', '6')"))
-                .isEqualTo(8);
+                + "IN ('1', '2', '3', '4', '5', '5.5', '6', '7', '8', '8.5', '9', '10', '11', '12')"))
+                .isEqualTo(14);
         assertThat(queryLong("SELECT count(*) FROM banking.account")).isEqualTo(3);
 
         reset();
@@ -92,7 +92,7 @@ class TransferCandidateMigrationPostgresTest {
         upgrade.migrate();
         assertThatCode(upgrade::validate).doesNotThrowAnyException();
         assertThat(queryLong("SELECT id FROM banking.predecessor_data")).isEqualTo(42);
-        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version = '6'"))
+        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version = '12'"))
                 .isEqualTo(1);
     }
 

@@ -73,8 +73,8 @@ class AdminIdempotencyPostgreSqlIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-con03-%'");
             actor = user("adm-con03-actor-" + suffix);
             otherActor = user("adm-con03-other-" + suffix);
         });
@@ -84,8 +84,8 @@ class AdminIdempotencyPostgreSqlIntegrationTest {
     void tearDown() {
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-con03-%'");
         });
     }
 

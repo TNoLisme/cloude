@@ -3,8 +3,10 @@ package com.simulatedbank.banking.admin.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,7 +15,14 @@ import static org.mockito.Mockito.when;
 import com.simulatedbank.banking.admin.application.AdminAuditPort.AdminAction;
 import com.simulatedbank.banking.admin.application.AdminAuditPort.AdminAuditEvent;
 import com.simulatedbank.banking.admin.application.ApprovalDecisionService.DecisionCommand;
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalAttemptRecorder;
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalMetrics;
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalRecoveryService;
+import com.simulatedbank.banking.admin.application.ops.AdminWorkflowLog;
 import com.simulatedbank.banking.admin.application.port.ApprovalRequestStore;
+import com.simulatedbank.banking.admin.domain.AdminIdempotencyRecord;
+import com.simulatedbank.banking.admin.domain.AdminIdempotencyScope;
+import com.simulatedbank.banking.admin.domain.AdminIdempotencyStatus;
 import com.simulatedbank.banking.admin.domain.ApprovalDecision;
 import com.simulatedbank.banking.admin.domain.ApprovalRequest;
 import com.simulatedbank.banking.admin.domain.ApprovalRequestType;
@@ -23,6 +32,7 @@ import com.simulatedbank.banking.admin.domain.RoleChangePayload;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.identity.api.IdentityRoleCommand;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -48,7 +58,12 @@ class ApprovalDecisionServiceTest {
     private final ApprovalStepUpService stepUp = mock(ApprovalStepUpService.class);
     private final AdminAuthorization authorization = mock(AdminAuthorization.class);
     private final IdentityRoleCommand roleChanges = mock(IdentityRoleCommand.class);
+    private final LimitConfigMutationPort limitChanges = mock(LimitConfigMutationPort.class);
     private final AdminAuditPort audit = mock(AdminAuditPort.class);
+    private final AdminApprovalMetrics metrics = mock(AdminApprovalMetrics.class);
+    private final AdminApprovalAttemptRecorder attempts = mock(AdminApprovalAttemptRecorder.class);
+    private final AdminApprovalRecoveryService recovery = mock(AdminApprovalRecoveryService.class);
+    private final AdminWorkflowLog workflow = mock(AdminWorkflowLog.class);
     private final AdminIdempotencyService idempotency = mock(AdminIdempotencyService.class);
     private final AdminRequestHasher hasher = mock(AdminRequestHasher.class);
     private final AdminApprovalView view = mock(AdminApprovalView.class);
@@ -60,14 +75,16 @@ class ApprovalDecisionServiceTest {
     void setUp() {
         when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
         when(authorization.requireChecker()).thenReturn(CHECKER);
+        when(authorization.actorRole()).thenReturn("OPERATIONS");
         when(hasher.decisionHash(anyLong(), anyLong(), any(), any())).thenReturn(HASH);
         when(idempotency.precheck(any(), anyString(), anyString()))
                 .thenReturn(new AdminIdempotencyService.Precheck.Absent());
         when(idempotency.claim(any(), anyString(), anyString()))
                 .thenReturn(new AdminIdempotencyService.Claim.Claimed(77L));
         when(store.findById(APPROVAL)).thenReturn(Optional.of(pendingApproval()));
-        service = new ApprovalDecisionService(store, stepUp, authorization, roleChanges, audit, idempotency,
-                hasher, view, Clock.fixed(NOW, ZoneOffset.UTC), transactionManager);
+        service = new ApprovalDecisionService(store, stepUp, authorization, roleChanges, limitChanges, audit,
+                metrics, attempts, recovery, workflow, idempotency, hasher, view,
+                Clock.fixed(NOW, ZoneOffset.UTC), transactionManager);
     }
 
     @Test
@@ -177,6 +194,128 @@ class ApprovalDecisionServiceTest {
 
         verify(stepUp, never()).stepUpRequired(anyLong(), any(), any(), anyString());
         verify(store, never()).lockById(anyLong());
+    }
+
+    @Test
+    void approvedDecisionWritesOnlyTheCatalogC2FactWithTheTrustedChecker() {
+        ApprovalRequest pending = pendingApproval();
+        when(store.lockById(APPROVAL)).thenReturn(Optional.of(pending));
+        when(roleChanges.applyApprovedRoleChange(any())).thenReturn(new IdentityRoleCommand.RoleChangeResult(
+                APPROVAL, 1105L, IdentityRoleCommand.Operation.GRANT_PRIVILEGE, null, "CHECKER", 0L, 1L, 0,
+                "corr-1", "req-1"));
+        when(store.update(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(view.detail(any(), any())).thenReturn(Map.of("approvalId", "5"));
+        when(idempotency.complete(anyLong(), anyInt(), any(), anyLong())).thenReturn(Map.of("approvalId", "5"));
+
+        service.decide(command(APPROVAL, ApprovalDecision.APPROVE, "note", "challenge", "corr-1", "req-1"));
+
+        ArgumentCaptor<AdminAuditEvent> event = ArgumentCaptor.forClass(AdminAuditEvent.class);
+        verify(audit).recordInTransaction(event.capture());
+        verify(audit, never()).recordStandalone(any());
+        assertThat(event.getValue().action()).isEqualTo(AdminAction.ROLE_CHANGE_APPROVED);
+        assertThat(event.getValue().auditClass()).isEqualTo(AdminAuditPort.AuditClass.C2);
+        assertThat(event.getValue().actorUserId()).isEqualTo(CHECKER);
+        assertThat(event.getValue().actorRole()).isEqualTo("OPERATIONS");
+        assertThat(event.getValue().entityType()).isEqualTo("APPROVAL_REQUEST");
+        assertThat(event.getValue().entityId()).isEqualTo(Long.toString(APPROVAL));
+        assertThat(event.getValue().outcome()).isEqualTo("SUCCESS");
+        assertThat(event.getValue().reasonCode()).isNull();
+        assertThat(event.getValue().afterState()).containsEntry("previousVersion", "0")
+                .containsEntry("resultingVersion", "1");
+    }
+
+    @Test
+    void rejectedDecisionWritesTheC2RejectedFactWithoutCallingTheProvider() {
+        ApprovalRequest pending = pendingApproval();
+        when(store.lockById(APPROVAL)).thenReturn(Optional.of(pending));
+        when(store.update(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(view.detail(any(), any())).thenReturn(Map.of("approvalId", "5"));
+        when(idempotency.complete(anyLong(), anyInt(), any(), anyLong())).thenReturn(Map.of("approvalId", "5"));
+
+        service.decide(command(APPROVAL, ApprovalDecision.REJECT, "not allowed", "challenge", "corr-1", "req-1"));
+
+        verify(roleChanges, never()).applyApprovedRoleChange(any());
+        ArgumentCaptor<AdminAuditEvent> event = ArgumentCaptor.forClass(AdminAuditEvent.class);
+        verify(audit).recordInTransaction(event.capture());
+        verify(audit, never()).recordStandalone(any());
+        assertThat(event.getValue().action()).isEqualTo(AdminAction.ROLE_CHANGE_REJECTED);
+        assertThat(event.getValue().auditClass()).isEqualTo(AdminAuditPort.AuditClass.C2);
+        assertThat(event.getValue().actorUserId()).isEqualTo(CHECKER);
+        assertThat(event.getValue().entityId()).isEqualTo(Long.toString(APPROVAL));
+        assertThat(event.getValue().outcome()).isEqualTo("SUCCESS");
+        assertThat(event.getValue().reasonCode()).isNull();
+    }
+
+    @Test
+    void staleProviderVersionIsAConflictAndNeverPersistsApplied() {
+        ApprovalRequest pending = pendingApproval();
+        when(store.lockById(APPROVAL)).thenReturn(Optional.of(pending));
+        when(roleChanges.applyApprovedRoleChange(any()))
+                .thenThrow(new BankingBusinessException(ErrorCode.ROLE_CONFLICT));
+
+        assertCode(() -> service.decide(command(APPROVAL, ApprovalDecision.APPROVE, null, "challenge",
+                "corr-1", "req-1")), ErrorCode.ROLE_CONFLICT);
+
+        assertThat(pending.status()).isEqualTo(ApprovalStatus.PENDING);
+        assertThat(pending.appliedAt()).isNull();
+        verify(store, never()).update(any());
+        verify(audit, never()).recordInTransaction(any());
+        ArgumentCaptor<AdminAuditEvent> event = ArgumentCaptor.forClass(AdminAuditEvent.class);
+        verify(audit).recordStandalone(event.capture());
+        assertThat(event.getValue().action()).isEqualTo(AdminAction.SECURITY_ACCESS_DENIED);
+        assertThat(event.getValue().reasonCode()).isEqualTo("ROLE_CONFLICT");
+    }
+
+    @Test
+    void providerTechnicalFailureKeepsTheApprovalPendingWithoutAuditOrProviderRetry() {
+        ApprovalRequest pending = pendingApproval();
+        when(store.lockById(APPROVAL)).thenReturn(Optional.of(pending));
+        when(roleChanges.applyApprovedRoleChange(any()))
+                .thenThrow(new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE));
+
+        assertCode(() -> service.decide(command(APPROVAL, ApprovalDecision.APPROVE, null, "challenge",
+                "corr-1", "req-1")), ErrorCode.SERVICE_UNAVAILABLE);
+
+        assertThat(pending.status()).isEqualTo(ApprovalStatus.PENDING);
+        assertThat(pending.checkerId()).isNull();
+        assertThat(pending.appliedAt()).isNull();
+        verify(store, never()).update(any());
+        verify(audit, never()).recordInTransaction(any());
+        verify(audit, never()).recordStandalone(any());
+    }
+
+    @Test
+    void replayedDecisionDoesNotWriteAnotherAuditFact() {
+        ApprovalRequest applied = ApprovalRequest.restore(APPROVAL, rolePayload(), MAKER, "corr-1", NOW,
+                ApprovalStatus.APPLIED, CHECKER, null, NOW, NOW);
+        when(idempotency.precheck(any(), anyString(), anyString())).thenReturn(
+                new AdminIdempotencyService.Precheck.Replay(new AdminIdempotencyRecord(77L,
+                        AdminIdempotencyScope.decision(CHECKER, APPROVAL), HASH,
+                        AdminIdempotencyStatus.COMPLETED, 200, Map.of("approvalId", "5"), APPROVAL, NOW, NOW,
+                        NOW.plusSeconds(86_400))));
+        when(store.findById(APPROVAL)).thenReturn(Optional.of(applied));
+
+        var result = service.decide(command(APPROVAL, ApprovalDecision.APPROVE, "note", "challenge", "corr-1",
+                "req-1"));
+
+        assertThat(result.replayed()).isTrue();
+        verify(audit, never()).recordInTransaction(any());
+        verify(audit, never()).recordStandalone(any());
+    }
+
+    @Test
+    void checkerWithoutTheTypePermissionIsDeniedBeforePrecheckOrLock() {
+        doThrow(new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN))
+                .when(authorization).assertCanReview(ApprovalRequestType.ROLE_CHANGE);
+
+        assertCode(() -> service.decide(command(APPROVAL, ApprovalDecision.APPROVE, null, "challenge",
+                "corr-1", null)), ErrorCode.AUTH_FORBIDDEN);
+
+        verify(authorization).requireChecker();
+        verify(authorization).assertCanReview(ApprovalRequestType.ROLE_CHANGE);
+        verify(idempotency, never()).precheck(any(), anyString(), anyString());
+        verify(store, never()).lockById(anyLong());
+        verify(roleChanges, never()).applyApprovedRoleChange(any());
     }
 
     private static DecisionCommand command(long approvalId, ApprovalDecision decision, String note,

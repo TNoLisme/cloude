@@ -198,4 +198,53 @@ class ModuleBoundaryArchTest {
                     .allowEmptyShould(true)
                     .because("BE-CUS-IMP-04: CustomerQuery snapshot carries identifiers/status only, never textual PII");
 
+    @ArchTest
+    static final ArchRule adminInternalsMustNotBeConsumedByOtherModules =
+            noClasses()
+                    .that().resideOutsideOfPackage("..banking.admin..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "..banking.admin.adapter..",
+                            "..banking.admin.application..",
+                            "..banking.admin.domain.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ADM-DB-02 / BE-CON-12/13: consumers reach Admin only through admin.api");
+
+    @ArchTest
+    static final ArchRule adminInboundAdapterMustNotDependOnPersistenceModel =
+            noClasses()
+                    .that().resideInAPackage("..banking.admin.adapter.in..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "jakarta.persistence..",
+                            "org.springframework.data..",
+                            "..banking.admin.adapter.out.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ADM-DB-02: REST DTOs must not depend on entities or repositories");
+
+    @ArchTest
+    static final ArchRule adminDomainMustNotDependOnPersistenceOrAdapters =
+            noClasses()
+                    .that().resideInAPackage("..banking.admin.domain..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "jakarta.persistence..",
+                            "org.springframework.data..",
+                            "..banking.admin.adapter.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ADM-DB-02: the approval aggregate stays persistence-framework free");
+
+    @ArchTest
+    static final ArchRule adminPublicApiMustNotExposePersistenceOrInternals =
+            noClasses()
+                    .that().resideInAPackage("..banking.admin.api..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "jakarta.persistence..",
+                            "org.springframework.data..",
+                            "..banking.admin.adapter..",
+                            "..banking.admin.application..",
+                            "..banking.admin.domain.."
+                    )
+                    .allowEmptyShould(true)
+                    .because("BE-ADM-DB-02: any cross-module Admin contract must stay entity/repository free");
 }

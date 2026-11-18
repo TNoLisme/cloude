@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
         "app.customer.enabled=false",
         "app.account.enabled=false",
         "app.admin.enabled=false",
+        "app.audit.enabled=false",
+        "app.limit.enabled=false",
         "spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"

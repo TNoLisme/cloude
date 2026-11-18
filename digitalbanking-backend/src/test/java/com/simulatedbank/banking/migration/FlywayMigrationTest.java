@@ -40,6 +40,22 @@ class FlywayMigrationTest {
     }
 
     @Test
+    void approvalMigrationDeclaresCanonicalAdminTable() throws IOException {
+        try (var stream = getClass().getClassLoader()
+                .getResourceAsStream("db/migration/V6__create_approval_request_table.sql")) {
+            assertThat(stream).isNotNull();
+            var sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(sql).contains("CREATE TABLE banking.approval_request (");
+            assertThat(sql).contains("ck_approval_maker_checker");
+            assertThat(sql).contains("ck_approval_decided_fields");
+            assertThat(sql).contains("ck_approval_applied_at");
+            assertThat(sql).contains("ix_approval_status_time");
+            // Canonical 04 §4.5.3 baseline: no overview-only UUID/expiry/challenge columns.
+            assertThat(sql).doesNotContain("EXPIRED", "expires_at", "step_up_challenge_id");
+        }
+    }
+
+    @Test
     void accountMigrationDeclaresCanonicalAccountTable() throws IOException {
         try (var stream = getClass().getClassLoader()
                 .getResourceAsStream("db/migration/V8__create_account_table.sql")) {
