@@ -88,6 +88,10 @@ tasks.withType<Test> {
     val dockerApiVersion = System.getenv("DOCKER_API_VERSION") ?: "1.44"
     systemProperty("api.version", dockerApiVersion)
     environment("DOCKER_API_VERSION", dockerApiVersion)
+    // Default 512 MB worker heap overflows when a test drives several concurrent
+    // Argon2id verifications (m=65536 -> 64 MiB each; OtpChallengePostgreSqlIntegrationTest
+    // t20 OOMs once the merged suite pushes 950 tests through one worker).
+    maxHeapSize = "3g"
     finalizedBy(tasks.jacocoTestReport)
 }
 
