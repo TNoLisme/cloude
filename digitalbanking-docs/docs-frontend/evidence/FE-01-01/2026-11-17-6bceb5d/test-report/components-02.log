@@ -1,0 +1,16 @@
+
+ RUN  v3.2.4 C:/project/cloude/digitalbanking-frontend
+
+ ✓ src/features/auth/v2/AuthFlow.test.tsx (11 tests) 5993ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > shows bootstrap loading before anonymous login and validates required fields in Vietnamese  926ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > logs in with username, renders an injected test-only authenticated slot and logs out  568ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > prevents double login while a response is delayed  587ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > handles 202/incorrect OTP/resend and keeps attempts governed by server metadata  1528ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > shows an expired challenge and only offers a restart  469ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > reports logout failure without claiming server revocation  796ms
+   ✓ auth v2 UI wiring to real session primitives and MSW > is safe under StrictMode bootstrap effect replay  367ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  16:46:21
+   Duration  19.80s (transform 139ms, setup 0ms, collect 11.39s, tests 5.99s, environment 1.62s, prepare 269ms)

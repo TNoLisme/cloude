@@ -105,3 +105,21 @@ GAP-04 về enrollment/provider, GAP-05 về session/cookie và tên login chall
 ## 13. Quyết định baseline FE/mock ngày 14/11/2026
 
 Người phụ trách FE chọn SESSION_TOKEN/Path=/api/LOGIN_MFA theo Security. Đã chốt giữ v1 và tạo v2 riêng; triển khai mới theo v2 Draft FE/mock, session client/UI tiếp tục ở task riêng theo [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]]. Không tự coi login/session tích hợp đã được nghiệm thu hoặc đóng GAP-05 từ lựa chọn này.
+
+## 14. Shared client/session ngày 17/11/2026
+
+Task con FE-FND-02-CLIENT-SESSION đã triển khai module nền tảng độc lập cho login 200/202, getSession và logout 204 theo v2 FE/mock; runtime metadata guards, CSRF, expiry/network distinction, stale-response cancellation, cleanup callback và signal đa tab. Chưa nối vào các màn/route APP-BOOTSTRAP/AUTH-LOGIN; verifyOtp/passcode/FIDO và capability mapping không thuộc thay đổi này. UI hiện tại vẫn là preview legacy đã duyệt, nên design/layout không đổi. FE-01-01 còn cần wiring và review UI; FET-01/13 mới có subset unit/MSW, chưa phải API/browser pass. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]].
+
+## 15. FE-01-01 — nối preview v2 ngày 17/11/2026
+
+Phần mới sau giai đoạn mục14: preview `authPreview=v2` trong dev/mock đã nối form AntD/RHF/Zod username/password, login200/202, verifyOtp/resend, bootstrap và logout vào memory controller. Base tường minh `/api/v2`; v1/legacy viewer giữ riêng. Device metadata tùy chọn chưa tự tạo/persist. OTP 6–8 chữ số theo YAML; 401 sai OTP giữ flow, 404/409/410/423 dừng challenge; resend lấy lại metadata và xóa input, không tự đặt max-resend/cooldown. Mọi API ngoài handler vẫn fail closed theo MSW hiện hành.
+
+Người phụ trách FE chốt trong chat 17/11: “Chốt màn phiên chung cho mọi role; chưa nối nghiệp vụ (đề xuất)” và “Cho phép cờ fixture dev/test, xóa khi logout (đề xuất)”. Màn sau login dùng metadata + logout cho mọi role, chưa mapping quyền/route nghiệp vụ (GAP-07 vẫn mở). Cờ `digitalbanking.fixture.v2.signedIn=1` chỉ tái dựng fixture tổng hợp, không chứa user/password/OTP/CSRF/token. Hai channel fixture/session chỉ truyền tín hiệu; không chứng minh runtime đa tab/cookie của BE. Logout lỗi vẫn clear UI/flag, giữ thông báo chưa xác nhận thu hồi máy chủ; cùng trang có thể kiểm tra lại session fixture.
+
+Host nối callback để hủy/xóa QueryClient, transfer/operator intent và metadata legacy khi context thay đổi; không dựng DTO/token legacy từ user v2. Thử nghiệm component host dùng thật controller/MSW kiểm tra login/MFA, khôi phục fixture khi remount và logout. Evidence giữ riêng nền tảng119 tests trước đó; thay đổi hiện tại chưa commit. FET-01/02/13 mới đạt subset unit/component/MSW; chưa browser, API thật, CSRF/cookie security, permission hoặc passcode/FIDO. FE-01-01/FE-01-01-MOCK Đang làm, chờ browser và review UI. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chung sau reload; lỗi first-load đã thêm gate chờ ServiceWorker.controller trước mount. Bản sửa chưa retest browser do IAB18/11 không attach được. Các giới hạn browser nêu trên tiếp tục mở; kết quả cuối ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+## 16. Phản hồi bố cục login ngày18/11
+
+User gửi ảnh và yêu cầu hai nửa hình/form, logo/tên dự án hiện tại, không CAPTCHA/hotline. Đã đổi preview v2 sang AuthSplitLayout, Brand DB/Digital Banking; mobile ưu tiên form, artwork tái dùng ảnh được cung cấp. Không thêm/xóa operation, payload, state/session policy; OTP LOGIN_MFA giữ nguyên. Browser subset mới: required validation, login200, reload giữ fixture, logout và reload anonymous; chưa đủ FET-01/02/13 toàn bộ hoặc nghiệm thu API thật. Bố cục có mốc review riêng FE-01-01-LOGIN-UI, parent/mock lifecycle còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]].

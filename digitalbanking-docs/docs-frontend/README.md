@@ -29,6 +29,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Đợt triển khai và phụ thuộc | [[digitalbanking-docs/docs-frontend/management/02-delivery-plan.md]] |
 | Tiến độ hiện tại và vấn đề mở | [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] |
 | Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
+| Đối chiếu quyết định replay/TTL/ownership, phiếu chốt FE–BE và lộ trình theo contract | [[digitalbanking-docs/docs-frontend/management/05-fe-be-contract-handoff.md]] |
 | Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
 | Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
@@ -113,3 +114,7 @@ Người phụ trách Frontend đã chốt phần design v1.2 và yêu cầu com
 Ngày 14/11/2026 người phụ trách FE chọn giữ /api/v1 và tạo /api/v2 riêng dùng SESSION_TOKEN/Path=/api/LOGIN_MFA. [[digitalbanking-docs/docs-common/07a. API contracts v2.md]] và [[digitalbanking-docs/openapi/digital-banking-v2.yaml]] là bản Draft FE/mock, chưa có xác nhận runtime. V1/preview cũ vẫn giữ nguyên; client/UI migration v2 theo task tiếp theo, không đổi baseline v1 đã duyệt.
 
 Contract/types/mock v2 được người phụ trách FE duyệt ngày 14/11/2026 trong phạm vi FE/mock. Trạng thái Draft BE/Security/runtime giữ nguyên; xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-AUTH-CONTRACT/2026-11-14-cfde9ad/run-02.md]].
+
+## 10. Tiến độ preview auth v2 ngày18/11/2026
+
+FE-01-01 đã nối UI login/OTP/bootstrap/logout và màn phiên chung mọi role theo hai chốt của người phụ trách FE17/11; chỉ bật dev/mock. Source/component/MSW có kết quả; browser mới xác minh subset trước sửa startup, chưa đủ FET. Task còn Đang làm, chưa duyệt UI/mock, chưa tích hợp runtime v2. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].

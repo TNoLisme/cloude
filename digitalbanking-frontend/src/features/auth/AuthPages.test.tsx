@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "../../test/setup-dom";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -26,10 +27,17 @@ afterEach(() => {
 });
 const user = {
   type: async (field: HTMLElement, value: string) =>
-    fireEvent.change(field, { target: { value } }),
+    act(async () => {
+      fireEvent.change(field, { target: { value } });
+    }),
   clear: async (field: HTMLElement) =>
-    fireEvent.change(field, { target: { value: "" } }),
-  click: async (button: HTMLElement) => fireEvent.click(button),
+    act(async () => {
+      fireEvent.change(field, { target: { value: "" } });
+    }),
+  click: async (button: HTMLElement) =>
+    act(async () => {
+      fireEvent.click(button);
+    }),
 };
 it("recovery never opens password form before server verification; confirmation mismatch never sends reset", async () => {
   const fetch = vi

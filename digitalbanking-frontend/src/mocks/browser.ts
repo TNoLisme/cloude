@@ -1,6 +1,7 @@
 import { setupWorker } from "msw/browser";
 import { handlers } from "./handlers";
 import { v2AuthHandlers } from "./v2-auth";
+import { waitForMockControl } from "./wait-for-control";
 
 export const worker = setupWorker(...handlers, ...v2AuthHandlers);
 export async function startMocks() {
@@ -14,4 +15,5 @@ export async function startMocks() {
       if (new URL(request.url).pathname.startsWith("/api/")) print.error();
     },
   });
+  await waitForMockControl(navigator.serviceWorker);
 }

@@ -70,6 +70,7 @@ export function PreviewShell({ children }: { children: ReactNode }) {
     <>
       <aside className="preview-toolbar" aria-label="Điều khiển bản xem UI">
         <strong>Preview UI · dữ liệu tổng hợp</strong>
+        <a href="/login?authPreview=v2">Xem đăng nhập v2</a>
         <form
           onSubmit={handleSubmit((v) => {
             const path = ["receipt", "otp"].includes(v.state)

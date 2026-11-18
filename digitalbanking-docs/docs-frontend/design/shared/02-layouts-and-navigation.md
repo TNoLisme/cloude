@@ -90,3 +90,11 @@ Screen docs dẫn file này cho layout và chỉ mô tả phần nội dung tron
 ## Preview UI ngày 13/11/2026
 
 PreviewShell bổ sung thanh chọn màn/trạng thái bằng AntD Select/Button và RHF/Zod ở ngoài app; styles .preview-toolbar/.preview-content trong digitalbanking-frontend/src/styles.css. Fieldset disabled khóa form legacy chưa chốt contract; trạng thái khóa được cập nhật khi route SPA đổi. Main chỉ nạp mock khi DEV và VITE_ENABLE_MOCKS=true. Bố cục source và tokens được giữ để review ban đầu; không thay policy/quyền đích. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+## Host auth v2 ngày17–18/11/2026 — chưa duyệt
+
+`src/mocks/AuthPreview.tsx` dùng riêng Brand → main `.auth`/section `.authCard` từ AppLayout.module.css → Simulation, không bọc fieldset khóa của viewer legacy. Toolbar fixture tái dùng `.preview-toolbar` ngoài flow; route login/challenge/workspace giữ query authPreview=v2 để reload đúng host. Trước mount API consumer chờ worker có controller; dev timeout10s thì dừng khởi động. Không đổi token/CSS/breakpoint hoặc điều hướng nghiệp vụ. Browser17/11 thấy login và summary, chưa kiểm responsive/keyboard; sửa startup chờ retest vì IAB18/11 không attach. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+### Thay host theo ảnh người dùng ngày18/11
+
+Preview v2 nay dùng AuthSplitLayout (feature auth/v2) thay card AppLayout.module.css: artwork trái50%, Brand/form phải max500px; <=767px ẩn artwork. Login/bootstrap/challenge/summary cùng host, route và lifecycle giữ nguyên; legacy shell không đổi. Toolbar chuyển details thu gọn fixed bottom-left, vẫn có label/kịch bản/chức năng fixture. Chi tiết kích thước/nội dung tại AUTH-LOGIN; ảnh browser và phạm vi chờ kiểm chứng ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]]. Đây là thay đổi bố cục được user yêu cầu, chưa phải phê duyệt UI sau sửa.

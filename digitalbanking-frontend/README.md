@@ -45,4 +45,14 @@ Task FE-FND-02-DATA bổ sung src/shared/lib/money.ts và id.ts, dùng type sinh
 
 V1 tiếp tục giữ nguyên. Contract/types/mock v2 đã được người phụ trách FE duyệt ngày 14/11/2026; runtime BE/Security chưa xác nhận. Contract v2 Draft FE/mock có tại ../digitalbanking-docs/openapi/digital-banking-v2.yaml, ngữ nghĩa 07a; types tại src/shared/api/generated/v2/openapi.d.ts. pnpm api:generate sinh cả hai; api:generate:v1/v2 sinh riêng, api:check kiểm tra cả hai (node scripts/check-api.mjs v1 hoặc v2 để kiểm tra riêng).
 
-Worker có thêm handler /api/v2/auth/login/session/logout; username fixture-mfa chọn kịch bản 202 LOGIN_MFA, username fixture khác chọn 200 (không xác minh mật khẩu thật). Response header mô phỏng SESSION_TOKEN, HttpOnly/Secure/SameSite/Path=/api; logout kiểm tra CSRF fixture. State mock v1 và v2 độc lập chỉ để kiểm tra fixture, không phải chính sách coexistence BE. OTP verify/resend/FIDO v2 chưa có handler, sẽ fail closed. Các màn UI/client legacy vẫn gọi v1 qua adapter chỉ xem; chưa chuyển app sang v2 và không nhập credential thật vào fixture.
+Worker có handler /api/v2/auth/login/session/logout và OTP verify/resend (FE-01-01 ngày17–18/11); FIDO chưa có handler, sẽ fail closed. Response header mô phỏng SESSION_TOKEN, HttpOnly/Secure/SameSite/Path=/api; logout kiểm tra CSRF fixture. State mock v1 và v2 chỉ phục vụ fixture, không phải chính sách coexistence BE. Các màn legacy vẫn dùng adapter chỉ xem. Không nhập credential thật.
+
+## Preview auth v2 — FE-01-01 đang làm
+
+Ngày18/11, theo ảnh người dùng: đổi sang artwork trái/form phải, BrandDB/Digital Banking, không CAPTCHA/hotline; mobile ưu tiên form. Toolbar nay mở qua “Điều khiển bản xem thử” góc dưới trái. Bố cục và browser smoke mới có tại ../digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md; chưa phải phê duyệt UI hoặc nghiệm thu auth/integration đầy đủ.
+
+Chạy dev:mock như trên, mở `/login?authPreview=v2` hoặc link “Xem đăng nhập v2” trên toolbar. Dùng fixture-customer / fixture-only cho login200, fixture-mfa / fixture-only cho202. OTP đầu123456; sau resend lấy mã mới bằng nút fixture trên toolbar. Có kịch bản bootstrap slow/error, OTP expired và logout error. Form mới dùng AntD/RHF/Zod, controller memory v2; mọi role vào màn metadata/logout chung theo chốt FE17/11, chưa nối nghiệp vụ.
+
+Người dùng cho phép sessionStorage chỉ một cờ `digitalbanking.fixture.v2.signedIn=1` để khôi phục fixture khi reload, xóa khi logout; không chứa metadata/secret. Challenge không persist. Startup chờ worker control trước mount consumer API; timeout10s dừng, không fallback BE. Mode này chỉ bật dev/mock; production/dev:api chưa nối UI v2.
+
+Unit/component/MSW có kết quả, browser mới có subset trước sửa startup; lần18/11 công cụ browser không attach nên chờ retest và review UI. Chưa nghiệm thu cookie/security/runtime BE. Chi tiết và checklist còn thiếu: ../digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md.

@@ -1,5 +1,6 @@
 # Chạy local, debug và giao ước build
 
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-LOCAL |
@@ -95,3 +96,35 @@ Scripts hiện có: typecheck, test, api:generate/check, format/check, build/pre
 `pnpm lint` chạy ESLint 10.14.0 với recommended JS/TypeScript, rules-of-hooks và exhaustive-deps, zero warnings. Generated types và MSW worker không được lint thủ công. `pnpm check` chạy lần lượt lint → typecheck → api:check → format:check → test → build và dừng nếu có lỗi. Các script format bao gồm eslint.config.js. Node engine yêu cầu tối thiểu 22.14.0 và dưới 23, khớp .node-version/CI.
 
 Workflow `.github/workflows/frontend.yml` dùng Actions pin SHA, Node từ .node-version, pnpm từ packageManager, `pnpm install --frozen-lockfile` và `pnpm check`; trigger PR hoặc push frontend/main có thay đổi FE/OpenAPI/workflow. Chưa chạy trên GitHub trong lần này. Browser E2E/API thật và các GAP scope/security vẫn là gate riêng. Chi tiết clean install ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-01.md]].
+
+## Shared client/session mock v2 — 17/11/2026
+
+Phần mới FE-FND-02-CLIENT-SESSION (17/11/2026) hiện là module nền tảng, chưa thay route preview. Chạy tập trung từ digitalbanking-frontend: `node node_modules/vitest/vitest.mjs run src/shared/api/client.test.ts src/shared/auth`. Full gate dùng scripts package theo quy trình hiện hành. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]] ghi kết quả, code và giới hạn. Không dùng dev:api để chứng minh controller v2 đã tích hợp; runtime v2 vẫn cần readiness BE/Security.
+
+## FE-01-01 — xem login/session mock v2 (17/11/2026)
+
+Từ `digitalbanking-frontend`, chạy `pnpm dev:mock --port 5174`, mở `http://127.0.0.1:5174/login?authPreview=v2`. Lần chạy này Vite báo ready tại port5174 và HTTP local được kiểm tra; công cụ browser tích hợp timeout và native Chrome approval timeout nên chưa xác nhận UI trong browser. Nếu port bận, dùng đúng port Vite báo. Link “Xem đăng nhập v2” cũng có ở thanh viewer cũ. Đây là mode dev mock riêng; `dev:api` và build production chưa nối UI v2.
+
+| Cách thử | Kết quả fixture dự kiến, cần review browser |
+|---|---|
+| fixture-customer / fixture-only | Login200, màn “Phiên hiện tại”, chỉ metadata và logout |
+| fixture-mfa / fixture-only | Login202, OTP ban đầu123456; nút “Xem mã OTP fixture” trên toolbar lấy mã hiện tại |
+| Nhập000000 | OTP sai; resend tạo mã fixture mới, mã cũ không còn hợp lệ, attempts giữ theo server fixture |
+| fixture-invalid / fixture-only | Credential401, giữ username/xóa password |
+| fixture-locked / fixture-only | Account423 |
+| Toolbar → Chưa đăng nhập / Khôi phục fixture đã đăng nhập | Mở lại kịch bản rõ ràng, reset fixture của preview |
+| Toolbar → Khôi phục chậm / Lỗi khôi phục phiên | Loading1500ms hoặc503 một lần; retry rõ ràng/đến login |
+| Toolbar → Lỗi logout máy chủ → login rồi logout |503 một lần; clear UI/flag, báo chưa xác nhận máy chủ; kiểm tra lại phiên có thể khôi phục trong cùng trang |
+| Toolbar → OTP đã hết hạn → fixture-mfa | Challenge hết hạn, khóa verify/resend, còn đăng nhập lại |
+
+Chọn dropdown rồi “Mở kịch bản”. Mã/password trên là dữ liệu tổng hợp, không dùng thông tin thật. Toolbar OTP nằm ngoài flow sản phẩm. Username khác hợp lệ cũng dùng cùng session tổng hợp; đây không phải authentication thực. Fixture TTL/attempts/các lỗi dùng để xem trạng thái, không tự chốt policy còn mở.
+
+Theo chốt người phụ trách FE17/11, key duy nhất `digitalbanking.fixture.v2.signedIn` có giá trị `1` trong sessionStorage giúp reload dựng lại fixture; xóa khi logout. Không chứa user/password/OTP/CSRF/token; nếu storage bị chặn thì chỉ dùng memory. Challenge không persist. BroadcastChannel fixture chỉ “signed-in/signed-out”, channel session chỉ “invalidate”; tab khác clear UI, dùng “Kiểm tra lại phiên” để đối chiếu fixture. Chưa kiểm chứng ordering/đa tab bằng browser; không coi đây là session/cookie thật hay policy v1/v2 coexistence.
+
+Kiểm tra tự động: `pnpm check`; tập trung: `pnpm test src/features/auth/v2 src/shared/auth/mfa.test.ts src/mocks/v2-auth-persistence.test.ts src/mocks/AuthPreview.test.tsx`. Browser checklist và kết quả chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]]. Không đổi backend baseline, không đóng readiness runtime v2/GAP-05/07/04 và không nghiệm thu FE-01-01 từ mock.
+
+Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chung sau reload; lỗi first-load đã thêm gate chờ ServiceWorker.controller trước mount. Bản sửa chưa retest browser do IAB18/11 không attach được. Các giới hạn browser nêu trên tiếp tục mở; kết quả cuối ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+### Xem bố cục mới theo ảnh18/11
+
+URL vẫn `/login?authPreview=v2`. Form mới dùng hình trái/logoDB và Digital Banking bên phải; mobile ẩn hình. Thanh chọn kịch bản/OTP fixture được thu gọn: mở “Điều khiển bản xem thử” ở góc dưới trái trước khi chọn scenario hoặc lấy mã sau resend. User/password/OTP thử và API version không đổi. Có browser smoke login/reload/logout và ảnh1440/768/360 tại [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]]; chưa phải full browser/security acceptance.

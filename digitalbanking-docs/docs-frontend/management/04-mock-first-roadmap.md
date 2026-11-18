@@ -61,3 +61,17 @@ Giữ đăng ký/recovery/PIN/tạo khách tại quầy/nạp số dư/khóa và
 ## 8. Baseline session theo Security ngày 14/11/2026
 
 Đã chốt SESSION_TOKEN, Path=/api, LOGIN_MFA cho FE/mock. Theo [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]], phải thống nhất version/route rồi đồng bộ semantics → YAML → DTO/mock trước client phụ thuộc. Người dùng đã chọn giữ v1, tạo v2 riêng theo quy tắc 07; nguồn mới là 07a/YAML v2 (Draft FE/mock), không coi là backend v2 đã có. Runtime BE/Security/DB vẫn mở.
+
+## 9. Bổ sung theo audit contract ngày 17/11/2026
+
+Đã tìm thấy DEC-TRF-004/005/012 trên dev2/rework: thiết kế replay, retention/TTL, correlation và quyền đọc đã được lựa chọn trong nguồn đó; main/dev và FE chưa đồng bộ toàn bộ. [[digitalbanking-docs/docs-frontend/management/05-fe-be-contract-handoff.md]] ghi bằng chứng theo SHA, câu hỏi Q-01..05 còn cần FE–BE xác nhận và phân rã thực hiện ở mục 5.
+
+Thực hiện phần shared client/session mock đã rõ trước; đưa semantics Transfer mới vào DTO/mock/flow sau khi xác nhận đúng bản contract và HTTP version giao FE. Customer ownership đã có rule không bị chặn toàn bộ vì staff scope còn thiếu. Các bước intent/replay → retention/trace/query → staff scope → API/browser có gate theo bảng handoff; không tự biến baseline branch thành FE/mock v2 đã duyệt hoặc nghiệm thu runtime. Không gán lịch hoàn thành khi các bên chưa chốt readiness.
+
+Thứ tự chốt được người phụ trách FE yêu cầu ngày 17/11: lấy phản hồi BE tại handoff mục 4.1 trước, sau đó người phụ trách FE chốt phần UI/client tại mục 4.2. Task chỉ mở phần phụ thuộc khi cả input server và quyết định FE liên quan đã rõ; phần độc lập đã được duyệt vẫn được tiếp tục.
+
+## 10. FE-01-01 preview auth v2 — 17/11/2026
+
+Đã thực hiện phần độc lập login/OTP/bootstrap/logout trên v2 FE/mock. Người dùng chốt màn phiên chung mọi role, chưa nối nghiệp vụ và cho phép cờ fixture dev/test không secret/xóa khi logout. Đây là quyết định phạm vi preview, không đóng GAP-07 hoặc runtime v2. Checks unit/component/MSW đạt; browser bị chặn nên task còn Đang làm, chưa được duyệt UI/mock. Tiếp tục xác minh browser và nhận review trước tích hợp phần này; không tự chuyển sang các task business còn phụ thuộc phản hồi BE. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chung sau reload; lỗi first-load đã thêm gate chờ ServiceWorker.controller trước mount. Bản sửa chưa retest browser do IAB18/11 không attach được. Các giới hạn browser nêu trên tiếp tục mở; kết quả cuối ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].

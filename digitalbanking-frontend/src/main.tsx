@@ -9,15 +9,23 @@ import "./styles.css";
 async function mount() {
   const mock =
     import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === "true";
-  const Preview = mock
-    ? (await import("./mocks/PreviewShell")).PreviewShell
-    : null;
+  const authPreview =
+    mock && new URLSearchParams(location.search).get("authPreview") === "v2"
+      ? await import("./mocks/AuthPreview")
+      : null;
+  const Preview =
+    mock && !authPreview
+      ? (await import("./mocks/PreviewShell")).PreviewShell
+      : null;
   if (mock) {
     const { startMocks } = await import("./mocks/browser");
     await startMocks();
-    (await import("./mocks/handlers")).selectPreviewSession();
+    if (authPreview) authPreview.prepareV2AuthPreview();
+    else (await import("./mocks/handlers")).selectPreviewSession();
   }
-  const app = Preview ? (
+  const app = authPreview ? (
+    <authPreview.AuthPreview />
+  ) : Preview ? (
     <Preview>
       <App />
     </Preview>

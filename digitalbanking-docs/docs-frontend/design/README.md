@@ -35,7 +35,7 @@ Kích thước/màu/props được ghi theo nơi khai báo trong code. Giá tr�
 
 | Screen ID | File mô tả | Trạng thái UI | Đặc tả |
 |---|---|---|---|
-| AUTH-LOGIN | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-LOGIN.md]] | Có source UI, có phần chờ cập nhật | FE-01 |
+| AUTH-LOGIN | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-LOGIN.md]] | Có preview v2 bố cục hai nửa18/11 theo ảnh user, chờ duyệt | FE-01 |
 | AUTH-REGISTER | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-REGISTER.md]] | Có source UI | FE-01 |
 | AUTH-RECOVERY | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-RECOVERY.md]] | Có source UI | FE-01 |
 | AUTH-WORKSPACE | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-WORKSPACE.md]] | Có source UI | FE-01 |
@@ -55,7 +55,7 @@ Kích thước/màu/props được ghi theo nơi khai báo trong code. Giá tr�
 | OPS-CREATE-CUSTOMER | [[digitalbanking-docs/docs-frontend/design/screens/OPS-CREATE-CUSTOMER.md]] | Có source UI | FE-06 |
 | STAFF-AUDIT | [[digitalbanking-docs/docs-frontend/design/screens/STAFF-AUDIT.md]] | Có source UI, có phần chờ cập nhật | FE-07 |
 | OPS-FRAUD | [[digitalbanking-docs/docs-frontend/design/screens/OPS-FRAUD.md]] | Có source UI, có phần chờ cập nhật | FE-06 |
-| AUTH-CHALLENGE | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-CHALLENGE.md]] | Chưa có UI màn đích | FE-01 |
+| AUTH-CHALLENGE | [[digitalbanking-docs/docs-frontend/design/screens/AUTH-CHALLENGE.md]] | Có source preview v2 17/11; component/mock, browser chờ kiểm chứng | FE-01 |
 | CUST-RESULT | [[digitalbanking-docs/docs-frontend/design/screens/CUST-RESULT.md]] | Chưa có UI màn đích | FE-03 |
 | CUST-LIMITS | [[digitalbanking-docs/docs-frontend/design/screens/CUST-LIMITS.md]] | Chưa có UI màn đích | FE-05 |
 | STAFF-TX | [[digitalbanking-docs/docs-frontend/design/screens/STAFF-TX.md]] | Chưa có UI màn đích | FE-04 |
@@ -64,7 +64,7 @@ Kích thước/màu/props được ghi theo nơi khai báo trong code. Giá tr�
 | STAFF-APPROVAL-DETAIL | [[digitalbanking-docs/docs-frontend/design/screens/STAFF-APPROVAL-DETAIL.md]] | Chưa có UI màn đích | FE-05, FE-08 |
 | ADMIN-ROLES | [[digitalbanking-docs/docs-frontend/design/screens/ADMIN-ROLES.md]] | Chưa có UI màn đích | FE-08 |
 
-CUST-TRANSFER có receipt như một state trong wizard. CUST-RESULT là file chờ màn độc lập theo reference của kiến trúc đích. AUTH-CHALLENGE là file chờ controller/màn challenge mới, các OTP form đã có được mô tả trong màn tương ứng. STAFF-APPROVAL-LIST và STAFF-APPROVAL-DETAIL cùng thuộc screen group STAFF-APPROVAL trong route map.
+CUST-TRANSFER có receipt như một state trong wizard. CUST-RESULT là file chờ màn độc lập theo reference của kiến trúc đích. AUTH-CHALLENGE đã có source LOGIN_MFA/OTP trong FE-01-01 preview v2 ngày17/11, chưa FIDO/step-up; các OTP form legacy được mô tả ở màn tương ứng. STAFF-APPROVAL-LIST và STAFF-APPROVAL-DETAIL cùng thuộc screen group STAFF-APPROVAL trong route map.
 
 Các màn register/recovery/PIN/create customer có source, việc đưa vào phạm vi tích hợp sau refactor được quyết định ở GAP-01. OPS-CUSTOMER hiện mô tả lookup /staff/customers, route param của đích và API được cập nhật qua FE-06-01. Chức năng riêng của từng màn được truy vết từ feature và tracker.
 

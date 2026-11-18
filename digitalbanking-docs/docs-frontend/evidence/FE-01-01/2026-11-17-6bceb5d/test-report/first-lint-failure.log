@@ -1,0 +1,17 @@
+Node v22.14.0 pnpm 10.34.9
+Start 2026-11-17T09:49:46.104Z
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run lint
+
+> digitalbanking-frontend@0.1.0 lint C:\project\cloude\digitalbanking-frontend
+> eslint . --max-warnings=0
+
+
+C:\project\cloude\digitalbanking-frontend\src\features\auth\v2\AuthFlow.tsx
+  68:18  error  The ref value 'bootTicket.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'bootTicket.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+✖ 1 problem (1 error, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+EXIT 1

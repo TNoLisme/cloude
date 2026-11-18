@@ -1,0 +1,9 @@
+HTTP-only local smoke; not browser rendering or worker execution
+2026-11-17T17:10:54.4034463+07:00
+Sandbox HTTP blocked; first unsandboxed HTTP attempt timed out. Restarted Vite outside sandbox.
+GET /login?authPreview=v2 -> 200 text/html
+GET /workspace?authPreview=v2 -> 200 text/html
+GET /auth/challenge?authPreview=v2 -> 200 text/html
+GET /src/main.tsx -> 200 text/javascript
+GET /src/mocks/AuthPreview.tsx -> 200 text/javascript
+GET /mockServiceWorker.js -> 200 text/javascript
