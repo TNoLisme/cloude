@@ -2,6 +2,7 @@ package com.simulatedbank.banking.common.context;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.simulatedbank.banking.support.CommonTestApplication;
 import com.simulatedbank.banking.common.config.RequestContextConfig;
 import jakarta.servlet.ServletContext;
 import java.net.URI;

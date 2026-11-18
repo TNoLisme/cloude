@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.simulatedbank.banking.support.CommonTestApplication;
 import com.simulatedbank.banking.common.crypto.HmacService;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;

@@ -2,6 +2,7 @@ package com.simulatedbank.banking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.simulatedbank.banking.support.CommonTestApplication;
 import com.simulatedbank.banking.common.config.AppProperties;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -11,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = {
+@SpringBootTest(classes = CommonTestApplication.class, properties = {
     "app.identity.enabled=false",
-        "spring.autoconfigure.exclude="
+    "spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"

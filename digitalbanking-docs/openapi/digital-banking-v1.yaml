@@ -866,6 +866,7 @@ paths:
     get:
       tags: [Limit]
       summary: Hạn mức hiện tại và còn lại
+      description: Không có accountId chỉ trả scope CUSTOMER; có accountId thuộc customer trả scope CUSTOMER và ACCOUNT đã chọn. Effective tính theo các scope được trả.
       operationId: getLimits
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -889,6 +890,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
         '503':
@@ -2843,6 +2846,7 @@ components:
           $ref: '#/components/schemas/Currency'
         effectiveFrom:
           $ref: '#/components/schemas/Instant'
+          description: E4 hiện từ chối thời điểm tương lai; cấu hình có hiệu lực khi checker approve (clarify 15–16/11/2026).
         reason:
           type: string
           maxLength: 500

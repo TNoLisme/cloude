@@ -123,9 +123,9 @@ Các hash dưới đây dành cho đối chiếu docs/source tại thời điể
 
 | File | SHA-256 |
 |---|---|
-| `digitalbanking-docs/docs-backend/modules/common/README.md` | `a40fcfba9018b63c377d98e6ed62e250a28241b5db4aab1040bd247cde389a3c` |
-| `digitalbanking-docs/docs-backend/modules/common/TKCT.md` | `93d07bbe1a865075454ac6691c2c4d41535d908ba53a72a7729984ea506fcafe` |
-| `digitalbanking-docs/docs-backend/modules/common/tasks/README.md` | `566019c70ee6ac756ab82a6d44de3a50f21b9e629f0882434231c39db4a2db4f` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/HealthController.java` | `2e47bc8504ec877cbdc0eb42fa2f41b887cac42708ca3f7ca24eabe0831021c5` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SafeJsonLogEncoder.java` | `64407f50bd2bca2881bd40db469d2e18f1bd1929dedf38d24d89ff3922061e10` |
-| `digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/HttpRequestLog.java` | `69b5d5e828ffb5b4edd35f97658faf598ce7d29691cf6cdd1191467ce678e4d1` |
+| `README.md` | `a40fcfba9018b63c377d98e6ed62e250a28241b5db4aab1040bd247cde389a3c` |
+| `TKCT.md` | `93d07bbe1a865075454ac6691c2c4d41535d908ba53a72a7729984ea506fcafe` |
+| `tasks/README.md` | `566019c70ee6ac756ab82a6d44de3a50f21b9e629f0882434231c39db4a2db4f` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/HealthController.java` | `2e47bc8504ec877cbdc0eb42fa2f41b887cac42708ca3f7ca24eabe0831021c5` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/config/SafeJsonLogEncoder.java` | `64407f50bd2bca2881bd40db469d2e18f1bd1929dedf38d24d89ff3922061e10` |
+| `../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common/context/HttpRequestLog.java` | `69b5d5e828ffb5b4edd35f97658faf598ce7d29691cf6cdd1191467ce678e4d1` |
