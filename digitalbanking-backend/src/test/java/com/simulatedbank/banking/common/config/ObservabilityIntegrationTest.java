@@ -180,7 +180,10 @@ class ObservabilityIntegrationTest {
         }
         request("/api/v1/auth/login", null, "{\"value\":\"\"}", "obs:metric-error");
         request("/api/v1/auth/passcode", null, "{}", "obs:metric-server");
+        // BE-ACC-05 mounted /api/v1/accounts, so a 401 there is now labelled with the handler
+        // pattern; use a genuinely unmapped path to keep exercising the bounded UNKNOWN label.
         request("/api/v1/accounts", null, null, "obs:metric-security");
+        request("/api/v1/unmapped/" + LEAK, null, null, "obs:metric-unmapped");
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             assertThat(count("/api/v1/fixture/{id}", "200")).isEqualTo(before + 3);
             assertThat(count("/api/v1/auth/login", "400")).isGreaterThan(0);

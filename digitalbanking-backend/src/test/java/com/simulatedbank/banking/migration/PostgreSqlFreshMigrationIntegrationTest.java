@@ -40,26 +40,63 @@ class PostgreSqlFreshMigrationIntegrationTest {
         var flyway = PostgreSqlIntegrationTestSupport.flyway(postgres);
         var first = flyway.migrate();
 
-        // Số migration kỳ vọng suy từ resource hiện hành thay vì hard-code: nhánh Identity-only
-        // có V1..V4 (V5 Customer thuộc BE-CUS, merge sau); sau khi V5 vào branch test vẫn đúng.
-        List<String> expectedVersions;
-        try (var resources = java.nio.file.Files.list(
-                java.nio.file.Path.of("src/main/resources/db/migration"))) {
-            expectedVersions = resources
-                    .map(path -> path.getFileName().toString())
-                    .filter(name -> name.matches("V\\d+__.*\\.sql"))
-                    .map(name -> name.substring(1, name.indexOf("__")))
-                    .distinct()
-                    .sorted(java.util.Comparator.comparingInt(Integer::parseInt))
-                    .toList();
-        }
-        assertThat(expectedVersions).isNotEmpty();
-        assertThat(first.migrationsExecuted).isEqualTo(expectedVersions.size());
+        assertThat(first.migrationsExecuted).isEqualTo(8);
         try (Connection connection = connection()) {
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
-                    .containsExactlyElementsOf(expectedVersions);
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+            assertThat(queryStrings(connection,
+                    "SELECT table_name FROM information_schema.tables "
+                            + "WHERE table_schema = 'banking' AND table_name = 'account'"))
+                    .containsExactly("account");
+            assertThat(queryStrings(connection,
+                    "SELECT conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
+                            + "WHERE n.nspname = 'banking' AND c.conrelid = 'banking.account'::regclass "
+                            + "ORDER BY conname"))
+                    .contains("account_pkey", "fk_account_customer", "uq_account_no_hash",
+                            "ck_account_status", "ck_account_currency",
+                            "ck_account_available_balance_non_negative",
+                            "ck_account_ledger_balance_non_negative",
+                            "ck_account_balance_within_ledger", "ck_account_closed_at_required");
+            assertThat(queryStrings(connection,
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'banking' "
+                            + "AND tablename = 'account' ORDER BY indexname"))
+                    .containsExactly("account_pkey", "ix_account_customer", "ix_account_status",
+                            "uq_account_no_hash");
+            assertThat(queryStrings(connection,
+                    "SELECT table_name FROM information_schema.tables "
+                            + "WHERE table_schema = 'banking' AND table_name = 'approval_request'"))
+                    .containsExactly("approval_request");
+            assertThat(queryStrings(connection,
+                    "SELECT conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
+                            + "WHERE n.nspname = 'banking' AND c.conrelid = 'banking.approval_request'::regclass "
+                            + "ORDER BY conname"))
+                    .contains("approval_request_pkey", "fk_approval_maker", "fk_approval_checker",
+                            "ck_approval_maker_checker", "ck_approval_decided_fields", "ck_approval_applied_at");
+            assertThat(queryStrings(connection,
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'banking' "
+                            + "AND tablename = 'approval_request' ORDER BY indexname"))
+                    .contains("ix_approval_status_time", "ix_approval_type_status", "ix_approval_target",
+                            "ix_approval_maker", "ix_approval_checker");
+            assertThat(queryStrings(connection,
+                    "SELECT table_name FROM information_schema.tables "
+                            + "WHERE table_schema = 'banking' AND table_name = 'admin_idempotency_record'"))
+                    .containsExactly("admin_idempotency_record");
+            assertThat(queryStrings(connection,
+                    "SELECT conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
+                            + "WHERE n.nspname = 'banking' "
+                            + "AND c.conrelid = 'banking.admin_idempotency_record'::regclass ORDER BY conname"))
+                    .contains("admin_idempotency_record_pkey", "fk_admin_idempotency_actor",
+                            "fk_admin_idempotency_approval", "ck_admin_idempotency_key_len",
+                            "ck_admin_idempotency_operation", "ck_admin_idempotency_status",
+                            "ck_admin_idempotency_terminal_fields", "ck_admin_idempotency_received_fields",
+                            "ck_admin_idempotency_expiry");
+            assertThat(queryStrings(connection,
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'banking' "
+                            + "AND tablename = 'admin_idempotency_record' ORDER BY indexname"))
+                    .contains("uq_admin_idempotency_scope", "ix_admin_idempotency_expires",
+                            "ix_admin_idempotency_status", "ix_admin_idempotency_approval");
             assertThat(singleInt(connection,
                     "SELECT count(*) FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND (NOT success OR checksum IS NULL)"))

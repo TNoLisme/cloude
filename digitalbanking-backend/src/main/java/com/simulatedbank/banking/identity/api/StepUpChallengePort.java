@@ -1,7 +1,6 @@
 package com.simulatedbank.banking.identity.api;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Hợp đồng cross-module cho challenge step-up/OTP (BE-ID-IMP-05).
@@ -105,7 +104,4 @@ public interface StepUpChallengePort {
      * (design/02 §5.2 bước 3).
      */
     ConsumedChallenge consumeVerified(ConsumeCommand command);
-
-    /** Binding data used by the limit/admin candidate. */
-    record ActionBinding(long userId, String action, Long approvalId, String requestHash) { }
 }

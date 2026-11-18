@@ -48,13 +48,14 @@ paths:
       tags: [Auth]
       summary: Đăng nhập bằng password
       description: >-
-        API-AUTH-01. Xác thực username và password. Theo chính sách bảo mật mặc định
-        của MVP (mfa-every-login), đăng nhập hợp lệ trả về 202 Accepted kèm OTP
-        challenge (LOGIN_NEW_DEVICE); phản hồi 200 OK chỉ áp dụng khi bật xác minh
-        thiết bị tin cậy phía server. Nếu gửi OTP thất bại, trả về 503 OTP_DISPATCH_FAILED
-        và không tạo session.
+        API-AUTH-01. DEC-ID-008 requires MFA for every valid password login:
+        return 202 without a session, even for trusted device metadata. deviceRef
+        and fingerprint are identification metadata, never proof or an OTP bypass.
+        The advertised 200 branch remains inactive pending an approved device-proof
+        protocol. Dispatch failure returns 503 OTP_DISPATCH_FAILED, never a session.
       operationId: login
       security: []
+      x-runtime-status: partial
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -65,6 +66,7 @@ paths:
         '503': [OTP_DISPATCH_FAILED, SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -82,7 +84,7 @@ paths:
                   deviceFingerprint: opaque-device-fingerprint
       responses:
         '200':
-          description: Đăng nhập thành công trên thiết bị tin cậy và tạo session
+          description: Advertised trusted-device session; inactive under DEC-ID-008
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -96,7 +98,7 @@ paths:
                 success:
                   $ref: '#/components/examples/LoginSuccessExample'
         '202':
-          description: Xác thực password hợp lệ; yêu cầu xác thực OTP (LOGIN_NEW_DEVICE) trước khi tạo session
+          description: Password accepted; OTP required for every login, no session cookie
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -127,12 +129,15 @@ paths:
       tags: [Auth]
       summary: Đăng nhập bằng passcode trên thiết bị tin cậy
       description: >-
-        API-AUTH-02. Xác thực nhanh bằng passcode trên thiết bị đã được đánh dấu
-        tin cậy (trusted) và đang hoạt động (ACTIVE). Nếu thiết bị chưa được chứng
-        minh tin cậy, trả về 403 AUTH_DEVICE_NOT_TRUSTED và yêu cầu đăng nhập bằng
-        password kèm OTP.
+        API-AUTH-02 preserves its advertised 200 AuthResponse contract. Positive
+        login is BLOCKED under DEC-ID-009 preserve_contracts: metadata and a trusted
+        row do not prove device possession. Current valid requests fail closed with
+        403 AUTH_DEVICE_NOT_TRUSTED before credential verification or session creation.
+        An approved enrollment/device-proof/expiry protocol is required; use password
+        plus OTP instead. No new device-proof endpoint is implied.
       operationId: loginPasscode
       security: []
+      x-runtime-status: blocked-positive
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -143,6 +148,7 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -151,7 +157,7 @@ paths:
               $ref: '#/components/schemas/PasscodeLoginRequest'
       responses:
         '200':
-          description: Đăng nhập bằng passcode thành công và tạo session
+          description: Advertised session contract; positive flow blocked by DEC-ID-009
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -181,14 +187,17 @@ paths:
       tags: [Auth]
       summary: Đăng nhập FIDO/WebAuthn (begin/finish)
       description: >-
-        API-AUTH-03. Hỗ trợ hai bước trên cùng endpoint: bước begin gửi username
-        và deviceRef (không có challengeId và fido) để nhận 202 WebAuthn request
-        options; bước finish gửi challengeId kèm fido assertion để xác minh chữ ký,
-        RP ID, origin, userVerification=required và bộ đếm fido_sign_count rồi tạo
-        session 200 OK. Nếu thiết bị không khả dụng hoặc người dùng hủy, thực hiện
-        fallback đăng nhập lại bằng password + OTP.
+        API-AUTH-03. Begin requires username and deviceRef with neither challengeId
+        nor fido; finish requires both challengeId and a nested assertion. Requires
+        an active trusted credential provisioned outside this API. DEC-ID-010 requires
+        user verification, exact RP ID and configured origin, signature, single-use
+        nonce and counter verification (0 to 0 is valid; otherwise counter increases).
+        Verification is opt-in; enrollment and production Audit remain dependencies.
+        On cancellation/unavailability/failure start a fresh password + OTP login;
+        never convert this challenge to OTP or carry FIDO assurance to fallback.
       operationId: loginFido
       security: []
+      x-runtime-status: partial
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -202,6 +211,7 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -257,9 +267,11 @@ paths:
       tags: [Auth]
       summary: Xác thực OTP thiết bị mới
       description: >-
-        API-AUTH-04. Xác thực mã OTP cho challenge LOGIN_NEW_DEVICE đang ở trạng
-        thái SENT. Khi OTP hợp lệ, hệ thống đánh dấu challenge VERIFIED, consume
-        challenge và khởi tạo session nguyên tử.
+        API-AUTH-04. Public proof is challengeId plus OTP, not the reference alone.
+        Only a dispatched SENT OTP for LOGIN_NEW_DEVICE may activate a session
+        (DEC-ID-006). User/device come from the stored challenge, never request data.
+        Success verifies and consumes the challenge and creates a session atomically.
+        DEC-ID-008 forbids automatic persistent trust; deviceTrusted remains false.
       operationId: verifyOtp
       security: []
       x-error-codes:
@@ -275,6 +287,7 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -319,11 +332,13 @@ paths:
       tags: [Auth]
       summary: Xác thực step-up cho transfer hoặc hành động nhạy cảm
       description: >-
-        API-AUTH-05. Yêu cầu session đang hoạt động và quyền sở hữu đối với
-        challenge có purpose TRANSFER_STEP_UP hoặc SENSITIVE_ACTION. Trường method
-        phải khớp với phương thức của challenge đã lưu (nếu khác trả về 409
-        STEP_UP_CHALLENGE_MISMATCH). Xác thực thành công chỉ chuyển trạng thái
-        challenge sang VERIFIED, không tạo session mới hay thực thi giao dịch ngay.
+        API-AUTH-05. Requires an active session and ownership of a TRANSFER_STEP_UP
+        or SENSITIVE_ACTION challenge. Select exactly the credential required by
+        method; method must match the stored challenge. Current runtime verifies
+        OTP only; advertised FIDO/PASSCODE proofs cannot produce success and return
+        409 STEP_UP_CHALLENGE_MISMATCH for an unsupported/mismatched stored method.
+        Verification never creates a login session, transfer or ledger entry.
+        Cookie-authenticated POST requires CSRF; bearer-only authentication is exempt.
       operationId: verifyStepUp
       security:
         - sessionCookie: []
@@ -387,9 +402,10 @@ paths:
       tags: [Auth]
       summary: Logout và vô hiệu hóa session
       description: >-
-        API-AUTH-06. Thu hồi session hiện tại (status=LOGGED_OUT) và xóa cookie
-        DB_SESSION (Max-Age=0); trả về 204 No Content. Nếu xác thực bằng cookie thì
-        bắt buộc gửi kèm header X-CSRF-Token.
+        API-AUTH-06. No request body. Revoke the current active session and clear
+        DB_SESSION (Max-Age=0); 204 has no body. Cookie authentication requires
+        X-CSRF-Token; bearer-only authentication is exempt. An already invalid or
+        logged-out token may return 401 without revealing session details.
       operationId: logout
       security:
         - sessionCookie: []
@@ -427,9 +443,9 @@ paths:
       tags: [Auth]
       summary: Lấy session hiện tại
       description: >-
-        API-AUTH-07. Trả thông tin người dùng, quyền hiện hành và metadata của
-        session đang hoạt động (bao gồm csrfToken). Không trả opaque session token
-        trong JSON body.
+        API-AUTH-07. Requires an active cookie or bearer session. Returns the
+        current authorities and session metadata, rotating the session-bound CSRF
+        token. No opaque session token in JSON. GET does not require CSRF.
       operationId: getSession
       security:
         - sessionCookie: []
@@ -465,16 +481,21 @@ paths:
       tags: [Auth]
       summary: Gửi lại OTP cho challenge
       description: >-
-        API-AUTH-08. Gửi lại mã OTP mới cho challenge đang ở trạng thái CREATED
-        hoặc SENT (tối đa 3 lần gửi lại cho mỗi challenge). Challenge LOGIN_NEW_DEVICE
-        cho phép gọi public dựa trên challengeId và rate limit; các challenge
-        TRANSFER_STEP_UP và SENSITIVE_ACTION yêu cầu session của đúng chủ sở hữu.
-        Mỗi lần gửi lại làm mới mã OTP và TTL nhưng giữ nguyên số lần thử đã dùng.
+        Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge
+        TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge, cooldown
+        mặc định 60 giây và TTL 5 phút; xoay OTP và generation, không reset
+        số lần nhập sai. 202 chỉ sau ACK và lưu SENT cho generation hiện tại;
+        lỗi hoặc kết quả dispatch không rõ trả 503 OTP_DISPATCH_FAILED.
+        API-AUTH-08 advertised contract, NOT an implemented route. DEC-ID-006 blocks
+        runtime until an approved forward schema and generation/fencing protocol
+        provides durable resend count, last resend/cooldown and safe in-flight send
+        invalidation (MOD-OI-07). Do not treat this specification as runtime support.
       operationId: resendChallenge
       security:
         - {}
         - sessionCookie: []
         - bearerAuth: []
+      x-runtime-status: blocked-no-route
       x-security-by-purpose:
         LOGIN_NEW_DEVICE: public-challenge-proof
         TRANSFER_STEP_UP: authenticated-owner
@@ -495,7 +516,7 @@ paths:
         - $ref: '#/components/parameters/ChallengeIdPath'
       requestBody:
         required: false
-        description: Tùy chọn kênh nhận OTP khi hệ thống bật hỗ trợ đa kênh
+        description: Optional only when multichannel support is available
         content:
           application/json:
             schema:
@@ -691,6 +712,12 @@ paths:
       description: >-
         Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED,
         428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency.
+        Cùng actor/key/hash terminal replay nguyên status/body gốc 201 hoặc 422
+        kèm Idempotent-Replayed; record chưa terminal trả 409 Retry-After,
+        worker recovery nội bộ xử lý. Record terminal hết TTL nhưng chưa purge
+        vẫn replay/conflict; sau purge key có thể tạo yêu cầu mới. Step-up chỉ trả
+        428 sau gateway ACK và SENT được lưu cho generation hiện tại; lỗi
+        dispatch hoặc quota store không sẵn sàng trả 503.
       operationId: createTransfer
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -714,14 +741,17 @@ paths:
                   description: Chuyển tiền tháng 11
       responses:
         '201':
-          description: Transfer COMPLETED (hoặc idempotent replay của giao dịch COMPLETED kèm header Idempotent-Replayed=true)
+          description: Transfer COMPLETED; replay giữ 201 và body gốc
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
             Idempotent-Replayed:
-              $ref: '#/components/headers/IdempotentReplayed'
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
           content:
             application/json:
               schema:
@@ -730,7 +760,7 @@ paths:
                 completed:
                   $ref: '#/components/examples/TransferCompletedExample'
         '202':
-          description: Transfer PENDING (dành cho xử lý bất đồng bộ nếu bật)
+          description: Transfer PENDING (đề xuất cho xử lý bất đồng bộ)
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -751,7 +781,31 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+          description: >-
+            Vi phạm business rule; nếu terminal FAILED thì replay giữ nguyên
+            422 và body gốc, với Idempotent-Replayed true. Lỗi trước T1 không
+            có reference/transferStatus và không phải terminal replay. Account
+            inactive/not-found sau T1 dùng code TRANSFER_FAILED cùng failureCode
+            ACCOUNT_INACTIVE/ACCOUNT_NOT_FOUND; trước T1 dùng 409/404 tương ứng.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              description: Chỉ có giá trị true khi replay terminal response.
+              schema:
+                type: string
+                enum: ['true']
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                insufficientBalance:
+                  $ref: '#/components/examples/InsufficientBalanceExample'
+                transferFailed:
+                  $ref: '#/components/examples/TransferFailedExample'
+                accountInactiveAfterT1:
+                  $ref: '#/components/examples/AccountInactiveAfterT1Example'
         '428':
           $ref: '#/components/responses/StepUpRequired'
         '429':
@@ -866,7 +920,6 @@ paths:
     get:
       tags: [Limit]
       summary: Hạn mức hiện tại và còn lại
-      description: Không có accountId chỉ trả scope CUSTOMER; có accountId thuộc customer trả scope CUSTOMER và ACCOUNT đã chọn. Effective tính theo các scope được trả.
       operationId: getLimits
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -890,8 +943,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
         '503':
@@ -902,11 +953,17 @@ paths:
       tags: [Limit, Approval]
       summary: Maker tạo yêu cầu thay đổi hạn mức
       description: >-
-        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
-        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+        Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428
+        SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal
+        hash); verify rồi retry với X-Step-Up-Challenge. Cùng key + cùng payload
+        replay 201 gốc với Idempotent-Replayed: true; payload khác trả 409
+        IDEMPOTENCY_CONFLICT. Chưa tạo approval/idempotency record trước khi
+        verify hoặc khi payload/validation fail. LIMIT_CHANGE vẫn fail-closed
+        503 khi Limit provider chưa có runtime.
       operationId: createLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
       requestBody:
@@ -917,12 +974,14 @@ paths:
               $ref: '#/components/schemas/LimitChangeRequest'
       responses:
         '201':
-          description: Approval LIMIT_CHANGE đã tạo
+          description: Approval LIMIT_CHANGE đã tạo hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -935,6 +994,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
         '428':
@@ -951,11 +1012,16 @@ paths:
       tags: [Limit, Approval]
       summary: Checker duyệt/từ chối yêu cầu hạn mức
       description: >-
-        Path id là approvalId của LIMIT_CHANGE. Yêu cầu privilege CHECKER,
-        maker khác checker và step-up SENSITIVE_ACTION.
+        Path id là approvalId của LIMIT_CHANGE. Idempotency-Key bắt buộc. Yêu cầu
+        privilege CHECKER, maker khác checker và step-up SENSITIVE_ACTION.
+        Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409
+        IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
+        APPROVE vẫn fail-closed 503 khi Limit provider chưa có runtime; REJECT
+        hoạt động và idempotent.
       operationId: approveLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
         - $ref: '#/components/parameters/LimitApprovalIdPath'
@@ -967,10 +1033,12 @@ paths:
               $ref: '#/components/schemas/LimitApprovalRequest'
       responses:
         '200':
-          description: Approval đã được xử lý
+          description: Approval đã được xử lý hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1217,11 +1285,17 @@ paths:
       tags: [Role, Approval]
       summary: Maker tạo yêu cầu role/privilege
       description: >-
-        Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry
-        với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+        Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428
+        SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal
+        hash, gồm expectedVersion server-capture); verify rồi retry với
+        X-Step-Up-Challenge. Cùng key + cùng payload replay 201 gốc với
+        Idempotent-Replayed: true; payload khác trả 409 IDEMPOTENCY_CONFLICT.
+        Chưa tạo approval/idempotency record trước khi verify hoặc khi payload
+        fail. expectedVersion không nằm trong request/response public.
       operationId: createRoleChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
       requestBody:
@@ -1232,12 +1306,14 @@ paths:
               $ref: '#/components/schemas/RoleChangeRequest'
       responses:
         '201':
-          description: Approval ROLE_CHANGE đã tạo
+          description: Approval ROLE_CHANGE đã tạo hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1266,11 +1342,14 @@ paths:
       tags: [Role, Approval]
       summary: Checker duyệt/từ chối yêu cầu role/privilege
       description: >-
-        Path id là approvalId của ROLE_CHANGE. Yêu cầu privilege CHECKER,
-        maker khác checker và step-up SENSITIVE_ACTION.
+        Path id là approvalId của ROLE_CHANGE. Idempotency-Key bắt buộc. Yêu cầu privilege
+        CHECKER, maker khác checker và step-up SENSITIVE_ACTION. Cùng key + cùng
+        decision/note replay 200 gốc; payload khác trả 409 IDEMPOTENCY_CONFLICT;
+        record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
       operationId: approveRoleChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/StepUpChallenge'
         - $ref: '#/components/parameters/RoleApprovalIdPath'
@@ -1282,10 +1361,12 @@ paths:
               $ref: '#/components/schemas/RoleApprovalRequest'
       responses:
         '200':
-          description: Approval đã được xử lý
+          description: Approval đã được xử lý hoặc replay từ idempotency record
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1428,7 +1509,13 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Bắt buộc cho POST /transfers; 1-255 ký tự, không chứa PII
+      description: >-
+        Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255
+        ký tự, pattern hợp lệ, không chứa PII. Admin scope là
+        actor + operation + resource (empty resource cho proposal, approvalId
+        cho decision); cùng key + cùng canonical hash replay response gốc,
+        khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là
+        409 IDEMPOTENCY_IN_PROGRESS.
       schema:
         type: string
         minLength: 1
@@ -1807,12 +1894,10 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     UnprocessableEntity:
-      description: Vi phạm business rule hoặc giao dịch FAILED (nếu là idempotent replay sẽ kèm header Idempotent-Replayed=true)
+      description: Vi phạm business rule
       headers:
         X-Correlation-ID:
           $ref: '#/components/headers/XCorrelationId'
-        Idempotent-Replayed:
-          $ref: '#/components/headers/IdempotentReplayed'
       content:
         application/problem+json:
           schema:
@@ -2187,11 +2272,11 @@ components:
         timeout:
           type: integer
           minimum: 1
-          description: Thời gian chờ tính bằng mili-giây; mặc định 30000 ms theo TTL của challenge
+          description: Milliseconds; default 30000, configurable with the challenge TTL
         userVerification:
           type: string
           const: required
-          description: Bắt buộc xác minh người dùng (userVerification=required) trên thiết bị xác thực
+          description: Required by DEC-ID-010; preferred is not an accepted policy
     ChallengeRequiredResponse:
       type: object
       required: [code, message, challenge, correlationId]
@@ -2846,7 +2931,6 @@ components:
           $ref: '#/components/schemas/Currency'
         effectiveFrom:
           $ref: '#/components/schemas/Instant'
-          description: E4 hiện từ chối thời điểm tương lai; cấu hình có hiệu lực khi checker approve (clarify 15–16/11/2026).
         reason:
           type: string
           maxLength: 500
@@ -3261,6 +3345,21 @@ components:
         reference: TXN20261103A1B2C3D4
         transferStatus: FAILED
         failureCode: PROCESSING_ERROR
+    AccountInactiveAfterT1Example:
+      summary: Account inactive sau khi tạo intent T1
+      value:
+        type: https://api.demo.local/problems/transfer-failed
+        title: Transfer failed
+        status: 422
+        detail: Giao dịch không hoàn tất vì tài khoản không còn hoạt động.
+        instance: /api/v1/transfers
+        code: TRANSFER_FAILED
+        correlationId: 0f8fad5b-d9cb-469f-a165-70867728950e
+        timestamp: '2026-11-16T10:15:30Z'
+        retryable: false
+        reference: TXN20261103A1B2C3D4
+        transferStatus: FAILED
+        failureCode: ACCOUNT_INACTIVE
     StepUpRequiredExample:
       summary: Step-up required
       value:
@@ -3276,7 +3375,7 @@ components:
         challenge:
           challengeId: 11111111-2222-4333-8444-555555555555
           purpose: TRANSFER_STEP_UP
-          methods: [OTP]
+          methods: [OTP, FIDO, PASSCODE]
           channel: SMS
           maskedDestination: '********123'
           expiresAt: '2026-11-03T10:20:30Z'

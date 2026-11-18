@@ -8,8 +8,8 @@
 ## A. Phạm vi và trạng thái ban đầu
 
 - Root không có `README.md`; đã đọc `digitalbanking-docs/README.md`, SRS §4, architecture §6/§8, API §3/§4/§8.8, DB §4.2/§4.5.3, Modules contract §5.1/§5.3/§11.1/§12.1 và Audit action catalog §5.2–5.3.
-- IMP-01 có V2/seed RBAC và migration tests; IMP-03 có opaque session, CSRF, logout và `SessionAuthenticator` thật.
-- Admin/Audit hiện là các thành phần độc lập chưa nối runtime với Identity; public role endpoints thuộc Admin, không thêm controller production vào Identity.
+- IMP-01 có V2/seed RBAC và migration tests; IMP-03 có opaque session, CSRF, logout và `SessionAuthenticator` thật. Các task trước có nhiều file chưa commit; giữ nguyên, không chuyển branch/commit/push.
+- Admin/Audit hiện là package skeleton, tài liệu module chỉ có heading. Public role endpoints thuộc Admin, không thêm controller production vào Identity.
 - Lỗi RBAC phát hiện khi đọc code: `JdbcAuthorityReader` chỉ kiểm `permission.status` trong nhánh permission, không kiểm `role.status`; role DISABLED vẫn cấp permission. Thay reader bằng JPA projection, không dựng security chain khác.
 
 ## B. Code thay đổi

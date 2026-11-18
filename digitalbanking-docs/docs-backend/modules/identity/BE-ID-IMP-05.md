@@ -186,4 +186,4 @@ tests theo IMP-04, nay 321 tests = +25 unit +22 integration).
 
 | Version | Ngày | Người | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Đạt (`identity`) | Tạo BE-ID-IMP-05: `StepUpChallengePort`, `OtpChallengeService`, `JdbcChallengeRepository`, `ChallengeState`, `SecureRandomOtpCodeGenerator`, audit +4 action; 47 test (unit + PostgreSQL Testcontainers); DEC-ID-005. |
+| 1.0 | 16/11/2026 | Codex (owner: Đạt) | Tạo BE-ID-IMP-05: `StepUpChallengePort`, `OtpChallengeService`, `JdbcChallengeRepository`, `ChallengeState`, `SecureRandomOtpCodeGenerator`, audit +4 action; 47 test (unit + PostgreSQL Testcontainers); DEC-ID-005. |

@@ -1,0 +1,24 @@
+BE-ACC-12 — Targeted regression + Flyway verification
+Generated: 2026-11-18T02:21:46Z
+Source revision: 07188e9c25ced5db5f934d2b75a771df299c9b0b + working tree, branch datht-backend-rework
+Sibling docs: /home/kali/digitalbanking-docs -> repo digitalbanking-docs (OpenAPI contract file required by PostgreSqlErrorPipelineIntegrationTest)
+Command: ./gradlew test --tests 'com.simulatedbank.banking.migration.*' --tests 'com.simulatedbank.banking.architecture.ModuleBoundaryArchTest' --tests 'com.simulatedbank.banking.BackendApplicationContextTest' --tests 'com.simulatedbank.banking.common.error.PostgreSqlErrorPipelineIntegrationTest' --tests 'com.simulatedbank.banking.common.config.HttpSecurityTest' --tests 'com.simulatedbank.banking.common.config.HttpSecurityServletTest' --tests 'com.simulatedbank.banking.common.config.ObservabilityIntegrationTest' --console=plain
+Result: BUILD SUCCESSFUL in 1m 5s
+
+TEST CLASS                                                                     TESTS  FAIL ERROR  SKIP
+com.simulatedbank.banking.BackendApplicationContextTest                            1     0     0     0
+com.simulatedbank.banking.architecture.ModuleBoundaryArchTest                     18     0     0     0
+com.simulatedbank.banking.common.config.HttpSecurityServletTest                    2     0     0     0
+com.simulatedbank.banking.common.config.HttpSecurityTest                          10     0     0     0
+com.simulatedbank.banking.common.config.ObservabilityIntegrationTest               6     0     0     0
+com.simulatedbank.banking.common.error.PostgreSqlErrorPipelineIntegrationTest      8     0     0     0
+com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest    10     0     0     0
+com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest     8     0     0     0
+com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest    10     0     0     0
+com.simulatedbank.banking.migration.CustomerV5MigrationPostgreSqlIntegrationTest     9     0     0     0
+com.simulatedbank.banking.migration.FlywayMigrationTest                            5     0     0     0
+com.simulatedbank.banking.migration.IdentityV2MigrationPostgreSqlIntegrationTest     7     0     0     0
+com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest       1     0     0     0
+com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest        1     0     0     0
+
+TOTAL: 14 classes / 96 tests / 0 failures / 0 errors / 0 skipped

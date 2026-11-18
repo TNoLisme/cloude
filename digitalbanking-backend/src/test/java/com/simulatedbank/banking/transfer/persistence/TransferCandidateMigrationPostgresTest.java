@@ -43,7 +43,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** Candidate-only checks with synthetic provider key tables, not provider integration evidence. */
+/** Candidate checks: real Identity/Customer migrations plus a synthetic Account stand-in, not full provider integration evidence. */
 @Testcontainers
 class TransferCandidateMigrationPostgresTest {
     @TempDir
@@ -77,8 +77,9 @@ class TransferCandidateMigrationPostgresTest {
         Flyway clean = flyway(null);
         clean.migrate();
         assertThatCode(clean::validate).doesNotThrowAnyException();
-        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version IN ('1', '1.5', '2')"))
-                .isEqualTo(3);
+        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version "
+                + "IN ('1', '1.4', '2', '3', '4', '5', '5.5', '6')"))
+                .isEqualTo(8);
         assertThat(queryLong("SELECT count(*) FROM banking.account")).isEqualTo(3);
 
         reset();
@@ -91,7 +92,7 @@ class TransferCandidateMigrationPostgresTest {
         upgrade.migrate();
         assertThatCode(upgrade::validate).doesNotThrowAnyException();
         assertThat(queryLong("SELECT id FROM banking.predecessor_data")).isEqualTo(42);
-        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version = '2'"))
+        assertThat(queryLong("SELECT count(*) FROM banking.flyway_schema_history WHERE success AND version = '6'"))
                 .isEqualTo(1);
     }
 

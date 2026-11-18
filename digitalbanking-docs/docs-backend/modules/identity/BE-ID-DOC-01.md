@@ -2,15 +2,14 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-ID-DOC-01`
-> **Phiên bản:** 1.2
-> **Ngày cập nhật:** 18/11/2026
-> **Trạng thái:** Hoàn thành (Hồ sơ rà soát kiến trúc ban đầu tại `56210cc`; toàn bộ các hạng mục `BE-ID-IMP-01..13` và `BE-ID-TEST-01..03` đã được triển khai — 75 classes Java / 597 tests PASS)
-> **Owner:** Đạt (module `identity`) · **Reviewer:** Backend Lead, BA, Security, Module Owners
-> **Baseline rà soát ban đầu:** `origin/dev2` = `56210cc80ad742ddad9139dc1a08fe9ff524465a` (xem §1)
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.2, §2.12–§2.13, §3.1, §4–§11; [[digitalbanking-docs/docs-common/02. BRD.md]] §4.2, §6.1, §6.7, §11.4; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.2, §9, §10.1; [[digitalbanking-docs/docs-common/06. System architecture.md]] §6.2–§6.3, §7.1; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2–§9, §11.1; [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §5, §8; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§6, §9; [[digitalbanking-docs/docs-common/design/04. security.md]] §4–§8; [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] §2–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]]; [[digitalbanking-docs/docs-backend/modules/_overview/01-identity-auth.md]]; [[digitalbanking-docs/docs-backend/modules/common/CURRENT-STATE.md]]; [tasks/README.md](tasks/README.md); [[DECISIONS.md]] (`DEC-ID-001..013`)
+> **Phiên bản:** v1.0
+> **Ngày cập nhật:** 16/11/2026
+> **Trạng thái:** Draft — chờ review (task tài liệu/review, KHÔNG triển khai code)
+> **Owner:** Đạt (module identity); reviewer: Backend Lead, BA, Security, chủ module phụ thuộc — chờ review
+> **Baseline:** `origin/dev2` = `56210cc80ad742ddad9139dc1a08fe9ff524465a` (đã fetch, xem §1)
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.2, §2.12–§2.13, §3.1, §4–§11; [[digitalbanking-docs/docs-common/02. BRD.md]] §4.2, §6.1, §6.7, §11.4; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.2, §9, §10.1; [[digitalbanking-docs/docs-common/06. System architecture.md]] §6.2–§6.3, §7.1; [[digitalbanking-docs/docs-common/07. API contracts.md]] §2–§9, §11.1; [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] §5, §8; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§6, §9; [[digitalbanking-docs/docs-common/design/04. security.md]] §4–§8; [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] §2–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]]; [[digitalbanking-docs/docs-backend/modules/_overview/01-identity-auth.md]]; [[digitalbanking-docs/docs-backend/modules/common/CURRENT-STATE.md]]; [../tasks/README.md](tasks/README.md); `DECISIONS.md` (DEC-TRF-001/002)
 
-> [!IMPORTANT]
-> **Cập nhật trạng thái thực thi (`18/11/2026`):** Tài liệu này ghi lại kết quả rà soát kiến trúc tại thời điểm trước khi viết code (`baseline 56210cc`). Hiện tại, toàn bộ các gói công việc **`BE-ID-IMP-01..13`** và **`BE-ID-TEST-01..03`** đã được triển khai trên nhánh phát triển (**75 classes Java**, migrations `V2`–`V4`, **597 tests PASS**) và các quyết định mở `OD-ID-01..13` đã được phân xử chính thức tại [[DECISIONS.md]] (`DEC-ID-001..013`). Xem tổng hợp hiện trạng mới nhất tại [README.md](README.md) và [tasks/README.md](tasks/README.md).
+**Ghi chú phạm vi tài liệu:** đề gán cho task ghi thư mục `docs-backend/Identity/`; kho không có cấu trúc này. Quy ước hiện hành của repo là `docs-backend/modules/identity/` ([[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.3; index tại [[digitalbanking-docs/docs-backend/README.md]] §2), do đó toàn bộ sản phẩm nằm tại `docs-backend/modules/identity/` — khớp điều kiện "sửa tài liệu chỉ bên trong thư mục Identity của backend docs" và BE-DOC-03.
 
 ---
 
@@ -36,12 +35,10 @@
 | Quyết định | `DECISIONS.md` (DEC-TRF-001, DEC-TRF-002), `PROGRESS.md` |
 | Source dev2 | `digitalbanking-backend/src/main/java/com/simulatedbank/banking/**` (common triển khai đầy đủ; 10 module nghiệp vụ chỉ `.gitkeep`), `src/main/resources/db/migration/V1__init_schema.sql`, `build.gradle.kts`, `application.yml`, `src/test/java/**` |
 
-### 1.3. Kết luận chính (tại thời điểm rà soát ban đầu `56210cc` và cập nhật sau `BE-ID-IMP-01..13`)
+### 1.3. Kết luận chính
 
-> **Cập nhật `18/11/2026`:** Toàn bộ các hạng mục `MISSING` được ghi nhận tại thời điểm rà soát `56210cc` dưới đây nay **đã được triển khai hoàn chỉnh** qua chuỗi công việc `BE-ID-IMP-01..13` và `BE-ID-TEST-01..03` (**75 classes Java** trong `com.simulatedbank.banking.identity`, migrations `V2`–`V4`, **597 tests PASS**), đồng thời các điểm mở `OD-ID-01..13` đã được chốt tại `DEC-ID-001..013` trong [[DECISIONS.md]].
-
-1. **Tại thời điểm baseline `56210cc` (trước khi thực hiện `BE-ID-IMP-01..13`):** `com.simulatedbank.banking.identity/` chỉ chứa `.gitkeep` ở 5 package chuẩn; `V1__init_schema.sql` chỉ tạo schema `banking`. Sau khi hoàn tất `BE-ID-IMP-01..13`, toàn bộ 11 bảng Identity/RBAC (`V2`–`V4`) và 75 classes Java đã được hiện thực đầy đủ (§8).
-2. **Nền tảng common đã có và đã được kiểm thử** (30 Java files, 203+ tests pass theo báo cáo [CURRENT-STATE.md](../common/CURRENT-STATE.md)): `SessionAuthenticator` SPI, security filter chain + CSRF session-bound, error contract 46 mã, crypto (AES-256-GCM/HMAC/JCS/masking), request context, rate limit, JSON log và `LogRedaction`. Identity tái sử dụng trực tiếp các thành phần này mà không tạo SPI trùng.
+1. **Toàn bộ chức năng Identity chưa được triển khai tại dev2.** `com.simulatedbank.banking.identity/` chỉ chứa `.gitkeep` ở 5 package chuẩn (adapter/in, adapter/out, api, application, domain); không có controller/service/entity/migration/test nào của identity. `V1__init_schema.sql` chỉ có `CREATE SCHEMA IF NOT EXISTS banking;` — **không có bảng identity nào tồn tại**. Tất cả năng lực Identity thuộc loại `MISSING` (§8).
+2. **Nền tảng common đã có và đã được kiểm thử** (28 Java files, 203 tests pass theo report lịch sử [BE-COM-FINAL-REPORT]): `SessionAuthenticator` SPI, security filter chain + CSRF session-bound, error contract 46 mã, crypto (AES-256-GCM/HMAC/JCS/masking), request context, rate limit, JSON log. Identity chỉ cần điền phần thiếu, không tự tạo SPI trùng.
 3. **Thiết kế nguồn đầy đủ nhưng nhiều giá trị "Đề xuất"**: BRL-003/004/005/006, NFR-016, ngưỡng step-up — chờ OI-001/OI-006 (BRD §11.4, "Cần xác nhận"). Không coi giá trị đề xuất là policy đã duyệt.
 4. **Đã phát hiện một số xung đột giữa các nguồn** (10 phút vs 15 phút lockout; `status='CONSUMED'` trong design/04 nhưng CHECK constraint của `04` không có; `session.status='REVOKED'` trong design/04/overview nhưng enum `04` chỉ có `EXPIRED/LOGGED_OUT`; tên role trong design/04 §5.1 khác `04`/`07`). Được ghi trong §9 với cách phân xử theo thẩm quyền BE-ARCH-00 §1.5 (`docs-common/01–11` > `design/` > `docs-backend/`); chưa có mục nào tự đóng vượt thẩm quyền.
 5. `PROGRESS.md` mô tả một vòng iteration trước (`IdentityModuleApi` `issueOtp/dispatchOtp/consumeOtp/invalidateOtp`, migration V8, 230 tests) **không tồn tại trong dev2** — xem OD-ID-13, không dùng làm bằng chứng hiện trạng.
@@ -362,28 +359,26 @@ Bảng module khác tham chiếu identity: `customer.user_id` (UK), `transfer.in
 
 Baseline: `origin/dev2@56210cc`. Hạn chế xác minh: task này KHÔNG chạy lại test suite; trạng thái `VERIFIED` của common dựa trên (a) source tại worktree trùng commit 56210cc và (b) report lịch sử BE-COM-IMP-* (203 tests, chưa sign-off). Không có bất kỳ runtime identity nào để chạy.
 
-### 8.1. Năng lực Identity (Đối chiếu Baseline `56210cc` và Hiện trạng sau `BE-ID-IMP-01..13`)
+### 8.1. Năng lực Identity
 
-> **Cập nhật `18/11/2026`:** Sau khi hoàn tất `BE-ID-IMP-01..13` và `BE-ID-TEST-01..03`, cả 16 nhóm năng lực dưới đây đã có mã nguồn thực thi (**75 classes Java**) và bài kiểm thử tự động (**597 tests PASS**). Xem báo cáo chi tiết từng hạng mục tại [BE-ID-IMP-02](BE-ID-IMP-02.md)..[BE-ID-IMP-13](BE-ID-IMP-13.md) và [BE-ID-TEST-01](BE-ID-TEST-01.md)..[BE-ID-TEST-03](BE-ID-TEST-03.md).
-
-| Năng lực | Trạng thái tại `56210cc` | Trạng thái hiện tại (`18/11/2026`) | Báo cáo triển khai & Kiểm chứng |
-|---|---|---|---|
-| SessionAuthenticator SPI (interface) | **IMPLEMENTED (common)** | **VERIFIED** (`IdentitySessionAuthenticator` + PostgreSQL) | [BE-ID-IMP-03](BE-ID-IMP-03.md) |
-| Session persistence + CSRF + cookie | **MISSING** | **VERIFIED** (`JdbcSessionRepository`, `csrf_token_hash`, rotation) | [BE-ID-IMP-02](BE-ID-IMP-02.md), [BE-ID-IMP-03](BE-ID-IMP-03.md), [BE-ID-IMP-04](BE-ID-IMP-04.md) |
-| Password login + Argon2id + anti-enumeration | **MISSING** | **VERIFIED** (`PasswordLoginService`, `Argon2PasswordHasher`) | [BE-ID-IMP-02](BE-ID-IMP-02.md) |
-| Lockout (5 lần sai / 10 phút) | **MISSING** | **VERIFIED** (atomic `UPDATE ... RETURNING`, `423 AUTH_ACCOUNT_LOCKED`) | [BE-ID-IMP-02](BE-ID-IMP-02.md) |
-| OTP state machine (`issue`/`verify`/`consume`) | **MISSING** | **VERIFIED** (`OtpChallengeService`, `consumed_at`, `DEC-ID-005`) | [BE-ID-IMP-05](BE-ID-IMP-05.md) |
-| OTP gateway delivery/timeout/expiry recovery | **MISSING** | **PARTIAL / VERIFIED boundary** (`OtpDispatchService`, `OtpRecoveryJob`, `DEC-ID-006`) | [BE-ID-IMP-06](BE-ID-IMP-06.md) |
-| Step-up port cho Transfer (`T0`/`T1`/`428`) | **MISSING** | **VERIFIED provider** (`StepUpChallengePort`, chờ ghép `transfer` runtime) | [BE-ID-IMP-07](BE-ID-IMP-07.md) |
-| Device recognition + MFA login (`202` -> `200`) | **MISSING** | **VERIFIED** (`DEC-ID-008` `mfa_every_login`, atomic OTP→session) | [BE-ID-IMP-08](BE-ID-IMP-08.md) |
-| Passcode fail-closed + password history | **MISSING** | **VERIFIED** (`PasscodeLoginService`, `PasswordHistoryService`, `DEC-ID-009`) | [BE-ID-IMP-09](BE-ID-IMP-09.md) |
-| WebAuthn/FIDO2 verify + fallback | **MISSING** | **VERIFIED** (`FidoLoginService`, `YubicoFidoAssertionVerifier`, `V3`, `DEC-ID-010`) | [BE-ID-IMP-10](BE-ID-IMP-10.md) |
-| RBAC storage/evaluation/role command | **MISSING** | **VERIFIED** (`JpaAuthorityReader`, `IdentityRoleCommandService`, `V4`, `DEC-ID-011`) | [BE-ID-IMP-11](BE-ID-IMP-11.md) |
-| `API-AUTH-01..08` REST & OpenAPI | **MISSING** | **VERIFIED `API-AUTH-01..07`** (`DEC-ID-012`) | [BE-ID-IMP-12](BE-ID-IMP-12.md) |
-| Flyway `V2`–`V4` Identity & RBAC DDL | **MISSING** | **VERIFIED** (`V2`, `V3`, `V4` trên PostgreSQL 16 Testcontainers) | [tasks/README.md](tasks/README.md) |
-| Audit events Auth + Metrics + `LogRedaction` | **MISSING** | **PARTIAL / VERIFIED Identity-side** (`AuthAuditPort`, `AuthMetrics`, `LogRedaction`, `DEC-ID-013`) | [BE-ID-IMP-13](BE-ID-IMP-13.md) |
-| Rate limit auth (theo IP & normalized username) | **PARTIAL** | **VERIFIED** (`10 req/phút/username` + `Retry-After`, `DEC-ID-013`) | [BE-ID-IMP-13](BE-ID-IMP-13.md) |
-| Identity test suite (Unit, PostgreSQL, Security, Perf) | **MISSING** | **VERIFIED** (33 classes / 597 tests PASS + 5 kịch bản `perfTest`) | [BE-ID-TEST-01](BE-ID-TEST-01.md), [BE-ID-TEST-02](BE-ID-TEST-02.md), [BE-ID-TEST-03](BE-ID-TEST-03.md) |
+| Năng lực | Trạng thái | Bằng chứng (path dev2) | Gap còn lại | Follow-up |
+|---|---|---|---|---|
+| SessionAuthenticator SPI (interface) | **IMPLEMENTED (thuộc common)** | `common/config/SessionAuthenticator.java`; test fail-closed `HttpSecurityServletTest` | identity implement bean + persistence | BE-ID-IMP-03 |
+| Session persistence + CSRF + cookie | **MISSING** | identity/ `*.gitkeep`; `SessionCsrfTokens` generateToken throw "Identity must supply session-bound CSRF state" | Toàn bộ storage/expiry/revoke | BE-ID-IMP-01/03 |
+| Password login + Argon2id + anti-enumeration | **MISSING** | identity/ trống; common cấm dùng SHA/HMAC thay password hash (common README §3.3) | Toàn bộ | BE-ID-IMP-02 |
+| Lockout (5/10m, 3 khóa/24h) | **MISSING** | — | Giá trị chờ OI-001/OI-006 | BE-ID-IMP-02 |
+| OTP state machine issue/verify/consume | **MISSING** | — | AC-003/033, T-STEP-01/02 | BE-ID-IMP-05 |
+| OTP gateway delivery/resend/recovery | **MISSING** | — | MOD-OI-07; không lưu plaintext | BE-ID-IMP-06 |
+| Step-up port cho Transfer (T0/T1/428) | **MISSING** | — | Protocol MOD-OI-01 BLOCKED release | BE-ID-IMP-07 |
+| Device trust + MFA login | **MISSING** | — | Chính sách trust OPEN | BE-ID-IMP-08 |
+| Passcode + password history | **MISSING** | — | Policy password OPEN (OI-006) | BE-ID-IMP-09 |
+| WebAuthn/FIDO verify + fallback | **PARTIAL — verification có code thật** | Yubico/COSE/nonce/counter, PostgreSQL locks, API-AUTH-03 và password+OTP mới | DEC-ID-010 duyệt extension; enrollment/Audit/Notification thật chưa có | [BE-ID-IMP-10](BE-ID-IMP-10.md) |
+| RBAC storage/evaluation/role command | **MISSING** | — | Revoke session policy | BE-ID-IMP-11 |
+| API-AUTH-01..08 REST | **MISSING** (path đã whitelist trong common) | `SecurityFilterChainConfig` | Toàn bộ DTO/validation | BE-ID-IMP-12 |
+| Flyway V2 identity DDL | **MISSING** (V1 chỉ tạo schema) | `db/migration/V1__init_schema.sql` | Schema theo `04` §4.2 | BE-ID-IMP-01 |
+| Audit events Auth | **MISSING** | — | 4 action Đề xuất chưa vào catalog DB | BE-ID-IMP-13 |
+| Rate limit auth (username/pre-auth quota) | **PARTIAL** | `RequestRateLimitFilter` route buckets (login/step-up/otp) đã có; `RequestRateLimiter` javadoc "Identity can use this for normalized username quotas" | Quota username normalize, pre-auth challenge quota, phân tán | BE-ID-IMP-13 |
+| Identity test suite | **MISSING** | — | — | BE-ID-TEST-01/02 |
 
 ### 8.2. Support infrastructure (common) — dùng được ngay, có giới hạn
 
@@ -415,7 +410,7 @@ Mỗi mục: ID — yêu cầu liên quan — mâu thuẫn/thiếu — tác đ�
 | **OD-ID-14** | `auth_challenge.method` đơn trị vs `methods` array trong 428/`Challenge` | `07` §6.3 (warning schema MVP) vs yaml | MVP: một challengeId một method; chọn method khác → challenge mới (OI-API-17) | **OPEN — OI-API-17** |
 | **OD-ID-15** | Rotation key / hash_version audit / threshold policy còn mở từ common (OI-COM-05, OI-001, OI-006) | common CURRENT-STATE §4.1 | Nghiệm thu Identity phụ thuộc một phần các quyết định này (hash chain cần protocol chốt trước audit thật) | **OPEN — owner tương ứng** |
 
-Các quyết định liên quan đã chốt tập trung tại `DECISIONS.md`: `DEC-TRF-001` (thành phần tổng ngày), `DEC-TRF-002` (ngưỡng 10M/20M) và `DEC-ID-001`–`DEC-ID-013`.
+Các quyết định **đã có** (tham chiếu, không tạo mới): DEC-TRF-001 (thành phần tổng ngày), DEC-TRF-002 (ngưỡng 10M/20M) — ghi rõ trong `DECISIONS.md` là quyết định của Codex theo chỉ đạo điều hành, **không phải sign-off owner**.
 
 ---
 
@@ -459,6 +454,5 @@ Thứ tự theo `tasks/README.md` (BE-ID-IMP-01..13, BE-ID-TEST-01..03) và gate
 
 | Version | Ngày | Người cập nhật | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Đạt (`identity`) | Tạo BE-ID-DOC-01: baseline dev2@56210cc, truy vết SRS/BRD, architecture review, dependency matrix, workflow, API/DB hiện trạng, 15 open decisions, khuyến nghị follow-up. Chỉ tài liệu, không code. |
-| 1.1 | 16/11/2026 | Đạt (`identity`) | BE-ID-IMP-01 thực hiện sau review: `V2__create_identity_and_rbac_tables.sql` + test Testcontainers; OD-ID-04/05/06 phân xử theo thẩm quyền nguồn cho DDL. Seed RBAC trong V2 theo DEC-ID-001 trong `DECISIONS.md`. |
-| 1.2 | 18/11/2026 | Đạt (`identity`) | Cập nhật trạng thái hoàn tất triển khai `BE-ID-IMP-01..13` và `BE-ID-TEST-01..03` (75 classes Java, migrations `V2`–`V4`, 597 tests PASS) và đối chiếu các quyết định `DEC-ID-001..013`. |
+| 1.0 | 16/11/2026 | Codex (owner: Đạt) | Tạo BE-ID-DOC-01: baseline dev2@56210cc, truy vết SRS/BRD, architecture review, dependency matrix, workflow, API/DB hiện trạng, 15 open decisions, khuyến nghị follow-up. Chỉ tài liệu, không code. |
+| 1.1 | 16/11/2026 | Codex (owner: Đạt) | BE-ID-IMP-01 thực hiện sau review: `V2__create_identity_and_rbac_tables.sql` + test Testcontainers; OD-ID-04/05/06 phân xử theo thẩm quyền nguồn cho DDL (§8.1 dòng "Flyway V2" trở nên lỗi thời so với worktree hiện tại, trạng thái cập nhật tại `tasks/README.md`). Seed RBAC trong V2 theo DEC-ID-001 trong `DECISIONS.md`. |

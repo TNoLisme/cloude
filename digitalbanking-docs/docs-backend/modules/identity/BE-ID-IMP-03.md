@@ -98,4 +98,4 @@ Biên thời gian: test dùng SQL `now() - interval '1 second'` / `+ interval '1
 
 | Version | Ngày | Người | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Đạt (`identity`) | Tạo BE-ID-IMP-03: rà session/CSRF/logout/SPI, vá 2 lỗi fail-open/500, thêm 11 test ID-03 (Testcontainers PostgreSQL), kiểm chứng không duplicate filter/SPI. |
+| 1.0 | 16/11/2026 | Codex (owner: Đạt) | Tạo BE-ID-IMP-03: rà session/CSRF/logout/SPI, vá 2 lỗi fail-open/500, thêm 11 test ID-03 (Testcontainers PostgreSQL), kiểm chứng không duplicate filter/SPI. |

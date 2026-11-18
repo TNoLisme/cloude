@@ -68,4 +68,4 @@ Kết quả nổi bật:
 
 | Version | Ngày | Người | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Đạt (`identity`) | Tạo báo cáo triển khai BE-ID-IMP-02: login/Argon2id/lockout/anti-enumeration/logout/SPI/audit port + 31 tests pass trên PostgreSQL thật. |
+| 1.0 | 16/11/2026 | Codex (owner: Đạt) | Tạo báo cáo triển khai BE-ID-IMP-02: login/Argon2id/lockout/anti-enumeration/logout/SPI/audit port + 31 tests pass trên PostgreSQL thật. |

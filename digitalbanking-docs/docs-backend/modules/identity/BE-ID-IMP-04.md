@@ -98,4 +98,4 @@ Ghi nhận kỹ thuật test: validation `X-Correlation-ID` ở common không b�
 
 | Version | Ngày | Người | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Đạt (`identity`) | Tạo BE-ID-IMP-04: API-AUTH-07 actor propagation + CSRF rotation (DEC-ID-004), `rotateCsrfToken` fail-closed, 19 test integration bảo mật CSRF/RBAC/actor/IDOR (Testcontainers PostgreSQL). |
+| 1.0 | 16/11/2026 | Codex (owner: Đạt) | Tạo BE-ID-IMP-04: API-AUTH-07 actor propagation + CSRF rotation (DEC-ID-004), `rotateCsrfToken` fail-closed, 19 test integration bảo mật CSRF/RBAC/actor/IDOR (Testcontainers PostgreSQL). |

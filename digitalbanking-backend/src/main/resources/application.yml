@@ -84,12 +84,6 @@ info:
 app:
   timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
 
-  limit:
-    policy:
-      # No business default: absent policy disables preparation/approval, never enforcement reads.
-      max-per-transaction-vnd: ${APP_LIMIT_POLICY_MAX_PER_TRANSACTION_VND:}
-      max-daily-vnd: ${APP_LIMIT_POLICY_MAX_DAILY_VND:}
-
   identity:
     fido:
       enabled: ${APP_FIDO_ENABLED:false}
@@ -168,3 +162,8 @@ app:
     audit-verify-incremental-cron: "0 */15 * * * *"
     audit-verify-full-cron: "0 0 2 * * *"
     retention-cleanup-cron: "0 0 3 * * *"
+
+  admin:
+    # Canonical IDEMPOTENCY_RECORD retention (04 §9.6, BRL-013/OI-001).
+    idempotency-ttl-hours: ${APP_ADMIN_IDEMPOTENCY_TTL_HOURS:24}
+    idempotency-purge-batch-size: ${APP_ADMIN_IDEMPOTENCY_PURGE_BATCH_SIZE:500}
