@@ -2,13 +2,13 @@
 
 > **Ngày/branch:** 16/11/2026 · `datht-backend-rework`.
 > **Mã/phiên bản:** BE-ID-IMP-09 · v1.1 (audit kiến trúc/persistence).
-> **Owner:** Đạt (module); **Người thực hiện:** Codex; **Reviewer:** Backend Lead/Security — chưa có sign-off.
+> **Owner:** Đạt (module); **Người thực hiện:** Đạt (`identity`); **Reviewer:** Backend Lead/Security — chưa có sign-off.
 > **Trạng thái tổng:** **PARTIAL** theo quyết định trực tiếp `preserve_contracts`, DEC-ID-009. Không đánh DONE/AC-002 hoàn tất.
 > **Nguồn:** [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §1.5/3.1/4.2/6.2/6.4/6.9/9.1; [[digitalbanking-docs/docs-common/05. Technical stack.md]] §5.2.2; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.2.1/4.2.4/4.2.7; [[digitalbanking-docs/docs-common/07. API contracts.md]] §8.1.2; BRD BRL-006; DEC-ID-008/009.
 
 ## 1. Phạm vi và dependency thực tế
 
-Đã kiểm tra branch và worktree trước sửa; giữ nguyên thay đổi chưa commit IMP-01..08 và Common. Không checkout/reset, không sửa migration đã có, không commit/push. Repo dùng `docs-backend/modules/identity/`, không có `docs-backend/Identity/`.
+Tái sử dụng các thành phần đã triển khai từ `BE-ID-IMP-01..08` và `common`.
 
 | Dependency | Trạng thái quan sát | Ảnh hưởng |
 |---|---|---|

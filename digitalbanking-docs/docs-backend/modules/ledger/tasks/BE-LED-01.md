@@ -23,7 +23,7 @@ Phạm vi là `postDoubleEntry`, evidence/reconciliation, ranh giới với Acco
 
 Thứ tự nguồn `docs-common/01–11` → `design/` → `docs-backend/`; `07` là nguồn ngữ nghĩa API. Nếu các nguồn cùng cấp mâu thuẫn, ghi rõ và chuyển owner phân xử, không tự suy ra sign-off. `04` §4.4.2 là baseline schema. Đã bỏ hai cột `reference` và `counterparty_account_id` khỏi overview; history lấy qua Transfer projection và Account facts.
 
-Rà soát working tree ngày 17/11: chưa thấy Java provider Ledger/Account hay migration production cho hai bảng; `TransferSettlementCandidate.postAndVerifyBalancedLedger` là seam consumer candidate, không phải Ledger provider. `SecurityFilterChainConfig` đã có matcher GET transactions nhưng matcher không chứng minh ownership. Migration hiện có hai file V2 khác tên; DB owner cần kiểm tra chain và phối hợp version thực tế trước migration Ledger. Các trạng thái này chỉ là snapshot, phải kiểm tra lại trước khi thực hiện BE-LED-02–08.
+Rà soát working tree ngày 18/11/2026: provider posting `banking.ledger` (`LedgerPosting`, `LedgerPostingService`, `LedgerEntryPersistenceAdapter`) và candidate schema `db/ledger-candidate/V2__ledger_entry.sql` đã được triển khai và kiểm chứng độc lập ([BE-LED-02](BE-LED-02.md), [BE-LED-03](BE-LED-03.md), `DEC-LED-005`); `banking.account` chưa có source production; `TransferSettlementCandidate.postAndVerifyBalancedLedger` là seam consumer candidate bên phía Transfer, chờ đấu nối với `LedgerPosting` trong `BE-LED-04`. `SecurityFilterChainConfig` đã có matcher GET transactions nhưng matcher không chứng minh ownership. Migration production chuẩn hóa theo chuỗi `V1`–`V10` (`DEC-COM-001`), trong đó `ledger_entry` mang phiên bản `V8` sau `account` (`V6`) và `transfer` (`V7`).
 
 ## 3. Đầu việc và tiêu chí nghiệm thu
 

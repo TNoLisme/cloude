@@ -1,109 +1,91 @@
 # Quy trình và thứ tự task Backend của Thịnh
 
-> **Dự án:** Digital Banking MVP; **Mã tài liệu:** BE-WORK-THINH-01  
-> **Phiên bản:** 0.5; **Ngày:** 15/11/2026; **Baseline:** `c570986` + Common implementation trên nhánh `dev`
-> **Người đề xuất:** Thịnh; **Reviewer đề xuất:** Đạt, Vũ, Phương  
-> **Trạng thái:** Draft — chờ review; implementation task chưa đóng  
+> **Dự án:** Digital Banking MVP; **Mã tài liệu:** BE-WORK-THINH-01
+> **Phiên bản:** 1.1; **Ngày:** 18/11/2026; **Baseline:** `c570986` + Common implementation
+> **Người đề xuất:** Thịnh; **Reviewer đề xuất:** Đạt, Vũ, Phương
+> **Trạng thái:** Hoàn thành cấp độ Component Verified — chờ ghép tích hợp liên module
 > **Nguồn:** [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]]; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]]; [[digitalbanking-docs/docs-common/09. Test plan.md]]; [[digitalbanking-docs/docs-backend/modules/common/CURRENT-STATE.md]]; [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]].
 
-## 1. Scope sau Common merge
+## 1. Phạm vi sau khi hợp nhất Common
 
-Common đã triển khai baseline cross-cutting: config/time, errors, request context/correlation, JCS/HMAC/PII crypto, HTTP security, observability và quality gates. Các module khác phải reuse Common; không copy primitive riêng.
+Module `common` đã triển khai đầy đủ nền tảng dùng chung (config/time, errors, request context/correlation, JCS/HMAC/PII crypto, HTTP security, observability và quality gates). Các module nghiệp vụ phải tái sử dụng trực tiếp `common`, không tự viết lại các primitive trùng lặp.
 
-Common **chưa** cung cấp identity production adapter, customer/account/transfer/ledger/fraud/admin/notification Java implementation, session persistence, CSRF persistence, ownership/maker-checker transaction hoặc distributed quota. Common tests/harness không thay consumer integration.
+Trạng thái của `common`:
+- `BE-COM-IMP-01..04/06`: Hoàn thành trong phạm vi nền tảng, chờ review.
+- `BE-COM-IMP-05/07/08`: Đạt phần độc lập, một số tiêu chí nghiệm thu phụ thuộc tích hợp toàn hệ thống / Cloud.
+- Quyết định phát hành toàn hệ thống giữ `NO-GO` cho đến khi hoàn tất ghép tích hợp các module nghiệp vụ và đạt đầy đủ quality gates.
 
-State của Common:
-- COM-IMP-01..04/06: Done trong scope implementer, chờ review.
-- COM-IMP-05/07/08: Blocked một phần do thiếu consumer/identity/Cloud.
-- Reviewer/sign-off: chưa ghi nhận.
-- Release: NO-GO cho đến khi consumer integration/quality gates đạt.
+## 2. Phân công sở hữu module
 
-## 2. Ownership
+Thịnh phụ trách chính các module `audit`, `notification`, `fraud` và phối hợp phần tích hợp fraud/audit trong `admin`. Đạt phụ trách `identity`, `customer`, `account`, `admin`; Vũ phụ trách `transfer`, `limit`; Phương phụ trách `ledger`, `common`.
 
-Thịnh owner `audit`, `notification`, `fraud`; phối hợp fraud/audit trong `admin`. Đạt owner `identity`, `customer`, `account`, `admin`; Vũ owner `transfer`, `limit`; Phương owner `ledger`, `common`.
+Mã nguồn đặt tại `digitalbanking-backend/src/main/java/com/simulatedbank/banking/<module>/`, kiểm thử tại package tương ứng dưới `src/test/java/`, và tài liệu đặt tại `digitalbanking-docs/docs-backend/modules/<module>/`.
 
-Code: `digitalbanking-backend/src/main/java/com/simulatedbank/banking/<module>/`. Tests package tương ứng. Docs: `digitalbanking-docs/docs-backend/modules/<module>/`. README chỉ hướng dẫn/link.
+## 3. Thứ tự triển khai các task
 
-## 3. Task order
-
-| Order | Task | Output | Integration dependency |
+| Thứ tự | Task | Đầu ra chính | Phụ thuộc tích hợp |
 |---|---|---|---|
-| 01 | BE-AUD-01 writer | Validator/action catalog/hash/writer/migration tests | Common JCS/context/error; identity/transfer callers |
-| 02 | BE-AUD-02 query/export/verify | REST/query/export/verifier | AUD-01 + identity/RBAC |
-| 03 | BE-NOT-01 outbox | T2 enqueue/T3 worker/retry | Common context/metrics/PII + transfer/identity |
-| 04 | BE-FRD-01 fraud | Rule engine/flag/review | Common config/context/error + transfer/limit/identity |
-| 05 | BE-ADM-01 collaboration | Admin fraud/audit integration | Common security + Đạt admin/identity |
-| 06 | BE-AUD-03 retention | Hold/checkpoint/dry-run | AUD-01/02 + admin approval |
-| 07 | BE-AI-01 feasibility | Synthetic offline study | FRD baseline; no MVP block |
+| 01 | `BE-AUD-01` (Audit Writer) | Validator, action catalog, hash chain, JDBC writer và kiểm thử migration | Common JCS/context/error; callers từ `identity`/`transfer`/`admin` |
+| 02 | `BE-AUD-02` (Query/Export/Verify) | Dịch vụ truy vấn, xuất CSV và kiểm định chuỗi băm (`AuditChainVerifier`) | `BE-AUD-01` + `identity`/RBAC |
+| 03 | `BE-NOT-01` (Transactional Outbox) | Ghi nhận outbox trong T2 (`MANDATORY`), tiến trình gửi T3 theo lease và retry backoff | Common context/metrics/PII + `transfer`/`identity`/`customer` |
+| 04 | `BE-FRD-01` (Fraud Rules & Review) | Bộ đánh giá quy tắc (`LARGE_VALUE`, `HIGH_FREQUENCY`), ghi nhận cờ và xử lý hậu kiểm | Common config/context/error + `transfer`/`limit`/`identity` |
+| 05 | `BE-ADM-01` (Admin Fraud/Audit) | Luồng hậu kiểm cờ gian lận kèm kiểm toán `C2` đồng giao dịch | Common security + `admin`/`identity` |
+| 06 | `BE-AUD-03` (Retention & Legal Hold) | Chính sách lưu trữ, chốt chặn `LEGAL_HOLD_ACTIVE` và đối chiếu anchor trước khi dọn dẹp | `BE-AUD-01/02` + phê duyệt `admin` |
+| 07 | `BE-AI-01` (AI Fraud Feasibility) | Nghiên cứu khả thi và bộ trích xuất đặc trưng ngoại tuyến (`FraudFeatureExtractor`) | `BE-FRD-01` baseline; không chặn đường găng MVP |
 
-Specs có thể viết trước. Component code có thể làm với fake. Không claim Integrated/Verified khi consumer thật chưa chạy.
+Đặc tả kỹ thuật được viết trước; thành phần độc lập được triển khai và kiểm thử với test doubles/Testcontainers trước khi đấu nối vào caller thật. Không đánh dấu `Done` toàn hệ thống khi chưa hoàn tất tích hợp với caller/provider thật.
 
-## 4. Workflow mỗi task
+## 4. Quy trình thực hiện mỗi task
 
-### 4.1. Discovery và contract gate
+### 4.1. Khảo sát và chốt hợp đồng (Discovery & Contract Gate)
 
-1. Đọc `docs-common/01–11`, design, OpenAPI, Backend conventions, Common CURRENT-STATE/TKCT và source code Common.
-2. Đọc task spec, verification report, handoff `.claude/docs/project_xcreative(datahub+xvideo)/` nếu có.
-3. Chạy `git status --short --branch`, xem staged/unstaged/untracked trước sửa. Không reset, stash, checkout hoặc xóa thay đổi user.
-4. Phân loại capability đã có trong Common, capability cần consumer owner, gap/open issue.
-5. Chốt task contract: mục tiêu, input/output, in-scope, out-of-scope, owner dependency và Definition of Done.
+1. Đọc `docs-common/01–11`, `docs-common/design/`, OpenAPI, `00. architecture & conventions.md`, `common/CURRENT-STATE.md`, `common/TKCT.md` và mã nguồn `common`.
+2. Đọc đặc tả task và báo cáo kiểm chứng trong `docs-backend/modules/<module>/`.
+3. Kiểm tra trạng thái nhánh làm việc (`git status --short --branch`) trước khi chỉnh sửa.
+4. Phân loại năng lực đã có sẵn trong `common`, năng lực cần phối hợp với chủ sở hữu module khác và các điểm mở.
+5. Chốt hợp đồng của task: mục tiêu, đầu vào/đầu ra, phạm vi trong/ngoài task, phụ thuộc liên module và tiêu chí hoàn thành (Definition of Done).
 
-### 4.2. Docs-first và decision register
+### 4.2. Tài liệu hóa trước và ghi nhận quyết định (Docs-First & Decision Register)
 
-1. Viết/cập nhật spec: input/output, owner, dependency, transaction, error, security, PII, test, non-goals.
-2. Đối chiếu nguồn theo thứ tự: `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; ghi rõ conflict, không tự nâng proposal thành policy.
-3. Mỗi quyết định còn mở phải có: owner, bằng chứng, hướng đề xuất, lý do, trade-off, acceptance evidence và điểm dừng.
-4. Không sửa Common/docs-common/OpenAPI để né conflict nếu task yêu cầu chỉ làm component; ghi conflict trong report.
-5. Tạo handoff task trong `.claude/docs/project_xcreative(datahub+xvideo)/` cho task lớn; cập nhật sau mỗi milestone.
+1. Viết hoặc cập nhật đặc tả kỹ thuật: đầu vào/đầu ra, chủ sở hữu, phụ thuộc, ranh giới giao dịch, mã lỗi, bảo mật, che dấu PII, kịch bản kiểm thử và giới hạn phạm vi.
+2. Đối chiếu nguồn chuẩn theo thứ tự ưu tiên: `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; ghi rõ nếu có xung đột và báo người điều hành để chốt vào `DECISIONS.md`.
+3. Mỗi quyết định kỹ thuật cần nêu rõ chủ sở hữu, căn cứ, phương án đề xuất, đánh đổi (trade-offs) và bằng chứng nghiệm thu.
+4. Cập nhật tài liệu bàn giao trong `docs-backend/modules/<module>/` sau mỗi cột mốc.
 
-### 4.3. Independent implementation gate
+### 4.3. Triển khai thành phần độc lập (Independent Implementation Gate)
 
-1. Tách phần làm được không cần owner: domain, validator, DTO nội bộ, query, pure evaluator, adapter, disposable fixture.
-2. Code core/domain/validator/SQL với test trước; giữ API port nhỏ. Không duplicate Common.
-3. TDD bắt buộc: viết RED test, chạy xác nhận failure đúng nguyên nhân, implement tối thiểu, chạy GREEN, refactor sau GREEN.
-4. Không expose public controller, identity/RBAC, caller port hoặc production migration contract khi owner chưa review.
-5. Test historical/security data fail-closed; không log/echo PII, secret, raw payload.
+1. Tách phần có thể triển khai độc lập: domain model, validator, DTO nội bộ, câu lệnh truy vấn, bộ đánh giá thuần (pure evaluator), persistence adapter và dữ liệu kiểm thử.
+2. Phát triển theo hướng kiểm thử dẫn dắt (TDD): viết kiểm thử thất bại (RED), cài đặt tối thiểu để vượt qua (GREEN), sau đó tái cấu trúc (REFACTOR).
+3. Giữ bề mặt port giao tiếp nhỏ gọn, đúng hợp đồng trong `design/05. Modules contract.md` và không sao chép lại tiện ích của `common`.
+4. Kiểm thử dữ liệu lịch sử và bảo mật theo cơ chế đóng an toàn (fail-closed); tuyệt đối không ghi log hoặc trả về PII thô, khóa bí mật hay payload chưa che dấu.
 
-### 4.4. Integration verification gate
+### 4.4. Kiểm chứng tích hợp (Integration Verification Gate)
 
-1. Chạy targeted unit/component tests trước.
-2. Chạy Testcontainers PostgreSQL cho transaction/lock/constraint/permission/tamper nếu task có DB.
-3. Chạy caller thật chỉ khi module owner/schema/port đã tồn tại; fake caller chỉ chứng minh component mapping.
-4. Đọc JUnit XML để lấy test count/failures/errors/skips; không dùng số từ run cũ.
-5. Ghi environment, revision, command, expected, actual, artifact, status và limitation trong verification report.
-6. Chạy `git diff --check`; phân biệt warning LF/CRLF với whitespace failure.
-7. Nếu Docker/dependency lỗi, báo BLOCKED và tách unit evidence khỏi integration evidence; không gọi task pass.
+1. Chạy bộ kiểm thử đơn vị (unit tests) và kiểm thử thành phần (component tests) có mục tiêu trước.
+2. Chạy kiểm thử tích hợp với PostgreSQL thật qua Testcontainers cho các kịch bản giao dịch, khóa dòng, ràng buộc dữ liệu, phân quyền và phát hiện sửa đổi trái phép.
+3. Đọc trực tiếp kết quả JUnit XML để lấy số lượng bài kiểm thử, lỗi hoặc bỏ qua; ghi nhận đầy đủ câu lệnh, môi trường, kết quả kỳ vọng và kết quả thực tế vào báo cáo kiểm chứng (`*-verification-report.md`).
+4. Kiểm tra định dạng khác biệt (`git diff --check`) để bảo đảm không phát sinh lỗi khoảng trắng.
 
-### 4.5. Review, staging và commit gate
+### 4.5. Rà soát và chuẩn bị bàn giao (Review & Staging Gate)
 
-1. Review full diff theo staged và unstaged riêng; không để implementation mới chỉ nằm unstaged rồi claim đã bàn giao.
-2. Kiểm tra file ownership; không trộn task/module khác vào commit.
-3. Tách commit logical units: backend code/tests riêng, docs/report/handoff riêng khi user yêu cầu commit.
-4. Chỉ `git add` khi user cho phép hoặc cần đánh dấu conflict resolution; sau stage phải báo status.
-5. Không tự chạy `git commit`, `git push`, tạo PR hoặc force operation.
-6. Trước commit, xác nhận không có secret, debug log, temp artifact, unrelated docs, generated output.
+1. Rà soát toàn bộ thay đổi theo đúng phạm vi sở hữu của module; không trộn lẫn tệp của module khác.
+2. Tách bạch mã nguồn/kiểm thử của module và tài liệu báo cáo.
+3. Trước khi bàn giao, xác nhận không có khóa bí mật, log gỡ lỗi tạm thời hoặc tệp sinh tự động ngoài phạm vi.
 
-### 4.6. Status gate và handoff
+### 4.6. Phân loại trạng thái và bàn giao (Status Gate & Handoff)
 
-Dùng đúng trạng thái:
+Sử dụng thống nhất các mức trạng thái:
 
-- **Planned:** chưa có implementation/evidence.
-- **Component Verified:** independent component và targeted evidence pass; owner integration còn mở.
-- **Integration Blocked:** component pass nhưng identity/caller/schema/policy/owner evidence thiếu.
-- **Done:** Definition of Done, caller integration, security/API contract, fresh evidence và owner sign-off đạt.
+- **Planned:** Chưa có mã nguồn hoặc bằng chứng kiểm thử.
+- **Component Verified:** Thành phần độc lập và bộ kiểm thử mục tiêu (gồm Testcontainers PostgreSQL) đã vượt qua; chờ đấu nối caller/provider liên module.
+- **Integration Blocked:** Thành phần độc lập đã hoàn tất nhưng còn chờ module phụ thuộc, chuỗi migration hợp nhất hoặc phê duyệt liên module.
+- **Done:** Đạt toàn bộ tiêu chí nghiệm thu, tích hợp thực tế với caller/provider, hợp đồng API/bảo mật và có xác nhận của các chủ sở hữu liên quan.
 
-Không gọi task `Done` chỉ vì test component pass. Report phải liệt kê phần đã verified, phần blocked, owner decision và next command/file.
+### 4.7. Phối hợp làm việc song song (Parallel-Work Gate)
 
-### 4.7. Parallel-agent gate
-
-1. Mỗi agent sở hữu module/thư mục/docs riêng; không cùng sửa Common, OpenAPI, build config, migration version hoặc shared fixtures nếu chưa phân công.
-2. Trước chạy song song, ghi ownership matrix, migration version reservation, shared API assumptions và file conflict list.
-3. Agent giao tiếp qua handoff/message: contract, files changed, tests, blockers, decisions needed. Không tự sửa phần agent khác.
-4. Chạy Gradle/test integration lần lượt khi dùng cùng checkout/build output; không lấy XML bị agent khác ghi đè.
-5. Merge theo thứ tự dependency: component trước, integration sau; review diff và rerun targeted suite sau merge.
-6. Fake integration không thay real owner integration; parallel progress không đóng task owner-dependent.
-
-Output task vẫn phải gồm: implementation, tests, verification report, limitation/owner register, handoff và Git status. README/index chỉ bổ sung link; giữ nội dung chung cũ.
+1. Mỗi thành viên sở hữu thư mục mã nguồn và tài liệu module riêng; không tự ý chỉnh sửa `common`, OpenAPI, cấu hình build chung hoặc số thứ tự migration khi chưa thống nhất.
+2. Giao tiếp qua tài liệu hợp đồng (`design/05. Modules contract.md`) và bảng quyết định (`DECISIONS.md`): nêu rõ chữ ký port, tệp thay đổi, bài kiểm thử và các điểm phụ thuộc.
+3. Hợp nhất theo thứ tự phụ thuộc: thành phần nền tảng và port trước, đấu nối tích hợp sau; chạy lại bộ kiểm thử hồi quy sau mỗi bước hợp nhất.
 
 ### 4.8. AUD-02 checkpoint — 15/11/2026
 
@@ -149,47 +131,42 @@ Kết luận: BE-NOT-01 **Component Verified / Integration Blocked**, không ph�
 
 Kết luận: BE-FRD-01 **Component Verified / Integration Blocked**, không phải `Done`.
 
-## 5. Mapping Common reuse
+## 5. Ánh xạ tái sử dụng từ Common
 
-| Need | Reuse | Không làm lại |
+| Nhu cầu | Tái sử dụng từ `common` | Không tự cài đặt lại |
 |---|---|---|
-| JCS | `common.crypto.JcsCanonicalizer` | Local JSON canonicalizer |
-| SHA/HMAC | `common.crypto.HmacService` | Duplicate crypto primitive |
-| PII | `PiiMaskingUtils` + module allowlist | Plaintext fallback |
-| Correlation | `RequestContextHolder` | Module ThreadLocal |
-| Errors | `ErrorCode`, `BankingBusinessException`, Problem writer | Duplicate public error catalog |
-| Security | Common filter chain + identity SPI | Fake production authentication |
-| Config/time | `AppProperties`, `TimeConfig`, deployment configuration | Hard-coded thresholds |
-| Logging/metrics | Common encoder/context/low-cardinality rules | PII/high-cardinality tags |
+| Chuẩn hóa JCS | `common.crypto.JcsCanonicalizer` | Bộ chuẩn hóa JSON nội bộ riêng |
+| Băm SHA/HMAC | `common.crypto.HmacService` | Tiện ích mật mã trùng lặp |
+| Che dấu PII | `PiiMaskingUtils` + danh sách trường cho phép của module | Fallback trả về dữ liệu rõ (plaintext) |
+| Mã tương quan | `RequestContextHolder` | `ThreadLocal` riêng trong module |
+| Xử lý lỗi | `ErrorCode`, `BankingBusinessException`, `ProblemWriter` | Danh mục mã lỗi công khai trùng lặp |
+| Bảo mật HTTP | Chuỗi filter của `common` + SPI `SessionAuthenticator` | Cơ chế xác thực giả lập trên production |
+| Cấu hình & thời gian | `AppProperties`, `TimeConfig`, `deployment/configuration.md` | Ngưỡng cố định (hard-coded thresholds) |
+| Nhật ký & chỉ số | `SafeJsonLogEncoder`, `LogRedaction`, quy tắc nhãn cardinality thấp | Ghi PII hoặc nhãn cardinality cao |
 
-## 6. Updated AUD-01 rule
+## 6. Quy tắc chuẩn hóa JCS trong `BE-AUD-01`
 
-Audit-local `AuditCanonicalJson` is an audit-specific Java-value validation adapter that delegates RFC 8785 canonicalization to Common `JcsCanonicalizer`; it is not a second JCS implementation. Audit-owned hash protocol—payload fields, hash_version, delimiter, previous hash and chain lock—still requires audit/architecture review. Common JCS reuse does not approve the hash protocol.
+Lớp `AuditCanonicalJson` trong module `audit` là tầng kiểm tra kiểu dữ liệu Java đặc thù cho kiểm toán và ủy quyền bước chuẩn hóa RFC 8785 cho `JcsCanonicalizer` của `common` (không phải một bộ JCS thứ hai). Giao thức chuỗi băm của `audit` (`hash_version`, cấu trúc `canonical_payload`, dấu phân cách `|`, `prev_hash` và khóa chuỗi `pg_advisory_xact_lock`) thuộc thẩm quyền thiết kế của module `audit` và kiến trúc hệ thống (`design/01. audit-traceability.md`).
 
-Audit event uses Common context at integration. Unit tests may pass explicit IDs. Identity supplies actor/principal/authority; audit does not authenticate or authorize.
+Sự kiện kiểm toán sử dụng ngữ cảnh từ `RequestContextHolder` khi tích hợp; trong kiểm thử đơn vị có thể truyền trực tiếp các định danh tường minh. Module `identity` cung cấp thông tin chủ thể và quyền hạn; module `audit` không tự thực hiện xác thực hay phân quyền.
 
-## 7. Known limitations
+## 7. Các giới hạn kỹ thuật cần lưu ý
 
-- Global audit lock may serialize C1/C2 writes; benchmark before TPS claim.
-- Common JCS is available, but audit protocol/hash_version remains open.
-- Fraud evaluator unit tests do not prove caller query/count correctness.
-- Notification remains at-least-once attempts; duplicate/failure/polling delay accepted MVP limits.
-- Purge disabled shared/demo/production; checkpoint requires independent verification.
-- Common HTTP/security test harness does not prove real identity/session/CSRF/ownership.
-- Process-local rate limit is not distributed quota.
-- No Cloud/TLS/ingress/release readiness claim.
+- Khóa tuần tự chuỗi băm kiểm toán (`pg_advisory_xact_lock`) có thể tuần tự hóa các lượt ghi `C1`/`C2`; cần đo kiểm hiệu năng thực tế trước khi công bố thông lượng (TPS).
+- Kiểm thử đơn vị của bộ đánh giá gian lận (`FraudRuleEvaluator`) không thay thế kiểm thử câu lệnh đếm tần suất giao dịch thực tế bên phía `transfer`.
+- Tiến trình gửi thông báo (`notification` T3) hoạt động theo ngữ nghĩa ít nhất một lần (at-least-once); khả năng gửi trùng khi hết hạn lease là giới hạn được chấp nhận trong MVP (`DEC-TRF-011`).
+- Tính năng dọn dẹp nhật ký kiểm toán (`purge`) mặc định tắt trên các môi trường dùng chung/demo/production; mọi thao tác xóa phải qua đối chiếu anchor và kiểm tra `LEGAL_HOLD_ACTIVE`.
+- Bộ giới hạn tốc độ (`RequestRateLimiter`) trong `common` hoạt động theo từng tiến trình (process-local), chưa phải hạn ngạch phân tán toàn cụm.
 
-## 8. Conflict/staging rule
+## 8. Quy tắc xử lý xung đột cấu hình build
 
-If `git stash pop` conflicts after Common merge:
-- Preserve Common version-catalog build as base.
-- Convert old direct dependencies to `libs.*` aliases.
-- Keep JCS as `libs.jcs`; remove duplicate direct JCS declaration.
-- Keep Spring Security/JPA/validation/JaCoCo/readiness/test dependencies from Common.
-- Resolve conflict, run targeted build/tests, then `git add` only to mark resolution.
-- Stop and report staged state. Do not commit/push automatically.
+Khi hợp nhất nhánh hoặc giải quyết xung đột với cấu hình của `common`:
+- Giữ nguyên cấu trúc Version Catalog (`gradle/libs.versions.toml`) của `common` làm nền tảng.
+- Chuyển các khai báo phụ thuộc trực tiếp sang bí danh `libs.*` (ví dụ `libs.jcs`).
+- Giữ đầy đủ các phụ thuộc Spring Security, JPA, Validation, JaCoCo và Testcontainers từ `common`.
+- Sau khi giải quyết xung đột, chạy lại bộ kiểm thử mục tiêu để xác nhận xanh trước khi bàn giao.
 
-## 9. Change log
+## 9. Lịch sử thay đổi (Change Log)
 
 | Version | Date | Change |
 |---|---|---|

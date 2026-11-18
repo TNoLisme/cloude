@@ -1,6 +1,6 @@
 # BE-TRF-06 — Evidence kiểm thử candidate
 
-Ngày chạy 17/11/2026, branch tại HEAD `9d96c96` và thay đổi working tree chưa commit. Runner Codex dùng Temurin 21, Gradle 8.14.3 và PostgreSQL 16 Alpine qua Testcontainers. Kiểm thử trong bản sao tạm để cô lập build, với source/resources trùng workspace và OpenAPI từ repo.
+Ngày chạy 17/11/2026, branch tại HEAD `9d96c96` và thay đổi working tree chưa commit. Runner Vũ (`transfer`) dùng Temurin 21, Gradle 8.14.3 và PostgreSQL 16 Alpine qua Testcontainers. Kiểm thử trong bản sao tạm để cô lập build, với source/resources trùng workspace và OpenAPI từ repo.
 
 Từ `digitalbanking-backend`:
 

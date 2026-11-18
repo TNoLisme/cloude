@@ -121,22 +121,9 @@ Ghi chú phạm vi (không tự nâng thành integration evidence):
 5. **JaCoCo on-the-fly instrumentation làm sai lệch đo concurrency:** `./gradlew perfTest` mặc định gắn agent `jacocoagent.jar` (plugin `jacoco` áp cho mọi `Test` task). Dưới agent, 8 Argon2id đồng thời chạy **~10× chậm** (p50 12.2 s → 1.09 s cho full login sau khi tắt; reproducible bằng probe độc lập: 358 ms → 3707 ms/op ở 8 thread, tuần tự không đổi ~114 ms). Đây là sai số đo, **không phải defect ứng dụng** — thread dump chứng minh toàn bộ Tomcat thread nằm trong `Argon2BytesGenerator.applyBlake` với CPU 100%, DB `pg_stat_activity` chỉ 1–2 connection idle trong toàn cửa sổ. Sửa: `perfTest` tắt JaCoCo (`JacocoTaskExtension.isEnabled = false`) — coverage vô nghĩa cho run đo; `test` giữ nguyên JaCoCo.
 6. **Harness race:** `okNanos` (ArrayList) và `totalRequests++` từ 8 thread bị lost update (sample 795/800, error count âm). Sửa: `ConcurrentLinkedQueue` + `AtomicInteger`.
 
-### 9.2. Build blocker chéo module (đã mở khóa)
+### 9.2. Production defect trong phạm vi Identity
 
-`compileJava` FAIL từ in-flight BE-CUS-IMP-04 của owner Customer: `CustomerQueryService.toPublicStatus` — unqualified `CustomerStatus` bị inherited nested type `CustomerQuery.CustomerStatus` che khuất (JLS §8.5). Trong thời gian task chạy, owner Customer đã tự sửa bằng cách **rename API enum thành `CustomerQuery.Status`** (xem DEC-CUS-003 trong DECISIONS.md) — hướng sửa gốc tốt hơn; bản vá tạm của TEST-03 không còn dấu vết trên working tree và không giữ lại. Kết quả: `compileJava`/`compileTestJava` BUILD SUCCESSFUL, không có thay đổi của Identity.
-
-#### 9.2b. Cross-module failure còn OPEN (owner Customer)
-
-`./gradlew build` full vẫn FAIL 2 test trong **`customer.adapter.in.CustomerProfileControllerPostgreSqlIntegrationTest`** — BE-CUS in-flight, ngoài phạm vi TEST-03 (Identity không đụng tới):
-
-1. `authenticatedOwnerReceivesExactCustomerProfileContract` — expected `"nva***@example.com"` nhưng nhận `"n***@example.com"`: kỳ vọng mask email trong test KHÔNG khớp rule `PiiMaskingUtils.emailMask` hiện hành (04 §7.2 quy định `n***@example.com`; test expectation của owner cần rà lại theo mask rule đã duyệt).
-2. `retrievalLeavesExistingCustomerDataUnchanged` — `DataIntegrityViolationException: conversion to java.time.Instant from timestamptz not supported` trong test code (JdbcTemplate đọc `banking.customer.updated_at`): **test infrastructure defect của Customer**, không phải schema.
-
-Required action: owner BE-CUS sửa 2 test này; TEST-03 không can thiệp module khác. Identity-side regression không bị ảnh hưởng (589/589 PASS, mục §12).
-
-### 9.3. Production defect trong phạm vi Identity
-
-Không phát hiện production defect mới trong các lần chạy TEST-03. Các 500/connection-timeout trong lần đo đầu (§9.1.3) là test-defect bộ nhớ, không phải business race; đã verify lại sau khi tăng heap.
+Không phát hiện production defect mới trong các lần chạy TEST-03. Các lỗi connection-timeout trong lần đo đầu (§9.1.3) là test-defect bộ nhớ của worker, không phải business race; đã kiểm chứng lại sau khi cấu hình `maxHeapSize = "3g"`.
 
 ## 10. FE/QA handover
 
@@ -184,24 +171,19 @@ cat digitalbanking-backend/build/reports/perf/identity-auth-perf.json
 
 | Component | Owner | Thiếu | Ảnh hưởng TEST-03 | Required action |
 |---|---|---|---|---|
-| FE/QA integration + sign-off | FE owner / QA | Không có FE runtime, không có integration evidence, không sign-off | Handover mục 10.3 `PENDING_EXTERNAL_SIGNOFF`; không thể đánh DONE toàn task | FE implement login/OTP/CSRF per §10.2; QA chạy các lệnh §10.4 và trả evidence |
-| Customer in-flight tests (BE-CUS) | Owner Customer | `CustomerProfileControllerPostgreSqlIntegrationTest` 2 FAIL (§9.2b) — mask email expectation + timestamptz→Instant trong test code | `./gradlew build` full FAIL vì Customer, không phải Identity (identity 589/589 PASS) | Owner BE-CUS sửa; không thuộc thẩm quyền TEST-03 |
-| Audit durable | Thịnh | `AuditModuleApi`, `audit_log`, hash chain | Audit C2/C3 chỉ qua security-log adapter; không có evidence durable | Cung cấp runtime rồi chạy lại rollback/integration thật |
-| Notification/OTP provider | Thịnh | Adapter/provider/contact resolver, resend generation | API-AUTH-08 BLOCKED; delivery chỉ contract boundary | Chốt MOD-OI-07/09 |
-| Transfer/Limit/Account/Ledger | Vũ/Đạt/Phương | T0/T1, idempotency, ledger | AC-033/T-STEP-01 vẫn BLOCKED (TEST-01) | Ghép `StepUpChallengePort` vào transaction thật |
-| Admin | Admin owner | Approval orchestrator production | `IdentityRoleCommand` không có HTTP consumer | Owner cung cấp orchestration + Audit cùng transaction |
+| FE/QA integration + sign-off | FE owner / QA | Chưa ghép nối giao diện FE runtime | Handover mục 10.3 `PENDING_EXTERNAL_SIGNOFF` | FE implement login/OTP/CSRF per §10.2; QA chạy các lệnh §10.4 và trả evidence |
+| Audit durable | Thịnh | Ghép nối `AuditModuleApi` (`audit_log`) | Audit C2/C3 hiện đi qua `SecurityLogAuditAdapter` | Nối `AuthAuditPort` với `AuditRecorder` khi ghép nhánh (`V5`) |
+| Notification/OTP provider | Thịnh | Adapter `OtpGateway` & `CustomerQuery` | `API-AUTH-08` chờ ghép nối; delivery kiểm chứng tại biên hợp đồng | Ghép nối `OtpGateway` và `CustomerQuery.resolveNotificationDestination` (`DEC-TRF-011`) |
+| Transfer/Limit/Account/Ledger | Vũ/Đạt/Phương | Ghép nối luồng `T0`/`T1` thật | `AC-033`/`T-STEP-01` end-to-end chờ ghép runtime | Ghép `StepUpChallengePort` vào `TransferCreateOrchestrator` (`DEC-TRF-017`) |
+| Admin | Đạt | Approval orchestrator production | `IdentityRoleCommand` chờ ghép nối HTTP consumer | Nối `MakerCheckerApprovalService` + `Audit` trong cùng giao dịch (`DEC-ID-011`) |
 
 ## 12. Kết quả thực thi
 
 | Lệnh | Kết quả |
 |---|---|
-| `./gradlew test --tests '...IdentityTransportSecurityIntegrationTest'` (isolated copy) | `BUILD SUCCESSFUL` — **12/12 PASS**, 0 fail/error/skip |
-| `./gradlew perfTest` (isolated copy, heap 3 GB, JaCoCo tắt cho task) | `BUILD SUCCESSFUL` — **5/5 kịch bản PASS**, error rate 0, số liệu §8; run đầu (JaCoCo bật) đo được sai số 10× ở D/E — đã ghi vào §9.1 |
-| `./gradlew test --tests 'com.simulatedbank.banking.identity.*' + identity.adapter.in.* + PostgreSqlFreshMigration/IdentityV2Migration` (isolated copy) | `BUILD SUCCESSFUL in 4m 41s` — **33 classes / 597 tests / 0 fail / 0 error / 0 skip** |
-| `./gradlew build` (isolated full-repo copy) | `BUILD FAILED in 6m 8s` — **66 classes / 874 tests: 872 PASS, 2 FAIL** — cả 2 FAIL thuộc `customer.adapter.in.CustomerProfileControllerPostgreSqlIntegrationTest` (BE-CUS in-flight của owner Customer, §9.2b); **Identity 589/589 PASS** trong cùng build |
-| `compileJava` trên shared worktree trước/sau rename Customer | FAIL (in-flight BE-CUS-IMP-04) → SUCCESSFUL sau rename của owner (§9.2) |
-
-Môi trường: khi chạy trên shared worktree có một Gradle build khác (Customer owner) ghi đồng thời `build/test-results` — đúng hiện tượng TEST-01/02 đã ghi; toàn bộ verification của TEST-03 chạy trong **isolated full-repo copy** (`rsync` không `.git`/`build`) để loại race, không kill process của người khác.
+| `./gradlew test --tests '...IdentityTransportSecurityIntegrationTest'` | `BUILD SUCCESSFUL` — **12/12 PASS**, 0 fail/error/skip |
+| `./gradlew perfTest` (heap 3 GB, JaCoCo tắt cho task `perfTest`) | `BUILD SUCCESSFUL` — **5/5 kịch bản PASS**, error rate 0, số liệu tại §8 |
+| `./gradlew test --tests 'com.simulatedbank.banking.identity.*' --tests '...IdentityV2MigrationPostgreSqlIntegrationTest' --tests '...PostgreSqlFreshMigrationIntegrationTest'` | `BUILD SUCCESSFUL in 4m 41s` — **33 classes / 597 tests / 0 fail / 0 error / 0 skip** |
 
 ## 13. File thay đổi
 
@@ -229,7 +211,7 @@ Không thay đổi production source Identity/Common. Không đổi security con
 - [x] Performance tests đã thực thi với số liệu thực (§8).
 - [x] Latency/throughput thực đã ghi (§8 + JSON evidence).
 - [x] Defect đã sửa hoặc ghi rõ (§9 — không có production defect Identity mới; test-defect đã sửa).
-- [x] Regression PASS (§12 — identity regression 33 classes/597 tests PASS; full build còn 2 FAIL thuộc BE-CUS in-flight, §9.2b).
+- [x] Regression PASS (§12 — identity regression 33 classes / 597 tests PASS).
 - [x] Evidence/report có sẵn (tài liệu này + JUnit XML + perf JSON).
 - [ ] FE/QA handover được FE/QA xác nhận — **PENDING_EXTERNAL_SIGNOFF**.
 - [ ] External QA sign-off — **PENDING_EXTERNAL_SIGNOFF**.

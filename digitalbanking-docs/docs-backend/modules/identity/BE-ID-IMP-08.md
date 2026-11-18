@@ -1,7 +1,7 @@
 # BE-ID-IMP-08 — Device recognition và MFA login
 
-> **Ngày:** 16/11/2026 · **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` (đã fetch).
-> **Branch:** `datht-backend-rework`; không reset/checkout branch khác, giữ nguyên IMP-01..07 chưa commit.
+> **Ngày:** 16/11/2026 · **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`
+> **Branch:** `datht-backend-rework`
 > **Trạng thái tổng:** **PARTIAL** theo quyết định người điều hành: `mfa_every_login`; không triển khai persistent device trust khi chưa có contract proof được duyệt.
 > **Nguồn:** `docs-common/07. API contracts.md` §3.8, §7.2.3–§7.2.4, §8.1.1, §8.1.4; `04. Database design & analysis.md` §4.2.1–§4.2.6; `design/01. audit-traceability.md` §5.3; `design/05. Modules contract.md` §5; [DEC-ID-008](../../../../DECISIONS.md).
 
@@ -9,7 +9,7 @@
 
 `07` §3.8 cho phép `deviceRef` + `deviceFingerprint` khớp trusted device bỏ OTP, nhưng cả hai là dữ liệu client có thể sao chép. Schema/API baseline không có device-secret hash/protocol proof, trust expiry hoặc chính sách tự trust được duyệt. Người điều hành đã chọn **luôn MFA cho password login**, không chọn extension cookie DB_DEVICE/migration/API revoke. Đây là quyết định rõ ràng về scope, không phải fallback cho thiếu implementation.
 
-Mọi password login, kể cả row `trusted=true`, đều phải OTP. Không tạo persistent trust, không đổi `trusted_at`, không cấp device secret; `AuthResponse.session.deviceTrusted=false`. Thư mục repo thực tế là `docs-backend/modules/identity/`, không có `docs-backend/Identity/`.
+Mọi password login, kể cả row `trusted=true`, đều phải OTP. Không tạo persistent trust, không đổi `trusted_at`, không cấp device secret; `AuthResponse.session.deviceTrusted=false`.
 
 ## 2. API thực tế
 

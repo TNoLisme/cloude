@@ -1,39 +1,49 @@
-# Tiến độ dự án
+# Tiến độ Dự án (`PROGRESS.md`)
 
-## Trạng thái hiện tại
-Week 3 (Races, Risk, Acceptance, Handover) **hoàn thành 01/11/2026** — sớm hơn re-baseline 08–14/11; checklist & evidence trong [`docs transactions/Work/Week3.md`](docs transactions/Work/Week3.md) + [`docs transactions/evidence/`](docs transactions/evidence/). Full backend suite xanh: **230 tests / 0 fail** (66 classes, Java 21 + Testcontainers postgres:16-alpine), `make check` pass lúc 2026-11-01T09:49:54Z. D5 load test ghi **blocked-note** có điều kiện (k6 chưa cài, backend image stale, thiếu demo credentials/kịch bản FE) — không ghi PASS.
+> **Dự án:** Digital Banking MVP — Single-Bank, Core Simulated
+> **Ngày cập nhật:** 18/11/2026
+> **Giai đoạn hiện tại:** Hoàn tất chuẩn hoá bộ tài liệu kỹ thuật Baseline v1.0 & Phát triển độc lập các module; sẵn sàng cho pha ghép tích hợp liên module (`Integration Merge`).
 
-## Đã hoàn thành
-- W1/D1: Small transfer path 9 bước + UT-01..06 + happy-path integration 50K (Postgres thật) — ports `AccountModuleApi`/`IdentityModuleApi` + `TransferLockRepository`
-- W1/D2: Recipient resolve tách `ResolveRecipientService`; concealment 404 `RECIPIENT_NOT_AVAILABLE`; rate limit 30/phút theo customer; masking 4 số cuối
-- W1/D3: Query skeleton — cursor Base64 URL-safe, `limit+1`, visibility source/destination (QV-01..05)
-- W1/D4: State machine chốt — migration **V8** (`transfers_awaiting_requires_otp`, `transfers_expiry_only_awaiting`), lock order `ORDER BY id ASC FOR UPDATE` có EXPLAIN
-- W2/D1: Tách `CreateTransferService` + `ConfirmTransferOtpService`, `TransferPolicy`/`TransferStatus`/`TransferExpirationPolicy` về `transfer/domain/` (đóng M01/M03)
-- W2/D2: Boundary OTP M09–M11 — `IdentityModuleApi` thêm `issueOtp`/`dispatchOtp`/`consumeOtp`/`invalidateOtp`; adapter sở hữu internals identity; xoá `TransferOtpRepository`; không sửa `identity/**`
-- W2/D3: Large create 7 bước (issue OTP trong money TX, dispatch sau COMMIT, compensation `FAILED(OTP_DISPATCH_FAILED)` + 503) + confirm 8 bước (outcome-after-commit, wrong OTP persist, lock order transfer → challenge → accounts)
-- W2/D4: CON-01..03 + FI-01 pass PostgreSQL thật; lazy expiry AT-01..03; history filter `status/from/to` + QV-01..06; injector qua Spring Profile (NoOp prod)
-- W3/D1: CON-04 duplicate-confirm + CON-05 block-vs-confirm pass PostgreSQL thật; CON-05 dùng `AccountStatusService.change` thật; FI-04 cả hai thứ tự confirm/compensation
-- W3/D2: FI-02 timeout-retry, FI-03 dispatch compensation, FI-05 restart bằng Spring context thứ hai (cùng DataSource) pass; AF-05 accepted limitation ghi rõ
-- W3/D3: Risk AFTER_COMMIT integration — LARGE_TRANSFER (>5M), HIGH_FREQUENCY (>5/10 phút), failure isolation AF-06, rollback không trigger risk, terminal guard matrix
-- W3/D4: Full acceptance 230 tests / 66 classes / 0 fail; `make check` pass; evidence 3 file + handover FE/BE-A/BE-B
-- W3/D5: Load test k6 20 RPS × 10 phút **blocked-note** (chưa chạy) — điều kiện mở lại trong `evidence/BE3-handover.md §9`
-- `Makefile` gốc repo với target `check` (openapi + mvn test + git diff --check)
+---
 
-## Đang thực hiện
-- Không — W3 đóng. Milestone module transactions (W1–W3) hoàn thành phần BE; hạng mục mở: load test R5, AC-06 PIN lockout concurrent phía BE-A, xác nhận FE/BE-A/BE-B.
+## 1. Tổng quan Trạng thái Dự án
 
-## Vấn đề đã biết
-- **Java version**: system Java 25 làm Mockito/byte-buddy fail khi chạy test. Bắt buộc dùng JDK 21: `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home` (macOS). `Makefile` tự phát hiện qua `/usr/libexec/java_home -v 21`; máy khác override `JAVA_HOME`.
-- Docker image backend compose (`cloude-backend:latest`, build 2026-10-21) chưa chứa migration V8 — cần `docker compose build backend` trước khi chạy compose; V8 đã verify qua Testcontainers (Flyway tươi V1–V8).
-- **Đề xuất cho BE-A (identity)**: chuẩn hoá contract OTP lifecycle giống `IdentityModuleApi` của transfer (`issue` không gửi trong TX, `dispatch` sau COMMIT, `consume` lock theo challenge id, `invalidate`); hiện adapter transfer dùng raw SQL lock theo id vì `OtpChallengeService.consume` yêu cầu phone (M15).
-- **AC-06 phần PIN lockout concurrent**: transfer chỉ nhận `403 PIN_LOCKED`; test đồng thời 5 lần sai PIN phía identity thuộc BE-A — chưa có trong suite transfer.
-- **Load test R5 chưa chạy**: k6 chưa cài, `.env` không có `DEMO_*`, chưa có kịch bản FE; blocked-note + điều kiện mở lại tại `docs transactions/evidence/BE3-handover.md §9`.
-- **MISMATCH M17**: API docs ghi `429 RATE_LIMITED` cho create transfer nhưng interceptor hiện chỉ áp `recipient-resolve`/`operator-lookup`; không sửa module shared ngoài scope transfer.
-- **Nợ kỹ thuật có kiểm soát (M13)**: `TransferQueryService` inject read-only `AccountJdbcRepository`/`IdentityJdbcRepository` để mask/projection — không chạm money path; xử lý khi có module read API.
+- **Tài liệu kỹ thuật (`digitalbanking-docs/`):**
+  - `docs-common/01–11`: **Hoàn thành (v1.0)** — Đã chuẩn hoá toàn bộ yêu cầu nghiệp vụ (`BRD`), đặc tả hệ thống (`SRS`), thiết kế cơ sở dữ liệu (`Database Design`), ngăn xếp công nghệ (`Technical Stack`), kiến trúc hệ thống (`System Architecture`), hợp đồng API (`API Contracts`), hạ tầng triển khai (`Deployment Infrastructure`), kế hoạch kiểm thử (`Test Plan`), lộ trình (`Master Timelines`) và phân công nhân sự (`Resource Plan`).
+  - `docs-common/design/01–05`: **Hoàn thành (v1.0)** — Đã đồng bộ hoàn toàn thiết kế chuyên sâu về Audit (`01`), Consistency & Concurrency (`02`), Fraud Detection Rules (`03`), Security (`04`) và Hợp đồng giao tiếp nội bộ giữa 11 module (`05. Modules contract`).
+  - `openapi/digital-banking-v1.yaml`: **Hoàn thành (v1.0.1)** — Đã đồng bộ ngữ nghĩa HTTP status codes (`201`/`422` cho idempotency replay), headers và schemas với `07. API contracts.md`.
+  - `docs-backend/`: **Hoàn thành (v1.0)** — Đã chuẩn hoá chuẩn kiến trúc (`00. architecture & conventions.md`), cấu hình vận hành (`deployment/`), tổng quan 11 module (`modules/_overview/`) và tài liệu chi tiết từng module (`modules/<module>/`).
+  - `docs-frontend/`: **Hoàn thành (v1.2)** — Đã chốt baseline thiết kế màn hình và đặc tả tính năng Frontend.
 
-## Các bước tiếp theo
-1. Build lại docker image backend (`docker compose build backend`) để compose local có V8
-2. Chạy load test R5 khi có k6 + data/kịch bản: 20 RPS × 10 phút, invariant zero negative balance/duplicate debit, post-load reconciliation (Task 2.4)
-3. BE-A: chốt M15 OTP lifecycle contract; bổ sung test AC-06 PIN lockout concurrent; xác nhận CON-05
-4. FE: walkthrough matrix trong `evidence/BE3-handover.md §1–§6`; xác nhận bàn giao
-5. BE-B: xác nhận giữ per-class Testcontainers (B4) hoặc migrate `DisposablePostgresTestSupport`
+---
+
+## 2. Trạng thái Hiện thực 11 Module Backend (`digitalbanking-backend/`)
+
+| # | Module | Owner | Trạng thái Hiện thực | Chi tiết Thành phần Đã Hoàn thành & Công việc Cần Ghép Tích hợp |
+|---:|---|---|---|---|
+| 01 | `identity` | Đạt | **Đã triển khai Core & REST (75 classes)** | Hoàn thành 5 lớp (`api`, `adapter/in`, `adapter/out`, `application`, `domain`), đăng nhập mật khẩu + MFA (`LOGIN_NEW_DEVICE`), FIDO2/WebAuthn (`Yubico`), quản lý phiên opaque (`DB_SESSION` + CSRF rotation), `StepUpChallengePort`, `IdentityRoleCommand`, rate limit theo username và kiểm thử PostgreSQL/bảo mật/hiệu năng. Chờ nối adapter thật của `AuditModuleApi`, `OtpGateway` và `CustomerQuery`. |
+| 02 | `customer` | Đạt | **Đang phát triển (Skeleton)** | Đã chốt đặc tả bảng `banking.customer` (`04` §4.2.2) và hợp đồng `CustomerQuery` (`findByUserId`, `getCustomerView`, `resolveNotificationDestination` tại `design/05` §6). Các module phụ thuộc đang kiểm thử qua mock/port theo tài liệu giao tiếp. |
+| 03 | `account` | Đạt | **Đang phát triển (Skeleton)** | Đã chốt đặc tả bảng `banking.account` (`04` §4.3.1) và hợp đồng `AccountQuery`, `AccountBalance` (`lockTransferAccounts`, `debitConditional`, `credit`), `AccountReconciliationQuery` (`design/05` §7 & §9). |
+| 04 | `transfer` | Vũ | **Đã triển khai Candidate (51 classes)** | Đã hoàn thành toàn bộ logic điều phối `TransferCreateOrchestrator`, `TransferCreateService`, `TransferQueryService`, `TransferPreflightCandidate`, `TransferIntentCandidate` (`T1`), `TransferSettlementCandidate` (`T2`), `TransferRecoveryCandidate` và bộ kiểm thử hợp đồng (`BE-TRF-01..07`). Chờ kích hoạt component-scan sau khi ghép provider `account`, `limit`, `ledger`, `audit`. |
+| 05 | `ledger` | Phương | **Đã triển khai Candidate (16 classes)** | Đã hoàn thành `LedgerPosting` (`postDoubleEntry` `MANDATORY`), `PairVerifier` (native read-back kiểm chứng cặp `DEBIT`/`CREDIT`), `LedgerEntryEntity` và migration append-only (`BE-LED-01..03`). Chờ bổ sung `LedgerQuery.findEvidence` và ghép vào giao dịch `T2`. |
+| 06 | `limit` | Vũ | **Đang phát triển (Skeleton)** | Đã chốt đặc tả `limit_config`, `limit_usage`, `limit_reservation` và hợp đồng `lockStepUpGuard`, `evaluateStepUpUnderGuard`, `reserveForPendingTransfer`, `lockAndCheck`, `settleOrReleaseReservation` (`design/05` §10). |
+| 07 | `audit` | Thịnh | **Đã triển khai Component (17 classes)** | Đã hoàn thành `AuditRecorder` (`C1`/`C2` `MANDATORY`), `AuditJdbcWriter` (khóa tư vấn `hashtextextended('audit:chain', 0)` và tính chuỗi băm JCS SHA-256), `AuditQueryService`, `AuditChainVerifier` (`BE-AUD-01/02`). Chờ công bố port `audit.api.AuditModuleApi` (gồm `recordStandalone` `C3`), controller REST và job retention (`BE-AUD-03`). |
+| 08 | `fraud` | Thịnh | **Đã triển khai Component (24 classes)** | Đã hoàn thành `FraudRuleEvaluator` (`LARGE_VALUE`, `HIGH_FREQUENCY`, `UNUSUAL_PATTERN`), `FraudReviewService`, `FraudJdbcRepository` và JPA entities (`BE-FRD-01`). Chờ công bố port `fraud.api.FraudEvaluation` (kèm cô lập savepoint `T2`) và controller REST thẩm định cờ. |
+| 09 | `notification` | Thịnh | **Đã triển khai Component (19 classes)** | Đã hoàn thành `NotificationOutboxPort`, `OtpGateway`, `NotificationOutboxService`, `NotificationOutboxWorker` (`SKIP LOCKED`) và `SimulatedNotificationGateway` (`BE-NOT-01`). Cần chuyển `TransferNotice` sang `notification.api.dto` và nối `CustomerQuery.resolveNotificationDestination`. |
+| 10 | `admin` | Đạt & Thịnh | **Đang phát triển (Skeleton)** | Đã chốt đặc tả bảng `banking.approval_request` (`04` §4.5.3) và luồng điều phối phê duyệt 4 mắt (`Maker-Checker`) gọi `IdentityRoleCommand` / `Limit` / `Audit` (`design/05` §12.1, `BE-ADM-01`). |
+| 11 | `common` | Phương | **Hoàn thành (30 classes)** | Đã hoàn thành toàn bộ hạ tầng dùng chung trong 5 sub-packages (`config`, `context`, `crypto`, `error`, `logging`): `SessionAuthenticator` SPI, CSRF filter, Rate Limiter, `PiiCryptoService` (`AES-256-GCM`), `HmacService`, `JcsCanonicalizer`, `PiiMaskingUtils`, `GlobalExceptionHandler` (RFC 9457), `SafeJsonLogEncoder` và `LogRedaction`. |
+
+---
+
+## 3. Danh mục Cần Xử lý Khi Ghép Tích hợp (`Pre-Merge Integration Checklist`)
+
+1. **Đồng bộ đánh số Flyway Migration (`DEC-COM-001`):**
+   - Hiện tại trong `src/main/resources/db/migration/` đang có 2 tệp trùng số hiệu `V2` (`V2__create_identity_and_rbac_tables.sql` và `V2__create_audit_log.sql`), đồng thời SQL của `transfer` và `ledger` đang đặt tại `db/transfer-candidate/` và `db/ledger-candidate/`.
+   - Khi ghép nhánh code, đánh số lại theo chuẩn `DEC-COM-001` (`V1` schema → `V2..V4` identity → `V5` audit → `V6` customer/account → `V7` transfer/idempotency → `V8` ledger → `V9` limit/approval → `V10` fraud/notification) để `Flyway` và `spring.jpa.hibernate.ddl-auto: validate` khởi chạy thông suốt trên toàn bộ ứng dụng.
+2. **Bổ sung quyền `CUSTOMER_READ` và `FRAUD_READ` cho `AUDITOR` trong seed `V2` (`DEC-ID-001`):**
+   - Cập nhật danh sách `role_permission` của role `AUDITOR` trong `V2__create_identity_and_rbac_tables.sql` để khớp hoàn toàn với ma trận phân quyền tại `04` Appendix A.2 và `07` §3.4.
+3. **Chuẩn hoá package DTO của `notification.api` (`DEC-NOT-001`):**
+   - Di chuyển `TransferNotice` (hoặc tạo DTO tương ứng) vào `com.simulatedbank.banking.notification.api` để `NotificationOutboxPort` không import trực tiếp `notification.domain`.
+4. **Hoàn thiện các module `customer`, `account`, `limit`, `admin` và nối dây (`wiring`) các port:**
+   - Hiện thực các provider còn thiếu theo đúng chữ ký tại `docs-common/design/05. Modules contract.md`.
+   - Thay thế các test double/adapter tạm (`SecurityLogAuditAdapter`, consumer seams của `transfer`) bằng bean provider thật và chạy bộ kiểm thử nghiệm thu `D1–D5` theo `09. Test plan.md`.

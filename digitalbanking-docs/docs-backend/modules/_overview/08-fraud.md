@@ -2,60 +2,64 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-SUM-08`
+> **Phiên bản:** 1.1
+> **Ngày cập nhật:** 18/11/2026
 > **Module:** `com.simulatedbank.banking.fraud`
 > **Owner chính:** **Thịnh** (Phối hợp: Vũ — `transfer` & `limit`, Đạt — `admin`, Thắng — FE)
 > **Mốc tập trung:** **Tuần 5 (W5)** theo `10 Master timelines.md`
-> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (FR-044..048, AC-026), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§5.7), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6.2, §7.6), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§11.8), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§5.6), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (Toàn bộ)
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (FR-044..048, AC-026, AC-027), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§4.7.1, §4.7.2), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6.2, §7.6), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§8.7), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§5.3, §5.6), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (Toàn bộ), [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] (§11.2), [[DECISIONS.md]] (`DEC-COM-001`, `DEC-TRF-007/009`)
 
 ---
 
 ## 1. Mục tiêu và Phạm vi Trách nhiệm
 
-Module `fraud` thực thi bộ quy tắc phát hiện gian lận và dấu hiệu rủi ro theo thời gian thực ngay trong tiến trình xử lý giao dịch chuyển tiền (**In-Process Deterministic Rule Engine tại `T2`**), tạo cờ cảnh báo (`fraud_flag`) gắn với phiên bản quy tắc (`rule_version`), hỗ trợ giữ/chặn giao dịch bất thường theo cấu hình và cung cấp luồng thẩm định (`Operator Review Workflow`) cho nhân viên vận hành.
+Module `fraud` thực thi bộ quy tắc phát hiện gian lận và dấu hiệu rủi ro theo thời gian thực ngay trong tiến trình xử lý giao dịch chuyển tiền (**In-Process Deterministic Rule Engine tại `T2`**), tạo cờ cảnh báo (`fraud_flag`) gắn với phiên bản quy tắc (`(rule_code, rule_version)`), hỗ trợ đánh giá an toàn với cơ chế cô lập lỗi `Savepoint Fail-open`, và cung cấp luồng thẩm định cờ gian lận (`Operator Review Workflow`) cho nhân viên vận hành.
 
 ---
 
 ## 2. Dữ liệu Sở hữu Độc quyền (`Write-Owner` trong Schema `banking`)
 
-Module `fraud` sở hữu độc quyền 2 bảng:
+Module `fraud` sở hữu độc quyền 2 bảng (`04. Database design & analysis.md` §4.7.1–§4.7.2, migration `V10` theo `DEC-COM-001`):
 
-| Bảng | Cột & Ràng buộc Trọng tâm | Quy tắc Nghiệp vụ |
+| Bảng | Cột & Ràng buộc Trọng tâm | Quy tắc Nghiệp vụ & Bất biến |
 |---|---|---|
-| **`banking.fraud_rule_config`** | - `rule_code` (`PK`), `rule_name`, `version_no`<br>- `enabled`, `priority`, `severity` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)<br>- `threshold_json` / `threshold_value`, `window_seconds`, `action` / `auto_block`<br>- `effective_from`, `effective_to`, `updated_at` | Lưu cấu hình động của các quy tắc gian lận (không hard-code ngưỡng trong code) và giữ lịch sử phiên bản (`version_no`) để giải thích lại quyết định cũ. |
-| **`banking.fraud_flag`** | - `fraud_flag_id` (`PK`), `transfer_id` (`FK -> transfer`)<br>- `rule_code` (`FK -> fraud_rule_config`), `rule_version`<br>- `severity`, `status` (`OPEN`, `UNDER_REVIEW`, `ALLOWED`/`CLOSED_FALSE_POSITIVE`, `BLOCKED`/`CLOSED_CONFIRMED`, `CLOSED`)<br>- `score_details` / `observed_value` (`JSONB`)<br>- `reviewed_by`, `review_note` / `review_reason`, `reviewed_at`, `created_at` | **Unique Constraint:** `UNIQUE (transfer_id, rule_code)` đảm bảo retry không tạo cờ trùng lặp cho cùng một giao dịch và một quy tắc. |
+| **`banking.fraud_rule_config`** | - **Composite PK:** `(rule_code VARCHAR(32), version INT)` (`FraudRuleConfigId`)<br>- `rule_type IN ('LARGE_VALUE','HIGH_FREQUENCY','UNUSUAL_PATTERN')`<br>- `threshold_amount NUMERIC(19,2)`, `threshold_count INT`, `window_seconds INT`<br>- `severity IN ('LOW','MEDIUM','HIGH','CRITICAL')`, `enabled BOOLEAN NOT NULL`<br>- `effective_from TIMESTAMPTZ`, `effective_to TIMESTAMPTZ`, `created_by`, `approved_by`, `created_at` | Lưu cấu hình theo phiên bản của các quy tắc gian lận (không hard-code ngưỡng trong code); giữ lịch sử phiên bản `(rule_code, version)` để giải thích chính xác mọi quyết định gắn cờ trong quá khứ. |
+| **`banking.fraud_flag`** | - `flag_id BIGINT GENERATED ALWAYS AS IDENTITY PK`<br>- `transfer_id BIGINT NOT NULL FK -> transfer`<br>- **Composite FK:** `(rule_code, rule_version) -> fraud_rule_config(rule_code, version)`<br>- `severity IN ('LOW','MEDIUM','HIGH','CRITICAL')`<br>- `status IN ('OPEN','UNDER_REVIEW','ALLOWED','BLOCKED','CLOSED')` (`FlagStatus`)<br>- `matched_value JSONB NOT NULL` (chỉ chứa các khóa an toàn `amount`, `count`, `window` đã qua `FraudMatchedValueValidator`)<br>- `reviewed_by BIGINT FK -> app_user`, `reviewed_at TIMESTAMPTZ`<br>- `decision IN ('ALLOW','BLOCK','ESCALATE','CLOSE')` (`ReviewDecision`), `notes VARCHAR(500)`, `correlation_id`, `created_at` | - **Unique Constraint (`uq_fraud_flag_transfer_rule_ver`):** `UNIQUE (transfer_id, rule_code, rule_version)` đảm bảo không tạo cờ trùng lặp cho cùng một giao dịch và phiên bản quy tắc.<br>- Ánh xạ quyết định thẩm định (`ReviewStateTransition`): `ALLOW -> ALLOWED`, `BLOCK -> BLOCKED`, `ESCALATE -> UNDER_REVIEW`, `CLOSE -> CLOSED`. Chỉ các cờ ở trạng thái `OPEN` hoặc `UNDER_REVIEW` mới được phép cập nhật quyết định; cờ đã kết thúc (`ALLOWED`, `BLOCKED`, `CLOSED`) trả về `409 FRAUD_FLAG_ALREADY_CLOSED`. |
 
 ---
 
-## 3. Hợp đồng REST API Phụ trách (`07. API contracts.md` §11.8)
+## 3. Hợp đồng REST API Phụ trách (`07. API contracts.md` §8.7)
 
 | Mã API | Method & Path | Quyền truy cập | Hành vi cốt lõi |
 |---|---|---|---|
-| `API-FRD-01` | `GET /api/v1/fraud-flags` | `STAFF` (`FRAUD_READ`) | Tra cứu danh sách cờ cảnh báo gian lận (hỗ trợ lọc theo `status`, `severity`, `ruleCode`, `transferReference`, khoảng thời gian `from`–`to`, phân trang). |
-| `API-FRD-02` | `POST /api/v1/fraud-flags/{id}/review` | `STAFF` (`FRAUD_REVIEW`) | Nhân viên vận hành/rủi ro cập nhật quyết định thẩm định cờ gian lận kèm lý do (`reviewNote`). Khóa dòng bằng `FOR UPDATE NOWAIT` (`design/02` Pattern A.15) và ghi audit `FRAUD_FLAG_REVIEWED` (`C2`). |
+| `API-FRD-01` | `GET /api/v1/fraud-flags` | `OPERATIONS` (`FRAUD_REVIEW`), `ADMIN` / `AUDITOR` (`FRAUD_READ`) | Tra cứu danh sách cờ cảnh báo gian lận (hỗ trợ lọc theo `status`, `severity`, `ruleCode`, `reference`, `customerId`, khoảng thời gian `from`–`to`, phân trang, `sort=createdAt\|severity`). |
+| `API-FRD-02` | `POST /api/v1/fraud-flags/{id}/review` | `OPERATIONS` (`FRAUD_REVIEW`) | Nhân viên vận hành cập nhật quyết định thẩm định (`decision`: `ALLOW`, `BLOCK`, `ESCALATE`, `CLOSE`) kèm ghi chú (`notes` tối đa 500 ký tự). Khóa dòng bằng `SELECT ... FOR UPDATE NOWAIT` kết hợp `WHERE status IN ('OPEN','UNDER_REVIEW')` và ghi sự kiện kiểm toán `FRAUD_FLAG_REVIEWED` (`C2`). |
 
 ---
 
-## 4. Bộ Quy tắc Gian lận & Hợp đồng Giao tiếp Nội bộ (`design/03`)
+## 4. Bộ Quy tắc Gian lận & Hợp đồng Giao tiếp Nội bộ (`design/03`, `DEC-TRF-007/009`)
 
-### 4.1. Danh mục Quy tắc Gian lận (`Rule Catalog` từ `design/03` §4)
-- **Nhóm quy tắc Baseline & Mở rộng Phương án B (`design/03` §4.1–4.2):**
-  - `FRD-01 LARGE_VALUE` (`LARGE_TRANSFER`): Giao dịch giá trị lớn vượt ngưỡng cấu hình.
-  - `FRD-02 DAILY_STEP_UP`: Tổng chuyển đi dự kiến trong ngày vượt `20,000,000 VND/ngày` $\rightarrow$ kích hoạt Step-up OTP và gắn cờ `DAILY_THRESHOLD`.
-  - `FRD-03 DAILY_CAP`: Tổng chuyển đi dự kiến trong ngày vượt trần cứng (`50,000,000 VND/ngày` hoặc theo `limit_config`) $\rightarrow$ `REJECT` (`Fail-closed`).
-  - `FRD-04 HIGH_FREQUENCY`: Tần suất giao dịch liên tục từ cùng khách hàng/tài khoản trong cửa sổ trượt (ví dụ: giao dịch thứ 3 trong `120 giây`) $\rightarrow$ yêu cầu Step-up OTP và gắn cờ `WARNING`.
-  - `FRD-05 REPEATED_VELOCITY`: Tiếp tục chuyển tiền khi cảnh báo velocity (`WARNING` TTL 15 phút) còn hiệu lực $\rightarrow$ giữ giao dịch chờ Operator xem xét hoặc chặn theo cấu hình release.
-  - `FRD-06 UNUSUAL_PATTERN` / `FRD-07 AUTH_ABUSE` / `FRD-08 OPERATOR_ANOMALY`: Các quy tắc quan sát và gắn cờ phục vụ kiểm toán.
+### 4.1. Danh mục Quy tắc Gian lận Chuẩn trong MVP
+- **`LARGE_VALUE` (`RuleType.LARGE_VALUE`):** Kích hoạt khi giá trị giao dịch `amount >= threshold_amount` theo cấu hình quy tắc đang hiệu lực.
+- **`HIGH_FREQUENCY` (`RuleType.HIGH_FREQUENCY` — `DEC-TRF-009`):** Kích hoạt khi số lượng lệnh chuyển tiền (`transfer` intent đã commit `T1`) của cùng khách hàng trong cửa sổ trượt `window_seconds = 600` giây (10 phút) **lớn hơn `threshold_count = 5`** (tức từ lệnh thứ `6` trở đi trong 10 phút). Mặc định gắn cờ `OPEN` và tiếp tục xử lý giao dịch.
+- **`UNUSUAL_PATTERN` (`RuleType.UNUSUAL_PATTERN`):** Giữ ở trạng thái tắt mặc định (`disabled`) trong phạm vi MVP.
 
 ### 4.2. Port cung cấp cho `transfer` gọi trong Pha `T2` (`fraud.api`)
-- **`FraudEvaluationPort.evaluateTransferInT2(transfer, lockedAccounts)`:**
-  - Chạy đồng bộ trong `T2` trước khi ghi sổ cái với ngân sách thời gian mục tiêu `1 giây`.
-  - **Cơ chế Cô lập Lỗi `Fail-Open` (`design/02` §5.6, `design/03` §8):** Bọc phần tính toán thống kê/cảnh báo bổ trợ trong một **JDBC Savepoint (`PROPAGATION_NESTED`)** kèm `SET LOCAL statement_timeout = '1000ms'`. Nếu quá trình đánh giá quy tắc bổ trợ gặp lỗi kỹ thuật/timeout, rollback về Savepoint, ghi sự kiện `FRAUD_ENGINE_ERROR` (`C4`) và cho phép giao dịch hợp lệ tiếp tục (không làm hỏng giao dịch vì lỗi phụ trợ).
+- **`FraudEvaluationPort.evaluateTransferInT2(FraudTransferSnapshot snapshot) -> FraudEvaluationResult`:**
+  - Chạy đồng bộ trong `T2` (sau khi đã khóa tài khoản và hạn mức, trước khi ghi nợ/ghi có) với ngân sách thời gian mục tiêu `1000 ms`.
+  - **Cơ chế Cô lập Lỗi `Fail-Open` (`design/02` §5.6, `DEC-TRF-007`):** Bọc bước đánh giá quy tắc bổ trợ trong một **JDBC Savepoint (`PROPAGATION_NESTED`)**. Nếu quá trình đánh giá quy tắc gặp lỗi kỹ thuật/timeout và rollback về Savepoint thành công mà không làm hỏng transaction chính, ghi nhận sự kiện vận hành `FRAUD_ENGINE_ERROR` (`C4`) và cho phép giao dịch hợp lệ tiếp tục.
+  - Các cờ gian lận hợp lệ được giữ lại sau savepoint sẽ được ghi nhận kiểm toán `FRAUD_FLAG_CREATED` (`C2`) tuần tự theo `flag_id ASC` ở pha kiểm toán cuối của `T2` (lỗi ghi audit `C2` bắt buộc fail-closed làm rollback toàn bộ `T2` — `DEC-TRF-007`).
 
 ---
 
-## 5. Danh sách Công việc Cần Triển khai & Viết Thiết kế Chi tiết
+## 5. Danh sách Công việc & Trạng thái Triển khai
 
-1. [ ] Chốt phạm vi các quy tắc của Phương án B đưa vào bản phát hành cùng Vũ (`transfer`, `limit`) và Đạt (`admin`) theo checklist tại mục 13.2 của `design/03. fraud-detection-rules.md`.
-2. [ ] Hiện thực `FraudRuleEngineService` đọc cấu hình từ `fraud_rule_config`, đánh giá các quy tắc trong `T2` với Savepoint isolation và ghi `fraud_flag` + audit `FRAUD_FLAG_CREATED` (`C2`).
-3. [ ] Hiện thực `FraudReviewService` và 2 API `GET /api/v1/fraud-flags`, `POST /api/v1/fraud-flags/{id}/review`.
-4. [ ] Viết bộ kiểm thử ranh giới ngưỡng gian lận (`FRD-T01..T18` trong `design/03` và `T-FRAUD-01`, `T-FRAUD-B01..B08` trong `09. Test plan.md`).
+1. [x] Hiện thực domain & pure rule engine (`FraudRuleEvaluator`, `FraudTransferSnapshot`, `FraudEvaluationResult`, `FraudRuleMatch`, `FraudMatchedValueValidator` chặn tuyệt đối PII/secret tại ranh giới JSONB, `ReviewStateTransition`) (`BE-FRD-01`).
+2. [x] Hiện thực tầng persistence theo kiến trúc Hexagonal (`FraudPersistencePort`, `FraudRuleConfigEntity` với composite key `FraudRuleConfigId` + `Persistable`, `FraudFlagEntity`, MapStruct mappers `FraudRuleConfigMapper` / `FraudFlagMapper`, và `FraudJdbcRepository` cho `FOR UPDATE NOWAIT` + atomic conditional review update) (`BE-FRD-01`).
+3. [x] Hiện thực `FraudReviewService` và `ReviewFraudFlagRequest` DTO (tách biệt hoàn toàn `trustedReviewerId` khỏi request body để chống giả mạo người duyệt) cùng **45 tests PASS** (unit + PostgreSQL 16 Testcontainers) (`BE-FRD-01`).
+4. [ ] Đưa bảng `fraud_rule_config` và `fraud_flag` vào migration `V10` theo chuỗi `DEC-COM-001`, mở REST Controller (`API-FRD-01/02`) và ghép nối vào pha `T2` của `transfer` cùng `AuditModuleApi` (`C2`).
+
+**Tài liệu chi tiết module `fraud`:**
+- [Chỉ mục Module Fraud](../fraud/README.md)
+- [BE-FRD-01 — Rule Engine & Review Workflow](../fraud/BE-FRD-01-rules-and-review.md) ([Báo cáo kiểm chứng](../fraud/BE-FRD-01-verification-report.md))
+- [BE-AI-01 — Nghiên cứu Khả thi AI/ML Hỗ trợ Fraud](../fraud/BE-AI-01-fraud-feasibility.md) ([Báo cáo kiểm chứng](../fraud/BE-AI-01-verification-report.md))

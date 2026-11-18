@@ -1,11 +1,11 @@
 # BE-ID-IMP-12 — REST DTO, validation và error mapping API-AUTH-01..08
 
 > **Ngày:** 16/11/2026 · **Owner module:** Đạt (Identity) · **Branch:** `datht-backend-rework`
-> **Baseline:** HEAD `56210cc80ad742ddad9139dc1a08fe9ff524465a` (= `origin/dev2`); giữ nguyên thay đổi chưa commit của IMP-01..11 trên worktree.
+> **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`
 > **Trạng thái:** **PARTIAL** — phần REST độc lập (API-AUTH-01..07 DTO/validation/error mapping, OpenAPI) đã triển khai và kiểm thử; API-AUTH-02 positive và API-AUTH-08 runtime **BLOCKED** theo quyết định đã duyệt. Không đánh DONE toàn task.
 > **Quyết định ghi nhận:** [DEC-ID-012](../../../../DECISIONS.md); `design/05` §5.6.
 
-Nguồn chuẩn: `docs-common/07. API contracts.md` §2–4, §7.2, §8.1; `design/05` §5, §11.3.1, §13.1; `04` §4.2; `design/04` §4.1–4.3; `docs-backend/00. architecture & conventions.md` §4.4–6.1 (BE-CON-08..30). Thư mục thực tế là `docs-backend/modules/identity/` (không có `docs-backend/Identity/`).
+Nguồn chuẩn: `docs-common/07. API contracts.md` §2–4, §7.2, §8.1; `design/05` §5, §11.3.1, §13.1; `04` §4.2; `design/04` §4.1–4.3; `docs-backend/00. architecture & conventions.md` §4.4–6.1 (BE-CON-08..30).
 
 ## 1. Tóm tắt
 
@@ -117,4 +117,4 @@ Kết luận: không có failure code còn lại để quy cho module khác hay 
 
 | Version | Ngày | Người | Mô tả |
 |---|---|---|---|
-| 1.0 | 16/11/2026 | Codex (owner: Đạt) | BE-ID-IMP-12: DTO/validation/error mapping API-AUTH-01..07, OpenAPI sync, 43 test REST/DTO/OpenAPI mới; API-AUTH-02 positive + API-AUTH-08 BLOCKED theo DEC-ID-009/006; full build 765/765 PASS sau khi gỡ biến môi trường SPRING_PROFILES_ACTIVE. |
+| 1.0 | 16/11/2026 | Đạt (`identity`) | BE-ID-IMP-12: DTO/validation/error mapping API-AUTH-01..07, OpenAPI sync, 43 test REST/DTO/OpenAPI mới; API-AUTH-02 positive + API-AUTH-08 BLOCKED theo DEC-ID-009/006; full build 765/765 PASS sau khi gỡ biến môi trường SPRING_PROFILES_ACTIVE. |

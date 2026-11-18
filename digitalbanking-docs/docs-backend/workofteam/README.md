@@ -10,9 +10,10 @@ Ghi nhận task nền tảng, tích hợp, review và công việc khác của B
 
 ## Report index
 
-| Task ID | Công việc | Task report | Verification report | Trạng thái |
+| Task ID / Mã tài liệu | Công việc | Tài liệu chính | Verification report | Trạng thái |
 |---|---|---|---|---|
-| `BE-FND-01` | Dựng Backend base project theo `00. architecture & conventions.md` và `deployment/configuration.md` | `BE-FND-01-backend-base-project.md` | `BE-FND-01-verification-report.md` | Verified (Spring Data JPA, Security, Validation, MapStruct/Lombok, ArchUnit, Flyway V1, Compose & Testcontainers) |
+| `BE-FND-01` | Dựng Backend base project theo `00. architecture & conventions.md` và `deployment/configuration.md` | [BE-FND-01-backend-base-project.md](BE-FND-01-backend-base-project.md) | [BE-FND-01-verification-report.md](BE-FND-01-verification-report.md) | Verified (Spring Data JPA, Security, Validation, MapStruct/Lombok, ArchUnit, Flyway V1, Compose & Testcontainers) |
+| `BE-WORK-THINH-01` | Quy trình làm việc, phân rã gate kiểm chứng và thứ tự triển khai nhóm module `audit`, `notification`, `fraud` và phối hợp `admin` | [thinh-backend-workflow.md](thinh-backend-workflow.md) | Xem verification report trong từng thư mục module (`audit/`, `notification/`, `fraud/`, `admin/`) | Đã chuẩn hóa v1.1 (Component Verified trên cả 4 nhóm task) |
 
 ## Quy ước report
 

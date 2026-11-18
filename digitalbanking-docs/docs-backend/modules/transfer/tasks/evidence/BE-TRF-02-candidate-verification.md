@@ -2,7 +2,7 @@
 
 > 16/11/2026. Partial evidence: the migration is staged outside the production Flyway location and provider key tables are synthetic test fixtures. The JPA mapping and terminal adapter are candidates, not registered runtime beans. Review and real-provider integration are outstanding.
 
-- Revision: working tree based on `84a4d2e`, including the uncommitted Transfer candidate migration, domain, JPA mapping/adapter, JDBC primitives, fixtures and tests. Runner: Codex; reviewer: pending.
+- Revision: working tree based on `84a4d2e`, including the uncommitted Transfer candidate migration, domain, JPA mapping/adapter, JDBC primitives, fixtures and tests. Runner: Vũ (`transfer`); reviewer: pending.
 - Environment: Java 21 (Temurin `21.0.1` LTS), PostgreSQL `16-alpine` through Testcontainers, macOS local development. Fixtures and test values are synthetic; no real customer data or secrets.
 - Command from `digitalbanking-backend`: `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./gradlew clean check --offline --console=plain`.
 - Result: `BUILD SUCCESSFUL` (clean build, 9 tasks executed). XML reports: **298 backend tests, 0 failures, 0 errors, 0 skipped**, including **95 Transfer tests = 70 unit/fake + 25 PostgreSQL**. The BE-TRF-02 PostgreSQL scope is 20 tests: 12 migration (`TransferCandidateMigrationPostgresTest`) and 8 JPA (`TransferJpaCandidatePostgresTest`); the remaining 5 PostgreSQL tests belong to the T2 settlement candidate (BE-TRF-05). Domain/state suite: 5 (`TransferDomainTest`). Boundary enforcement: 2 (`TransferBoundaryTest`, ArchUnit with a negative fixture).

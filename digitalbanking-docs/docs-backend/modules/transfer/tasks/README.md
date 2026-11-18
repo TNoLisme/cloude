@@ -2,28 +2,28 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-TRANSFER-02`
-> **Phiên bản:** v1.0
-> **Ngày cập nhật:** 15/11/2026
-> **Trạng thái:** Draft — chờ review; tất cả implementation task chưa xác minh
+> **Phiên bản:** v1.7
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Đã triển khai candidate `BE-TRF-01..07` — chờ ghép tích hợp runtime
 > **Owner:** Vũ
 > **Reviewer:** Backend Lead, các owner phụ thuộc, QA, Security — chờ review
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7–§10; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§14; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §11–§13; [thiết kế module](../design.md).
 
-Các task dưới đây mô tả công việc và bằng chứng còn cần để hoàn thiện module; việc đã có một phần code hoặc evidence không đồng nghĩa toàn bộ task đạt. Ưu tiên **P0** là điều kiện cho money path/release an toàn; **P1** hoàn thiện trải nghiệm, vận hành và hardening trong phạm vi MVP, không tự hạ bất kỳ yêu cầu Must. Mốc W3–W8 là dự kiến theo `10`, phụ thuộc lịch và năng lực của các owner. Trước mỗi task kiểm tra code hiện tại, hợp đồng và quyết định mới; tái sử dụng common, không sao chép tính năng đã có. Mỗi task có thể làm phần độc lập trước khi dependency sẵn sàng nhưng chỉ đánh dấu hoàn thành khi toàn bộ AC và bằng chứng đạt.
+Các task dưới đây mô tả công việc và bằng chứng cần thiết để hoàn thiện module `transfer`. Ưu tiên **P0** là điều kiện cho money path/release an toàn; **P1** hoàn thiện trải nghiệm, vận hành và hardening trong phạm vi MVP. Mỗi task có thể triển khai và kiểm thử phần candidate độc lập trước khi dependency sẵn sàng, nhưng chỉ chuyển sang `[x]` khi toàn bộ AC và bằng chứng tích hợp liên module đạt.
 
 ## 1. Checklist và thứ tự phụ thuộc
 
-| Trạng thái | ID / ưu tiên / mốc         | Task                                                             | Phụ thuộc                                                           |
-| ---------- | -------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [ ]        | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module                          | API, BA, Identity, Limit, Ledger, Audit, QA, Security               |
-| [ ]        | **BE-TRF-02 / P0 / W4**    | Schema, migration và state domain (candidate; xem task/evidence) | 01 (schema/key); migration Account/Identity và FK                   |
-| [ ]        | **BE-TRF-03 / P0 / W4**    | API, validation, authorization và query/receipt                  | 01; identity/account thật; 02 cho persistence                       |
-| [ ]        | **BE-TRF-04 / P0 / W4**    | Idempotency, canonical hash, T1 và step-up                       | 01–03; identity challenge, audit C1, common crypto                  |
-| [ ]        | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox         | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
-| [ ]        | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge (candidate, xem evidence)      | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL             |
-| [ ]        | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification                      | 03–06; identity/audit/notification/common và Ops                    |
-| [ ]        | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure                 | 02–07; PostgreSQL và module thật                                    |
-| [ ]        | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao                           | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần    |
+| Trạng thái | ID / ưu tiên / mốc         | Task                                                                                  | Phụ thuộc                                                           |
+| ---------- | -------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [ ]        | **BE-TRF-01 / P0 / W3–W4** | Chốt hợp đồng và các rủi ro liên module (`DEC-TRF-001..017` đã ghi)                   | API, BA, Identity, Limit, Ledger, Audit, QA, Security               |
+| [ ]        | **BE-TRF-02 / P0 / W4**    | Schema, migration và state domain (candidate đã có; xem [evidence](evidence/BE-TRF-02-candidate-verification.md)) | 01 (schema/key); migration Account/Identity và FK                   |
+| [ ]        | **BE-TRF-03 / P0 / W4**    | API, validation, authorization và query/receipt (candidate đã có; xem [evidence](evidence/BE-TRF-03-candidate-verification.md)) | 01; identity/account thật; 02 cho persistence                       |
+| [ ]        | **BE-TRF-04 / P0 / W4**    | Idempotency, canonical hash, T1 và step-up (candidate đã có; xem [evidence](evidence/BE-TRF-04-05-candidate.md)) | 01–03; identity challenge, audit C1, common crypto                  |
+| [ ]        | **BE-TRF-05 / P0 / W4–W5** | T2: lock, balance, ledger, limit, fraud, audit và outbox (candidate đã có; xem [evidence](evidence/BE-TRF-04-05-candidate.md)) | 01–04; account, ledger, limit, audit, fraud, notification APIs thật |
+| [ ]        | **BE-TRF-06 / P0 / W4–W5** | Recovery, reconciliation và purge (candidate đã có; xem [evidence](evidence/BE-TRF-06-candidate.md)) | 02, 04–05; Ledger/Audit/Ops; quyết định recovery và TTL             |
+| [ ]        | **BE-TRF-07 / P0 / W4–W6** | Tích hợp bảo mật, telemetry và notification (candidate đã có; xem [evidence](evidence/BE-TRF-07-candidate.md)) | 03–06; identity/audit/notification/common và Ops                    |
+| [ ]        | **BE-TRF-08 / P0 / W4–W6** | Test chức năng, contract, concurrency và failure                                      | 02–07; PostgreSQL và module thật                                    |
+| [ ]        | **BE-TRF-09 / P0 / W6–W8** | Nghiệm thu D1–D5, vận hành và bàn giao                                                | 01–08; QA/Security/Ops, FE và môi trường test/load/Cloud khi cần    |
 
 Đường găng: 01 → 02/03 → 04 → 05 → 06/07 → 08 → 09. Contract tests và thiết kế test chuẩn bị song song từ 01; test cụ thể viết cùng mỗi task, không đợi 08. Thiếu dependency ghi **Blocked** cho AC bị ảnh hưởng, không thay production module bằng stub để tuyên bố tích hợp xong.
 
@@ -147,11 +147,11 @@ Mỗi task chỉ chuyển `[x]` khi toàn bộ AC được **Verified**, evidenc
 
 | Version | Ngày | Người cập nhật | Mô tả |
 |---|---|---|---|
-| 1.0 | 15/11/2026 | Codex | Tạo backlog, phụ thuộc, AC và quy tắc theo dõi implementation. |
-| 1.1 | 16/11/2026 | Codex | Ghi primitive và T1/T2 candidate, giới hạn fake/fixture và kiểm tra provider sau ghép. |
-| 1.2 | 16/11/2026 | Codex | Cập nhật preflight và evidence T2/recovery với fake và PostgreSQL synthetic. |
-| 1.3 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
-| 1.4 | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
-| 1.5 | 16/11/2026 | Qoder | Liên kết tài liệu chi tiết BE-TRF-04; không thay đổi AC hay trạng thái task. |
-| 1.6 | 17/11/2026 | Qoder | Ghi seam orchestrator BE-TRF-04, boundary challenge UUID, port T0 và reference generator (DEC-TRF-017); 28 test mới, check 366 backend/163 Transfer xanh; AC vẫn Blocked chờ provider thật/review. |
-| 1.7 | 17/11/2026 | Codex | Liên kết đặc tả BE-TRF-07 và mapping contract Notification; giữ AC/chưa nghiệm thu. Giữ nội dung changelog 1.6 khi dọn marker merge còn sót. |
+| 1.0 | 15/11/2026 | Vũ (`transfer`) | Tạo backlog, phụ thuộc, AC và quy tắc theo dõi implementation. |
+| 1.1 | 16/11/2026 | Vũ (`transfer`) | Ghi primitive và T1/T2 candidate, giới hạn fake/fixture và kiểm tra provider sau ghép. |
+| 1.2 | 16/11/2026 | Vũ (`transfer`) | Cập nhật preflight và evidence T2/recovery với fake và PostgreSQL synthetic. |
+| 1.3 | 16/11/2026 | Vũ (`transfer`) | Liên kết tài liệu chi tiết BE-TRF-03; không thay đổi AC hay trạng thái task. |
+| 1.4 | 16/11/2026 | Vũ (`transfer`) | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3 fake), 38 test mới và check 338 xanh; AC vẫn Blocked chờ provider thật/review. |
+| 1.5 | 16/11/2026 | Vũ (`transfer`) | Liên kết tài liệu chi tiết BE-TRF-04; không thay đổi AC hay trạng thái task. |
+| 1.6 | 17/11/2026 | Vũ (`transfer`) | Ghi seam orchestrator BE-TRF-04, boundary challenge UUID, port T0 và reference generator (DEC-TRF-017); 28 test mới, check 366 backend/163 Transfer xanh; AC vẫn Blocked chờ provider thật/review. |
+| 1.7 | 17/11/2026 | Vũ (`transfer`) | Liên kết đặc tả BE-TRF-07 và mapping contract Notification; giữ AC/chưa nghiệm thu. Giữ nội dung changelog 1.6 khi dọn marker merge còn sót. |

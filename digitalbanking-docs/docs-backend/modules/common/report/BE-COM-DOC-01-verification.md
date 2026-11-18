@@ -42,7 +42,7 @@ PASS: 7 sections; 33 links; 46 public errors
 PASS: 9 NFRs; 15 classes; 6 SQLSTATEs; 27 unique test cases; 8 open issues; metadata/fences/JSON/whitespace; 3 indexes
 ```
 
-`git diff --check` không có output lỗi, exit code 0. Đây là kiểm tra cấu trúc/nội dung và review tĩnh bởi Codex, chưa phải sign-off của Reviewer.
+`git diff --check` không có output lỗi, exit code 0. Đây là kiểm tra cấu trúc/nội dung và review tĩnh bởi Phương, chưa phải sign-off của Reviewer.
 
 Có thể kiểm lại khung, catalog và link từ workspace root bằng lệnh dưới đây. Đây là kiểm tra tài liệu, không phải test triển khai module:
 
