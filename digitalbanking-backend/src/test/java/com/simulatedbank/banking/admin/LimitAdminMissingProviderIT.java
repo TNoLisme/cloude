@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
+import com.simulatedbank.banking.common.error.BankingBusinessException;
+import com.simulatedbank.banking.common.error.ErrorCode;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -45,10 +49,15 @@ class LimitAdminMissingProviderIT {
     }
 
     @Autowired MockMvc mvc;
+    @MockitoBean LimitConfigMutationPort limits;
 
     @Test
     void authenticatedRequestWithoutRequiredProvidersFailsClosed() throws Exception {
+        // The integrated application now has providers; simulate an unavailable provider, not a missing module.
+        org.mockito.Mockito.when(limits.currentVersion(11, null))
+                .thenThrow(new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE));
         mvc.perform(post("/api/v1/admin/limits").header("Authorization", "Bearer maker")
+                .header("Idempotency-Key", "unavailable-limit-provider")
                 .contentType("application/json").content("""
                     {"customerId":"11","perTransactionLimit":"100.00","dailyLimit":"200.00"}
                     """))
@@ -57,7 +66,7 @@ class LimitAdminMissingProviderIT {
 
     @TestConfiguration
     static class SessionFixture {
-        @Bean SessionAuthenticator sessionAuthenticator() {
+        @Bean @org.springframework.context.annotation.Primary SessionAuthenticator sessionAuthenticator() {
             return token -> "maker".equals(token) ? Optional.of(new SessionAuthenticator.Session("1", null,
                     Set.of("ROLE_OPERATIONS", "LIMIT_MAKER"), "0".repeat(64))) : Optional.empty();
         }

@@ -108,6 +108,9 @@ public class ApprovalStepUpService {
 
     /** Public 428 challenge extension shape (07 §6.3): no OTP, hash or binding material. */
     public static Map<String, Object> publicChallenge(ChallengeView view) {
+        if (view == null || view.purpose() != ChallengePurpose.SENSITIVE_ACTION) {
+            throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        }
         Map<String, Object> challenge = new LinkedHashMap<>();
         challenge.put("challengeId", java.util.UUID.fromString(view.challengeRef()));
         challenge.put("purpose", view.purpose().name());

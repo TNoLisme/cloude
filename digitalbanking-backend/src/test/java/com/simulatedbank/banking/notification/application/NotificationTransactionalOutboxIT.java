@@ -357,7 +357,7 @@ class NotificationTransactionalOutboxIT {
         // T2: Money path commits successfully
         transactions.executeWithoutResult(status -> {
             jdbc.update("INSERT INTO audit_test.business_probe (id) VALUES (?)", probeId);
-            TransferNotice notice = createNotice(1001L, probeId, "TXN-ISOLATION-1");
+            TransferNotice notice = createNotice(1001L, 9009L, "TXN-ISOLATION-1");
             outboxPort.enqueueTransferNotificationsInT2(List.of(notice));
         });
 

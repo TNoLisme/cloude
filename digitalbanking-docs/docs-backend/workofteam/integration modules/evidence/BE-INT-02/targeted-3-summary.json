@@ -1,0 +1,128 @@
+[
+  {
+    "class": "com.simulatedbank.banking.limit.LimitCustomerMissingProviderIT",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.limit.LimitPersistenceIT",
+    "tests": 41,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.limit.LimitRulesIT",
+    "tests": 19,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest",
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.CustomerV5MigrationPostgreSqlIntegrationTest",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.FlywayMigrationTest",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.IdentityV2MigrationPostgreSqlIntegrationTest",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.LegacyModuleMigrationPostgreSqlIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.notification.adapter.out.persistence.NotificationJpaRepositoryIT",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.notification.application.NotificationTransactionalOutboxIT",
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.transfer.adapter.inbound.TransferApiContractTest",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.transfer.adapter.inbound.TransferControllerHttpTest",
+    "tests": 19,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "com.simulatedbank.banking.transfer.adapter.inbound.TransferCreateInputTest",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]

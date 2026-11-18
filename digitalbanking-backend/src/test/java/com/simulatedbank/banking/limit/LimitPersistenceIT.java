@@ -46,7 +46,7 @@ class LimitPersistenceIT {
     }
 
     @Test
-    void cleanMigrationCreatesOnlyLimitOwnedTablesWithDefaultsAndStagedReferences() {
+    void integratedMigrationCreatesLimitTablesWithDefaultsAndRealReferences() {
         jdbc.update(configSql("NULL", "DEFAULT", "DEFAULT", "NULL", "NULL", "100", "1000"));
         var row = jdbc.queryForMap("SELECT * FROM banking.limit_config");
         assertThat(row).containsEntry("status", "PENDING_APPROVAL").containsEntry("version", 1)
@@ -59,10 +59,10 @@ class LimitPersistenceIT {
         assertThat(jdbc.queryForObject("SELECT used_amount FROM banking.limit_usage", java.math.BigDecimal.class))
                 .isEqualByComparingTo("0");
         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema='banking'",
-                String.class)).contains("approval_request").doesNotContain("customer", "account", "app_user");
+                String.class)).contains("approval_request", "customer", "account", "app_user");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.table_constraints "
                 + "WHERE table_schema='banking' AND table_name IN ('limit_config','limit_usage') "
-                + "AND constraint_type='FOREIGN KEY'", Integer.class)).isZero();
+                + "AND constraint_type='FOREIGN KEY'", Integer.class)).isEqualTo(7);
     }
 
     @Test
@@ -79,11 +79,34 @@ class LimitPersistenceIT {
         upgradeJdbc.execute("COMMENT ON SCHEMA banking IS 'preexisting baseline'");
         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
                 .schemas("banking").defaultSchema("banking").load();
-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(18);
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
         assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking'::regnamespace, 'pg_namespace')", String.class))
                 .isEqualTo("preexisting baseline");
         assertThat(upgradeJdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isZero();
+    }
+
+    @Test
+    void upgradeRejectsExistingNanWithoutChangingHistoryOrGuessingAMonetaryValue() throws Exception {
+        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE DATABASE limit_nan_upgrade");
+        }
+        String url = postgres.getJdbcUrl().replace("/test", "/limit_nan_upgrade");
+        Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
+                .schemas("banking").defaultSchema("banking").target("18").load().migrate();
+        try (var connection = DriverManager.getConnection(url, postgres.getUsername(), postgres.getPassword())) {
+            IntegratedLimitReferences.seed(connection, false);
+        }
+        var old = new SqlFixture(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
+        old.update(configSql("NULL", "DEFAULT", "DEFAULT", "NULL", "NULL", "100", "'NaN'"));
+        var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
+                .schemas("banking").defaultSchema("banking").load();
+        assertThatThrownBy(latest::migrate).hasMessageContaining("ck_limit_amounts_finite");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("18");
+        assertThat(old.queryForObject("SELECT count(*) FROM banking.flyway_schema_history WHERE version IS NOT NULL", Integer.class))
+                .isEqualTo(18);
+        assertThat(old.queryForObject("SELECT daily_limit::text FROM banking.limit_config", String.class)).isEqualTo("NaN");
     }
 
     @Test

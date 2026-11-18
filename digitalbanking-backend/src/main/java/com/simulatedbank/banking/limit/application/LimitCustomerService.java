@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.application;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.account.api.AccountQuery;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class LimitCustomerService {
     private final LimitReadPort repository;

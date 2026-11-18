@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.application;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.limit.domain.LimitAmounts;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 /** Explicit change policy; existing transfer defaults are not configuration policy. */
 @Component
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 public class LimitChangePolicy {
     private final Environment environment;
 

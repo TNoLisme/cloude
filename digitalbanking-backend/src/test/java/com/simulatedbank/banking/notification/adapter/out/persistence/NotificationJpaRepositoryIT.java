@@ -73,6 +73,18 @@ class NotificationJpaRepositoryIT {
             populator.execute(migratorDs);
             try (var connection = migratorDs.getConnection()) {
                 IntegratedProviderReferences.seed(connection);
+                try (var statement = connection.createStatement()) {
+                    statement.execute("""
+                            INSERT INTO banking.auth_challenge
+                                (challenge_id, challenge_ref, user_id, purpose, method, channel,
+                                 otp_hash, expires_at, correlation_id)
+                            OVERRIDING SYSTEM VALUE VALUES
+                                (7001, '00000000-0000-4000-8000-000000007001', 5001,
+                                 'LOGIN_NEW_DEVICE', 'OTP', 'SMS', repeat('a',64),
+                                 clock_timestamp() + interval '5 minutes', 'notification-fixture')
+                            ON CONFLICT (challenge_id) DO NOTHING
+                            """);
+                }
             }
             schemaInitialized = true;
         }

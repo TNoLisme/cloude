@@ -70,7 +70,7 @@ class LimitRulesIT {
         try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
              var statement = connection.createStatement()) {
             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY");
-            IntegratedLimitReferences.seed(connection, false);
+            IntegratedLimitReferences.seed(connection, true);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.adapter.in;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.limit.application.LimitCustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 @RequestMapping("/api/v1/limits")
 @RequiredArgsConstructor
 public class LimitCustomerController {

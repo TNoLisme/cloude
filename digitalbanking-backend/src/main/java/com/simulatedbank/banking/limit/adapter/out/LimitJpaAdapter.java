@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.limit.adapter.out;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.limit.api.LimitConfiguration;
 import com.simulatedbank.banking.limit.api.LimitUsage;
 import com.simulatedbank.banking.limit.application.port.LimitStore;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
+@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class LimitJpaAdapter implements LimitStore {
     private final LimitConfigJpaRepository configs;

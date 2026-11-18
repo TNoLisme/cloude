@@ -30,14 +30,14 @@ class ApprovalRequestEntity {
     private Long approvalId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "request_type", nullable = false, length = 32)
+    @Column(name = "request_type", nullable = false, updatable = false, length = 32)
     private ApprovalRequestType requestType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "target_type", nullable = false, length = 32)
+    @Column(name = "target_type", nullable = false, updatable = false, length = 32)
     private ApprovalTargetType targetType;
 
-    @Column(name = "target_id", nullable = false, length = 64)
+    @Column(name = "target_id", nullable = false, updatable = false, length = 64)
     private String targetId;
 
     @JdbcTypeCode(SqlTypes.JSON)

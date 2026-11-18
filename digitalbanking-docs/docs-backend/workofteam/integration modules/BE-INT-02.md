@@ -2,12 +2,13 @@
 
 > **Người thực hiện/chốt:** người điều hành/merge owner theo DEC-INT-003  
 > **Ngày:** 18/11/2026  
-> **Source:** `dev2@4a00d57` + working tree chưa commit; PostgreSQL 16 Testcontainers  
-> **Trạng thái:** G1 **PARTIAL VERIFIED**; fresh/canonical upgrade và fail-closed legacy có bằng chứng test. Chuyển dữ liệu DB legacy thật còn chờ lịch sử và nguồn parent của môi trường đó.
+> **Source:** `phuong/integration@8109504` + working tree BE-INT-02; [source manifest](evidence/BE-INT-02/source-manifest.sha256), PostgreSQL 16 Testcontainers
+> **Môi trường đích:** DB canonical mới theo quyết định trực tiếp của người điều hành (DEC-INT-005); chuyển dữ liệu legacy thật **không áp dụng**.
+> **Trạng thái:** **DONE / G1 VERIFIED cho DB canonical mới**. Full clean build PASS 2.285 test / 202 class, 0 failure/error/skip; xem [verification report](BE-INT-02-verification.md).
 
 ## 1. Phạm vi và chuẩn quyết định
 
-[Kế hoạch tích hợp](README.md) yêu cầu compile, full build, Flyway V1–V17 từ DB trống, Hibernate `validate`, checksum, upgrade/restore cho DB đã áp dụng migration. Nguồn ưu tiên: [Database design §4](../../../docs-common/04.%20Database%20design%20%26%20analysis.md), [Deployment §7](../../../docs-common/08.%20Deployment%20infrastructure.md), [Test plan §10](../../../docs-common/09.%20Test%20plan.md), [Modules contract](../../../docs-common/design/05.%20Modules%20contract.md) và DEC-INT-003/004. SQL trong `db/migration` là chuỗi runtime; `db/migration-legacy` chỉ là bằng chứng nguồn, không nằm trong Flyway location.
+[Kế hoạch tích hợp](README.md) yêu cầu compile, full build, Flyway V1–V19 từ DB trống, Hibernate `validate`, checksum, upgrade/restore cho DB đã áp dụng migration. Nguồn ưu tiên: [Database design §4](../../../docs-common/04.%20Database%20design%20%26%20analysis.md), [Deployment §7](../../../docs-common/08.%20Deployment%20infrastructure.md), [Test plan §10](../../../docs-common/09.%20Test%20plan.md), [Modules contract](../../../docs-common/design/05.%20Modules%20contract.md) và DEC-INT-003/004/005/006. SQL trong `db/migration` là chuỗi runtime; `db/migration-legacy` chỉ là bằng chứng nguồn, không nằm trong Flyway location.
 
 ## 2. Lịch sử và checksum
 
@@ -35,22 +36,22 @@ ORDER BY installed_rank;
 
 | Case | Expected | Actual / giới hạn |
 |---|---|---|
-| `compileJava testClasses` | Source và test compile | PASS, `./gradlew compileJava testClasses --offline --max-workers=1`. |
-| Fresh V1–V17 | DB rỗng chạy đúng 17 migration, rerun 0, constraint/identity/schema có mặt | PASS sau khi cập nhật test cũ còn cố định V11; `PostgreSqlFreshMigrationIntegrationTest`. |
-| Canonical V7→V17 | Dữ liệu/sentinel và checksum cũ giữ nguyên, thêm V8–V17 | Đã có bài `AccountV8MigrationPostgreSqlIntegrationTest`; cần đối chiếu kết quả full build của source hiện tại trước khi chốt. |
+| `compileJava testClasses` | Source và test compile | PASS trong `./gradlew clean build --offline --no-daemon --max-workers=1`, compile từ đầu. |
+| Fresh V1–V19 | DB rỗng chạy đúng 19 migration, rerun 0, constraint/identity/schema có mặt | PASS trong full build; `PostgreSqlFreshMigrationIntegrationTest`. |
+| Canonical V7→V19 và V17→V19 | Giữ dữ liệu/sentinel, checksum cũ; quyền UPDATE approval tối thiểu | PASS full build: `AccountV8MigrationPostgreSqlIntegrationTest` + `ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest`; V18/V19 forward-only, V1–V17 không đổi. V19 từ chối NaN; `LimitPersistenceIT` kiểm upgrade V18 có NaN bị chặn mà không sửa dữ liệu/history. |
 | Legacy prefix V2, V3, V4, V5, V6 | Flyway canonical từ chối checksum trước business write; history và row count không đổi | PASS trên PG16 bằng `LegacyModuleMigrationPostgreSqlIntegrationTest`. V6 có bản ghi Audit, Limit, Admin giả lập. |
 | Backup/restore V6 legacy | `pg_dump -Fc` và `pg_restore` sang DB khác, giữ history và bản ghi | PASS trong cùng test; chỉ chứng minh khả năng phục hồi bản sao giả lập, chưa đo RTO/RPO vận hành. |
-| Hibernate `ddl-auto: validate` | Application context boot trên schema V1–V17 | Cần lấy kết quả full build hiện tại; test context và PostgreSQL integration thuộc suite đó. |
-| Full regression | `./gradlew build --offline --max-workers=1` exit 0, 0 failure | Đang chạy; cập nhật actual sau khi hoàn tất. |
+| Hibernate `ddl-auto: validate` | Application context boot trên schema V1–V19 | PASS trong full build; các context PostgreSQL validate schema, `PackagedApplicationReadinessIntegrationTest` 4/4 PASS (boot/restart JAR demo với app/migrator riêng và negative startup). |
+| Full regression | `./gradlew clean build --offline --no-daemon --max-workers=1` exit 0, 0 failure | PASS, exit 0, **2.285 test / 202 class / 0 failure / 0 error / 0 skip**, BUILD SUCCESSFUL in 13m56s; [artifact](evidence/BE-INT-02/final-results.tar.gz). |
 
-**Artifact:** JUnit XML ở `digitalbanking-backend/build/test-results/test/` và HTML ở `digitalbanking-backend/build/reports/tests/test/index.html`. Test dùng container riêng; không chạm DB môi trường. Ba test V6/V7/fresh cũ được đồng bộ kỳ vọng lên V17; không sửa migration đã áp dụng.
+**Artifact:** JUnit XML ở `digitalbanking-backend/build/test-results/test/` và HTML ở `digitalbanking-backend/build/reports/tests/test/index.html`. Test dùng container riêng; không chạm DB môi trường. Các test V6/V7/V8/fresh được đồng bộ kỳ vọng lên V19; không sửa migration đã áp dụng. V18 SHA-256 `6cc88d9863aede2783b89e51f501c548c6f8ac66c7a9cb7e95a49854fc951c75`, V19 SHA-256 `37027a4f88bb186eb5e3de97573ba5fbacdd2b12945e06d65b6942810fa1e0b3`; [manifest checksum](evidence/BE-INT-02/migration-checksums.json) chứng minh V1–V17 giữ nguyên so với HEAD.
 
 ## 4. Đường xử lý lịch sử module-local
 
 | Lịch sử quan sát | Hành động |
 |---|---|
-| DB trống | Chạy Flyway canonical V1–V17 và Hibernate validate. |
-| DB canonical prefix V1–V16 | Sao lưu, `flyway validate`, nâng cấp forward-only đến V17, xác nhận history/checksum và invariant dữ liệu. Bài test V7→V17 là rehearsal hiện có; môi trường thật cần kiểm tra theo revision của nó. |
+| DB trống | Chạy Flyway canonical V1–V19 và Hibernate validate. |
+| DB canonical prefix V1–V18 | Sao lưu, `flyway validate`, nâng cấp forward-only đến V19, xác nhận history/checksum và invariant dữ liệu. Bài test V7→V19 và V17→V19 là rehearsal hiện có; môi trường thật cần kiểm tra theo revision của nó. |
 | DB module-local V2–V6, không có dữ liệu cần giữ | Giữ bản `pg_dump` và SHA-256 để tra cứu; dựng DB canonical mới. Không đổi lịch sử cũ. |
 | DB module-local V2–V6, có dữ liệu cần giữ | **Chưa tự động nâng cấp.** Sao lưu và restore vào DB cô lập; kiểm tra row counts/ID, audit chain, quyền và dữ liệu parent; lấy mapping Identity/Customer/Account thật; viết công cụ copy/id mapping theo thứ tự parent → Audit/Approval → Account/Limit/Usage và kiểm FK, số dư, hash, count trước/sau. Diễn tập restore và cutover có khả năng quay về DB nguồn. Không tạo parent giả, không tắt FK, không sửa history/SQL cũ. |
 
@@ -59,10 +60,10 @@ Lý do: legacy V2 không có `app_user`, V3 Limit không có FK Customer/Account
 ## 5. Checklist đóng task
 
 - [x] Compile và test classes của source hiện tại.
-- [x] Test fresh V1–V17 và cập nhật expectation V11 cũ.
+- [x] Test fresh V1–V19 và cập nhật expectation V11 cũ.
 - [x] Test fail-closed từng prefix legacy V2–V6, không sửa history/dữ liệu khi khởi động sai chuỗi.
 - [x] Diễn tập `pg_dump`/`pg_restore` với bản ghi giả lập V6.
-- [ ] Full regression, Hibernate validate và canonical upgrade trên source hiện tại có report exit 0.
-- [ ] Inventory DB legacy thật, mapping nguồn Identity/Customer/Account, script copy/đối chiếu và restore rehearsal nếu môi trường có dữ liệu legacy cần giữ.
+- [x] Full regression, Hibernate validate và canonical upgrade trên source hiện tại có report exit 0; source manifest SHA-256 `a9e56ac53112f86c5a78bb3f99e902c96c219d152f7f33a0c3b33b4b40bb66bf`.
+- [x] Người điều hành chọn DB canonical mới (DEC-INT-005); inventory/copy dữ liệu legacy thật **N/A** cho môi trường tích hợp này. Quy trình mục 4 vẫn áp dụng nếu sau này chuyển sang DB legacy có dữ liệu cần giữ.
 
-**G1 chưa được công bố PASS toàn cục** trước khi các mục áp dụng cho môi trường triển khai được chứng minh. G0/G2/G3 vẫn theo task tích hợp tương ứng.
+**Đóng BE-INT-02 / G1 VERIFIED cho DB canonical mới** theo DEC-INT-005/006 và evidence trên. Không công bố chuyển dữ liệu legacy thật hoặc G0/G2/G3 PASS; các task tích hợp tiếp theo giữ gate riêng. Báo cáo giữ cả baseline bị ngắt, targeted/full run lỗi và lượt full build cuối để truy vết.

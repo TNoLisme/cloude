@@ -1,0 +1,116 @@
+[
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V1__init_schema.sql",
+    "sha256": "9e8f7acb2c6e9fca17541801bb96ee479937dc4fd582679b02fefb2b1aada484",
+    "head_sha256": "9e8f7acb2c6e9fca17541801bb96ee479937dc4fd582679b02fefb2b1aada484",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V2__create_identity_and_rbac_tables.sql",
+    "sha256": "3ba0c141a10c44279e01f689ac2ffcf34dd49956021bafcc8c8b79d0650c8fe2",
+    "head_sha256": "3ba0c141a10c44279e01f689ac2ffcf34dd49956021bafcc8c8b79d0650c8fe2",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V3__add_fido_verification_material.sql",
+    "sha256": "f9aea5f7c5e95831be261983ea8d8786bc9cdfef8e879500b78adb099ef481e9",
+    "head_sha256": "f9aea5f7c5e95831be261983ea8d8786bc9cdfef8e879500b78adb099ef481e9",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V4__add_role_assignment_version.sql",
+    "sha256": "d714b2ef11c005afa2d3bdd195752316b6c174a8ae43ba0d34f821e09a0afe33",
+    "head_sha256": "d714b2ef11c005afa2d3bdd195752316b6c174a8ae43ba0d34f821e09a0afe33",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V5__create_customer_table.sql",
+    "sha256": "f902b7eb1df6c4f3def1c4247eeaf5ff598cdedc123bbab996608e0d5c79b81e",
+    "head_sha256": "f902b7eb1df6c4f3def1c4247eeaf5ff598cdedc123bbab996608e0d5c79b81e",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V6__create_approval_request_table.sql",
+    "sha256": "04ccec83198af819bb01c51bf4f627378aca1b9a6a2c459fc1a1b8a03089f76b",
+    "head_sha256": "04ccec83198af819bb01c51bf4f627378aca1b9a6a2c459fc1a1b8a03089f76b",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V7__create_admin_idempotency_record_table.sql",
+    "sha256": "23993a1f2e611236fb8dcac0a046030a1f2dc89a62edae8229954254d626a696",
+    "head_sha256": "23993a1f2e611236fb8dcac0a046030a1f2dc89a62edae8229954254d626a696",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V8__create_account_table.sql",
+    "sha256": "6b397b7c4ba218b534e379dbd54626dcca3e642c761a4241086772b3a0e5885a",
+    "head_sha256": "6b397b7c4ba218b534e379dbd54626dcca3e642c761a4241086772b3a0e5885a",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V9__create_limit_config_table.sql",
+    "sha256": "78703370eb31547a561decb12a8e9153ceed0e7b67b2226460a4cb67114e8e0d",
+    "head_sha256": "78703370eb31547a561decb12a8e9153ceed0e7b67b2226460a4cb67114e8e0d",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V10__create_audit_log_table.sql",
+    "sha256": "f641d8e81ef4dc46f578cf26128c81812d59075a6af36e2335acdb15b5fb8879",
+    "head_sha256": "f641d8e81ef4dc46f578cf26128c81812d59075a6af36e2335acdb15b5fb8879",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V11__create_admin_approval_attempt_table.sql",
+    "sha256": "8094b2f3e1de61a72e89732669794f5d07c7e86fcaab555a76fd846dfba3f947",
+    "head_sha256": "8094b2f3e1de61a72e89732669794f5d07c7e86fcaab555a76fd846dfba3f947",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V12__create_limit_usage_and_runtime_grants.sql",
+    "sha256": "2e738c88855e31cb3d10972f0c1046503e83a46ee083fbc629236ba048b55762",
+    "head_sha256": "2e738c88855e31cb3d10972f0c1046503e83a46ee083fbc629236ba048b55762",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V13__create_transfer_and_idempotency.sql",
+    "sha256": "bf9dc807ab74b57b2a2286821ac78d1239c8206a30c1279ae46eb55864cba5a3",
+    "head_sha256": "bf9dc807ab74b57b2a2286821ac78d1239c8206a30c1279ae46eb55864cba5a3",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V14__create_ledger_entry.sql",
+    "sha256": "d643d1f223072b20db55b5c1f7261a3685dd7dc319df8c882fbca69d951f53fb",
+    "head_sha256": "d643d1f223072b20db55b5c1f7261a3685dd7dc319df8c882fbca69d951f53fb",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V15__create_fraud_tables.sql",
+    "sha256": "acc4073cf2470364d7a1182085a9ebc8d0c7c7dc8d2c04d1f3d6a8a3452c2a52",
+    "head_sha256": "acc4073cf2470364d7a1182085a9ebc8d0c7c7dc8d2c04d1f3d6a8a3452c2a52",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V16__create_notification_table.sql",
+    "sha256": "2078001f3f10accb7cb23da8a6cd3ca1f575f908c810de247d8c79ae009b529a",
+    "head_sha256": "2078001f3f10accb7cb23da8a6cd3ca1f575f908c810de247d8c79ae009b529a",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V17__bridge_audit_canonical_payload.sql",
+    "sha256": "72ea87fe61ad99b7543f211fbab20519ddbbb231843e940668d1de0ddc83efb3",
+    "head_sha256": "72ea87fe61ad99b7543f211fbab20519ddbbb231843e940668d1de0ddc83efb3",
+    "unchanged_from_head": true
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V18__restrict_approval_update_privileges.sql",
+    "sha256": "6cc88d9863aede2783b89e51f501c548c6f8ac66c7a9cb7e95a49854fc951c75",
+    "head_sha256": null,
+    "unchanged_from_head": null
+  },
+  {
+    "file": "digitalbanking-backend/src/main/resources/db/migration/V19__reject_non_finite_limit_amounts.sql",
+    "sha256": "37027a4f88bb186eb5e3de97573ba5fbacdd2b12945e06d65b6942810fa1e0b3",
+    "head_sha256": null,
+    "unchanged_from_head": null
+  }
+]
