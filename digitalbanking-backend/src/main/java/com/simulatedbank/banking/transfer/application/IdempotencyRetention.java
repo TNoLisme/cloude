@@ -38,6 +38,6 @@ public final class IdempotencyRetention {
         Objects.requireNonNull(expiresAt, "expiresAt");
         Objects.requireNonNull(now, "now");
         return (status == IdempotencyStatus.COMPLETED || status == IdempotencyStatus.FAILED)
-                && !expiresAt.isAfter(now);
+                && expiresAt.isBefore(now);
     }
 }

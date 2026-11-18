@@ -8,7 +8,7 @@
 
 ## 1. Mục đích
 
-Thư mục này chứa hợp đồng API **máy đọc** của Digital Banking MVP, dùng cho validation, sinh client và kiểm thử hợp đồng.
+Thư mục này chứa hợp đồng API **máy đọc** của Digital Banking MVP (`digital-banking-v1.yaml`), dùng cho validation, sinh client TypeScript và kiểm thử hợp đồng tự động.
 
 - Tệp chính: [[digitalbanking-docs/openapi/digital-banking-v1.yaml]]
 - Nguồn ngữ nghĩa: [[digitalbanking-docs/docs-common/07. API contracts.md]]
@@ -22,13 +22,15 @@ Thư mục này chứa hợp đồng API **máy đọc** của Digital Banking M
 
 Khi hai bên mâu thuẫn, **`07. API contracts` là nguồn ngữ nghĩa**; cập nhật `07` trước, sau đó đồng bộ YAML.
 
-## 3. Nội dung chính
+## 3. Nội dung chính (`digital-banking-v1.yaml` v1.0.1)
 
-- OpenAPI 3.1.0.
-- Server local và demo.
-- Nhóm endpoint: Auth, Customer, Account, Transfer, Transaction, Limit, Audit, Fraud, Role, Approval, Health.
-- Lỗi theo RFC 9457 Problem Details.
-- Tiền và ID dạng chuỗi; thời gian ISO 8601 UTC.
+- Chuẩn **OpenAPI 3.1.0**, gồm **30 operations** trên base path `/api/v1`.
+- Khai báo server môi trường `demo` (`https://api.demo.local/api/v1`) và `local` (`http://localhost:8080/api/v1`).
+- 11 nhóm tag nghiệp vụ: `Auth`, `Customer`, `Account`, `Transfer`, `Transaction`, `Limit`, `Audit`, `Fraud`, `Role`, `Approval`, `Health`.
+- Cơ chế bảo mật: `sessionCookie` (`DB_SESSION` opaque cookie) kết hợp `X-CSRF-Token` cho các thao tác ghi dùng cookie, và `bearerAuth` cho API client/test; các endpoint xác thực công khai dùng `security: []`.
+- Mô hình lỗi chuẩn hóa theo **RFC 9457 Problem Details** (`Problem`, `ValidationProblem`, `StepUpProblem`) kèm `code` thuộc `ErrorCode` catalog và `X-Correlation-ID`.
+- Quy ước kiểu dữ liệu: tiền (`Money`) và định danh (`ID`) biểu diễn dạng chuỗi để bảo toàn độ chính xác; thời gian theo chuẩn ISO 8601 UTC (`Instant`).
+- Hỗ trợ đầy đủ idempotency trên `POST /transfers` (replay trả lại mã `201` hoặc `422` gốc kèm header `Idempotent-Replayed: true`) và step-up authentication (`428 STEP_UP_REQUIRED`).
 
 ### Auth — BE-ID-IMP-12
 

@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản task:** [BE-COM-IMP-04](../tasks/BE-COM-IMP-04.md), v1.0 ngày 12/11/2026; nội dung AC giữ nguyên, snapshot/manifest trong evidence
-> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 / Codex theo ủy quyền owner
+> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 / Phương (`common`)
 > **Trạng thái task:** Done — implementer verified
 > **Kết luận verification:** Verified trong phạm vi primitive crypto, JCS, masking và validation cấu hình khóa
 > **Reviewer / sign-off:** Chưa review

@@ -4,16 +4,14 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.EncoderBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.common.context.RequestContext;
+import com.simulatedbank.banking.common.context.SecurityAuditFallbackLog;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.event.KeyValuePair;
-/**
- * Fail-closed stdout boundary: chỉ HTTP completion và security-audit field allowlist được
- * serialize; không bao giờ ghi raw message, arguments, MDC hoặc throwable.
- */
+
+/** Fail-closed stdout boundary: never serialize arbitrary messages, arguments, MDC or throwables. */
 public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
     private final ObjectMapper mapper = new ObjectMapper();
     private String service = "digital-banking-backend";
@@ -60,6 +58,7 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         String request = event.getMDCPropertyMap().get("requestId");
         fields.put("correlation_id", RequestContext.isValidCorrelationId(correlation) ? correlation : null);
         fields.put("request_id", request != null && request.matches("[0-9a-f-]{36}") ? request : null);
+        // Only the fixed completion event can contribute HTTP fields. Other log content is omitted.
         boolean completion = event.getLoggerName().equals("com.simulatedbank.banking.common.context.HttpRequestLog")
                 && event.getMessage().equals("HTTP_REQUEST_COMPLETED");
         boolean securityAudit = AUDIT_LOGGERS.contains(event.getLoggerName())
@@ -79,8 +78,10 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                     case "status" -> value instanceof Integer n && n >= 100 && n <= 599;
                     case "latency_ms" -> value instanceof Long n && n >= 0;
                     case "user_id" -> value instanceof String s && s.matches("sha256:[0-9a-f]{64}");
-                    case "action" -> "HTTP_REQUEST".equals(value);
-                    case "outcome" -> "SUCCESS".equals(value) || "CLIENT_ERROR".equals(value) || "SERVER_ERROR".equals(value);
+                    case "action" -> (completion && "HTTP_REQUEST".equals(value))
+                            || (securityGap && "SECURITY_ACCESS_DENIED".equals(value));
+                    case "outcome" -> completion && ("SUCCESS".equals(value) || "CLIENT_ERROR".equals(value) || "SERVER_ERROR".equals(value))
+                            || securityGap && "REJECTED".equals(value);
                     case "error_code" -> value instanceof String s && isErrorCode(s);
                     default -> false;
                 };

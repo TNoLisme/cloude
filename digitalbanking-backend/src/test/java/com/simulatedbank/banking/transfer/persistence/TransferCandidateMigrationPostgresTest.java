@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -25,6 +26,7 @@ import com.simulatedbank.banking.transfer.domain.TransferIdentity;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -44,19 +46,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /** Candidate checks: real Identity/Customer migrations plus a synthetic Account stand-in, not full provider integration evidence. */
 @Testcontainers
 class TransferCandidateMigrationPostgresTest {
+    @TempDir
+    static Path schemaDirectory;
+
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("transfer_test")
             .withUsername("postgres")
             .withPassword("test");
 
-    private static final String[] LOCATIONS = {
-            "classpath:db/migration", "classpath:db/transfer-fixture", "classpath:db/transfer-candidate"
-    };
-
     private Flyway flyway(String target) {
         var config = Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
-                .schemas("banking").defaultSchema("banking").locations(LOCATIONS);
+                .schemas("banking").defaultSchema("banking");
+        TransferCandidateFlyway.locations(config, schemaDirectory);
         if (target != null) {
             config.target(target);
         }

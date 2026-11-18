@@ -1,5 +1,7 @@
 package com.simulatedbank.banking.transfer.application;
 
+import com.simulatedbank.banking.common.context.RequestContext;
+import com.simulatedbank.banking.common.context.RequestContextHolder;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -10,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -17,15 +20,23 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Isolated T2 candidate, not a registered runtime component. Each port must use
  * the same primary transaction and respect the documented module contracts.
  * A port failure aborts T2; in particular this candidate does not implement
- * fraud fail-open, credit savepoint recovery, Tfail, retries or reconciliation.
+ * credit savepoint recovery, Tfail, retries or reconciliation. Fraud fail-open is
+ * available only when the provider explicitly proves savepoint recovery is safe.
  */
 public final class TransferSettlementCandidate {
     private final Ports ports;
     private final ZoneId businessZone;
     private final TransactionTemplate tx;
     private final TransactionTemplate recoveryTx;
+    private final TransferTelemetry telemetry;
 
     public TransferSettlementCandidate(PlatformTransactionManager manager, Ports ports, ZoneId businessZone) {
+        this(manager, ports, businessZone, TransferTelemetry.DISABLED);
+    }
+
+    public TransferSettlementCandidate(PlatformTransactionManager manager, Ports ports, ZoneId businessZone,
+                                       TransferTelemetry telemetry) {
+        this.telemetry = Objects.requireNonNull(telemetry);
         this.ports = Objects.requireNonNull(ports, "ports");
         this.businessZone = Objects.requireNonNull(businessZone, "business zone");
         tx = new TransactionTemplate(Objects.requireNonNull(manager, "transaction manager"));
@@ -45,7 +56,13 @@ public final class TransferSettlementCandidate {
         // Read immutable context without locking so the customer guard is always acquired first.
         Context context = Objects.requireNonNull(ports.readContextOnPrimary(transferId), "context");
         if (context.transferId() != transferId) throw new IllegalStateException("Transfer context mismatch");
-        return Objects.requireNonNull(tx.execute(status -> execute(context, attempt)));
+        try (var scope = bindIntent(context)) {
+            long started = System.nanoTime();
+            return Objects.requireNonNull(tx.execute(status -> {
+                telemetry.joinedSettlementAttempt(started);
+                return execute(context, attempt, status);
+            }));
+        }
     }
 
     /**
@@ -59,10 +76,20 @@ public final class TransferSettlementCandidate {
     public Outcome settleInRecoveryTransaction(Context context, AttemptFence attempt) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(attempt, "attempt fence");
-        return Objects.requireNonNull(recoveryTx.execute(status -> execute(context, attempt)));
+        return Objects.requireNonNull(recoveryTx.execute(status -> {
+            telemetry.joinedSettlementAttempt(System.nanoTime());
+            return execute(context, attempt, status);
+        }));
     }
 
-    private Outcome execute(Context context, AttemptFence attempt) {
+    private static RequestContextHolder.Scope bindIntent(Context context) {
+        if (context.correlationId() == null) return () -> { }; // Legacy candidate port.
+        String requestId = RequestContextHolder.current().map(RequestContext::requestId)
+                .orElseGet(() -> UUID.randomUUID().toString());
+        return RequestContextHolder.bind(new RequestContext(context.correlationId(), requestId, null, null));
+    }
+
+    private Outcome execute(Context context, AttemptFence attempt, TransactionStatus status) {
         ports.lockStepUpGuard(context.customerId());
         // Lock and re-read PENDING; both durable epoch and token must match this attempt.
         AttemptFence locked = Objects.requireNonNull(ports.lockPendingAndReadFence(context), "durable fence");
@@ -75,8 +102,7 @@ public final class TransferSettlementCandidate {
         Optional<Failure> failure = Objects.requireNonNull(ports.validateLockedState(context, businessDate), "validation");
         FraudResult fraud = new FraudResult(false, List.of());
         if (failure.isEmpty()) {
-            // A technical fraud failure rolls the whole T2 back, rather than pretending a savepoint exists.
-            fraud = Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+            fraud = evaluateFraud(context, terminalAt, status);
             if (fraud.blocked()) failure = Optional.of(Failure.FRAUD_BLOCKED);
         }
         if (failure.isEmpty() && !ports.debitConditional(context)) {
@@ -97,12 +123,53 @@ public final class TransferSettlementCandidate {
         // Writes transfer status, idempotency safe response + TTL snapshot, and outbox atomically.
         ports.writeTerminalAndOutbox(context, outcome, terminalAt);
         ports.flushBusinessWrites();
-        // No further business SQL after audit begins; audit exceptions are never caught here.
-        for (Flag flag : fraud.flags().stream().sorted((a, b) -> Long.compare(a.id(), b.id())).toList()) {
-            ports.recordFraudFlagAudit(context, flag, terminalAt);
+        // No further business SQL after audit begins.
+        try {
+            for (Flag flag : fraud.flags().stream().sorted((a, b) -> Long.compare(a.id(), b.id())).toList()) {
+                telemetry.requiredAudit(TransferTelemetry.AuditClass.C2,
+                        () -> ports.recordFraudFlagAudit(context, flag, terminalAt));
+            }
+            telemetry.requiredAudit(TransferTelemetry.AuditClass.C1,
+                    () -> ports.recordTerminalAudit(context, outcome, terminalAt));
+        } catch (RuntimeException auditFailure) {
+            throw new AuditWriteException(auditFailure);
         }
-        ports.recordTerminalAudit(context, outcome, terminalAt);
+        telemetry.terminalAfterCommit(outcome);
         return outcome;
+    }
+
+    private FraudResult evaluateFraud(Context context, Instant terminalAt, TransactionStatus status) {
+        if (!ports.fraudSavepointSupported()) {
+            return Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+        }
+        Object savepoint = status.createSavepoint();
+        FraudResult result;
+        try {
+            result = Objects.requireNonNull(ports.evaluateFraud(context, terminalAt), "fraud result");
+        } catch (FraudEngineException engineFailure) {
+            status.rollbackToSavepoint(savepoint);
+            if (status.isRollbackOnly() || !ports.fraudContextUsableAfterRollback() || status.isRollbackOnly()) {
+                throw engineFailure;
+            }
+            status.releaseSavepoint(savepoint);
+            // Provider must emit the prescribed safe telemetry without business SQL or sensitive data.
+            ports.recordFraudFailOpen();
+            return new FraudResult(false, List.of());
+        }
+        status.releaseSavepoint(savepoint);
+        return result;
+    }
+
+    /** A required C1 or C2 write failed in T2. The transaction must roll back. */
+    public static final class AuditWriteException extends IllegalStateException {
+        public AuditWriteException(Throwable cause) {
+            super("Transfer settlement audit write failed", cause);
+        }
+    }
+
+    /** Only failures classified by the fraud provider as engine failures may use fail-open. */
+    public static final class FraudEngineException extends RuntimeException {
+        public FraudEngineException(String message) { super(message); }
     }
 
     /** All operations except readContextOnPrimary are mandatory participants in the same T2. */
@@ -118,6 +185,12 @@ public final class TransferSettlementCandidate {
         /** Re-check source ownership, account state/currency, balance and limit under lock. */
         Optional<Failure> validateLockedState(Context context, LocalDate businessDate);
         FraudResult evaluateFraud(Context context, Instant terminalAt);
+        /** Opt in only after proving savepoint and persistence-context recovery with the provider. */
+        default boolean fraudSavepointSupported() { return false; }
+        /** Restore/clear provider persistence state and prove the shared transaction remains usable. */
+        default boolean fraudContextUsableAfterRollback() { return false; }
+        /** Emit safe fail-open telemetry; failures propagate and roll back T2. */
+        default void recordFraudFailOpen() { throw new IllegalStateException("Fraud telemetry unavailable"); }
         /** Return false only when debit did not occur and insufficient balance was confirmed. */
         boolean debitConditional(Context context);
         void credit(Context context);
@@ -134,8 +207,30 @@ public final class TransferSettlementCandidate {
         void recordTerminalAudit(Context context, Outcome outcome, Instant terminalAt);
     }
 
+    /** Terminal adapter contract for using the TRFC-NO-01 consumer mapping in the existing T2. */
+    public interface NotificationPorts extends Ports {
+        TransferNotifications notifications();
+
+        /** Write terminal status and replay snapshot and return the locked facts for enqueue. */
+        TransferNotifications.Facts writeTerminal(Context context, Outcome outcome, Instant terminalAt);
+
+        @Override
+        default void writeTerminalAndOutbox(Context context, Outcome outcome, Instant terminalAt) {
+            var facts = writeTerminal(context, outcome, terminalAt);
+            if (facts.transferId() != context.transferId() || facts.senderCustomerId() != context.customerId()
+                    || !facts.correlationId().equals(context.correlationId())) {
+                throw new IllegalStateException("Transfer notification facts mismatch");
+            }
+            notifications().enqueue(facts, outcome);
+        }
+    }
+
     /** Immutable values used to select the guard; port revalidates full stored details under lock. */
-    public record Context(long transferId, long customerId, Instant createdAt) {
+    public record Context(long transferId, long customerId, Instant createdAt, String correlationId) {
+        public Context(long transferId, long customerId, Instant createdAt) {
+            this(transferId, customerId, createdAt, null);
+        }
+
         public Context {
             if (transferId <= 0 || customerId <= 0) throw new IllegalArgumentException("Invalid transfer context");
             Objects.requireNonNull(createdAt, "createdAt");
@@ -154,9 +249,9 @@ public final class TransferSettlementCandidate {
         public static Outcome completed() { return new Outcome(Optional.empty()); }
         public static Outcome failed(Failure failure) { return new Outcome(Optional.of(failure)); }
     }
-    public record Flag(long id, String ruleCode, String ruleVersion, String severity) {
+    public record Flag(long id, String ruleCode, int ruleVersion, String severity) {
         public Flag {
-            if (id <= 0 || ruleCode == null || ruleCode.isBlank() || ruleVersion == null || ruleVersion.isBlank()
+            if (id <= 0 || ruleCode == null || ruleCode.isBlank() || ruleVersion <= 0
                     || severity == null || severity.isBlank()) throw new IllegalArgumentException("Invalid fraud flag");
         }
     }

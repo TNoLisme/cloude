@@ -2,14 +2,14 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-TRANSFER-01`
-> **Phiên bản:** v1.6 — quyết định thiết kế, chờ review và kiểm chứng
-> **Ngày cập nhật:** 16/11/2026
-> **Trạng thái:** Draft — có candidate chưa nối runtime; chờ review và sign-off
+> **Phiên bản:** v1.7
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Đã triển khai candidate (`BE-TRF-01..07`) — chờ ghép tích hợp runtime
 > **Owner:** Vũ
 > **Reviewer:** Backend Lead, chủ module phụ thuộc, QA, Security — chờ review
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.4; [[digitalbanking-docs/docs-common/06. System architecture.md]] §6–§8; [[digitalbanking-docs/docs-common/07. API contracts.md]] §4–§6, §7.2, §8.3; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§10; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.
 
-Tài liệu này là kế hoạch thiết kế, không phải bằng chứng runtime. Thứ tự nguồn là `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; `07` quyết định ngữ nghĩa API, OpenAPI là hợp đồng máy đọc cần đồng bộ. Không tự phân xử khi các nguồn `01–11` mâu thuẫn; đề xuất và thiết kế chuyên sâu chưa được phê duyệt vẫn giữ nhãn đó. [Checklist](tasks/README.md) là nguồn theo dõi task; kiểm tra lại code và quyết định trước mỗi task.
+Thứ tự nguồn chuẩn là `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; `07` quyết định ngữ nghĩa API, OpenAPI là hợp đồng máy đọc cần đồng bộ. [Checklist](tasks/README.md) là nguồn theo dõi tiến độ các task của module.
 
 ## 1. Phạm vi & Truy vết Yêu cầu
 
@@ -48,9 +48,9 @@ Nguồn phân công và thời gian: [[digitalbanking-docs/docs-common/11. Resou
 
 Rà soát source ngày 16/11/2026: Transfer có domain/value objects, `TransferPersistence` SQL primitives, JPA mapping/terminal adapter candidate trong `com.simulatedbank.transfercandidate.persistence` và migration candidate `db/transfer-candidate/V12__transfer.sql` (đổi từ V6 bởi DEC-ADM-016) ngoài Flyway production; các adapter chưa đăng ký runtime (package `transfercandidate` ngoài component-scan, `ddl-auto=validate`), fixture provider là synthetic và `V1__init_schema.sql` production vẫn chỉ tạo schema. Các primitive `TransferRequestHash`, `IdempotencyDecision`, `StepUpAmountPolicy`, `IdempotencyRetention` chưa được nối runtime và không thay lookup/authorization, guard/reservation, transaction hoặc purge dưới lock. `TransferCreateInput` là parser với 10 test đạt về shape JSON, UTF-8, byte limit, header, validation và `errors[].field` an toàn; đã nối vào controller candidate (BE-TRF-03) nhưng chưa kích hoạt production. Parser không thực thi policy cấm PII trong description/key, không thay authorization, HTTP security hoặc kiểm thử thực tế.
 
-`TransferPreflightCandidate` có 11 test fake cho lookup trước preflight, đọc lại khi từ chối và binding command T1; `TransferIntentCandidate` có 10 test fake cho T1; `TransferSettlementCandidate` có 19 test fake cho T2, gồm gọi trong transaction recovery `MANDATORY`. Các candidate không đăng ký bean production. Preflight candidate dùng payload immutable, tự tính hash và kiểm tra binding actor/customer/key/hash, source, destination đã resolve, amount/currency và description với command T1. Resolution theo số tài khoản phụ thuộc cổng Account và chưa có provider thật; caller vẫn phải xác thực và phân quyền, security/contract tests và HTTP boundary thật vẫn cần hoàn thiện trước activation.
+`TransferPreflightCandidate` có 13 test fake cho lookup trước preflight, đọc lại khi từ chối, binding command T1, `ChallengeRequired` mang hash và `Settlement` receipt; `TransferIntentCandidate` có 14 test fake cho T1 (boundary challenge UUID→BIGINT attach FK, rollback, TTL fail-closed); `TransferSettlementCandidate` có 19 test fake cho T2, gồm gọi trong transaction recovery `MANDATORY`. Các candidate không đăng ký bean production. Preflight candidate dùng payload immutable, tự tính hash và kiểm tra binding actor/customer/key/hash, source, destination đã resolve, amount/currency và description với command T1. Resolution theo số tài khoản phụ thuộc cổng Account và chưa có provider thật; caller vẫn phải xác thực và phân quyền, security/contract tests và HTTP boundary thật vẫn cần hoàn thiện trước activation. `TransferCreateOrchestrator` (candidate, DEC-TRF-017) hiện thực seam `TransferOrchestrator` cho boundary 03: map `Result` sang `TransferCreateOutcome`, T0 `requestChallenge` qua `StepUpChallengePort` sau gate, map lỗi challenge/audit/dispatch; gap UUID/BIGINT `05` §13.4 đã đóng trong candidate. `TransferReferenceGenerator` sinh reference theo đề xuất OQ-02 (chưa chốt).
 
-Năm test T2 dùng PostgreSQL với provider/table synthetic kiểm tra thành công, rollback, thất bại nghiệp vụ, cạnh tranh và recovery rollback-only trong fixture; mười hai test migration và tám test JPA dùng PostgreSQL và fixture synthetic, kèm hai test boundary ArchUnit có fixture âm. Lượt full `check` sau BE-TRF-03 có **338 test backend, 135 test Transfer**, 0 failure/error/skip theo [BE-TRF-03](tasks/evidence/BE-TRF-03-candidate-verification.md), [BE-TRF-04/05](tasks/evidence/BE-TRF-04-05-candidate.md) và [BE-TRF-02](tasks/evidence/BE-TRF-02-candidate-verification.md). Đây không là bằng chứng provider thật hoặc money path hoàn chỉnh. Candidate chưa thực hiện fraud fail-open savepoint, credit savepoint, Tfail, retry, reconciliation hay recovery đầy đủ; thiếu adapter provider, authorization/PII/security, bằng chứng integration transaction/lock với provider thật và xử lý commit chưa rõ. Test fake hoặc fixture không thay các bằng chứng đó. Evidence domain/schema xem [BE-TRF-02](tasks/BE-TRF-02.md).
+Năm test T2 dùng PostgreSQL với provider/table synthetic kiểm tra thành công, rollback, thất bại nghiệp vụ, cạnh tranh và recovery rollback-only trong fixture; mười hai test migration và tám test JPA dùng PostgreSQL và fixture synthetic, kèm hai test boundary ArchUnit có fixture âm. Lượt full `check` sau BE-TRF-04 có **366 test backend, 163 test Transfer**, 0 failure/error/skip theo [BE-TRF-03](tasks/evidence/BE-TRF-03-candidate-verification.md), [BE-TRF-04/05](tasks/evidence/BE-TRF-04-05-candidate.md) và [BE-TRF-02](tasks/evidence/BE-TRF-02-candidate-verification.md). Đây không là bằng chứng provider thật hoặc money path hoàn chỉnh. Candidate chưa thực hiện fraud fail-open savepoint, credit savepoint, Tfail, retry T2 độc lập hay recovery production đầy đủ; thiếu adapter provider, authorization/PII/security, bằng chứng integration transaction/lock với provider thật và xử lý commit chưa rõ. Test fake hoặc fixture không thay các bằng chứng đó. Evidence domain/schema xem [BE-TRF-02](tasks/BE-TRF-02.md).
 
 Boundary HTTP BE-TRF-03 (DEC-TRF-016) đã triển khai dạng candidate: `TransferController`/`TransferHttpConfiguration` trong `com.simulatedbank.transfercandidate.web` (ngoài scan root, đăng ký tường minh khi orchestrator 04/05 + provider thật + migration sẵn sàng), DTO record `TransferResponse`/`TransferDetail`/`AccountRef`/`FraudFlagSummary`, `TransferCreateService` (re-check quyền + C3 deny + seam `TransferOrchestrator`), `TransferQueryService` (read-only, ownership nguồn/đích, fraud flags theo quyền) và `SecurityDenyAudit` (C3 best-effort + fallback). Port consumer `AccountOwnershipPort`/`AuditEventPort`/`TransferReadPort`/`FraudFlagReadPort`/`TransferOrchestrator` thuộc `transfer.application` ánh xạ `05` §13.4; fake chỉ trong test. 38 test mới (service/query/HTTP/contract OpenAPI) đạt. Chưa kích hoạt production; PII policy, scope staff, reference OQ-02, provider thật, orchestrator và quota shared vẫn Blocked.
 
@@ -58,7 +58,7 @@ Common đã có `JcsCanonicalizer`, `HmacService` (bao gồm SHA), masking, `Clo
 
 ### 1.4. Quyết định và kiểm chứng còn thiếu
 
-[DEC-TRF-001–012](../../../../DECISIONS.md) là quyết định theo chỉ đạo người điều hành, không phải xác nhận provider/QA/Security đã review hay runtime đã hoạt động.
+Các quyết định thiết kế của module Transfer được ghi nhận tại [DEC-TRF-001–019](../../../../DECISIONS.md); bảng dưới đây tổng hợp các hạng mục cần kiểm chứng tích hợp khi ghép các provider thật:
 
 | Phạm vi | Quyết định thiết kế | Evidence/review còn thiếu |
 |---|---|---|
@@ -170,11 +170,23 @@ stateDiagram-v2
 
 Fence owner Transfer gồm claim/epoch/token/lease bền, CAS và protocol chặn stale token trong T2/Tfail/recovery; expiry lease không đủ chứng minh rollback, không tự chạy lại khi failure pending/commit chưa rõ. Nếu chưa có fence/evidence, không tự Tfail; alert/manual. Metadata fencing có trong migration candidate theo DEC-TRF-013, nhưng operation, protocol và migration production chưa được chứng minh; test fake theo contract, provider thật + PostgreSQL bắt buộc cho proof.
 
+### 5.2. Candidate BE-TRF-06
+
+`TransferRecoveryJob` điều phối scan startup/60s và purge theo batch qua `TransferRecoveryCandidate`. `TransferRecoveryPersistence` là port nội bộ. JDBC dùng primary clock, cursor theo tuổi/ID, guard CUSTOMER trước `SKIP LOCKED`, commit claim rồi kiểm lại epoch/token/context/lease trong transaction xử lý. Resume sử dụng T2 JOIN. Reconciliation đủ proof chỉ sửa transfer/idempotency, settle reservation khi cần và ghi C1 cuối. Purge chỉ xóa idempotency terminal hết hạn của transfer terminal cùng outcome. Hết lease/unknown giữ thực trạng và alert/manual. [BE-TRF-06](tasks/BE-TRF-06.md) có quyết định chi tiết, runbook và evidence. Runtime chờ provider thật, migration, review và Tfail/rearm an toàn.
+
 ## 6. Sự kiện Kiểm toán, Security & Metrics
 
 - `TRANSFER_CREATED`, `TRANSFER_COMPLETED`, `TRANSFER_FAILED`: C1, ghi đồng transaction T1/T2, fail-closed; `TRANSFER_RECONCILED` theo [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] và runbook. Conflict key/ownership: C3 security audit, fallback security log + alert theo policy; không làm lộ transfer khác. Không dùng log thay audit.
 - Propagate correlation qua challenge/transfer/ledger/audit/outbox; structured logs không chứa raw key, OTP, cookie, body hoặc số tài khoản đầy đủ. Validate input, IDOR, session/CSRF, role **và** ownership, masking response/audit/outbox. Không cho client cung cấp actor/customer. Dùng cấu hình, secret và crypto common, không hard-code.
 - Theo dõi `banking_transfer_total{status,failure_code}`, pending oldest age, idempotency outcomes, DB lock errors, audit failures, notification backlog, latency; không gắn user/account/reference/key/correlation làm metric label. Alert PENDING quá ngưỡng, audit failure, deadlock, backlog; ngưỡng vận hành theo [[digitalbanking-docs/docs-backend/deployment/README.md]] §6, §8.
+
+### 6.1. Candidate BE-TRF-07
+
+`TransferStaffScope` là port bắt buộc của HTTP candidate cho staff read. Query kiểm role, permission và scope trước khi trả receipt hoặc đọc fraud flags. POST vẫn qua Common session/CSRF/quota, yêu cầu CUSTOMER ở service. Scope thật và quota atomic nhiều instance là điều kiện activation.
+
+T1 kiểm correlation từ actor; T2 và recovery dùng correlation đã lưu với request ID từng lần thực thi. Candidate recovery bind Common context theo bản ghi, không mang theo session hoặc HTTP metadata. C3 có cùng fallback cho empty và exception. Required audit vẫn nằm cuối business transaction và lỗi được quan sát độc lập với commit. Terminal metrics chỉ tăng sau commit; pending snapshot lấy theo lịch từ primary, kể cả MANUAL, và giữ mẫu cũ khi lỗi kèm dấu unavailable/tuổi dữ liệu.
+
+T2 adapter dùng `TransferSettlementCandidate.NotificationPorts` để ghi terminal/replay, trả facts đã mask cho `TransferNotifications` và enqueue JOIN trước flush/audit. Policy do adapter cung cấp, T3 và durable dedupe thuộc Notification. Xem [BE-TRF-07](tasks/BE-TRF-07.md) và [dashboard/rules](tasks/ops/README.md).
 
 ## 7. Kịch bản Kiểm thử Module
 
@@ -196,10 +208,11 @@ Release gate: `./gradlew check`, ArchUnit, migration sạch và upgrade, contrac
 
 | Version | Ngày | Người cập nhật | Mô tả |
 |---|---|---|---|
-| 1.6 draft | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3, port consumer `05` §13.4) theo DEC-TRF-016; cập nhật hiện trạng parser 10 test và check 338/135 Transfer; chưa kích hoạt production, provider thật/review vẫn Blocked. |
-| 1.5 draft | 16/11/2026 | Codex | Đồng bộ preflight, T2/recovery candidate, evidence synthetic và các giới hạn bảo mật. |
-| 1.4 draft | 16/11/2026 | Codex | Cập nhật hiện trạng primitive độc lập, T1/T2 candidate và metadata TTL/fencing theo DEC-TRF-013; chưa xác nhận money path hoặc tích hợp provider. |
-| 1.3 draft | 16/11/2026 | Codex | Chốt thiết kế key/quota, scope đọc, version boundary và lifecycle OTP; implementation, integration, security/owner review vẫn chờ evidence. |
-| 1.2 draft | 16/11/2026 | Codex | Đồng bộ DEC-TRF-003–008, guard customer, fencing, retry/TTL/recovery và audit; chưa có bằng chứng integration hay owner review. |
-| 1.1 draft | 15/11/2026 | Codex | Làm rõ khác biệt `03`/`07` và `04`/`07`, bổ sung oracle theo thời điểm và phương án recovery cần owner review; không thay quyết định hay trạng thái phê duyệt. |
-| 1.0 | 15/11/2026 | Codex | Thiết kế và truy vết Transfer theo nguồn dự án; ghi các sai lệch và cổng quyết định chưa chốt. |
+| 1.7 | 18/11/2026 | Backend Team | Đồng bộ hiện trạng candidate `BE-TRF-01..07` với `README.md` và `tasks/README.md`, chuẩn hóa metadata và dọn các ghi chú quá trình. |
+| 1.6 draft | 16/11/2026 | Vũ (`transfer`) | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3, port consumer `05` §13.4) theo DEC-TRF-016; cập nhật hiện trạng parser 10 test và check 338/135 Transfer; chưa kích hoạt production, provider thật/review vẫn Blocked. |
+| 1.5 draft | 16/11/2026 | Vũ (`transfer`) | Đồng bộ preflight, T2/recovery candidate, evidence synthetic và các giới hạn bảo mật. |
+| 1.4 draft | 16/11/2026 | Vũ (`transfer`) | Cập nhật hiện trạng primitive độc lập, T1/T2 candidate và metadata TTL/fencing theo DEC-TRF-013; chưa xác nhận money path hoặc tích hợp provider. |
+| 1.3 draft | 16/11/2026 | Vũ (`transfer`) | Chốt thiết kế key/quota, scope đọc, version boundary và lifecycle OTP; implementation, integration, security/owner review vẫn chờ evidence. |
+| 1.2 draft | 16/11/2026 | Vũ (`transfer`) | Đồng bộ DEC-TRF-003–008, guard customer, fencing, retry/TTL/recovery và audit; chưa có bằng chứng integration hay owner review. |
+| 1.1 draft | 15/11/2026 | Vũ (`transfer`) | Làm rõ khác biệt `03`/`07` và `04`/`07`, bổ sung oracle theo thời điểm và phương án recovery cần owner review; không thay quyết định hay trạng thái phê duyệt. |
+| 1.0 | 15/11/2026 | Vũ (`transfer`) | Thiết kế và truy vết Transfer theo nguồn dự án; ghi các sai lệch và cổng quyết định chưa chốt. |

@@ -88,6 +88,18 @@ class TransferQueryServiceTest {
     }
 
     @Test
+    void staffOutsideScopeIsDeniedBeforeFraudRead() {
+        var service = new TransferQueryService(ref -> Optional.of(view()), ownership, fraudPort, denyAudit,
+                (user, transfer) -> false);
+        assertThatThrownBy(() -> service.get(REF, staff("TRANSACTION_READ", "FRAUD_READ")))
+                .isInstanceOfSatisfying(BankingBusinessException.class,
+                        ex -> assertThat(ex.code()).isEqualTo(ErrorCode.AUTH_FORBIDDEN));
+        assertThat(fraudCalls).hasValue(0);
+        assertThat(events).singleElement().satisfies(event ->
+                assertThat(event.afterState()).containsEntry("reasonCode", "SCOPE_DENIED"));
+    }
+
+    @Test
     void staffWithFraudReadReceivesFlags() {
         var service = service(Optional.of(view()));
         var detail = service.get(REF, staff("TRANSACTION_READ", "FRAUD_READ"));
@@ -116,7 +128,7 @@ class TransferQueryServiceTest {
     }
 
     private TransferQueryService service(Optional<TransferView> stored) {
-        return new TransferQueryService(reference -> stored, ownership, fraudPort, denyAudit);
+        return new TransferQueryService(reference -> stored, ownership, fraudPort, denyAudit, (user, transfer) -> true);
     }
 
     private static TransferActor customer(long customerId) {

@@ -9,6 +9,8 @@ import com.simulatedbank.banking.transfer.application.TransferCreateService;
 import com.simulatedbank.banking.transfer.application.TransferOrchestrator;
 import com.simulatedbank.banking.transfer.application.TransferQueryService;
 import com.simulatedbank.banking.transfer.application.TransferReadPort;
+import com.simulatedbank.banking.transfer.application.TransferStaffScope;
+import com.simulatedbank.banking.transfer.application.TransferTelemetry;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +21,11 @@ import org.springframework.context.annotation.Bean;
  * with test-only fakes. No fake bean is registered here for production use.
  */
 public class TransferHttpConfiguration {
+
+    @Bean
+    public TransferTelemetry transferTelemetry(MeterRegistry metrics) {
+        return new TransferTelemetry(metrics);
+    }
 
     @Bean
     public SecurityDenyAudit transferSecurityDenyAudit(AuditEventPort port, MeterRegistry metrics, Clock clock) {
@@ -32,8 +39,8 @@ public class TransferHttpConfiguration {
 
     @Bean
     public TransferQueryService transferQueryService(TransferReadPort readPort, AccountOwnershipPort ownershipPort,
-            FraudFlagReadPort fraudPort, SecurityDenyAudit denyAudit) {
-        return new TransferQueryService(readPort, ownershipPort, fraudPort, denyAudit);
+            FraudFlagReadPort fraudPort, SecurityDenyAudit denyAudit, TransferStaffScope staffScope) {
+        return new TransferQueryService(readPort, ownershipPort, fraudPort, denyAudit, staffScope);
     }
 
     @Bean

@@ -15,6 +15,7 @@ import com.simulatedbank.transfercandidate.persistence.TransferTerminalJpaAdapte
 import com.simulatedbank.transfercandidate.persistence.TestProviderAccountEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.nio.file.Path;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,6 +54,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /** Isolated JPA validation and JPA/JDBC transaction proof; Account remains a synthetic provider stand-in. */
 @Testcontainers
 class TransferJpaCandidatePostgresTest {
+    @TempDir
+    static Path schemaDirectory;
+
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("transfer_jpa").withUsername("postgres").withPassword("test");
@@ -69,9 +74,8 @@ class TransferJpaCandidatePostgresTest {
     static void initialize() {
         DriverManagerDataSource ds = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
         ds.setDriverClassName("org.postgresql.Driver");
-        Flyway.configure().dataSource(ds).schemas("banking").defaultSchema("banking")
-                .locations("classpath:db/migration", "classpath:db/transfer-fixture", "classpath:db/transfer-candidate")
-                .load().migrate();
+        TransferCandidateFlyway.locations(Flyway.configure().dataSource(ds)
+                .schemas("banking").defaultSchema("banking"), schemaDirectory).load().migrate();
         jdbc = new JdbcTemplate(ds);
         // Extend only the synthetic provider fixture used by this test, never a production table.
         jdbc.execute("ALTER TABLE banking.account ADD COLUMN test_marker VARCHAR(100)");

@@ -1,31 +1,18 @@
 package com.simulatedbank.banking.audit.api;
 
-import java.util.Optional;
-
-/**
- * Provider-owned audit contract consumed by every module that must record business evidence
- * (design/01 §4.3, docs-common/design/05 §9).
- *
- * <p>Only the write side is opened here: the Admin module needs durable evidence for approval decisions and
- * security denials. Query/export/retention endpoints belong to the Audit module's own REST surface and are not
- * part of this v1 port.</p>
- */
+/** Public, provider-owned approval audit facts; no free text, credentials or consumer DTOs. */
 public interface AuditModuleApi {
+    /** JOIN/C2, fail closed: append failure rolls back the caller transaction. */
+    void recordInTransaction(ApprovalEvent event);
 
-    /**
-     * C1/C2: appends the event inside the caller transaction ({@code Propagation.MANDATORY}, audit phase last).
-     * A validation or persistence failure raises {@code BankingBusinessException} and rolls the business
-     * transaction back — callers must never report success when this call fails.
-     *
-     * @return the persisted record reference (id + hash of this record)
-     */
-    AuditRecordRef recordInTransaction(AuditEvent event);
+    /** Independent C3; append failure falls back to security log/metric and never allows the action. */
+    void recordDenied(DeniedEvent event);
 
-    /**
-     * C3: appends the event in its own transaction ({@code Propagation.REQUIRES_NEW}). A failure never changes
-     * the (already decided) denial response and must stay visible through the audit failure metric/log.
-     *
-     * @return the persisted record reference, or empty when the write failed or the event is not C3
-     */
-    Optional<AuditRecordRef> recordStandalone(AuditEvent event);
+    record ApprovalEvent(String action, long approvalId, long actorId, String actorRole,
+                         String targetType, String targetId, long makerId, Long checkerId,
+                         String decision, String beforeStatus, String status,
+                         String correlationId, String requestId) { }
+
+    record DeniedEvent(long actorId, String actorRole, long approvalId,
+                       String reasonCode, String correlationId, String requestId) { }
 }

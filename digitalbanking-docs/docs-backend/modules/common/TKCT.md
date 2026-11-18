@@ -2,14 +2,14 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-COMMON-01`
-> **Phiên bản:** v1.11
-> **Ngày:** 12/11/2026
-> **Trạng thái:** Đã đối chiếu code 5bf84a6; verified theo từng scope/report local; consumer/Cloud còn Blocked, chưa sign-off
+> **Phiên bản:** v1.12
+> **Ngày:** 18/11/2026
+> **Trạng thái:** Hoàn thành nền tảng (30 Java files / 5 sub-packages); chờ nghiệm thu tích hợp toàn hệ thống / Cloud
 > **Owner:** Phương
 > **Reviewer:** Backend Lead, QA, Security (chờ review)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (§2.13, §3, §10), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6, §9, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§2–§5, §7.2, §10), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§4.6, §5–§7), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§7.10, §11, Appendix C), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§8).
 
-Thiết kế trước đây nằm trong README.md, nay chuyển sang TKCT.md. [README](README.md) là hướng dẫn sử dụng/tra cứu; [final report](report/BE-COM-FINAL-REPORT.md) tổng hợp state và dependency. Giữ số mục 1–7 để tra các tham chiếu lịch sử. Verified chỉ áp dụng scope/revision/môi trường trong report, không nghiệm thu toàn module.
+Thiết kế trước đây nằm trong README.md, nay chuyển sang TKCT.md. [README](README.md) là hướng dẫn sử dụng/tra cứu; [CURRENT-STATE](CURRENT-STATE.md) tổng hợp state và dependency. Giữ số mục 1–7 để tra các tham chiếu lịch sử. Verified chỉ áp dụng scope/revision/môi trường trong report, không nghiệm thu toàn module.
 
 ## 1. Phạm vi & Truy vết Yêu cầu
 
@@ -20,7 +20,7 @@ Thiết kế trước đây nằm trong README.md, nay chuyển sang TKCT.md. [R
 - Mọi module được dùng `common.*`; `common` không import ngược `identity`, `customer`, `account`, `transfer`, `ledger`, `limit`, `audit`, `fraud`, `notification`, `admin`.
 - Không sở hữu bảng/repository/migration nghiệp vụ, không mở transaction tiền; không đặt rule số dư, hạn mức, step-up, maker/checker tại đây.
 - `identity` sở hữu session/OTP/RBAC; `audit` sở hữu ghi audit/hash chain; `transfer` sở hữu idempotency. `common` chỉ cung cấp primitive và chuẩn HTTP.
-- Dùng 4 gói `config/context/crypto/error`, không ép thành 5 lớp nghiệp vụ.
+- Dùng 5 gói `config/context/crypto/error/logging`, không ép thành 5 lớp nghiệp vụ.
 
 Nguồn: `06` §6.1–§6.4; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §4.3–§5.2; [[digitalbanking-docs/docs-backend/modules/_overview/11-common.md]] §1–§2.
 
@@ -60,7 +60,7 @@ Hoàn thiện `common` không tự chứng minh toàn hệ thống đạt các N
 
 ### 1.4. Trạng thái so với code
 
-Đối chiếu code tại **5bf84a6**: common có **28 Java files** (config: 14 / context: 4 / crypto: 4 / error: 6), profile local/test/demo và logback config. Mười module nghiệp vụ còn lại chưa có Java implementation; migration hiện chỉ tạo schema banking.
+Đối chiếu code hiện tại: common có **30 Java files trong 5 sub-packages** (`config`: 14 / `context`: 5 / `crypto`: 4 / `error`: 6 / `logging`: 1), profile local/test/demo và logback config. Các module `identity`, `audit`, `fraud`, `notification`, `ledger`, `transfer` đã triển khai core/candidate sử dụng trực tiếp các primitive của `common`.
 
 | Nhóm | Đã triển khai | Verification / giới hạn |
 |---|---|---|
@@ -115,19 +115,22 @@ com.simulatedbank.banking.common/
 │   ├── CorrelationAndRequestIdFilter.java
 │   ├── HttpRequestLog.java
 │   ├── RequestContext.java
-│   └── RequestContextHolder.java
+│   ├── RequestContextHolder.java
+│   └── SecurityAuditFallbackLog.java
 ├── crypto/
 │   ├── HmacService.java
 │   ├── JcsCanonicalizer.java
 │   ├── PiiCryptoService.java
 │   └── PiiMaskingUtils.java
-└── error/
-    ├── BankingBusinessException.java
-    ├── DatabaseErrorMapper.java
-    ├── ErrorCode.java
-    ├── GlobalExceptionHandler.java
-    ├── ProblemResponse.java
-    └── ProblemWriter.java
+├── error/
+│   ├── BankingBusinessException.java
+│   ├── DatabaseErrorMapper.java
+│   ├── ErrorCode.java
+│   ├── GlobalExceptionHandler.java
+│   ├── ProblemResponse.java
+│   └── ProblemWriter.java
+└── logging/
+    └── LogRedaction.java
 ```
 
 Giao tiếp nghiệp vụ dùng Java primitives in-process; common có endpoint vận hành HealthController, không tạo REST/entity/port nghiệp vụ. DTO/extension không chứa entity/class module nghiệp vụ. Chữ ký rút gọn bỏ imports/annotations/thân hàm, không copy như file biên dịch; source Java quyết định overload/visibility thực.
@@ -697,21 +700,21 @@ BE-COM-IMP-08 bổ sung profile demo (Secure cookie config, CORS explicit), test
 | COM-ARCH-01 | ModuleBoundaryArchTest: 5 rules, gồm common không persistence/transaction dependency | Business packages trống nên chưa review hết architecture consumer |
 | Readiness08 | PackagedApplicationReadinessIntegrationTest: demo JAR start/restart/roles/Flyway/10 negative config cases | Chưa accepted prior artifact rollback, RC/image/scan/URL/owner/W7/W8 |
 
-Report01–08 là nơi giữ revision/command/result cụ thể; [final report](report/BE-COM-FINAL-REPORT.md) tổng hợp task/dependency. Không đánh dấu AC nhiều vế Verified chỉ vì primitive/component đã pass.
+Report01–08 là nơi giữ revision/command/result cụ thể; [CURRENT-STATE](CURRENT-STATE.md) tổng hợp task/dependency. Không đánh dấu AC nhiều vế Verified chỉ vì primitive/component đã pass.
 
 ## Change Log
 
 | Phiên bản | Ngày | Người thực hiện | Thay đổi |
 |---|---|---|---|
-| v1.0 | 12/11/2026 | Codex — theo Task 1 của owner | Hoàn thiện 7 phần, traceability, chữ ký 4 gói, lỗi/SQLSTATE, trace/PII/crypto, tests Planned và issue nguồn; không sửa runtime |
-| v1.1 | 12/11/2026 | Codex — theo quyết định ưu tiên của owner | Phân xử 7 nhóm theo docs-common/01–11, giữ rotation còn mở và nhãn Đề xuất của nguồn; đồng bộ các mục backend liên quan trước implement |
-| v1.2 | 12/11/2026 | Codex — theo yêu cầu chia task của owner | Bổ sung chỉ mục 8 task implementation và mẫu verification; không sửa thiết kế hành vi hoặc xác nhận runtime |
-| v1.3 | 12/11/2026 | Codex — BE-COM-IMP-01 | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |
-| v1.4 | 12/11/2026 | Codex — BE-COM-IMP-02 | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
-| v1.5 | 12/11/2026 | Codex — BE-COM-IMP-03 | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |
-| v1.6 | 12/11/2026 | Codex — BE-COM-IMP-04 | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |
-| v1.7 | 12/11/2026 | Codex — BE-COM-IMP-05 | Triển khai security chain, SPI identity, CSRF/CORS/headers và body/token-bucket limits; report giữ Blocked cho tích hợp session/cookie/username/challenge/proxy chưa có evidence |
-| v1.8 | 12/11/2026 | Codex — BE-COM-IMP-06 | Triển khai JSON log allowlist/completion, HTTP histogram, protected operational metrics và HealthResponse app/DB; kiểm thử local HTTP/PostgreSQL và handoff owner/07/08 trong report, chưa xác nhận Cloud/toàn NFR-025 |
-| v1.9 | 12/11/2026 | Codex — BE-COM-IMP-07 | PostgreSQL error pipeline/rollback và architecture quality gate; ma trận tích hợp với task07 Blocked do thiếu consumer nghiệp vụ thật, không thay nghiệp vụ bằng test probe |
-| v1.10 | 12/11/2026 | Codex — BE-COM-IMP-08 | Profile demo/CORS/cookie config; packaged JAR readiness/negative tests và runbook ứng dụng; giữ Cloud/release/owner gates Blocked, không nhận nghiệm thu từ local |
-| v1.11 | 12/11/2026 | Codex — rà soát sau implementation | Tách README hướng dẫn; đồng bộ 28 classes/SPI/demo/health/log/trace/SQLSTATE/test mapping với 5bf84a6; sửa mô tả Planned và ví dụ chưa implement, giữ consumer/Cloud/rotation/hash protocol chưa nghiệm thu |
+| v1.0 | 12/11/2026 | Phương (`common`)| Hoàn thiện 7 phần, traceability, chữ ký 4 gói, lỗi/SQLSTATE, trace/PII/crypto, tests Planned và issue nguồn; không sửa runtime |
+| v1.1 | 12/11/2026 | Phương (`common`)| Phân xử 7 nhóm theo docs-common/01–11, giữ rotation còn mở và nhãn Đề xuất của nguồn; đồng bộ các mục backend liên quan trước implement |
+| v1.2 | 12/11/2026 | Phương (`common`)| Bổ sung chỉ mục 8 task implementation và mẫu verification; không sửa thiết kế hành vi hoặc xác nhận runtime |
+| v1.3 | 12/11/2026 | Phương (BE-COM-IMP-01) | Đồng bộ cấu hình/thời gian đã kiểm chứng; liên kết report; chưa xác nhận HTTP security, enforcement hoặc toàn module |
+| v1.4 | 12/11/2026 | Phương (BE-COM-IMP-02) | Đồng bộ error API, trust boundary, mapper/writer đã kiểm chứng và report; chưa xác nhận pipeline trace/security hoặc lock/transaction thật |
+| v1.5 | 12/11/2026 | Phương (BE-COM-IMP-03) | Đồng bộ context/filter/scope API, proxy trust boundary và metadata, liên kết verification; security identity và propagation DB bàn giao 05/07 |
+| v1.6 | 12/11/2026 | Phương (BE-COM-IMP-04) | Đồng bộ crypto/JCS/masking đã kiểm chứng, biên raw JSON và cấu hình khóa, handoff và verification; rotation/PII xuyên kênh vẫn bàn giao owner |
+| v1.7 | 12/11/2026 | Phương (BE-COM-IMP-05) | Triển khai security chain, SPI identity, CSRF/CORS/headers và body/token-bucket limits; report giữ Blocked cho tích hợp session/cookie/username/challenge/proxy chưa có evidence |
+| v1.8 | 12/11/2026 | Phương (BE-COM-IMP-06) | Triển khai JSON log allowlist/completion, HTTP histogram, protected operational metrics và HealthResponse app/DB; kiểm thử local HTTP/PostgreSQL và handoff owner/07/08 trong report, chưa xác nhận Cloud/toàn NFR-025 |
+| v1.9 | 12/11/2026 | Phương (BE-COM-IMP-07) | PostgreSQL error pipeline/rollback và architecture quality gate; ma trận tích hợp với task07 Blocked do thiếu consumer nghiệp vụ thật, không thay nghiệp vụ bằng test probe |
+| v1.10 | 12/11/2026 | Phương (BE-COM-IMP-08) | Profile demo/CORS/cookie config; packaged JAR readiness/negative tests và runbook ứng dụng; giữ Cloud/release/owner gates Blocked, không nhận nghiệm thu từ local |
+| v1.11 | 12/11/2026 | Phương (`common`) | Tách README hướng dẫn; đồng bộ 28 classes/SPI/demo/health/log/trace/SQLSTATE/test mapping với 5bf84a6; sửa mô tả Planned và ví dụ chưa implement, giữ consumer/Cloud/rotation/hash protocol chưa nghiệm thu |

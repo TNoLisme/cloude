@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản task:** [BE-COM-IMP-02](../tasks/BE-COM-IMP-02.md), v1.0 ngày 12/11/2026; source snapshot/hash E04
-> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 — Codex theo yêu cầu của Phương
+> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 — Phương (`common`)
 > **Phiên bản report:** v1.1 — bổ sung quyết định theo ủy quyền owner ngày 12/11/2026
 > **Trạng thái task:** Done — implementer verified
 > **Kết luận verification:** Verified trong phạm vi error model, writer và mapper
@@ -82,7 +82,7 @@ XML evidence sao từ Gradle, chỉ redact dòng password Spring sinh tự độ
 
 | ID | AC ảnh hưởng | Gap/lỗi và tác động | Trạng thái | Đầu mối / điều kiện tiếp tục | Quyết định hoặc evidence liên quan |
 |---|---|---|---|---|---|
-| HARNESS-01 | G03/AC02/03/05 | Fixture chưa được import, ObjectMapper test khác ISO config app; fail cascade/output capture có request dump synthetic | Fixed và retested | Codex; explicit fixture import + mapper config; E03 pass | E01–E03 |
+| HARNESS-01 | G03/AC02/03/05 | Fixture chưa được import, ObjectMapper test khác ISO config app; fail cascade/output capture có request dump synthetic | Fixed và retested | Phương; explicit fixture import + mapper config; E03 pass | E01–E03 |
 | TRACE-WIRING | Ngoài acceptance độc lập task 02; cần cho toàn pipeline | Writer nhận request attribute correlationId hoặc UUID fallback, chưa filter validate/cleanup/mọi response | Handoff | IMP-03 / Phương; dùng chung attribute, kiểm all-dispatch headers/context | common §2.4, E03 harness |
 | SECURITY-WIRING | Phần wiring/enforcement task 05 | Production chain còn baseline, chưa gắn entrypoint/denied writer; body-limit test chỉ gọi writer, chưa đếm byte body | Handoff | IMP-05 / Phương + Đạt identity; CSRF/session/auth thật, limiter/proxy enforcement | Task 02 AC03 quy định body-limit ở 05 |
 | DATABASE-INTEGRATION | Phần PostgreSQL task 07 | Mapping pass không chứng minh rollback, audit atomicity, lock timeout/NOWAIT hoặc commit uncertain | Handoff | IMP-07 / Phương với transfer/limit Vũ, audit Thịnh; TX/connection độc lập trên PG16 | Task 02 AC04 quy định DB thật ở 07 |
@@ -93,7 +93,7 @@ Không có gap ảnh hưởng tiêu chí task 02 còn chưa đạt. Các phần 
 
 ### 5.1. Quyết định đã chốt theo ủy quyền owner
 
-Ngày 12/11/2026 (UTC+07:00), sau khi hoàn tất task, owner yêu cầu: “Có quyết định gì để ngỏ hoặc conflict bạn hãy cứ đưa ra quyết định. Nhưng nhớ phải report lại quyết định trong report!” Codex chốt các quyết định dưới đây trong phạm vi BE-COM-IMP-02. Đây là ủy quyền ra quyết định; review/sign-off và kiểm chứng tích hợp vẫn là các bước riêng.
+Ngày 12/11/2026 (UTC+07:00), sau khi hoàn tất task, owner yêu cầu: “Có quyết định gì để ngỏ hoặc conflict bạn hãy cứ đưa ra quyết định. Nhưng nhớ phải report lại quyết định trong report!” Phương chốt các quyết định dưới đây trong phạm vi BE-COM-IMP-02. Đây là ủy quyền ra quyết định; review/sign-off và kiểm chứng tích hợp vẫn là các bước riêng.
 
 | ID | Vấn đề / lựa chọn | Quyết định và lý do | Tác động / trạng thái triển khai | Căn cứ |
 |---|---|---|---|---|
