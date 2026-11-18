@@ -51,6 +51,8 @@ class RequestContextTest {
             filter.doFilter(request, response, (req, res) -> {
                 var context = RequestContextHolder.current().orElseThrow();
                 assertThat(context.correlationId()).isEqualTo(response.getHeader("X-Correlation-ID"));
+                assertThat(response.getHeader("X-Request-ID")).isEqualTo(context.requestId())
+                        .isNotEqualTo("client-controlled");
                 assertThat(MDC.get("correlationId")).isEqualTo(context.correlationId());
                 assertThat(MDC.get("requestId")).isEqualTo(context.requestId());
                 assertThat(UUID.fromString(context.requestId()).version()).isEqualTo(4);

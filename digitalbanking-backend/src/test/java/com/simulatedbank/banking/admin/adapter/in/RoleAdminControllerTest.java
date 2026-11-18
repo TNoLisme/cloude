@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.admin.application.ApprovalDecisionService;
 import com.simulatedbank.banking.admin.application.ApprovalDecisionService.DecisionCommand;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -52,8 +54,14 @@ class RoleAdminControllerTest {
     @BeforeEach
     void setUp() {
         var writer = new ProblemWriter(Clock.fixed(NOW, ZoneOffset.UTC), new ObjectMapper());
+        // Match application.yml: an unknown decision field is a 400, never a silently ignored value.
+        var mapper = new ObjectMapper().findAndRegisterModules()
+                .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        var json = new MappingJackson2HttpMessageConverter(mapper);
+        json.setSupportedMediaTypes(List.of(MediaType.APPLICATION_JSON, MediaType.APPLICATION_PROBLEM_JSON));
         mvc = MockMvcBuilders.standaloneSetup(new RoleAdminController(proposals, decisions))
                 .setControllerAdvice(new GlobalExceptionHandler(writer))
+                .setMessageConverters(json)
                 .build();
     }
 
@@ -138,6 +146,21 @@ class RoleAdminControllerTest {
     }
 
     @Test
+    void targetUserIdOverBigintIs400WithoutCallingTheService() throws Exception {
+        mvc.perform(post("/api/v1/admin/roles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", KEY)
+                        .content("""
+                                {"operation":"ASSIGN_ROLE","targetUserId":"9999999999999999999",
+                                 "roleCode":"OPERATIONS"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(proposals, org.mockito.Mockito.never()).proposeRole(any());
+    }
+
+    @Test
     void invalidDecisionIs400BeforeTheService() throws Exception {
         mvc.perform(post("/api/v1/admin/roles/8001/approve")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -147,6 +170,20 @@ class RoleAdminControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void clientSuppliedExpectedVersionIsRejectedBeforeTheService() throws Exception {
+        mvc.perform(post("/api/v1/admin/roles/8001/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", KEY)
+                        .content("""
+                                {"decision":"APPROVE","expectedVersion":1}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+
+        verify(decisions, org.mockito.Mockito.never()).decide(any());
     }
 
     @Test

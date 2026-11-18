@@ -1,6 +1,8 @@
 package com.simulatedbank.banking.admin.adapter.in;
 
 import com.simulatedbank.banking.admin.domain.ApprovalDecision;
+import com.simulatedbank.banking.admin.domain.ApprovalRequestType;
+import com.simulatedbank.banking.admin.domain.ApprovalStatus;
 import com.simulatedbank.banking.admin.domain.RoleChangeOperation;
 import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.common.context.RequestContextHolder;
@@ -36,7 +38,12 @@ final class AdminHttpSupport {
         if (value == null || !value.matches(ID_PATTERN)) {
             throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         }
-        return Long.parseLong(value);
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException overflow) {
+            // 19 decimal digits can still exceed Long.MAX_VALUE; never surface a parser 500.
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        }
     }
 
     static Long optionalId(String value) {
@@ -64,6 +71,45 @@ final class AdminHttpSupport {
         try {
             return RoleChangeOperation.valueOf(value);
         } catch (IllegalArgumentException invalid) {
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    /** Optional {@code requestType} query filter; blank means "not supplied". */
+    static ApprovalRequestType requestType(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return ApprovalRequestType.valueOf(value.strip());
+        } catch (IllegalArgumentException invalid) {
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    /** Optional {@code status} query filter; blank means "not supplied". */
+    static ApprovalStatus status(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return ApprovalStatus.valueOf(value.strip());
+        } catch (IllegalArgumentException invalid) {
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    /**
+     * Optional integer query parameter. A non-numeric or overflowing value is a client validation error,
+     * never a Spring type-mismatch exception that could leak binding details.
+     */
+    static Integer integer(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value.strip());
+        } catch (NumberFormatException invalid) {
             throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         }
     }

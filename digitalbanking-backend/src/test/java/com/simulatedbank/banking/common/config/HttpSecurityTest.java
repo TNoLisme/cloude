@@ -35,6 +35,8 @@ import org.springframework.web.bind.annotation.*;
         "app.customer.enabled=false",
         "app.account.enabled=false",
         "app.admin.enabled=false",
+        "app.audit.enabled=false",
+        "app.limit.enabled=false",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
@@ -236,6 +238,8 @@ class HttpSecurityTest {
     static void assertHeaders(MvcResult result) {
         assertThat(result.getResponse().getHeader("Cache-Control")).isEqualTo("no-store");
         assertThat(result.getResponse().getHeader("Pragma")).isEqualTo("no-cache");
+        assertThat(result.getResponse().getHeader("Expires")).isEqualTo("0");
+        assertThat(result.getResponse().getHeader("X-Request-ID")).matches("[0-9a-f-]{36}");
         assertThat(result.getResponse().getHeader("X-Content-Type-Options")).isEqualTo("nosniff");
         assertThat(result.getResponse().getHeader("X-Frame-Options")).isEqualTo("DENY");
         assertThat(result.getResponse().getHeader("Referrer-Policy")).isEqualTo("no-referrer");

@@ -40,12 +40,12 @@ class PostgreSqlFreshMigrationIntegrationTest {
         var flyway = PostgreSqlIntegrationTestSupport.flyway(postgres);
         var first = flyway.migrate();
 
-        assertThat(first.migrationsExecuted).isEqualTo(8);
+        assertThat(first.migrationsExecuted).isEqualTo(11);
         try (Connection connection = connection()) {
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
             assertThat(queryStrings(connection,
                     "SELECT table_name FROM information_schema.tables "
                             + "WHERE table_schema = 'banking' AND table_name = 'account'"))

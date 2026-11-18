@@ -35,6 +35,8 @@ Quyết định release giữ **NO-GO**: cần consumer integration và quality 
 
 Task/report cũ ghi kết quả của revision và môi trường khi thực hiện; không sửa counts lịch sử thành 203 hoặc tự thêm sign-off. [Tracker](../tasks/README.md) giữ AC/dependency và điều kiện Done. Đợt tổ chức tài liệu này không tạo task implementation thứ 9 và không thay trạng thái của bất kỳ AC nào.
 
+> **Cập nhật 17/11/2026 — BE-CUS-IMP-06 (task của owner Customer, không phải task Common mới):** Common bổ sung 2 phần độc lập đã được test trong focused suites: (1) `common.crypto.PiiMaskingUtils.maskFullName` (oracle tạm theo [DEC-CUS-005](../../../../DECISIONS.md), CUS-OI-02 chờ owner); (2) `common.config.SecurityAccessDeniedAuditor` — audit C3 `SECURITY_ACCESS_DENIED` cho 403 chain-level qua `AuthorizationDeniedEvent` (gỡ BLOCKED §8 của BE-ID-IMP-13; chỉ record 403-sau-xác-thực với principal `SessionAuthenticator.Session`; metadata actor/roles/entity bounded, không PII/token; persistence `audit_log` vẫn BLOCKED chờ module audit). Semantics C3: emit lỗi không bao giờ làm hỏng response 403.
+
 Các commit runtime liên quan: 01 `00a5823`, 02 `8b7298a`, 03 `991472b`, 04 `b44e927`, 05–06 `87427ce`, 07–08 `5bf84a6`. Các thay đổi README/TKCT/final report hiện tại chưa commit.
 
 ## 3. Năng lực có thể bàn giao ngay và giới hạn sử dụng

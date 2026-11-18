@@ -58,6 +58,7 @@ class ApprovalRequestPostgreSqlIntegrationTest {
     @Autowired private ApprovalRequestStore store;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private jakarta.persistence.EntityManagerFactory entityManagerFactory;
 
     private TransactionTemplate tx;
     private long maker;
@@ -71,8 +72,8 @@ class ApprovalRequestPostgreSqlIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-it-%'");
             maker = user("adm-it-maker-" + suffix);
             checker = user("adm-it-checker-" + suffix);
             secondChecker = user("adm-it-checker2-" + suffix);
@@ -84,8 +85,8 @@ class ApprovalRequestPostgreSqlIntegrationTest {
     void tearDown() {
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-it-%'");
         });
     }
 
@@ -295,6 +296,58 @@ class ApprovalRequestPostgreSqlIntegrationTest {
     }
 
     @Test
+    void jpaMetamodelMatchesCanonicalIdentifierEnumMappingsAndHasNoVersion() {
+        jakarta.persistence.metamodel.EntityType<ApprovalRequestEntity> entity =
+                entityManagerFactory.getMetamodel().entity(ApprovalRequestEntity.class);
+
+        assertThat(entity.getIdType().getJavaType()).isEqualTo(Long.class);
+        assertThat(entity.getAttributes()).extracting(jakarta.persistence.metamodel.Attribute::getName)
+                .doesNotContain("version");
+        assertThat(entity.getAttribute("requestType").getJavaType()).isEqualTo(ApprovalRequestType.class);
+        assertThat(entity.getAttribute("targetType").getJavaType()).isEqualTo(ApprovalTargetType.class);
+        assertThat(entity.getAttribute("status").getJavaType()).isEqualTo(ApprovalStatus.class);
+        assertThat(entity.getAttribute("payload").getJavaType()).isEqualTo(java.util.Map.class);
+        assertThat(optional(entity, "checkerId")).isTrue();
+        assertThat(optional(entity, "decisionNote")).isTrue();
+        assertThat(optional(entity, "decidedAt")).isTrue();
+        assertThat(optional(entity, "appliedAt")).isTrue();
+        assertThat(optional(entity, "makerId")).isFalse();
+        assertThat(optional(entity, "targetId")).isFalse();
+        assertThat(optional(entity, "correlationId")).isFalse();
+        assertThat(optional(entity, "createdAt")).isFalse();
+    }
+
+    @Test
+    void lockContentionHonorsLockTimeoutWithoutSilentlyBypassingRowLock() throws Exception {
+        ApprovalRequest inserted = tx.execute(status -> store.insert(limitRequest()));
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        CountDownLatch firstLocked = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        try {
+            Future<?> holder = executor.submit(() -> tx.executeWithoutResult(status -> {
+                store.lockById(inserted.approvalId()).orElseThrow();
+                firstLocked.countDown();
+                await(releaseFirst);
+            }));
+            assertThat(firstLocked.await(5, TimeUnit.SECONDS)).isTrue();
+
+            assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+                jdbc.execute("SET LOCAL lock_timeout = '100ms'");
+                store.lockById(inserted.approvalId());
+            })).isInstanceOf(DataAccessException.class)
+                    .satisfies(failure -> assertThat(sqlState(failure)).isEqualTo("55P03"));
+
+            releaseFirst.countDown();
+            holder.get(5, TimeUnit.SECONDS);
+            assertThat(store.findById(inserted.approvalId()).orElseThrow().status())
+                    .isEqualTo(ApprovalStatus.PENDING);
+        } finally {
+            releaseFirst.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void mutationRequiresCallerTransaction() {
         assertThatThrownBy(() -> store.insert(limitRequest()))
                 .isInstanceOf(IllegalTransactionStateException.class);
@@ -316,6 +369,22 @@ class ApprovalRequestPostgreSqlIntegrationTest {
     private static void assertCode(Runnable action, ErrorCode code) {
         assertThatThrownBy(action::run).isInstanceOfSatisfying(BankingBusinessException.class,
                 exception -> assertThat(exception.code()).isEqualTo(code));
+    }
+
+    private static boolean optional(jakarta.persistence.metamodel.EntityType<ApprovalRequestEntity> entity,
+            String attribute) {
+        jakarta.persistence.metamodel.SingularAttribute<?, ?> singular =
+                (jakarta.persistence.metamodel.SingularAttribute<?, ?>) entity.getAttribute(attribute);
+        return singular.isOptional();
+    }
+
+    private static String sqlState(Throwable failure) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
+                return sql.getSQLState();
+            }
+        }
+        return null;
     }
 
     private static void await(CountDownLatch latch) {

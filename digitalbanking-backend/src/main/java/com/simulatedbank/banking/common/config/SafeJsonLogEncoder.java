@@ -31,6 +31,16 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             "LIMIT_CHANGE_REQUESTED", "LIMIT_CHANGE_APPROVED", "LIMIT_CHANGE_REJECTED",
             "ROLE_CHANGE_REQUESTED", "ROLE_CHANGE_APPROVED", "ROLE_CHANGE_REJECTED");
     private static final Set<String> APPROVAL_REQUEST_TYPES = Set.of("LIMIT_CHANGE", "ROLE_CHANGE");
+    /** BE-ADM-OPS-01 workflow facts: logger + message pair, bounded key catalog only. */
+    private static final String WORKFLOW_LOGGER = "com.simulatedbank.banking.admin.WORKFLOW";
+    private static final String WORKFLOW_EVENT = "ADMIN_APPROVAL_WORKFLOW";
+    private static final Set<String> WORKFLOW_DECISIONS = Set.of("APPROVE", "REJECT");
+    private static final Set<String> WORKFLOW_PROVIDERS = Set.of("IDENTITY", "LIMIT", "AUDIT");
+    private static final Set<String> WORKFLOW_OUTCOMES = Set.of(
+            "SUCCESS", "FAILURE", "REJECTED", "REPLAYED", "CONFLICT", "EXHAUSTED", "ERROR",
+            "PROVIDER_FAILURE", "VERSION_CONFLICT", "AUDIT_FAILURE", "STEP_UP_FAILURE", "TECHNICAL_FAILURE");
+    private static final Set<String> WORKFLOW_AGE_BUCKETS = Set.of(
+            "LT_5M", "5M_30M", "30M_1H", "1H_6H", "6H_24H", "GT_24H");
     private String environment = "local";
 
     public void setService(String service) { this.service = service; }
@@ -54,8 +64,11 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 && event.getMessage().equals("HTTP_REQUEST_COMPLETED");
         boolean securityAudit = AUDIT_LOGGERS.contains(event.getLoggerName())
                 && AUDIT_EVENTS.contains(event.getMessage());
+        boolean workflow = WORKFLOW_LOGGER.equals(event.getLoggerName())
+                && WORKFLOW_EVENT.equals(event.getMessage());
         fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
-                : securityAudit ? event.getMessage() : "APPLICATION_LOG");
+                : securityAudit ? event.getMessage()
+                : workflow ? WORKFLOW_EVENT : "APPLICATION_LOG");
         if (completion && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;
@@ -75,8 +88,10 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             }
         } else if (securityAudit) {
             addSecurityAuditFields(fields, event);
+        } else if (workflow) {
+            addWorkflowFields(fields, event);
         }
-        if (event.getThrowableProxy() != null) {
+        if (event.getThrowableProxy() != null && !workflow) {
             fields.put("exception_type", event.getThrowableProxy().getClassName());
         }
         try {
@@ -107,6 +122,35 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 case "request_type" -> value == null
                         || value instanceof String type && APPROVAL_REQUEST_TYPES.contains(type);
                 case "reason_code" -> value == null || value instanceof String code && isErrorCode(code);
+                case "correlation_id" -> value instanceof String id && RequestContext.isValidCorrelationId(id);
+                case "request_id" -> value instanceof String id && id.matches("[0-9a-f-]{36}");
+                default -> false;
+            };
+            if (allowed) {
+                fields.put(pair.key, value);
+            }
+        }
+    }
+
+    private static void addWorkflowFields(Map<String, Object> fields, ILoggingEvent event) {
+        if (event.getKeyValuePairs() == null) {
+            return;
+        }
+        for (KeyValuePair pair : event.getKeyValuePairs()) {
+            Object value = pair.value;
+            boolean allowed = switch (pair.key) {
+                case "stage" -> value instanceof String stage && stage.matches("[A-Z][A-Z0-9_]{0,31}");
+                case "request_type" -> value instanceof String type && APPROVAL_REQUEST_TYPES.contains(type);
+                case "decision" -> value instanceof String decision && WORKFLOW_DECISIONS.contains(decision);
+                case "provider" -> value instanceof String provider && WORKFLOW_PROVIDERS.contains(provider);
+                case "operation" -> value instanceof String operation
+                        && operation.matches("[A-Z][A-Z0-9_]{0,63}");
+                case "outcome" -> value instanceof String outcome && WORKFLOW_OUTCOMES.contains(outcome);
+                case "error_code" -> value instanceof String code && isErrorCode(code);
+                case "attempts" -> value instanceof Integer count && count >= 0 && count <= 1_000_000
+                        || value instanceof String digits && digits.matches("[0-9]{1,7}");
+                case "age_bucket" -> value instanceof String bucket && WORKFLOW_AGE_BUCKETS.contains(bucket);
+                case "approval_id" -> value instanceof String id && id.matches("[1-9][0-9]{0,18}");
                 case "correlation_id" -> value instanceof String id && RequestContext.isValidCorrelationId(id);
                 case "request_id" -> value instanceof String id && id.matches("[0-9a-f-]{36}");
                 default -> false;

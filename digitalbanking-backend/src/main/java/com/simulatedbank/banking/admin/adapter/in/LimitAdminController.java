@@ -22,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * API-LIM-02/API-LIM-03 (`POST /api/v1/admin/limits`, `POST /api/v1/admin/limits/{id}/approve`).
  *
- * <p>Reject decisions are fully implemented and idempotent. Approve and proposal creation remain fail-closed with
- * {@code 503 SERVICE_UNAVAILABLE} because {@code limit.api.applyApprovedLimitChange} and the pending
- * {@code limit_config} row have no runtime (ADM-OI-05); no partial approval is written.</p>
+ * <p>Both paths are fully implemented against the real Limit provider
+ * ({@code limit.api.LimitConfigMutationPort}): the proposal creates the {@code PENDING_APPROVAL} configuration in
+ * the same transaction as the approval, approve supersedes the ACTIVE version with an expected-version check, and
+ * reject marks the pending configuration {@code REJECTED}. Step-Up, idempotency and Maker–Checker enforcement are
+ * shared with the role endpoints.</p>
  */
 @RestController
 @ConditionalOnProperty(name = {"app.admin.enabled", "app.identity.enabled"}, havingValue = "true",

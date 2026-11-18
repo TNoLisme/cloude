@@ -1,5 +1,9 @@
 package com.simulatedbank.banking.admin.application;
 
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalAttemptRecorder;
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalMetrics;
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalRecoveryService;
+import com.simulatedbank.banking.admin.application.ops.AdminWorkflowLog;
 import com.simulatedbank.banking.admin.application.port.ApprovalRequestStore;
 import com.simulatedbank.banking.admin.domain.AdminIdempotencyOperation;
 import com.simulatedbank.banking.admin.domain.AdminIdempotencyRecord;
@@ -14,6 +18,8 @@ import com.simulatedbank.banking.admin.domain.RoleChangePayload;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.identity.api.IdentityRoleCommand;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.ApprovedLimitChange;
 import java.time.Clock;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -30,7 +36,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>Ordering of the invariant (07 §6.5/§8.5.3/§8.8.2, design/05 §12.1):</p>
  * <ol>
- *   <li>Authenticated checker resolved from the trusted session ({@code CHECKER} privilege required).</li>
+ *   <li>Authenticated checker resolved from the trusted session ({@code CHECKER} privilege required) and the
+ *       permission for the approval type re-checked from the same snapshot ({@code ROLE_MANAGE} for
+ *       {@code ROLE_CHANGE}; {@code LIMIT_MAKER}/{@code LIMIT_MANAGE} for {@code LIMIT_CHANGE}).</li>
  *   <li>Idempotency precheck: a completed record with the same canonical decision replays its stored response
  *       before any challenge is required; a different payload is a hard 409 conflict; a durable RECEIVED record is
  *       {@code 409 IDEMPOTENCY_IN_PROGRESS}.</li>
@@ -49,6 +57,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * idempotency claim disappears and Identity restores the challenge to {@code VERIFIED} (design/02 §5.2), so a
  * failed attempt can be retried with the same proof but a consumed proof can never be reused for another
  * decision. A client timeout after commit is safe: the retry replays the stored response.</p>
+ *
+ * <p>The canonical approval schema has no version column (04 §4.5.3), so there is no expected approval version to
+ * compare here. {@code ROLE_CHANGE.expectedVersion} is captured from Identity at proposal time, bound into the
+ * step-up hash and validated by {@link IdentityRoleCommand#applyApprovedRoleChange} under a user-row lock before
+ * any mutation; a stale value is a {@code ROLE_CONFLICT}. A future Limit command owns the same validation rule for
+ * its config version (ADM-OI-05).</p>
  */
 @Service
 @ConditionalOnProperty(name = {"app.admin.enabled", "app.identity.enabled"}, havingValue = "true",
@@ -60,8 +74,9 @@ public class ApprovalDecisionService {
             ErrorCode.AUTH_FORBIDDEN,
             ErrorCode.APPROVAL_ALREADY_DECIDED,
             ErrorCode.INVALID_STATE_TRANSITION,
+            ErrorCode.ROLE_CONFLICT,
             ErrorCode.IDEMPOTENCY_CONFLICT,
-            ErrorCode.STEP_UP_REQUIRED,
+            // STEP_UP_REQUIRED is the normal first-call 428, not a denial: it must not emit C3.
             ErrorCode.STEP_UP_CHALLENGE_MISMATCH,
             ErrorCode.AUTH_CHALLENGE_NOT_FOUND,
             ErrorCode.AUTH_CHALLENGE_EXPIRED,
@@ -73,7 +88,12 @@ public class ApprovalDecisionService {
     private final ApprovalStepUpService stepUp;
     private final AdminAuthorization authorization;
     private final IdentityRoleCommand roleChanges;
+    private final LimitConfigMutationPort limitChanges;
     private final AdminAuditPort audit;
+    private final AdminApprovalMetrics metrics;
+    private final AdminApprovalAttemptRecorder attempts;
+    private final AdminApprovalRecoveryService recovery;
+    private final AdminWorkflowLog workflow;
     private final AdminIdempotencyService idempotency;
     private final AdminRequestHasher hasher;
     private final AdminApprovalView view;
@@ -81,14 +101,22 @@ public class ApprovalDecisionService {
     private final TransactionTemplate transaction;
 
     public ApprovalDecisionService(ApprovalRequestStore approvals, ApprovalStepUpService stepUp,
-            AdminAuthorization authorization, IdentityRoleCommand roleChanges, AdminAuditPort audit,
+            AdminAuthorization authorization, IdentityRoleCommand roleChanges,
+            LimitConfigMutationPort limitChanges, AdminAuditPort audit,
+            AdminApprovalMetrics metrics, AdminApprovalAttemptRecorder attempts,
+            AdminApprovalRecoveryService recovery, AdminWorkflowLog workflow,
             AdminIdempotencyService idempotency, AdminRequestHasher hasher, AdminApprovalView view, Clock clock,
             PlatformTransactionManager transactionManager) {
         this.approvals = approvals;
         this.stepUp = stepUp;
         this.authorization = authorization;
         this.roleChanges = roleChanges;
+        this.limitChanges = limitChanges;
         this.audit = audit;
+        this.metrics = metrics;
+        this.attempts = attempts;
+        this.recovery = recovery;
+        this.workflow = workflow;
         this.idempotency = idempotency;
         this.hasher = hasher;
         this.view = view;
@@ -123,7 +151,12 @@ public class ApprovalDecisionService {
      */
     public DecisionResult decide(DecisionCommand command) {
         Objects.requireNonNull(command, "command");
+        long startedAt = System.nanoTime();
         long checkerId = authorization.requireChecker();
+        // Defense-in-depth: the checker must hold the permission for this approval type (ROLE_MANAGE for
+        // ROLE_CHANGE, LIMIT_MAKER/LIMIT_MANAGE for LIMIT_CHANGE), mirroring the chain rule with the trusted
+        // principal instead of the URL. A mismatch is a 403, never a provider/state call.
+        authorization.assertCanReview(command.expectedType());
         requireApprovalId(command.approvalId());
         String note = AdminText.optional(command.decisionNote(), 500);
         String correlation = AdminText.required(command.correlationId(), 64);
@@ -134,11 +167,15 @@ public class ApprovalDecisionService {
         try {
             var precheck = idempotency.precheck(scope, key, requestHash);
             if (precheck instanceof AdminIdempotencyService.Precheck.Replay replay) {
-                return replay(replay.record(), command, checkerId);
+                DecisionResult replayed = replay(replay.record(), command, checkerId);
+                recordDecision(command, "REPLAYED", startedAt, correlation, requestId, null);
+                return replayed;
             }
             if (command.challengeRef() == null || command.challengeRef().isBlank()) {
                 // 428 before any approval/provider/idempotency state changes; challenge bound to approval+decision.
                 requireExpectedType(command);
+                // A Maker/target user asking for a challenge surfaces as ROLE_CONFLICT: the outer catch audits
+                // exactly one C3 fact, outside any transaction and therefore without holding user locks.
                 throw stepUp.stepUpRequired(command.approvalId(), command.decision(), note, correlation);
             }
             DecisionResult result = transaction.execute(status -> decideInTransaction(
@@ -147,9 +184,15 @@ public class ApprovalDecisionService {
             if (result == null) {
                 throw new IllegalStateException("Decision transaction returned no result");
             }
+            recordDecision(command, "SUCCESS", startedAt, correlation, requestId, null);
+            if (!result.replayed()) {
+                // Best-effort: a retry after recorded failures is visible as a recovery operation.
+                recovery.recordSuccessfulDecision(command.approvalId(), command.expectedType());
+            }
             return result;
         } catch (BankingBusinessException rejection) {
             auditRejection(command.approvalId(), checkerId, correlation, requestId, rejection.code());
+            recordDecisionFailure(command, rejection, checkerId, startedAt, correlation, requestId);
             throw rejection;
         }
     }
@@ -167,20 +210,20 @@ public class ApprovalDecisionService {
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.APPROVAL_NOT_FOUND));
         verifyType(approval, command.expectedType());
         // Terminal state and Maker–Checker/self-target rules are checked before consuming the proof.
-        try {
-            approval.assertCheckerEligible(checkerId);
-        } catch (BankingBusinessException segregationViolation) {
-            // Maker self-approval / role-target conflict is a security denial, not a provider conflict.
-            auditDenial(approval.approvalId(), checkerId, correlation, requestId, segregationViolation.code());
-            throw segregationViolation;
-        }
+        // Denials are audited once by the outer catch after this transaction has rolled back (no user locks held).
+        approval.assertCheckerEligible(checkerId);
         stepUp.consumeForDecision(approval, checkerId, command.decision(), note, challengeRef);
 
-        Map<String, Object> result = null;
+        AppliedChange applied = null;
         if (command.decision() == ApprovalDecision.APPROVE) {
-            result = applyApprovedChange(approval, checkerId, correlation, requestId);
+            // A provider rejection rolls this transaction back; its C3 fact is written by the outer catch.
+            applied = applyApprovedChange(approval, checkerId, correlation, requestId);
             approval.approve(checkerId, note, clock.instant());
         } else {
+            // The rejected pending Limit configuration must not stay approvable after the approval is terminal.
+            if (approval.payload() instanceof com.simulatedbank.banking.admin.domain.LimitChangePayload) {
+                limitChanges.rejectPendingChange(approval.approvalId(), checkerId, correlation);
+            }
             approval.reject(checkerId, note, clock.instant());
         }
         ApprovalRequest persisted = approvals.update(approval);
@@ -189,12 +232,14 @@ public class ApprovalDecisionService {
             throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
         }
 
-        Map<String, Object> body = idempotency.complete(recordId, 200, view.detail(persisted, result),
+        Map<String, Object> body = idempotency.complete(recordId, 200,
+                view.detail(persisted, applied == null ? null : applied.responseResult()),
                 persisted.approvalId());
         // C2 is the last catalog write: failure rolls back approval, provider change and idempotency completion.
-        audit.recordInTransaction(new AdminAuditPort.AdminAuditEvent(action, AdminAuditPort.AuditClass.C2,
-                checkerId, persisted.approvalId(), persisted.requestType().name(), correlation, requestId,
-                "SUCCESS", null));
+        audit.recordInTransaction(AdminAuditPort.AdminAuditEvent.decided(persisted, command.decision(), checkerId,
+                authorization.actorRole(), correlation, requestId,
+                applied == null ? null : applied.auditBeforeState(),
+                applied == null ? null : applied.auditAfterState()));
         return new DecisionResult(persisted, 200, body, false, command.decision());
     }
 
@@ -221,21 +266,68 @@ public class ApprovalDecisionService {
     }
 
     /**
-     * Provider mutation for an approved change. ROLE_CHANGE is applied by Identity in this transaction
-     * ({@code MANDATORY}); the Limit provider contract does not exist yet (ADM-OI-05), so approving a limit
-     * change fails closed instead of persisting an {@code APPLIED} approval without the effect.
+     * Provider mutation for an approved change, joined to this transaction ({@code MANDATORY}):
+     * <ul>
+     *   <li>{@code ROLE_CHANGE} — Identity applies the role/privilege, checks {@code expectedVersion} under a user
+     *       lock and revokes the target's active sessions; a stale version or revoked-session failure rolls
+     *       everything back as {@code ROLE_CONFLICT}/{@code SERVICE_UNAVAILABLE}.</li>
+     *   <li>{@code LIMIT_CHANGE} — Limit supersedes the ACTIVE configuration and activates the pending version
+     *       after re-validating {@code expectedVersion} and policy; a duplicate apply is impossible.</li>
+     * </ul>
      */
-    private Map<String, Object> applyApprovedChange(ApprovalRequest approval, long checkerId, String correlation,
+    private AppliedChange applyApprovedChange(ApprovalRequest approval, long checkerId, String correlation,
             String requestId) {
-        if (!(approval.payload() instanceof RoleChangePayload payload)) {
-            throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        if (approval.payload() instanceof com.simulatedbank.banking.admin.domain.LimitChangePayload limit) {
+            long started = System.nanoTime();
+            try {
+                var applied = limitChanges.applyApprovedLimitChange(new ApprovedLimitChange(
+                        approval.approvalId(), checkerId, limit.expectedVersion(), correlation));
+                metrics.provider("LIMIT", "APPLY_LIMIT_CHANGE", "SUCCESS", System.nanoTime() - started);
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("limitConfigId", Long.toString(applied.limitConfigId()));
+                body.put("version", applied.version());
+                body.put("perTransactionLimit", applied.perTransactionLimit());
+                body.put("dailyLimit", applied.dailyLimit());
+                body.put("previousPerTransactionLimit", applied.previousPerTransactionLimit());
+                body.put("previousDailyLimit", applied.previousDailyLimit());
+                Map<String, Object> after = new LinkedHashMap<>();
+                after.put("perTransactionLimit", applied.perTransactionLimit());
+                after.put("dailyLimit", applied.dailyLimit());
+                after.put("version", Long.toString(applied.version()));
+                Map<String, Object> before = new LinkedHashMap<>();
+                if (applied.previousPerTransactionLimit() != null) {
+                    before.put("perTransactionLimit", applied.previousPerTransactionLimit());
+                    before.put("dailyLimit", applied.previousDailyLimit());
+                }
+                return new AppliedChange(Collections.unmodifiableMap(body), before.isEmpty() ? null : before,
+                        after);
+            } catch (BankingBusinessException failure) {
+                metrics.provider("LIMIT", "APPLY_LIMIT_CHANGE", "FAILURE", System.nanoTime() - started);
+                if (failure.code() == ErrorCode.ROLE_CONFLICT) {
+                    metrics.versionConflict("LIMIT");
+                }
+                throw failure;
+            }
         }
-        IdentityRoleCommand.RoleChangeResult result = roleChanges.applyApprovedRoleChange(
-                new IdentityRoleCommand.ApprovedRoleChange(
-                        approval.approvalId(), approval.makerId(), checkerId,
-                        IdentityRoleCommand.ApprovalState.APPROVED, payload.targetUserId(),
-                        operation(payload.operation()), payload.roleCode(), payload.privilegeCode(),
-                        payload.expectedVersion(), correlation, requestId));
+        if (!(approval.payload() instanceof RoleChangePayload payload)) {
+            throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
+        }
+        long started = System.nanoTime();
+        IdentityRoleCommand.RoleChangeResult result;
+        try {
+            result = roleChanges.applyApprovedRoleChange(new IdentityRoleCommand.ApprovedRoleChange(
+                    approval.approvalId(), approval.makerId(), checkerId,
+                    IdentityRoleCommand.ApprovalState.APPROVED, payload.targetUserId(),
+                    operation(payload.operation()), payload.roleCode(), payload.privilegeCode(),
+                    payload.expectedVersion(), correlation, requestId));
+            metrics.provider("IDENTITY", "APPLY_ROLE_CHANGE", "SUCCESS", System.nanoTime() - started);
+        } catch (BankingBusinessException failure) {
+            metrics.provider("IDENTITY", "APPLY_ROLE_CHANGE", "FAILURE", System.nanoTime() - started);
+            if (failure.code() == ErrorCode.ROLE_CONFLICT) {
+                metrics.versionConflict("IDENTITY");
+            }
+            throw failure;
+        }
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("targetUserId", Long.toString(result.targetUserId()));
         body.put("operation", result.operation().name());
@@ -244,7 +336,67 @@ public class ApprovalDecisionService {
         body.put("previousVersion", result.previousVersion());
         body.put("resultingVersion", result.resultingVersion());
         body.put("revokedSessionCount", result.revokedSessionCount());
-        return Collections.unmodifiableMap(body);
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("operation", result.operation().name());
+        if (result.roleCode() != null) {
+            after.put("roleCode", result.roleCode());
+        }
+        if (result.privilegeCode() != null) {
+            after.put("privilegeCode", result.privilegeCode());
+        }
+        after.put("previousVersion", Long.toString(result.previousVersion()));
+        after.put("resultingVersion", Long.toString(result.resultingVersion()));
+        return new AppliedChange(Collections.unmodifiableMap(body), null, after);
+    }
+
+    /** Provider response body plus allowlisted audit state (design/01 §5.5/§5.6). */
+    private record AppliedChange(Map<String, Object> responseResult, Map<String, Object> auditBeforeState,
+            Map<String, Object> auditAfterState) {
+    }
+
+    /** Bounded decision metric + structured workflow fact; telemetry never changes the response. */
+    private void recordDecision(DecisionCommand command, String outcome, long startedAt, String correlation,
+            String requestId, String errorCode) {
+        metrics.decision(command.expectedType().name(), command.decision().name(), outcome,
+                System.nanoTime() - startedAt);
+        workflow.transition("DECISION", command.expectedType(), command.decision().name(), outcome, errorCode,
+                command.approvalId() > 0 ? Long.toString(command.approvalId()) : null, correlation, requestId);
+    }
+
+    /**
+     * Failure evidence: bounded metric, one durable attempt row for operational/retryable categories and a
+     * structured workflow fact. Client mistakes (validation, unknown approval, terminal state, 403) are metrics
+     * only — they are not retry evidence and must not mutate the attempt table.
+     */
+    private void recordDecisionFailure(DecisionCommand command, BankingBusinessException rejection,
+            long checkerId, long startedAt, String correlation, String requestId) {
+        if (rejection.code() == ErrorCode.STEP_UP_REQUIRED) {
+            // The 428 leg issues the decision challenge; it is not a failed decision attempt.
+            return;
+        }
+        String outcome = rejection.code() == ErrorCode.ROLE_CONFLICT ? "CONFLICT"
+                : rejection.code().httpStatus() >= 500 ? "FAILURE" : "REJECTED";
+        recordDecision(command, outcome, startedAt, correlation, requestId, rejection.code().name());
+        AdminApprovalAttemptRecorder.Outcome category = attemptCategory(rejection.code());
+        if (category != null && command.approvalId() > 0) {
+            attempts.record(command.approvalId(), command.expectedType(), checkerId, category,
+                    rejection.code(), correlation, requestId);
+        }
+    }
+
+    private static AdminApprovalAttemptRecorder.Outcome attemptCategory(ErrorCode code) {
+        return switch (code) {
+            case ROLE_CONFLICT -> AdminApprovalAttemptRecorder.Outcome.VERSION_CONFLICT;
+            case AUDIT_WRITE_FAILED -> AdminApprovalAttemptRecorder.Outcome.AUDIT_FAILURE;
+            case STEP_UP_CHALLENGE_MISMATCH, AUTH_CHALLENGE_NOT_FOUND, AUTH_CHALLENGE_EXPIRED,
+                    AUTH_CHALLENGE_LOCKED, AUTH_OTP_INVALID, AUTH_OTP_EXPIRED ->
+                    AdminApprovalAttemptRecorder.Outcome.STEP_UP_FAILURE;
+            case SERVICE_UNAVAILABLE, INTERNAL_ERROR, GATEWAY_TIMEOUT ->
+                    AdminApprovalAttemptRecorder.Outcome.TECHNICAL_FAILURE;
+            case INVALID_STATE_TRANSITION, LIMIT_OUT_OF_POLICY, ACCOUNT_NOT_FOUND, CUSTOMER_NOT_FOUND ->
+                    AdminApprovalAttemptRecorder.Outcome.PROVIDER_FAILURE;
+            default -> null;
+        };
     }
 
     private void requireExpectedType(DecisionCommand command) {
@@ -270,9 +422,8 @@ public class ApprovalDecisionService {
     /** C3 {@code SECURITY_ACCESS_DENIED}: bounded reason code, no payload/note/challenge material. */
     private void auditDenial(long approvalId, long checkerId, String correlation, String requestId,
             ErrorCode code) {
-        audit.recordStandalone(new AdminAuditPort.AdminAuditEvent(AdminAuditPort.AdminAction.SECURITY_ACCESS_DENIED,
-                AdminAuditPort.AuditClass.C3, checkerId, approvalId, null, correlation, requestId, "REJECTED",
-                code.name()));
+        audit.recordStandalone(AdminAuditPort.AdminAuditEvent.denied(checkerId, authorization.actorRole(),
+                approvalId, null, correlation, requestId, code));
     }
 
     private static IdentityRoleCommand.Operation operation(RoleChangeOperation operation) {

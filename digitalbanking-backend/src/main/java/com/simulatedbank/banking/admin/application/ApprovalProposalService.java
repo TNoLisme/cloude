@@ -1,5 +1,7 @@
 package com.simulatedbank.banking.admin.application;
 
+import com.simulatedbank.banking.admin.application.ops.AdminApprovalMetrics;
+import com.simulatedbank.banking.admin.application.ops.AdminWorkflowLog;
 import com.simulatedbank.banking.admin.application.port.ApprovalRequestStore;
 import com.simulatedbank.banking.admin.application.stepup.AdminProposalStepUpBinding;
 import com.simulatedbank.banking.admin.domain.AdminIdempotencyOperation;
@@ -7,6 +9,7 @@ import com.simulatedbank.banking.admin.domain.AdminIdempotencyRecord;
 import com.simulatedbank.banking.admin.domain.AdminIdempotencyScope;
 import com.simulatedbank.banking.admin.domain.AdminText;
 import com.simulatedbank.banking.admin.domain.ApprovalRequest;
+import com.simulatedbank.banking.admin.domain.ApprovalRequestType;
 import com.simulatedbank.banking.admin.domain.LimitChangePayload;
 import com.simulatedbank.banking.admin.domain.RoleChangeOperation;
 import com.simulatedbank.banking.admin.domain.RoleChangePayload;
@@ -18,6 +21,8 @@ import com.simulatedbank.banking.identity.api.StepUpChallengePort.ChallengePurpo
 import com.simulatedbank.banking.identity.api.StepUpChallengePort.ChallengeRequest;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort.ChallengeView;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort.ConsumeCommand;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
+import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.LimitChangeRequest;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -45,8 +50,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * </ol>
  *
  * <p>Any validation/provider/step-up/audit failure rolls the claim back, so the same key can be retried cleanly and
- * a failed operation is never marked {@code COMPLETED}. LIMIT_CHANGE proposals stay fail-closed because the Limit
- * provider has no runtime (ADM-OI-05); no partial approval is created.</p>
+ * a failed operation is never marked {@code COMPLETED}. LIMIT_CHANGE proposals create the Limit
+ * {@code PENDING_APPROVAL} configuration in the same transaction through
+ * {@code limit.api.LimitConfigMutationPort} (BE-ADM-INT-01); no partial approval is created.</p>
  */
 @Service
 @ConditionalOnProperty(name = {"app.admin.enabled", "app.identity.enabled"}, havingValue = "true",
@@ -62,14 +68,18 @@ public class ApprovalProposalService {
     private final AdminRequestHasher hasher;
     private final AdminApprovalView view;
     private final AdminAuditPort audit;
+    private final LimitConfigMutationPort limitChanges;
+    private final AdminApprovalMetrics metrics;
+    private final AdminWorkflowLog workflow;
     private final Clock clock;
     private final TransactionTemplate transaction;
 
     public ApprovalProposalService(ApprovalRequestStore approvals, AdminAuthorization authorization,
             IdentityRoleCommand roleChanges, StepUpChallengePort challenges,
             AdminProposalStepUpBinding stepUpBinding, AdminIdempotencyService idempotency,
-            AdminRequestHasher hasher, AdminApprovalView view, AdminAuditPort audit, Clock clock,
-            PlatformTransactionManager transactionManager) {
+            AdminRequestHasher hasher, AdminApprovalView view, AdminAuditPort audit,
+            LimitConfigMutationPort limitChanges, AdminApprovalMetrics metrics, AdminWorkflowLog workflow,
+            Clock clock, PlatformTransactionManager transactionManager) {
         this.approvals = approvals;
         this.authorization = authorization;
         this.roleChanges = roleChanges;
@@ -79,6 +89,9 @@ public class ApprovalProposalService {
         this.hasher = hasher;
         this.view = view;
         this.audit = audit;
+        this.limitChanges = limitChanges;
+        this.metrics = metrics;
+        this.workflow = workflow;
         this.clock = clock;
         this.transaction = new TransactionTemplate(transactionManager);
     }
@@ -115,18 +128,22 @@ public class ApprovalProposalService {
         String key = AdminIdempotencyService.requireKey(command.idempotencyKey());
         String reason = AdminText.optional(command.reason(), 500);
 
-        // Validates operation/roleCode/privilegeCode and maker != role target before any challenge or persistence.
+        // Validates operation/roleCode/privilegeCode before any challenge or persistence. The aggregate's
+        // maker == role-target rejection must be inside the guarded block so the self-escalation attempt is
+        // recorded as a C3 security fact.
         RoleChangePayload clientPayload = new RoleChangePayload(command.operation(), command.targetUserId(),
                 command.roleCode(), command.privilegeCode(), 0L, reason);
-        ApprovalRequest.propose(clientPayload, makerId, correlation, clock.instant());
 
         AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(makerId,
                 AdminIdempotencyOperation.CREATE_ROLE_PROPOSAL);
         String requestHash = hasher.roleProposalHash(makerId, clientPayload);
         try {
+            ApprovalRequest.propose(clientPayload, makerId, correlation, clock.instant());
             var precheck = idempotency.precheck(scope, key, requestHash);
             if (precheck instanceof AdminIdempotencyService.Precheck.Replay replay) {
-                return replay(replay.record());
+                ProposalResult replayed = replay(replay.record());
+                recordProposal("ROLE_CHANGE", "REPLAYED", replayed.approvalId(), correlation, requestId);
+                return replayed;
             }
 
             long expectedVersion = roleChanges.getRoleAssignmentVersion(command.targetUserId());
@@ -148,30 +165,77 @@ public class ApprovalProposalService {
             if (result == null) {
                 throw new IllegalStateException("Proposal transaction returned no result");
             }
+            recordProposal("ROLE_CHANGE", "SUCCESS", result.approvalId(), correlation, requestId);
             return result;
         } catch (BankingBusinessException rejection) {
-            if (rejection.code() == ErrorCode.IDEMPOTENCY_CONFLICT) {
-                auditConflict(makerId, correlation, requestId);
+            if (rejection.code() == ErrorCode.IDEMPOTENCY_CONFLICT
+                    || rejection.code() == ErrorCode.ROLE_CONFLICT) {
+                auditDenied(makerId, correlation, requestId, "ROLE_CHANGE", rejection.code());
             }
+            recordProposalFailure("ROLE_CHANGE", rejection, correlation, requestId);
             throw rejection;
         }
     }
 
     /**
-     * LIMIT_CHANGE proposal remains fail-closed: 07 §8.5.2 requires a {@code limit_config PENDING_APPROVAL} row in
-     * the same transaction, and the Limit module has no runtime/contract (ADM-OI-05). No approval/idempotency row
-     * is created, so a retry cannot duplicate a partial proposal.
+     * LIMIT_CHANGE proposal (07 §8.5.2): the approval, the Limit {@code PENDING_APPROVAL} configuration and the
+     * C2 audit are written in one transaction. The current Limit version is captured before the Maker step-up
+     * challenge and re-validated by the provider under lock, so a concurrent change is a {@code 409}
+     * {@code ROLE_CONFLICT} instead of a silent lost update.
      */
     public ProposalResult proposeLimit(LimitProposalCommand command) {
         Objects.requireNonNull(command, "command");
-        authorization.requireAnyAuthority("LIMIT_MAKER", "LIMIT_MANAGE");
-        AdminIdempotencyService.requireKey(command.idempotencyKey());
-        // Validate the documented request shape first so malformed bodies stay 400, then fail closed because
-        // the required Limit provider/pending limit_config row has no runtime (ADM-OI-05).
-        new LimitChangePayload(command.customerId(), command.accountId(), command.perTransactionLimit(),
-                command.dailyLimit(), command.currency(), command.effectiveFrom(), command.reason());
-        throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE,
-                "Limit provider chưa có runtime; không tạo approval LIMIT_CHANGE.");
+        long makerId = authorization.requireAnyAuthority("LIMIT_MAKER", "LIMIT_MANAGE");
+        String correlation = AdminText.required(command.correlationId(), 64);
+        String requestId = AdminText.optional(command.requestId(), 64);
+        String key = AdminIdempotencyService.requireKey(command.idempotencyKey());
+        String reason = AdminText.optional(command.reason(), 500);
+
+        LimitChangePayload clientPayload = new LimitChangePayload(command.customerId(), command.accountId(),
+                command.perTransactionLimit(), command.dailyLimit(), command.currency(), command.effectiveFrom(),
+                reason);
+        AdminIdempotencyScope scope = AdminIdempotencyScope.proposal(makerId,
+                AdminIdempotencyOperation.CREATE_LIMIT_PROPOSAL);
+        String requestHash = hasher.limitProposalHash(makerId, clientPayload);
+        try {
+            ApprovalRequest.propose(clientPayload, makerId, correlation, clock.instant());
+            var precheck = idempotency.precheck(scope, key, requestHash);
+            if (precheck instanceof AdminIdempotencyService.Precheck.Replay replay) {
+                ProposalResult replayed = replay(replay.record());
+                recordProposal("LIMIT_CHANGE", "REPLAYED", replayed.approvalId(), correlation, requestId);
+                return replayed;
+            }
+
+            long expectedVersion = limitChanges.currentVersion(command.customerId(), command.accountId());
+            LimitChangePayload payload = new LimitChangePayload(command.customerId(), command.accountId(),
+                    command.perTransactionLimit(), command.dailyLimit(), command.currency(),
+                    command.effectiveFrom(), reason, expectedVersion);
+            String proposalHash = stepUpBinding.proposalRequestHash(payload, makerId);
+
+            if (command.challengeRef() == null || command.challengeRef().isBlank()) {
+                ChallengeView challenge = challenges.requestChallenge(new ChallengeRequest(
+                        ChallengePurpose.SENSITIVE_ACTION, makerId, proposalHash,
+                        stepUpBinding.bindingKey(key), correlation));
+                throw new BankingBusinessException(ErrorCode.STEP_UP_REQUIRED, ErrorCode.STEP_UP_REQUIRED.detail(),
+                        Map.of("challenge", ApprovalStepUpService.publicChallenge(challenge)));
+            }
+
+            ProposalResult result = transaction.execute(status -> proposeLimitInTransaction(
+                    payload, makerId, correlation, requestId, key, requestHash, scope,
+                    command.challengeRef().strip(), proposalHash));
+            if (result == null) {
+                throw new IllegalStateException("Proposal transaction returned no result");
+            }
+            recordProposal("LIMIT_CHANGE", "SUCCESS", result.approvalId(), correlation, requestId);
+            return result;
+        } catch (BankingBusinessException rejection) {
+            if (rejection.code() == ErrorCode.IDEMPOTENCY_CONFLICT
+                    || rejection.code() == ErrorCode.ROLE_CONFLICT) {
+                auditDenied(makerId, correlation, requestId, "LIMIT_CHANGE", rejection.code());
+            }
+            recordProposalFailure("LIMIT_CHANGE", rejection, correlation, requestId);
+            throw rejection;
+        }
     }
 
     private ProposalResult proposeRoleInTransaction(RoleChangePayload payload, long makerId, String correlation,
@@ -191,9 +255,36 @@ public class ApprovalProposalService {
         Map<String, Object> body = idempotency.complete(recordId, 201, view.summary(persisted),
                 persisted.approvalId());
         // C2 remains the last catalog write: any failure rolls back the approval and idempotency completion.
-        audit.recordInTransaction(new AdminAuditPort.AdminAuditEvent(
-                AdminAuditPort.AdminAction.ROLE_CHANGE_REQUESTED, AdminAuditPort.AuditClass.C2, makerId,
-                persisted.approvalId(), persisted.requestType().name(), correlation, requestId, "SUCCESS", null));
+        audit.recordInTransaction(AdminAuditPort.AdminAuditEvent.requested(persisted, makerId,
+                authorization.actorRole(), correlation, requestId));
+        return new ProposalResult(201, body, false, persisted.approvalId());
+    }
+
+    /**
+     * LIMIT_CHANGE persistence: the approval row and the provider's PENDING_APPROVAL configuration are inserted
+     * in this transaction; a provider/version/audit failure rolls both back, so no orphan pending limit exists.
+     */
+    private ProposalResult proposeLimitInTransaction(LimitChangePayload payload, long makerId, String correlation,
+            String requestId, String key, String requestHash, AdminIdempotencyScope scope, String challengeRef,
+            String proposalHash) {
+        var claim = idempotency.claim(scope, key, requestHash);
+        if (claim instanceof AdminIdempotencyService.Claim.Existing existing) {
+            return replay(existing.record());
+        }
+        long recordId = ((AdminIdempotencyService.Claim.Claimed) claim).recordId();
+
+        challenges.consumeVerified(new ConsumeCommand(challengeRef, makerId, ChallengePurpose.SENSITIVE_ACTION,
+                proposalHash, stepUpBinding.bindingKey(key)));
+
+        ApprovalRequest persisted = approvals.insert(
+                ApprovalRequest.propose(payload, makerId, correlation, clock.instant()));
+        limitChanges.reservePendingChange(new LimitChangeRequest(persisted.approvalId(), makerId,
+                payload.customerId(), payload.accountId(), payload.perTransactionLimit(), payload.dailyLimit(),
+                payload.currency(), payload.effectiveFrom(), payload.expectedVersion()));
+        Map<String, Object> body = idempotency.complete(recordId, 201, view.summary(persisted),
+                persisted.approvalId());
+        audit.recordInTransaction(AdminAuditPort.AdminAuditEvent.requested(persisted, makerId,
+                authorization.actorRole(), correlation, requestId));
         return new ProposalResult(201, body, false, persisted.approvalId());
     }
 
@@ -205,9 +296,30 @@ public class ApprovalProposalService {
                 record.approvalId());
     }
 
-    private void auditConflict(long makerId, String correlation, String requestId) {
-        audit.recordStandalone(new AdminAuditPort.AdminAuditEvent(
-                AdminAuditPort.AdminAction.SECURITY_ACCESS_DENIED, AdminAuditPort.AuditClass.C3, makerId, 0L,
-                "ROLE_CHANGE", correlation, requestId, "REJECTED", ErrorCode.IDEMPOTENCY_CONFLICT.name()));
+    /** Bounded metrics + structured workflow fact; telemetry failures never change the proposal response. */
+    private void recordProposal(String requestType, String outcome, long approvalId, String correlation,
+            String requestId) {
+        metrics.proposal(requestType, outcome);
+        workflow.transition("PROPOSAL", ApprovalRequestType.valueOf(requestType), null, outcome, null,
+                Long.toString(approvalId), correlation, requestId);
+    }
+
+    private void recordProposalFailure(String requestType, BankingBusinessException rejection, String correlation,
+            String requestId) {
+        if (rejection.code() == ErrorCode.STEP_UP_REQUIRED) {
+            // The 428 leg issues the step-up challenge; no approval request exists yet, so it is not a failure.
+            return;
+        }
+        String outcome = rejection.code() == ErrorCode.IDEMPOTENCY_CONFLICT ? "CONFLICT"
+                : rejection.code().httpStatus() >= 500 ? "FAILURE" : "REJECTED";
+        metrics.proposal(requestType, outcome);
+        workflow.transition("PROPOSAL", ApprovalRequestType.valueOf(requestType), null, outcome,
+                rejection.code().name(), null, correlation, requestId);
+    }
+
+    private void auditDenied(long makerId, String correlation, String requestId, String requestType,
+            ErrorCode reasonCode) {
+        audit.recordStandalone(AdminAuditPort.AdminAuditEvent.deniedForActor(makerId,
+                authorization.actorRole(), correlation, requestId, reasonCode, requestType));
     }
 }

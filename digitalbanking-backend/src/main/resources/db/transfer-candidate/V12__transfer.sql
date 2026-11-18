@@ -1,5 +1,6 @@
 -- REVIEW CANDIDATE: intentionally outside Flyway's configured migration location.
--- V6 is the unique version chosen at integration (after Identity V2-V4 and Customer V5);
+-- V12 keeps the candidate unique after the Admin chain claimed V6-V11 in db/migration
+-- (Admin approval V6, idempotency V7, account V8, limit V9, audit V10, attempt V11).
 -- production activation still requires DBA/provider review, rollout and restore checks.
 -- Do not activate this file in production until those prerequisites are satisfied.
 

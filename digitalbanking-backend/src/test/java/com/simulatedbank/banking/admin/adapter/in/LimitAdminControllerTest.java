@@ -20,8 +20,6 @@ import com.simulatedbank.banking.admin.domain.ApprovalDecision;
 import com.simulatedbank.banking.admin.domain.ApprovalRequest;
 import com.simulatedbank.banking.admin.domain.ApprovalRequestType;
 import com.simulatedbank.banking.admin.domain.LimitChangePayload;
-import com.simulatedbank.banking.common.error.BankingBusinessException;
-import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.common.error.GlobalExceptionHandler;
 import com.simulatedbank.banking.common.error.ProblemWriter;
 import java.math.BigDecimal;
@@ -36,7 +34,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-/** BE-ADM-CON-03: LIMIT proposal fail-closed and decision header/type mapping. */
+/** BE-ADM-CON-03/INT-01: LIMIT proposal mapping and decision header/type mapping. */
 class LimitAdminControllerTest {
 
     private static final String KEY = "idem-limit";
@@ -55,9 +53,10 @@ class LimitAdminControllerTest {
     }
 
     @Test
-    void createIsFailClosedWhileTheLimitProviderIsAbsent() throws Exception {
-        when(proposals.proposeLimit(any())).thenThrow(new BankingBusinessException(
-                ErrorCode.SERVICE_UNAVAILABLE, "Limit provider unavailable"));
+    void createMapsTheLimitProposalAndReturns201WithLocation() throws Exception {
+        when(proposals.proposeLimit(any())).thenReturn(new com.simulatedbank.banking.admin.application
+                .ApprovalProposalService.ProposalResult(201,
+                Map.of("approvalId", "8001", "status", "PENDING", "requestType", "LIMIT_CHANGE"), false, 8001L));
 
         mvc.perform(post("/api/v1/admin/limits")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,8 +65,9 @@ class LimitAdminControllerTest {
                                 {"customerId":"2001","perTransactionLimit":"5000000.00",
                                  "dailyLimit":"20000000.00","currency":"VND"}
                                 """))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"));
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/api/v1/admin/approvals/8001"))
+                .andExpect(jsonPath("$.status").value("PENDING"));
 
         ArgumentCaptor<LimitProposalCommand> captor = ArgumentCaptor.forClass(LimitProposalCommand.class);
         verify(proposals).proposeLimit(captor.capture());

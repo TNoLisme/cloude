@@ -20,6 +20,8 @@ final class ApiSecurityHeadersFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("Pragma", "no-cache");
+        // Legacy HTTP/1.0 caches only honour Expires; it must never allow a sensitive body to be stored.
+        response.setHeader("Expires", "0");
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "no-referrer");

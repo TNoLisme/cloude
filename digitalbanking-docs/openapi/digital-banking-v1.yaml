@@ -490,6 +490,12 @@ paths:
         runtime until an approved forward schema and generation/fencing protocol
         provides durable resend count, last resend/cooldown and safe in-flight send
         invalidation (MOD-OI-07). Do not treat this specification as runtime support.
+        LOGIN_NEW_DEVICE is public with challenge proof and rate limiting;
+        TRANSFER_STEP_UP/SENSITIVE_ACTION requires session ownership and CSRF for
+        cookie POST. Only CREATED/SENT challenges may resend. Rotate OTP, reset TTL,
+        invalidate the old OTP and preserve used verify attempts; max 3 resends and
+        cooldown are configurable. Optional channel is advertised only for multichannel
+        support. The preserved 202 contract depends on those approvals and delivery.
       operationId: resendChallenge
       security:
         - {}
@@ -958,8 +964,9 @@ paths:
         hash); verify rồi retry với X-Step-Up-Challenge. Cùng key + cùng payload
         replay 201 gốc với Idempotent-Replayed: true; payload khác trả 409
         IDEMPOTENCY_CONFLICT. Chưa tạo approval/idempotency record trước khi
-        verify hoặc khi payload/validation fail. LIMIT_CHANGE vẫn fail-closed
-        503 khi Limit provider chưa có runtime.
+        verify hoặc khi payload/validation fail. LIMIT_CHANGE tạo limit_config
+        PENDING_APPROVAL trong cùng transaction; 422 LIMIT_OUT_OF_POLICY khi
+        vượt policy cấu hình.
       operationId: createLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -1013,11 +1020,13 @@ paths:
       summary: Checker duyệt/từ chối yêu cầu hạn mức
       description: >-
         Path id là approvalId của LIMIT_CHANGE. Idempotency-Key bắt buộc. Yêu cầu
-        privilege CHECKER, maker khác checker và step-up SENSITIVE_ACTION.
+        privilege CHECKER, quyền LIMIT_MAKER/LIMIT_MANAGE được re-check ở service, maker khác
+        checker và step-up SENSITIVE_ACTION.
         Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409
         IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
-        APPROVE vẫn fail-closed 503 khi Limit provider chưa có runtime; REJECT
-        hoạt động và idempotent.
+        APPROVE áp version mới sau khi kiểm expectedVersion/policy (409
+        ROLE_CONFLICT khi stale, 422 LIMIT_OUT_OF_POLICY); REJECT đánh dấu cấu
+        hình pending REJECTED và idempotent.
       operationId: approveLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -1343,9 +1352,10 @@ paths:
       summary: Checker duyệt/từ chối yêu cầu role/privilege
       description: >-
         Path id là approvalId của ROLE_CHANGE. Idempotency-Key bắt buộc. Yêu cầu privilege
-        CHECKER, maker khác checker và step-up SENSITIVE_ACTION. Cùng key + cùng
-        decision/note replay 200 gốc; payload khác trả 409 IDEMPOTENCY_CONFLICT;
-        record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
+        CHECKER, quyền ROLE_MANAGE được re-check ở service, maker khác checker và step-up
+        SENSITIVE_ACTION. Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409
+        IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS. Response
+        ApprovalDetail đã mask (không có expectedVersion).
       operationId: approveRoleChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -1395,6 +1405,14 @@ paths:
       tags: [Approval]
       summary: Danh sách approval
       operationId: listApprovals
+      description: >-
+        Quyền OPERATIONS/ADMIN. Chỉ trả approval trong scope server-side: actor luôn thấy request do
+        mình tạo; checker thấy thêm mọi request thuộc loại mình được duyệt (ROLE_CHANGE cần
+        ROLE_MANAGE; LIMIT_CHANGE cần LIMIT_MAKER/LIMIT_MANAGE). Scope áp trong cùng predicate SQL
+        với filter, sort và count nên makerId/checkerId không thể mở rộng quyền xem. Filter:
+        requestType/status/makerId/checkerId/from (inclusive)/to (exclusive); phân trang 0-based
+        size 1-100; sort whitelist createdAt (mặc định desc). Page vượt cuối trả items rỗng. Read-only:
+        không đổi trạng thái, không tạo audit nghiệp vụ.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/RequestTypeQuery'
@@ -1432,6 +1450,11 @@ paths:
       tags: [Approval]
       summary: Chi tiết approval
       operationId: getApproval
+      description: >-
+        Quyền OPERATIONS/ADMIN với cùng scope như list. Trả ApprovalSummary + payload đã mask
+        (không có expectedVersion; không lộ secret/full PII/entity). `result` chỉ có khi provider đã trả.
+        Id không tồn tại và id ngoài scope đều trả 404 APPROVAL_NOT_FOUND để chống enumeration. Read-only:
+        không đổi trạng thái, không tạo audit nghiệp vụ.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ApprovalIdPath'

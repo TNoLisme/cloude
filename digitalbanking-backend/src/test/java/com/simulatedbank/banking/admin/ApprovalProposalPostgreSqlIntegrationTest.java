@@ -121,13 +121,13 @@ class ApprovalProposalPostgreSqlIntegrationTest {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         tx.executeWithoutResult(status -> {
             jdbc.update("DELETE FROM banking.admin_idempotency_record");
+            jdbc.update("DELETE FROM banking.admin_approval_attempt");
             jdbc.update("DELETE FROM banking.approval_request");
             jdbc.update("DELETE FROM banking.auth_challenge");
             jdbc.update("DELETE FROM banking.user_role WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con03p-%')");
             jdbc.update("DELETE FROM banking.user_privilege WHERE user_id IN "
                     + "(SELECT user_id FROM banking.app_user WHERE username LIKE 'adm-con03p-%')");
-            jdbc.update("DELETE FROM banking.app_user WHERE username LIKE 'adm-con03p-%'");
             maker = staff("adm-con03p-maker-" + suffix, "ADMIN");
             otherMaker = staff("adm-con03p-maker2-" + suffix, "ADMIN");
             target = staff("adm-con03p-target-" + suffix, "OPERATIONS");
@@ -248,15 +248,33 @@ class ApprovalProposalPostgreSqlIntegrationTest {
     }
 
     @Test
-    void limitProposalFailsClosedWithoutAnyState() {
+    void limitProposalRequiresStepUpAndRejectsAnUnknownCustomerWithoutState() {
         authenticate(maker, Set.of("ROLE_ADMIN", "ROLE_MANAGE", "LIMIT_MAKER"));
+        String key = "key-limit";
 
-        assertCode(() -> proposals.proposeLimit(new LimitProposalCommand(2001L, null,
-                new BigDecimal("5000000.00"), new BigDecimal("20000000.00"), "VND", null, "reason",
-                "key-limit", null, CORRELATION, REQUEST_ID)), ErrorCode.SERVICE_UNAVAILABLE);
-
+        BankingBusinessException required = expectCode(
+                () -> proposals.proposeLimit(limitCommand(key, null)), ErrorCode.STEP_UP_REQUIRED);
+        String challengeRef = ((Map<?, ?>) required.extensions().get("challenge")).get("challengeId").toString();
+        verify(challengeRef, maker);
         assertThat(approvalCount()).isZero();
         assertThat(recordCount()).isZero();
+        assertThat(limitCount()).isZero();
+
+        // Real Limit provider: the customer does not exist, so the proposal fails before any state is written.
+        assertCode(() -> proposals.proposeLimit(limitCommand(key, challengeRef)), ErrorCode.CUSTOMER_NOT_FOUND);
+        assertThat(approvalCount()).isZero();
+        assertThat(recordCount()).isZero();
+        assertThat(limitCount()).isZero();
+    }
+
+    private static LimitProposalCommand limitCommand(String key, String challengeRef) {
+        return new LimitProposalCommand(2001L, null, new BigDecimal("5000000.00"),
+                new BigDecimal("20000000.00"), "VND", null, "reason", key, challengeRef, CORRELATION, REQUEST_ID);
+    }
+
+    private long limitCount() {
+        Long count = jdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Long.class);
+        return count == null ? 0 : count;
     }
 
     @Test
@@ -390,9 +408,10 @@ class ApprovalProposalPostgreSqlIntegrationTest {
     }
 
     private List<String> auditActions() {
-        return auditLog.list.stream().map(ILoggingEvent::getFormattedMessage)
-                .filter(message -> message.contains("action="))
-                .map(message -> message.replaceAll("(?s).*action=([A-Z_]+).*", "$1"))
+        return auditLog.list.stream()
+                .flatMap(event -> event.getKeyValuePairs().stream())
+                .filter(pair -> "action".equals(pair.key))
+                .map(pair -> String.valueOf(pair.value))
                 .toList();
     }
 

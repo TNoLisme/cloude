@@ -1,6 +1,6 @@
 # Module identity — Backend documentation
 
-> Baseline: `dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` · Trạng thái: IMP-01/IMP-02/IMP-03/IMP-04/IMP-05 đã triển khai; IMP-06 PARTIAL (MOD-OI-07 còn OPEN); IMP-07 BLOCKED ở integration Transfer/Limit; IMP-08 PARTIAL (MFA mọi password login theo DEC-ID-008, persistent trust hoãn); IMP-09 PARTIAL (Passcode fail-closed và password-history component theo DEC-ID-009); IMP-10 PARTIAL (WebAuthn/Yubico và password+OTP fallback đã có code; enrollment/Audit/Notification thật còn thiếu); IMP-11 PARTIAL (JPA RBAC, versioned role command và revoke sessions; production approval/Audit còn BLOCKED); IMP-12 PARTIAL (REST DTO/validation/error mapping + OpenAPI cho API-AUTH-01..07; API-AUTH-02 positive và API-AUTH-08 BLOCKED theo DEC-ID-009/006) trên branch `datht-backend-rework`; IMP-13 PARTIAL (audit port/metrics/username quota/redaction; durable audit persistence BLOCKED theo DEC-ID-013); còn lại DRAFT/planning.
+> Baseline: `dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` · Trạng thái: IMP-01/IMP-02/IMP-03/IMP-04/IMP-05 đã triển khai; IMP-06 PARTIAL (MOD-OI-07 còn OPEN); IMP-07 BLOCKED ở integration Transfer/Limit; IMP-08 PARTIAL (MFA mọi password login theo DEC-ID-008, persistent trust hoãn); IMP-09 PARTIAL (Passcode fail-closed và password-history component theo DEC-ID-009); IMP-10 PARTIAL (WebAuthn/Yubico và password+OTP fallback đã có code; enrollment/Audit/Notification thật còn thiếu); IMP-11 PARTIAL (JPA RBAC, versioned role command và revoke sessions; production approval/Audit còn BLOCKED); IMP-12 PARTIAL (REST DTO/validation/error mapping + OpenAPI cho API-AUTH-01..07; API-AUTH-02 positive và API-AUTH-08 BLOCKED theo DEC-ID-009/006) trên branch `datht-backend-rework`; IMP-13 PARTIAL (audit port/metrics/username quota/redaction; durable audit persistence BLOCKED theo DEC-ID-013); TEST-01 BLOCKED integration, TEST-02 PARTIAL, TEST-03 PARTIAL (QA/security/perf phía Identity VERIFIED, FE/QA sign-off PENDING_EXTERNAL_SIGNOFF — DEC-ID-TEST-03); còn lại DRAFT/planning.
 
 - [BE-ID-DOC-01 — Thiết kế chi tiết và kế hoạch triển khai](BE-ID-DOC-01.md)
 - [BE-ID-IMP-02 — Báo cáo triển khai password login/Argon2id/lockout/logout/anti-enumeration](BE-ID-IMP-02.md)
@@ -16,6 +16,8 @@
 - [BE-ID-IMP-12 — REST DTO/validation/error mapping API-AUTH-01..07 + OpenAPI; Passcode positive và resend BLOCKED](BE-ID-IMP-12.md)
 - [BE-ID-IMP-13 — Audit integration/metrics/username rate limit/log redaction; durable audit persistence BLOCKED](BE-ID-IMP-13.md)
 - [BE-ID-TEST-01 — Unit/contract/concurrency suite, traceability và blocker integration](BE-ID-TEST-01.md)
+- [BE-ID-TEST-02 — PostgreSQL Testcontainers, Spring wiring, restart/failure injection; durable Audit/Notification/Transfer còn BLOCKED](BE-ID-TEST-02.md)
+- [BE-ID-TEST-03 — QA security (cookie contract/credential binding/RBAC matrix/mass assignment), performance 5 kịch bản và handover; FE/QA sign-off PENDING](BE-ID-TEST-03.md)
 - [BE-ID — Task breakdown, checklist và acceptance criteria](tasks/README.md)
 - [Nguồn tổng quan Identity/Auth](../_overview/01-identity-auth.md)
 

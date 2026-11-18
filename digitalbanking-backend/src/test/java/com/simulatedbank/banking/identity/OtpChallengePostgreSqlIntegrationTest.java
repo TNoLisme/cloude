@@ -566,14 +566,19 @@ class OtpChallengePostgreSqlIntegrationTest {
         }
     }
 
-    // T20: 5 verify sai đồng thời không vượt max_attempts; kết cục LOCKED, count = 5.
+    // T20: hai verify sai cùng tranh threshold tại count=4 không vượt max_attempts;
+    // kết cục LOCKED, count = 5. Seed sát boundary giữ đúng race nhưng không đồng thời cấp
+    // 5 vùng nhớ Argon2id 64 MiB trong test JVM.
     @Test
     void t20_concurrentWrongVerifiesCannotBypassMaxAttempts() throws Exception {
         StepUpChallengePort.ChallengeView view = issue("k17");
         lastOtp();
+        tx.executeWithoutResult(ignored -> jdbc.update(
+                "UPDATE banking.auth_challenge SET attempt_count = 4 WHERE challenge_ref = ?::uuid",
+                view.challengeRef()));
 
-        ExecutorService pool = Executors.newFixedThreadPool(5);
-        CyclicBarrier barrier = new CyclicBarrier(5);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CyclicBarrier barrier = new CyclicBarrier(2);
         Callable<ErrorCode> wrong = () -> {
             barrier.await(5, TimeUnit.SECONDS);
             try {
@@ -584,12 +589,11 @@ class OtpChallengePostgreSqlIntegrationTest {
             }
         };
         try {
-            List<Future<ErrorCode>> results = pool.invokeAll(List.of(wrong, wrong, wrong, wrong, wrong));
+            List<Future<ErrorCode>> results = pool.invokeAll(List.of(wrong, wrong));
             List<ErrorCode> codes = new ArrayList<>();
             for (Future<ErrorCode> future : results) {
                 codes.add(future.get(15, TimeUnit.SECONDS));
             }
-            // Không OTP nào thành công; chỉ 401/423; luôn có LOCKED.
             assertThat(codes).allSatisfy(code -> assertThat(code).isIn(
                     ErrorCode.AUTH_OTP_INVALID, ErrorCode.AUTH_CHALLENGE_LOCKED));
             assertThat(codes).contains(ErrorCode.AUTH_CHALLENGE_LOCKED);
