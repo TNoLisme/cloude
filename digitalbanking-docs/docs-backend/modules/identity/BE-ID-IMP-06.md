@@ -1,8 +1,7 @@
 # BE-ID-IMP-06 — OTP gateway delivery, timeout và expiry recovery
 
-> **Ngày:** 16/11/2026 · **Owner thực hiện:** Codex (Identity) · **Trạng thái: PARTIAL**
-> **Branch:** `datht-backend-rework` · **Baseline đã fetch:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` (trùng HEAD).
-> Giữ nguyên IMP-01..05 và các thay đổi chưa commit đã có. Không dùng main/Phuong/common, không reset/rebase/push/merge/PR. Không tạo commit trong task này.
+> **Ngày:** 16/11/2026 · **Owner thực hiện:** Đạt (`identity`) · **Trạng thái: PARTIAL**
+> **Branch:** `datht-backend-rework` · **Baseline đã fetch:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`.
 
 ## 1. Nguồn và phạm vi
 

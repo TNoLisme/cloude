@@ -1,6 +1,6 @@
 # BE-ID-IMP-10 — WebAuthn/FIDO2 verification và fallback
 
-> **Ngày:** 16/11/2026 · **Branch:** `datht-backend-rework` · **Baseline:** đã fetch `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`, trùng HEAD. Giữ nguyên thay đổi chưa commit IMP-01..09; không checkout/reset/rebase/merge/push.
+> **Ngày:** 16/11/2026 · **Branch:** `datht-backend-rework` · **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`
 
 > **Trạng thái:** **PARTIAL** ở mức task end-to-end; verification và fallback có implementation thật, nhưng enrollment/Audit/Notification production còn BLOCKED (§6). Không đánh hoàn tất AC-002 toàn hệ thống.
 

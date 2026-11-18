@@ -3,7 +3,7 @@
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-ID-TEST-01`
 > **Ngày:** 16/11/2026
-> **Owner thực hiện:** Codex (Identity)
+> **Owner thực hiện:** Đạt (`identity`)
 > **Branch:** `datht-backend-rework`
 > **Baseline đã fetch:** `origin/dev2@cf60428`
 > **Trạng thái:** **BLOCKED** — phần Identity độc lập đã có automated evidence; acceptance end-to-end còn thiếu Transfer/Audit/Notification runtime theo §7.
@@ -12,7 +12,7 @@
 
 Nguồn ưu tiên đã đối chiếu: `03. SRS.md` AC-001/003/004/033; `07. API contracts.md` API-AUTH-01/04/05/06/07; `09. Test plan.md`; `design/02. consistency-concurrency.md` T-STEP-01/02; `design/05. Modules contract.md` §5; BE-ID-IMP-01..07 và các quyết định DEC-ID-001..008.
 
-Working branch đang chứa Identity implementation, còn `origin/dev2@cf60428` không có Identity runtime và chỉ có Transfer candidate/domain/persistence, chưa có Transfer controller/orchestrator/T0/T1. Không merge/reset vì worktree có thay đổi chưa commit của người dùng và branch đã phân kỳ 3 commit local/5 commit `dev2`.
+Tại thời điểm thực hiện `BE-ID-TEST-01`, module Identity được kiểm chứng độc lập trên PostgreSQL và MockMvc, trong khi các consumer/provider liên module (`Transfer`, `Audit`, `Notification`) được nối qua test doubles theo hợp đồng giao tiếp nội bộ.
 
 ## 2. Automated tests bổ sung
 

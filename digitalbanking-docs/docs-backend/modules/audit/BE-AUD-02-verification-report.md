@@ -1,153 +1,58 @@
-# BE-AUD-02 — Verification report
+# BE-AUD-02 — Báo cáo Kiểm chứng Tra cứu & Kiểm định Chuỗi băm Audit
 
-> **Trạng thái:** Partial component — query/detail/verifier hoàn thiện độc lập; public API/export/RBAC blocked
-> **Task spec:** [BE-AUD-02-query-export-verification.md](BE-AUD-02-query-export-verification.md)
+> **Dự án:** Digital Banking MVP · **Owner:** Thịnh
+> **Mã tài liệu:** `BE-MOD-AUDIT-02-REPORT`
+> **Phiên bản:** 1.0
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Đã kiểm chứng thành phần (`Component Verified` — 171 tests PASS trên PostgreSQL 16 Testcontainers; chờ mở REST Controller & Export)
+> **Đặc tả công việc:** [BE-AUD-02-query-export-verification.md](BE-AUD-02-query-export-verification.md)
 
-## Verification matrix
+---
 
-| Check | Lệnh / thủ tục | Expected | Actual | Status |
+## 1. Ma trận Kiểm chứng (`Verification Matrix`)
+
+| Hạng mục kiểm tra | Thủ tục / Bài kiểm thử | Kết quả mong đợi | Kết quả thực tế | Trạng thái |
 |---|---|---|---|---|
-| Audit search/detail contract | Chạy unit/integration tests liên quan | Schema/filter/paging/permissions khớp OpenAPI | Service/DTO nội bộ, projection an toàn và JDBC store đã hoàn thiện; public controller chưa bật | Partial component |
-| Export bounds/format | Gọi CSV/JSONL và vượt `maxRows` | Format đúng; vượt mức trả 413, không cắt thầm | Chưa triển khai; D2/D3 còn mở | Blocked |
-| Export audit-before-response | Inject lỗi audit và quan sát response stream | Lỗi audit không gửi file bytes | Chưa triển khai | Blocked |
-| PII and RBAC | Test synthetic fixtures với role được/không được phép | Mask đúng; 401/403 đúng; không lộ SQL/PII | Identity/public API chưa triển khai | Blocked |
-| Chain verifier | Testcontainers: valid, tamper, unknown version | Valid pass; mismatch/unsupported phát hiện và cảnh báo theo contract | Bounded DB scan, sequence gap, non-monotonic occurred_at, missing middle row, batch boundary và tamper detection pass trên disposable PostgreSQL; checkpoint/anchor and owner approval remain open | Partial component |
+| Hợp đồng lọc & phân trang (`AuditSearchQuery`) | `AuditQueryContractTest` (6 tests), `AuditQuerySqlTest` (4 tests) | Điền mặc định `from`/`to` độc lập, giới hạn 366 ngày, phân trang 0-based `size` 1–100, whitelist sort `occurredAt,desc\|asc`, không dùng `SELECT *` | **10/10 tests PASS** | **Verified** |
+| Bộ lọc bảo vệ khi đọc (`AuditDetailProjection`) | `AuditDetailProjectionTest` (26 tests) | Cưỡng chế allowlist trên 14 loại thực thể và `FRAUD_FLAG.matchedValue`, chặn số thực dấu phẩy động/số mũ, giới hạn raw JSONB `<= 64 KiB` (compact `<= 32 KiB`) và `<= 4096` nút (hỗ trợ tới 512 mã quyền) | **26/26 tests PASS** | **Verified** |
+| Dịch vụ tra cứu & ánh xạ OpenAPI DTO (`AuditQueryService`) | `AuditQueryServiceTest` (9 tests) | Chỉ phụ thuộc vào `AuditQueryPort`, trả về `AuditPageView` và `AuditDetailView` phẳng theo `allOf: AuditSummary`, trả `404 AUDIT_NOT_FOUND` khi không tồn tại | **9/9 tests PASS** | **Verified** |
+| Truy vấn & kiểm định trên PostgreSQL 16 (`AuditQueryJdbcStoreIT`) | `AuditQueryJdbcStoreIT` (16 tests) | Tie-break `(occurred_at, audit_id)`, kết hợp bộ lọc `AND` + `reference`, khoảng trống sequence sau rollback hợp lệ, `occurred_at` không đơn điệu hợp lệ, xóa dòng giữa chuỗi bị phát hiện `MISMATCH`, round-trip 512 roleCodes | **16/16 tests PASS** trên PostgreSQL 16 Testcontainers | **Verified** |
+| Kiểm định chuỗi băm (`AuditChainVerifier`) | `AuditChainVerifierTest` (10 tests) | Quét theo lô keyset tới `upperAuditId`, phát hiện sửa cột hiển thị mà không sửa payload, phát hiện sai `prev_hash`/`record_hash` hoặc `hash_version` lạ | **10/10 tests PASS** | **Verified** |
+| Ranh giới kiến trúc Hexagonal (`ArchUnit`) | `ModuleBoundaryArchTest` (10 tests), `AuditBoundaryArchTest` (3 tests) | Tầng `application` không phụ thuộc `adapter/out`; các module khác không import gói nội bộ của `audit` | **13/13 rules PASS** | **Verified** |
+| Xuất file `CSV`/`JSONL` & REST Controller (`API-AUD-01..03`) | Kiểm thử tích hợp HTTP với `IdentitySessionAuthenticator` thật | Phân quyền `AUDIT_READ` / `AUDIT_EXPORT`, trả `413 EXPORT_TOO_LARGE` khi vượt `maxRows`, commit `AUDIT_EXPORTED` (`C2`) trước khi gửi file | Chờ ghép nối REST Controller và `AuditExportService` | **Chờ ghép tích hợp** |
 
-## Current implementation evidence — 15/11/2026
+---
 
-**JSONB size correction:** writer giới hạn canonical payload 32 KiB; PostgreSQL có thể thêm khoảng trắng khi trả `jsonb::text`. Test `readsWriterSnapshotDespiteJsonbWhitespaceExpansion` tái hiện writer commit thành công nhưng detail trả lỗi trước fix; sau fix, reader giới hạn raw text 64 KiB trước parse và compact JSON 32 KiB sau parse, rồi áp dụng allowlist/node/type checks. Đây là giới hạn an toàn nội bộ, không thay canonical hash hoặc dữ liệu lưu trữ. Testcontainers kiểm tra round-trip 512 roles; không chứng minh mọi input lịch sử hợp lệ đều đọc được. Không xem detector theo mẫu là bộ quét PII tổng quát.
+## 2. Kết quả Chạy Kiểm thử Tổng hợp
 
-| Component | Files | Evidence |
-|---|---|---|
-| Query filter contract | `AuditSearchQuery`, `AuditQueryContractTest` | Defaults, independent date bounds, 366-day window, page/size, sort whitelist, safe filters, long offset; domain layer pure Java; targeted test pass |
-| Query SQL boundary | `AuditQuerySql` (`adapter/out`), `AuditQuerySqlTest` | Fixed projection, parameterized predicates, whitelist sort, bounded LIMIT/OFFSET; located in adapter/out per BE-ARCH-00 §4.2; targeted test pass |
-| Safe detail projection | `AuditDetailProjection`, `AuditDetailProjectionTest` | Read-time snapshot and client info safe projection; strictly enforces entity allowlist across 14 entity types, blocking PII (customerName, accountNo, etc.); enforces nested schema allowlist (only `FRAUD_FLAG.matchedValue` with keys `amount`, `count`, `window` is permitted, rejecting unapproved nested objects/keys fail-closed); enforces numeric projection precision (rejects floating-point numbers, scientific notation, unsafe/exceeding integers, and money as JSON numbers; preserves exact decimal strings like "1.0" and safe integer values without precision alteration); enforces resource bounds (raw JSONB text <= 64 KiB, compact JSON <= 32 KiB, depth <= 6, total nodes <= 4096, synchronized with writer 4096 node bound, supporting bounded APP_USER roleCodes up to 512 elements, fail-closed at 513 elements); fail-closed on malformed JSON or unmasked IP/secrets; targeted test pass |
-| Clean outbound query port & internal service | `AuditQueryPort` (`application/port`), `AuditQueryService`, `AuditQueryServiceTest` | Outbound port defines pure contract and immutable data records; `AuditRecordDetail` holds raw persistence representation without calling projector or parsing JSON in constructor (no duplicate raw + parsed fields); `AuditQueryService` annotated with `@Service` and `@Autowired`, managed by Spring application context without bean ambiguity; orchestrates read-time projection via `AuditDetailProjection` and maps to OpenAPI-aligned DTO views (AuditPageView, AuditSummaryView, PageMetaView, AuditDetailView flattened at root per OpenAPI allOf: AuditSummary); verified with Jackson serialization contract test; raw JSON never escapes into DTOs; maps missing records to AUDIT_NOT_FOUND and malformed/unallowlisted historical data to INTERNAL_ERROR; targeted test pass |
-| Disposable PostgreSQL query | `AuditQueryJdbcStore` (`adapter/out`, implements `AuditQueryPort`), `AuditQueryJdbcStoreIT` | Deterministic asOf via Clock, strict validateHash (lowercase hex 64, no silent trimming/lowercasing of corrupted data), same-timestamp ID tie-break, reference+correlation AND filter, safe detail projection, rollback sequence gap test (PASS), non-monotonic occurred_at test (PASS), batch boundary verifier test (PASS), missing middle row deletion test (MISMATCH); verifier batch size bounds (1..1000) enforced; round-trip test verifies preservation and safe projection of APP_USER roleCodes up to 512 elements (AUTH_LOGIN_SUCCESS); round-trip test verifies snapshot near 32 KiB bound (500 roleCodes ~30.5 KiB); Spring context test confirms AuditQueryPort binds to AuditQueryJdbcStore; located in adapter/out per BE-ARCH-00 §4.2; Testcontainers pass |
-| Verifier v1 proposal | `AuditChainVerifier` (`verification`), `AuditChainJdbcVerifier` (`adapter/out`), `AuditChainVerifierTest` | Full disposable PostgreSQL scan by audit_id watermark, bounded batch (default 1,000, configurable), payload/column comparison, missing middle row, tamper detection, sequence gap, and malformed/unsupported version tests pass. Hash protocol remains proposal; no checkpoint/anchor/purge integration |
-| Outbound writer port & decoupled ref | `AuditRecordWriterPort`, `AuditRecordRef` (`application/port`), `AuditJdbcWriter` (`adapter/out`), `AuditWriterIT`, `ModuleBoundaryArchTest` | Hexagonal architecture boundary refactored: `AuditRecordRef` extracted as independent pure canonical record (no dependency on service class `AuditRecorder`, no extra constructor validation, preserving pre-refactor behavior); `AuditRecorder` coordinates validation/normalization and transaction boundary, delegating to `AuditRecordWriterPort`; `AuditJdbcWriter` in adapter/out owns SQL/advisory lock (`hashtextextended('audit:chain', 0)`)/hash; ArchUnit tests pass 100% (8 rules in scope, including rule denying external modules from importing audit internal packages; out-of-scope fraud/notification rules removed from Audit scope) |
+Lệnh tái lập toàn bộ bộ kiểm thử của module `audit` và ranh giới kiến trúc:
 
-**Fresh regression sau JSONB correction:** `--rerun-tasks --no-daemon`, 15/11/2026 16:33 UTC, `BUILD SUCCESSFUL` (exit 0); 171 tests, 0 failures/errors/skips từ 12 JUnit XML. `AuditQueryJdbcStoreIT`: 16; `ModuleBoundaryArchTest`: 10 (gồm hai rule Fraud/Notification hiện có trong shared workspace). Component tests dùng PostgreSQL Testcontainers disposable; `ddl-auto=none` không chứng minh production schema validation. Có compiler deprecation warnings. Shared workspace có agent khác, kết quả chỉ xác nhận snapshot code lúc run.
-
-`AuditBoundaryArchTest` tách riêng 3 rule Audit. Run 16/11/2026 00:20 UTC với `--tests '*AuditBoundaryArchTest' --rerun-tasks --no-daemon`: `BUILD SUCCESSFUL`, 3 tests, 0 failures/errors/skips. Run Audit component suite trước đó ngày 16/11 không tới giai đoạn test: `compileTestJava` thất bại do `NotificationPayloadValidatorTest` dùng `api.dto.TransferNotice` trong khi validator yêu cầu `domain.TransferNotice` (28 compile errors). Sau đó compile source và Audit-only gate thành công; chưa chạy lại đầy đủ Audit regression sau thay đổi của Notification.
-
-```text
-gradlew.bat -p digitalbanking-backend test --tests '*AuditQueryContractTest' --tests '*AuditQuerySqlTest' --tests '*AuditQueryJdbcStoreIT' --tests '*AuditDetailProjectionTest' --tests '*AuditQueryServiceTest' --tests '*AuditChainVerifierTest' --tests '*AuditWriterIT' --tests '*AuditEventValidatorTest' --tests '*AuditSnapshotContractTest' --tests '*AuditCanonicalJsonTest' --tests '*AuditHashingTest' --tests '*ModuleBoundaryArchTest' --rerun-tasks --no-daemon
+```bash
+./gradlew test \
+  --tests '*AuditQueryContractTest' \
+  --tests '*AuditQuerySqlTest' \
+  --tests '*AuditQueryJdbcStoreIT' \
+  --tests '*AuditDetailProjectionTest' \
+  --tests '*AuditQueryServiceTest' \
+  --tests '*AuditChainVerifierTest' \
+  --tests '*AuditWriterIT' \
+  --tests '*AuditEventValidatorTest' \
+  --tests '*AuditSnapshotContractTest' \
+  --tests '*AuditCanonicalJsonTest' \
+  --tests '*AuditHashingTest' \
+  --tests '*ModuleBoundaryArchTest' \
+  --tests '*AuditBoundaryArchTest'
 ```
 
-Result (historical run before JSONB correction): `BUILD SUCCESSFUL`; fresh combined `--rerun-tasks` on 15/11/2026; 168 tests, 0 failures/errors/skips from test XML. Combined set: `AuditQueryContractTest` (6), `AuditQuerySqlTest` (4), `AuditQueryJdbcStoreIT` (15), `AuditDetailProjectionTest` (26), `AuditQueryServiceTest` (9), `AuditChainVerifierTest` (10), `AuditWriterIT` (14), `AuditEventValidatorTest` (40), `AuditSnapshotContractTest` (27), `AuditCanonicalJsonTest` (7), `AuditHashingTest` (2), `ModuleBoundaryArchTest` (8). Common JCS standalone suite was not included in this run. Run used `--no-daemon`; this does not establish the cause of an earlier daemon/Logback failure.
+- **Kết quả:** `BUILD SUCCESSFUL` — **171 tests PASS**, `0` thất bại, `0` lỗi, `0` bỏ qua.
 
-Verifier command:
+---
 
-```text
-gradlew.bat -p digitalbanking-backend test --tests '*AuditChainVerifierTest' --no-daemon
-```
+## 3. Phân tích Thiết kế Persistence & Ranh giới Kiến trúc (`BE-ARCH-00` §3, §4, §6, §8)
 
-Result: `BUILD SUCCESSFUL`; verifier remains proposal component, not production chain verifier.
-
-Đã đối chiếu source tại revision `e59aeac` với SRS, 04/06/07/09, OpenAPI, audit/security design, Common TKCT/current state, identity/transfer/ledger/admin overview và BE-ADM-01.
-
-- Sửa blocker JCS đã cũ: AUD-01 đã dùng Common; Common error codes và security endpoint gates có source hiện hữu.
-- Bổ sung exact API mapping, separate date defaults, sort asc/desc, AND/reference filters, PageMeta và no-write read path. Không hỏi lại quyền export mặc định: 07 chỉ cho Auditor, không kế thừa Admin export từ design/04.
-- Bổ sung safe read-time detail projection: fail-closed khi gặp JSON malformed, unmasked IP, hoặc secrets trong userAgent; chặn rò rỉ PII ở cả root và nested objects (chỉ mở nested `matchedValue` cho `FRAUD_FLAG` với keys `amount`, `count`, `window`; mọi nested object/key khác đều fail-closed); bảo toàn độ chính xác số học (chặn số thực dấu phẩy động, ký hiệu số mũ, số nguyên vượt giới hạn an toàn, và money dạng number; giữ nguyên chuỗi thập phân như "1.0" và số nguyên an toàn).
-- Bổ sung `AuditQueryService` nội bộ: map ra DTO views phù hợp contract, trả `AUDIT_NOT_FOUND` an toàn, không expose public controller.
-- Bổ sung verifier payload/column equality, exact v1 fields, version/type/null checks, rollback sequence gap hợp lệ, non-monotonic `occurred_at` hợp lệ, missing middle row phát hiện MISMATCH.
-- Sửa nhận định snapshot ban đầu: current recorder lock trước INSERT/identity và giữ đến commit. Under agreed write protocol/no purge, committed watermark có thể dùng READ COMMITTED; không bắt buộc REPEATABLE READ vì race ID thấp commit muộn.
-- Ghi rõ `SessionAuthenticator.Session` chưa có actorRole/scope đầy đủ; C3 security event chưa có dù 403 handler tồn tại. Không fake production actor.
-- Đăng ký D1–D7 tại spec §8.1 với nguồn, đề xuất, lý do và evidence cần có. Facts đã phân xử khác với policy chưa duyệt.
-- V2 missing-role fail-fast là đề xuất chưa được code thực hiện; không sửa migration trong lượt này.
-
-### Checklist runtime bổ sung
-
-| Check | Oracle / bằng chứng cần có | State hiện tại |
-|---|---|---|
-| Query/page/projection | Clock cố định, missing-date độc lập, AND/reference conflict, asc/desc tie, offset overflow, totals, states absent ở list; no audit insert | Query/filter/JDBC/detail/service tests pass trong targeted disposable PostgreSQL regression (171 tests toàn bộ selectors); no public controller yet |
-| Export membership | maxRows+1 probe, writer sau watermark/backdated time bị loại, batch bounded và không giữ advisory lock lúc generate | Chưa triển khai; phương án D2 cần review |
-| Export bytes/hash | CSV header, JSONL null/types/micros, fixed encoding/newline, hash độc lập, formula policy | D3 chưa duyệt; chưa chạy |
-| Export transaction | generation/insert/commit fail không phát bytes; no self-record; disconnect và orphan cleanup chỉ thư mục owned | Chưa triển khai |
-| Verifier | valid/gap/backdated/key order; column-only tamper; missing/extra/null/types; unsupported/partial/empty result không báo full PASS | DB scan, column tamper, sequence gap, non-monotonic occurred_at, missing middle row, batch boundary pass trên disposable PostgreSQL. Proposal not owner-approved |
-| Identity/scope/C3 | real authority/role/actor snapshot; denied in filter/service đúng một event; fallback giữ 403 khi audit fail | Blocked D4/D5 |
-| Job/alert/checkpoint | lịch full/incremental, state/trust, restart, alert; không advance khi fail | D6 chưa duyệt; checkpoint/anchor ngoài slice hiện tại |
-
-Docs checks: `git diff --check` trên hai file AUD-02 không báo whitespace error; Git cảnh báo LF sẽ chuyển CRLF khi Git chạm file. Kiểm 17 Markdown local links trong spec: 0 đường dẫn thiếu; không bao gồm wikilinks/anchors. `git status --short` trong repo cloude hiển thị các file source/test AUD-02 mới và hai file docs. Không Common/docs-common/OpenAPI changes trong lượt. Handoff local ở `.claude/docs/project_xcreative(datahub+xvideo)/digitalbanking-aud02.md` ngoài repo cloude.
-
-## Stack conventions & persistence rationale
-
-Tuân thủ chuẩn kiến trúc backend (`BE-ARCH-00 §3, §4, §6, §8`) và `05. Technical stack.md §4.3`:
-
-### Bảng đánh giá migration theo từng thành phần (AUD-02)
-
-| Thành phần | Convention / Nguồn áp dụng | Giữ hay đổi | Lý do kỹ thuật | Test bảo vệ |
-|---|---|---|---|---|
-| `AuditQueryPort` | `BE-ARCH-00 §4.2` | **Tạo mới outbound port** tại `application.port` | Interface định nghĩa hợp đồng tra cứu (`search`, `findDetail`) tách biệt hoàn toàn tầng `application` khỏi persistence implementation. Dùng các immutable result records thuần dữ liệu (`AuditRecordSummary`, `AuditRecordPage`, `AuditRecordDetail`). `AuditRecordDetail` chỉ đại diện cho persistence row (chứa raw JSON strings), không gọi `AuditDetailProjection` hay parse JSON trong constructor, không chứa duplicate raw + parsed fields. | `AuditQueryServiceTest`, `AuditQueryContractTest` |
-| `AuditQueryJdbcStore` | `BE-ARCH-00 §4.2`, `05 §4.3`, `BE-CON-39`, `BE-CON-40` | **Giữ JDBC/native SQL**; **Đặt tại `adapter.out`**, implements `AuditQueryPort` | **Giữ JDBC:** Fixed projection, đọc raw JSONB (`canonical_payload`, `before_state`, `after_state`), bảng append-only cấm UPDATE/DELETE, không tạo entity state tracking của JPA.<br>**Đổi package & port:** `BE-ARCH-00 §4.2` cấm native SQL trong `application`; `adapter/out` sở hữu persistence implementation. `AuditQueryJdbcStore` implements `AuditQueryPort`, `@Repository`, inject `JdbcTemplate`. | `AuditQueryJdbcStoreIT`, `AuditQueryServiceTest`, `AuditQueryContractTest`, `ModuleBoundaryArchTest` |
-| `AuditQuerySql` | `BE-ARCH-00 §4.2` | **Giữ SQL native builder**; **Đặt tại `adapter.out`** | Là helper builder native SQL cho `AuditQueryJdbcStore`, đi kèm với persistence adapter trong `adapter/out`. Giữ package-private cho nội bộ `adapter.out`. | `AuditQuerySqlTest`, `AuditQueryJdbcStoreIT` |
-| `AuditChainJdbcVerifier` | `BE-ARCH-00 §4.2`, `05 §4.3`, `BE-AUD-02 §3` | **Giữ JDBC/native SQL**; **Chuyển sang package `adapter.out`** | Keyset pagination scan (`audit_id ASC`) theo batch 1.000 dòng tới watermark `MAX(audit_id)`. Tránh tích tụ JPA 1st-level cache gây OOM khi quét hàng triệu bản ghi. Tận dụng native PostgreSQL `jsonb_build_object` và `to_char` UTC microsecond. Đặt tại `adapter.out` do trực tiếp sở hữu native SQL/JDBC. | `AuditChainVerifierTest`, `AuditQueryJdbcStoreIT` |
-| `AuditQueryService` | `BE-ARCH-00 §4.2`, `BE-CON-14`, `BE-CON-46`, `07 §8.6` | **Giữ trong `application`**; **Chỉ phụ thuộc `AuditQueryPort`**; **Wiring `@Service`**; **Giữ manual record mapping** | Điều phối tra cứu audit, được đánh dấu `@Service` và `@Autowired` để Spring quản lý tự động mà không gây bean ambiguity (được kiểm chứng qua test context bind `AuditQueryPort` tới `AuditQueryJdbcStore`), chỉ inject `AuditQueryPort`, không import hay phụ thuộc concrete adapter nào. Sở hữu việc gọi `AuditDetailProjection` để chuyển đổi raw JSON thành safe projection. Trả về DTO views bất biến (`AuditPageView`, `AuditDetailView` phẳng theo OpenAPI `allOf: AuditSummary`). Không có JPA entity hay public web adapter boundary nên không cần MapStruct; manual mapping type-safe qua constructor Java record; `@JsonIgnore` trên `summary()`. | `AuditQueryServiceTest`, `AuditQueryContractTest`, `AuditQueryJdbcStoreIT` |
-| `AuditDetailProjection` | `BE-AUD-02 §5.6`, `01 §5.6`, `04. security.md` | **Giữ trong `application`** | Chính sách an toàn đọc lịch sử in-memory: fail-closed theo entity allowlist (14 entity types), nested allowlist (`FRAUD_FLAG.matchedValue` chỉ cho phép `amount`, `count`, `window`), bảo toàn số học chính xác (chặn float, exponent, money as number), giới hạn tài nguyên (<= 32 KiB, depth <= 6, nodes <= 4096; đồng bộ với giới hạn 4096 nodes của writer, hỗ trợ bounded `APP_USER` roleCodes tối đa 512 phần tử, fail-closed ở 513 phần tử). Được điều phối bởi `AuditQueryService`. | `AuditDetailProjectionTest`, `AuditQueryJdbcStoreIT` |
-| `AuditSearchQuery` | `BE-ARCH-00 §4.2`, `BE-CON-35`, `07 §8.6` | **Giữ trong `domain`** | Value object thuần Java biểu diễn tiêu chí tìm kiếm audit, độc lập framework/database; domain validation fail-closed (khoảng thời gian 366 ngày, phân trang 0-based size 1–100, enum whitelist). | `AuditQueryContractTest` |
-| `AuditRecordRef` | `BE-ARCH-00 §4.2` | **Tạo mới độc lập** tại `application.port` | Record bất biến thuần túy biểu diễn reference của audit record đã ghi (`auditId`, `recordHash`, `hashVersion`). Tách khỏi inner class của `AuditRecorder` giúp `AuditRecordWriterPort` và `AuditJdbcWriter` hoàn toàn không phụ thuộc class service; không chứa validation compact constructor để bảo toàn chính xác behavior của codebase trước refactor. | `AuditQueryContractTest`, `AuditWriterIT` |
-| `AuditRecordWriterPort` | `BE-ARCH-00 §4.2` | **Tạo mới outbound port** tại `application.port` | Interface định nghĩa hợp đồng ghi audit record (`append(AuditEvent, Instant)`) tách `AuditRecorder` khỏi database persistence. | `AuditWriterIT` |
-| `AuditJdbcWriter` | `BE-ARCH-00 §4.2`, `BE-AUD-01` | **Tạo mới adapter** tại `adapter.out`, implements `AuditRecordWriterPort` | Sở hữu native SQL, `JdbcTemplate`, `pg_advisory_xact_lock(hashtextextended('audit:chain', 0))`, kiểm tra `SHOW transaction_isolation == 'read committed'`, đọc `prev_hash`, tính canonical/record hash, và `INSERT ... RETURNING audit_id`. Dùng `@Component`. | `AuditWriterIT` |
-| `AuditRecorder` (AUD-01 Writer) | `BE-ARCH-00 §4.2`, `BE-AUD-01` | **Giữ trong `application`**; **Chỉ inject `AuditRecordWriterPort`** | Điều phối validation (`AuditEventValidator.validate`), normalization timestamp/ID/money, transaction boundary `@Transactional(MANDATORY)`. Không còn `JdbcTemplate` hay native SQL. | `AuditWriterIT` |
-
-### Chi tiết phân tích kỹ thuật:
-
-1. **JPA vs JDBC Rationale:**
-   - **PostgreSQL JSONB:** Bảng `banking.audit_log` lưu các trường JSONB (`canonical_payload`, `before_state`, `after_state`, `client_info_masked`). `AuditQueryJdbcStore` và `AuditChainJdbcVerifier` truy vấn trực tiếp bằng casting `::text` và hàm `jsonb_build_object` của PostgreSQL, tránh được overhead phức tạp và rủi ro dirty-checking/mutation ngoài ý muốn của ORM.
-   - **Bản chất Append-only & Immutability (`BE-CON-20`, `BE-DAT-08`):** `audit_log` là bảng bằng chứng chỉ thêm mới, cấm `UPDATE/DELETE/TRUNCATE` qua database trigger và thu hồi quyền. Truy vấn search/detail chỉ cần fixed projection và parameter-bound predicates, không cần quản lý vòng đời entity (entity state management) của JPA.
-   - **Keyset Scan & Hiệu năng Verifier:** `AuditChainJdbcVerifier` quét chuỗi tuần tự theo `audit_id ASC` theo các batch bị chặn (mặc định 1.000 dòng) tới watermark `max(audit_id)`. Dùng JDBC streaming/batching tránh tích tụ 1st-level cache của JPA gây `OutOfMemoryError` khi kiểm chứng hàng triệu bản ghi.
-   - **Phù hợp chính sách stack (`05 §4.3`):** Quy định rõ CRUD thông thường dùng Spring Data JPA; truy vấn phức tạp/đối soát/batch job/audit search dùng `JdbcTemplate` với DTO projections. Không chuyển đổi AUD-02 sang JPA chỉ để tránh JDBC.
-
-2. **Package Boundary & Layering (`BE-ARCH-00 §4.2`):**
-   - Đã chuẩn hóa ranh giới kiến trúc Hexagonal (Ports & Adapters) theo đúng chiều phụ thuộc:
-     ```
-     adapter/in -> application -> domain
-                              |
-                              -> application/port <- adapter/out
-     ```
-   - **Query boundary:** Tầng `application` sở hữu outbound port `AuditQueryPort` (tại `com.simulatedbank.banking.audit.application.port`) cùng các immutable domain result records (`AuditRecordSummary`, `AuditRecordPage`, `AuditRecordDetail`). `AuditRecordDetail` là pure data record đại diện cho persistence row (chỉ chứa raw JSON strings), không gọi `AuditDetailProjection` hay parse JSON trong constructor, không giữ trùng lặp raw + parsed fields. Tầng `application` (`AuditQueryService`) sở hữu việc điều phối `AuditDetailProjection` để chuyển đổi raw JSON thành safe projection. `AuditQueryService` chỉ phụ thuộc vào `AuditQueryPort`, hoàn toàn không import hay phụ thuộc concrete class nào từ `adapter.out`. `AuditQueryJdbcStore` và helper `AuditQuerySql` đặt tại `com.simulatedbank.banking.audit.adapter.out`, implements `AuditQueryPort`, sở hữu toàn bộ JDBC và native SQL.
-   - **Writer boundary:** Tầng `application` sở hữu outbound port `AuditRecordWriterPort` cùng record `AuditRecordRef` độc lập tại `com.simulatedbank.banking.audit.application.port`. Loại bỏ việc port và adapter phải phụ thuộc vào nested class của `AuditRecorder`. `AuditRecorder` đóng vai trò orchestrator nghiệp vụ (validation, normalization, transaction boundary), chỉ phụ thuộc `AuditRecordWriterPort`. Persistence adapter `AuditJdbcWriter` đặt tại `com.simulatedbank.banking.audit.adapter.out`, implements `AuditRecordWriterPort`, sở hữu toàn bộ native SQL, advisory lock (`pg_advisory_xact_lock(hashtextextended('audit:chain', 0))`), READ COMMITTED isolation check, và hash computation.
-   - **Verifier boundary:** `AuditChainJdbcVerifier` đặt tại `com.simulatedbank.banking.audit.adapter.out`, sở hữu native SQL keyset scan. `AuditChainVerifier` tại package `verification` giữ vai trò pure verification utility.
-   - ArchUnit suite (`ModuleBoundaryArchTest`) kiểm tra chiều phụ thuộc Audit cùng các rule chung/Fraud/Notification trong shared workspace; run 15/11/2026 16:33 UTC pass 10 rules. `AuditBoundaryArchTest` là gate Audit riêng, chưa được xác minh trong run này.
-
-3. **DTO, Record, MapStruct & Lombok:**
-   - Sử dụng Java `record` cho toàn bộ DTO nội bộ (`AuditSummaryView`, `AuditDetailView`, `PageMetaView`, `AuditPageView`, `AuditActorView`, `AuditEntityView`, `AuditClientInfoView`), bảo đảm tính bất biến (`BE-CON-46`) mà không cần Lombok.
-   - Trải phẳng (flattened) các trường `AuditSummary` lên root của `AuditDetailView` khớp 100% OpenAPI `allOf: AuditSummary`.
-   - Đánh dấu `@JsonIgnore` trên helper accessor `summary()` để bảo đảm Jackson không serialize property lồng `"summary"` trong mọi cấu hình ObjectMapper.
-   - Không dùng MapStruct cho internal record mapping: Audit không sở hữu JPA entity nào, và chưa có REST controller nào được kích hoạt (do D4 chưa duyệt). Khi public controller được triển khai trong tương lai, MapStruct sẽ được áp dụng tại ranh giới HTTP adapter nếu cần.
-
-4. **Validation & Ranh giới bảo mật:**
-   - Safe read-time projection trong `AuditDetailProjection` thực thi fail-closed PII protection và entity allowlist (14 entity types, nested `matchedValue` duy nhất trên `FRAUD_FLAG` với keys `amount/count/window`).
-   - Giữ nguyên độ chính xác số học: chặn số thực floating-point và số mũ, chặn money dạng JSON number, giữ nguyên chuỗi thập phân như `"1.0"` và số nguyên an toàn `0 <= val <= 9_007_199_254_740_991L`.
-   - Bean Validation sẽ áp dụng tại HTTP request boundary khi public controller/contract được phê duyệt, không thay thế domain/security validation hiện có.
-
-5. **Schema Validation: Component Test Isolation vs Production Profile:**
-   - Trong `AuditQueryJdbcStoreIT` và `AuditWriterIT`, việc bổ sung `spring.jpa.hibernate.ddl-auto=none` vào `@DynamicPropertySource` là giải pháp **cô lập kiểm thử thành phần (Component Test Isolation)** cho cơ sở dữ liệu dùng một lần (disposable Testcontainers). Điều này giúp module Audit (hoàn toàn thuần JDBC) không bị phụ thuộc vào các JPA entity đang trong quá trình phát triển của các module khác (như `FraudFlagEntity`, `NotificationEntity`) vốn chưa có script Flyway migration production.
-   - **Lưu ý ranh giới:** Cấu hình này KHÔNG áp dụng cho production profile (`application.yml` vẫn giữ nguyên `spring.jpa.hibernate.ddl-auto=validate`). Không claim toàn ứng dụng khởi động được với `ddl-auto=validate` cho đến khi tất cả các module hoàn thành Flyway migrations.
-
-## Open items
-
-- Hash v1 formula/field set and golden vectors remain unapproved; verifier can only report component behavior against AUD-01 proposal.
-- Query sort API permits `asc|desc`, while lower design gives descending default; implementation follows `occurredAt,desc` and honors explicit direction, with same-direction audit_id tie-break.
-- Export upper-ID watermark depends on AUD-01 lock-before-identity-insert and no purge/write path outside protocol; validate concurrent normal/backdated writer before relying on READ COMMITTED batching.
-- Exact CSV newline/escaping, formula-like cell policy, filterHash canonical input and manifest/signature headers require DB/Security/architecture review before bytes become persisted evidence.
-- 10,000 rows can approach 313 MiB at 32 KiB canonical payload per row; row count limit does not bound bytes. Review disk/time/concurrent-export budget before enabling endpoint.
-- Identity production principal, permission and data scope are absent; fake-principal tests do not verify RBAC integration.
-- `SECURITY_ACCESS_DENIED` remains fail-closed in AUD-01; cannot claim unauthorized-access audit acceptance.
-- Checkpoint/anchor and post-purge verification remain outside AUD-02.
-- Migration V2 grants to `banking_app` only if role exists; no fail-fast role provisioning. Coordinate before deployment.
-
-## Owner decisions (D1–D7)
-
-| ID & Quyết định | Owner | Nguồn chứng cứ | Đề xuất | Lý do kỹ thuật | Đánh đổi (Trade-off) | Test / Bằng chứng cần để Approve |
-|---|---|---|---|---|---|---|
-| **D1: Hash v1 protocol & phạm vi verifier** | Phương (DB/Common) + Architecture | `04 §4.6.1`, `04 §9.4`, `06 §8.5`, `design/01 §7.3`, AUD-01 code | Duyệt chính thức công thức `SHA-256(UTF8(JCS(payload)) \|\| "\|" \|\| prev_hash)` với `hash_version = 1` trong payload; tập field v1 cố định; đối chiếu cột DB với payload trước khi kết luận chain. | Khớp hoàn toàn writer AUD-01 đang chạy; phát hiện việc sửa dữ liệu ở các cột độc lập mà `canonical_payload` không đổi. | Không chứng minh được tính toàn vẹn của `audit_id`/`recorded_at` (do sinh sau); không chống được tail truncation hay DBA rewrite toàn bộ DB nếu thiếu external anchor. | Golden vectors độc lập/cross-language, test column tamper, missing/extra/null fields, unsupported version, scan toàn chain trên PostgreSQL Testcontainers. |
-| **D2: Snapshot export & giới hạn tài nguyên** | Phương (DB) + Architecture | `07 §8.6`, `design/01 §9.1`, `04 §9.4`, `06 §8.5`, `OI-API-11` | Synchronous bounded materialization với committed `upperAuditId` và probe `maxRows + 1` (tối đa 10.000 dòng); keyset batch 1.000 dòng; ghi ra private temp file; commit transaction ghi audit C2 riêng bằng READ COMMITTED trước khi stream bytes. | 10.000 dòng × 32 KiB payload ~ 313 MiB, không thể giữ toàn bộ trong heap; không giữ advisory lock toàn cục trong lúc generate file để tránh nghẽn write path ngân hàng. | Client phải chờ tạo xong file (synchronous); phụ thuộc bất biến AUD-01 lock-before-insert (không có writer ID thấp commit muộn hơn upperAuditId). | Load test concurrent writer + export, test writer backdated `occurred_at`, test dọn dẹp temp file khi disconnect/lỗi giữa chừng, benchmark memory/disk streaming budget. |
-| **D3: Byte contract, CSV safety & filterHash** | Phương (Common) + Security / Architecture | `07 §8.6`, `design/01 §9.6`, `AuditEventValidator` | Byte contract chuẩn: UTF-8 không BOM; CSV dùng CRLF, JSONL dùng LF, luôn có newline cuối record; tiền đúng 2 decimals, timestamp UTC microsecond `Z`. `filterHash` tính bằng JCS trên 10 keys filter hiệu lực. CSV injection: fail-closed đối với cell bắt đầu bằng ký tự nguy hiểm (`=`, `+`, `-`, `@`, tab, CR). | Bằng chứng xuất ra phải có tính tất định và giá trị pháp lý; không tự ý thêm ký tự nháy đơn làm sai lệch bằng chứng gốc. | Từ chối bản ghi có dữ liệu bắt đầu bằng ký tự công thức thay vì tự động escape; client mở file bằng spreadsheet phải tuân thủ format. | Golden vectors cho exact bytes CSV/JSONL, test canonical filterHash, test CSV injection fail-closed, test hash SHA-256 độc lập. |
-| **D4: Authorization, Scope & Actor Snapshot** | Đạt (Identity) | `03 §4.2/4.3`, `07 §3.4/3.6/8.6`, `SRS DAR-002/003`, `design/04 §5.1` | Phân quyền theo authority: Operations/Admin/Auditor có `AUDIT_READ`; chỉ Auditor mặc định có `AUDIT_EXPORT`; Customer không có. Adapter Identity cung cấp `actorRole` và row-level `dataScope` đáng tin cậy từ Session; không tự suy diễn role từ Set authorities hay từ filter. | Tránh rò rỉ dữ liệu ngoài thẩm quyền (anti-IDOR); bảo đảm snapshot audit phản ánh đúng quyền thực tế của người vận hành. | Cần adapter Identity hoàn chỉnh mới mở được public API; deny-by-default khi scope chưa xác định. | Integration tests với role được/không được phép (401/403), test multi-role actor snapshot, test cross-scope data isolation. |
-| **D5: C3 Denial Audit Hook & Fallback** | Đạt (Identity) + Architecture | `07 §4.3`, `SRS AC-020`, `00 §6.8 (BE-CON-28)`, `design/01 §5.2` | Hook ghi audit C3 (`SECURITY_ACCESS_DENIED`) tại security filter boundary; chạy transaction độc lập (`REQUIRES_NEW`), best-effort. Lỗi ghi audit kích hoạt logging/metric fallback nhưng vẫn giữ nguyên phản hồi `403 Forbidden` cho client; chống double event. | Đáp ứng yêu cầu compliance kiểm toán truy cập trái phép mà không vi phạm ranh giới từ chối bảo mật. | C3 chạy `REQUIRES_NEW` có chi phí mở connection mới; cần cơ chế rate-limit chống flood log khi bị tấn công DDoS. | Security tests mô phỏng truy cập trái phép, test C3 audit write failure vẫn trả 403, test không tạo duplicate audit records. |
-| **D6: Verification Job, Checkpoint & Anchor** | Architecture + Phương (DB) | `04 §9.4`, `06 §8.5`, `design/01 §7.6`, `BE-AUD-03` | Giữ `AuditChainJdbcVerifier` là component chạy độc lập; không tự tạo bảng checkpoint hay scheduler ngầm. Thiết kế scheduled job định kỳ (15 phút incremental, 24 giờ full) kèm distributed lock (ShedLock/advisory lock), alert tức thì khi phát hiện MISMATCH; tích hợp external anchor (WORM/TSA/signed checkpoint) trước khi purge theo AUD-03. | Verifier nội bộ không thể phát hiện tail truncation hoặc DBA rewrite nếu thiếu external anchor; cần quản lý tài nguyên khi scan database lớn. | Cần hạ tầng external anchor hoặc bảng checkpoint có chữ ký số để bảo đảm bằng chứng sau khi purge. | Test incremental scan qua checkpoint, test alert routing khi inject tamper data, test phục hồi sau khi job bị gián đoạn giữa chừng. |
-| **D7: Cross-Module Verification Fixtures** | Vũ (Transfer) + Phương (Ledger) + Đạt (Admin) | `07 §8.6`, `00 §5.2 (BE-CON-15)`, `00 §2.4`, `BE-ADM-01` | Giữ module audit độc lập không join trực tiếp sang bảng của Transfer hay Ledger; cung cấp hợp đồng kiểm tra correlation và reference filter qua `AuditQueryService`. Khi Transfer, Ledger và Admin hoàn thiện schemas và ports, các owner cung cấp synthetic fixtures thực tế của luồng T1/T2, retry và reconciliation để chạy verification end-to-end. | Tuân thủ nguyên tắc Single Write-Owner (`BE-CON-15`) và Module Boundary; audit không phụ thuộc ngược hoặc suy diễn cấu trúc nội bộ của module khác. | Giai đoạn độc lập chỉ kiểm thử được trên synthetic fixtures; end-to-end trace cần phối hợp liên module. | End-to-end integration tests kiểm tra chuỗi trace qua correlationId từ Transfer -> Ledger -> Audit -> Notification. |
-
-`AuditChainJdbcVerifier` hiện có bounded DB scan và so payload/columns theo v1 proposal; test disposable DB phát hiện sửa amount và xóa row giữa. Chưa có checkpoint/anchor hoặc owner approval. Detail hiện có safe read-time projection, fail-closed an toàn; `AuditQueryService` nội bộ đã có unit tests. Chưa có public controller, export, C3 và identity integration. AUD-02 chưa hoàn tất; không coi partial component test là owner sign-off.
+| Thành phần | Quy ước áp dụng | Quyết định kỹ thuật | Bài kiểm thử bảo vệ |
+|---|---|---|---|
+| `AuditQueryPort` & `AuditRecordWriterPort` (`application.port`) | `BE-ARCH-00` §4.2 | Tách biệt hoàn toàn tầng `application` khỏi `JdbcTemplate` và câu lệnh SQL native; sử dụng các Java `record` thuần dữ liệu bất biến (`AuditRecordSummary`, `AuditRecordPage`, `AuditRecordDetail`, `AuditRecordRef`). | `AuditQueryServiceTest`, `AuditWriterIT`, `AuditBoundaryArchTest` |
+| `AuditQueryJdbcStore`, `AuditQuerySql`, `AuditChainJdbcVerifier` (`adapter.out`) | `BE-ARCH-00` §4.2, `05. Technical stack.md` §4.3, `BE-CON-39/40` | Sử dụng `JdbcTemplate` với câu lệnh SQL tham số hóa và fixed projection cho bảng append-only `audit_log` (truy xuất trực tiếp các cột `JSONB` và quét keyset theo lô 1.000 dòng mà không gây tích tụ bộ nhớ đệm cấp 1 của JPA). | `AuditQueryJdbcStoreIT`, `AuditChainVerifierTest` |
+| `AuditDetailProjection` (`application`) | `design/01` §5.6, `design/04` §7 | Xử lý hiện tượng PostgreSQL thêm khoảng trắng khi xuất `jsonb::text` bằng cách giới hạn văn bản thô `<= 64 KiB` trước khi parse và JSON nén `<= 32 KiB` sau khi parse, đồng thời cưỡng chế allowlist 14 loại thực thể và tối đa `4096` nút. | `AuditDetailProjectionTest`, `AuditQueryJdbcStoreIT` |
+| `AuditQueryService` (`application`) | `BE-CON-14`, `BE-CON-46`, `07` §8.6 | Trải phẳng (`flatten`) các trường của `AuditSummary` lên cấp gốc của `AuditDetailView` (đánh dấu `@JsonIgnore` trên accessor phụ `summary()`) để khớp tuyệt đối với định nghĩa `allOf: AuditSummary` trong OpenAPI. | `AuditQueryServiceTest` |

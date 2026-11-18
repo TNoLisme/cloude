@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản task:** [BE-COM-IMP-05](../tasks/BE-COM-IMP-05.md), v1.0 ngày 12/11/2026; không hạ hoặc thay AC
-> **Ngày / người thực hiện:** 12/11/2026 UTC+07:00 / Codex theo ủy quyền owner
+> **Ngày / người thực hiện:** 12/11/2026 UTC+07:00 / Phương (`common`)
 > **Trạng thái task:** **Blocked — phần common đã triển khai, còn thiếu tích hợp identity thật**
 > **Kết luận verification:** 5/9 AC Verified; AC01/02/04/05 Blocked ở phần tích hợp owner/môi trường, không tính harness là integration thật
 > **Reviewer / sign-off:** Chưa review

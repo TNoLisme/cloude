@@ -1,17 +1,15 @@
 # BE-ID-IMP-07 — StepUpChallengePort: hardening và chuẩn bị tích hợp Transfer
 
-> **Ngày:** 16/11/2026 · **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` (đã fetch).
-> **Branch:** `datht-backend-rework`; giữ nguyên IMP-01..06 và thay đổi khác chưa commit.
+> **Ngày:** 16/11/2026 · **Baseline:** `origin/dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a`
+> **Branch:** `datht-backend-rework`
 > **Trạng thái task:** **BLOCKED — thiếu Transfer/Limit runtime và protocol được duyệt.** Phần Identity triển khai trong task này không đồng nghĩa hoàn tất integration.
 > **Nguồn:** `docs-common/07. API contracts.md` §6, §8.1.5; `04. Database design & analysis.md` §4.2.5; `design/02. consistency-concurrency.md` §5.1–§5.2; `design/05. Modules contract.md` §5.2, §10.1, §13–§14; [DEC-ID-007](../../../../DECISIONS.md).
 
 ## 1. Hiện trạng và thẩm quyền
 
-- Trên baseline, Identity chỉ có `.gitkeep`; working tree có implementation IMP-01..06 chưa commit. Task này tái sử dụng implementation đó, không tạo challenge subsystem thứ hai.
-- Transfer, Limit, Account, Ledger và Audit chưa có production API/service/controller; các package chỉ `.gitkeep`. Migrations hiện có V1 và V2 Identity, không có bảng transfer/idempotency/ledger/limit. Không tồn tại Transfer T0/T1 thật để gắn port.
-- `docs-backend/Identity/` không tồn tại; tài liệu theo convention thực tế `docs-backend/modules/identity/`.
-- Đề bài tham chiếu `MOD-OT-01/09`; không tìm thấy các ID này trên `origin/dev2`. Contract/task hiện có dùng **MOD-OI-01/09**, không tự tạo specification khác.
-- Overview Identity ghi `status='CONSUMED'`, trái `04` §4.2.5; giữ VERIFIED + `consumed_at` theo nguồn cao hơn. Security design nêu `403 STEP_UP_INVALID`, trái error catalog `07` §6.6; dùng mã/status của `07`. Các xung đột và giới hạn quyết định đã ghi tại DEC-ID-007.
+- Task này tái sử dụng implementation `BE-ID-IMP-01..06`, không tạo challenge subsystem thứ hai.
+- Transfer, Limit, Account, Ledger và Audit chưa được đấu nối runtime trực tiếp với Identity tại thời điểm thực hiện task (`MOD-OI-01/09`).
+- Overview Identity cũ ghi `status='CONSUMED'`, trái `04` §4.2.5; giữ `VERIFIED` + `consumed_at` theo nguồn cao hơn. Security design nêu `403 STEP_UP_INVALID`, trái error catalog `07` §6.6; dùng mã/status của `07`. Các xung đột và giới hạn quyết định đã ghi tại DEC-ID-007.
 
 ## 2. Contract và lifecycle
 

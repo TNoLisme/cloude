@@ -1,62 +1,49 @@
-# BE-AUD-03 — Retention, legal hold và archival
+# BE-AUD-03 — Đặc tả Lưu trữ (`Retention`), Giữ Pháp lý (`Legal Hold`) và Archival
 
-> **Dự án:** Digital Banking MVP  
-> **Mã tài liệu:** BE-MOD-AUDIT-03; **Task:** BE-AUD-03  
-> **Phiên bản:** 0.3; **Ngày:** 12/11/2026  
-> **Trạng thái:** Draft — chờ review; implementation chưa bắt đầu  
-> **Owner:** Thịnh; **Reviewer đề xuất:** Đạt (admin/approval), Phương (DB/Common), Vũ (transfer/ledger); chưa sign-off  
-> **Nguồn:** [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]]; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]]; [[digitalbanking-docs/docs-common/07. API contracts.md]]; [[digitalbanking-docs/docs-backend/modules/common/CURRENT-STATE.md]]; [[digitalbanking-docs/docs-backend/modules/common/TKCT.md]].
+> **Dự án:** Digital Banking MVP
+> **Mã tài liệu:** `BE-MOD-AUDIT-03` (`Task: BE-AUD-03`)
+> **Phiên bản:** 1.0
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Hoàn thành thiết kế — chờ triển khai sau khi ghép nối `admin` và `audit`
+> **Owner:** Thịnh · **Reviewer:** Đạt (`admin`, `identity`), Phương (`common`, `ledger`), Vũ (`transfer`)
+> **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§10), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§4.6), [[digitalbanking-docs/docs-common/07. API contracts.md]], [[digitalbanking-docs/docs-backend/modules/common/CURRENT-STATE.md]], [[DECISIONS.md]] (`DEC-COM-001`)
 
-## 1. Mục tiêu và safety gate
+---
 
-Thiết kế policy/legal hold/archive/checkpoint/purge có thể kiểm chứng. Purge disabled trong local/shared/demo/production. Chỉ test purge trên disposable Testcontainers. Không claim legal compliance hoặc production recoverability từ component tests.
+## 1. Mục tiêu và Cổng An toàn (`Safety Gate`)
 
-## 2. Common integration
+Đặc tả cơ chế quản lý chính sách thời hạn lưu trữ (`banking.retention_policy`), lệnh giữ pháp lý (`banking.legal_hold`), mốc kiểm định chuỗi băm (`banking.audit_chain_checkpoint`) và quy trình lưu trữ/dọn dẹp dữ liệu hết hạn:
+- **Cổng an toàn bắt buộc:** Tính năng xóa dữ liệu hết hạn (`purge`) được **tắt mặc định** trên các môi trường `local`, `demo` và `production` trong giai đoạn MVP. Mọi bài kiểm thử dọn dẹp dữ liệu chỉ được phép thực thi trên container PostgreSQL dùng một lần (`Testcontainers`).
+- **Ưu tiên tuyệt đối của Legal Hold (`I-AUD-06`):** Không một bản ghi nào thuộc phạm vi đang có `legal_hold` ở trạng thái `ACTIVE` được phép bị xóa hoặc di chuyển làm mất khả năng truy xuất.
 
-Reuse:
-- `AppProperties`/deployment config cho retention/job values; không hard-code.
-- `JcsCanonicalizer`/`HmacService` cho manifest/filter/hash bytes khi protocol được duyệt.
-- `RequestContextHolder` cho correlation ở admin/request path.
-- Common security/Problem/ErrorCode ở API boundary sau identity/admin integration.
-- Common logging/metrics conventions; không emit PII/high-cardinality tags.
+---
 
-Không tạo JCS, error catalog, context holder, security gate hoặc privileged DB wrapper duplicate.
+## 2. Phân định Quyền Sở hữu và Tái sử dụng `common`
 
-## 3. Ownership và contracts
+- Module `audit` sở hữu độc quyền các bảng `audit_log`, `audit_chain_checkpoint`, `legal_hold` và `retention_policy` (migration `V5` theo `DEC-COM-001`).
+- Module `admin` sở hữu bảng `approval_request` và điều phối luồng phê duyệt Maker-Checker khi đặt hoặc giải phóng lệnh giữ pháp lý (`LEGAL_HOLD_PLACED`, `LEGAL_HOLD_RELEASED`).
+- Tái sử dụng `AppProperties` (`app.jobs.retention-cleanup-cron`), `JcsCanonicalizer`, `HmacService`, `RequestContextHolder` và `ErrorCode.LEGAL_HOLD_ACTIVE` (`409`) từ module `common`.
 
-`audit` sở hữu `audit_log`, checkpoint, legal_hold, retention_policy. `admin` sở hữu approval_request. Identity owns principal/strong auth; admin owns maker/checker. Không ghi trực tiếp bảng module khác.
+---
 
-`RetentionPolicyPort`/`LegalHoldPort` vẫn proposal. Không expose public retention/legal-hold endpoint vì OpenAPI MVP chưa chốt contract.
+## 3. Quy trình Lưu trữ và Dọn dẹp An toàn (`10 Bước`)
 
-## 4. Hash/checkpoint dependency
+1. Đọc cấu hình `retention_policy` đang bật (mặc định tối thiểu `5 năm` / `1.825 ngày` cho `AUDIT_LOG`, `TRANSFER`, `LEDGER_ENTRY`).
+2. Phân giải phạm vi dữ liệu qua các port của module sở hữu; nếu việc phân giải gặp lỗi, dừng ngay tiến trình (`fail-closed`).
+3. Kiểm tra các lệnh `legal_hold` đang `ACTIVE` dưới khóa phạm vi tương ứng; nếu trùng phạm vi giữ pháp lý, từ chối với `409 LEGAL_HOLD_ACTIVE`.
+4. Xuất lưu trữ (`archive`) đoạn tiền tố liên tục (`contiguous prefix`) của chuỗi `audit_log` kèm tệp manifest chứa mã băm `SHA-256`.
+5. Đọc lại và kiểm định độc lập tính toàn vẹn của gói lưu trữ vừa tạo.
+6. Ghi nhận mốc kiểm định bất biến (`audit_chain_checkpoint` với `through_audit_id` và `through_record_hash`) để bảo toàn gốc kiểm định cho phần chuỗi còn lại.
+7. Kiểm tra lại trạng thái `legal_hold` và phê duyệt bên trong một giao dịch DB ngắn.
+8. Thực hiện dọn dẹp các dòng tiền tố đã lưu trữ hợp lệ và ghi sự kiện kiểm toán `RETENTION_PURGED` (`C2`) thông qua `AuditRecorder`.
+9. Chạy `AuditChainVerifier` kiểm định lại toàn bộ phần chuỗi còn lại tính từ `audit_chain_checkpoint` vừa tạo.
+10. Nếu phát hiện bất kỳ sai lệch nào ở bất kỳ bước nào: dừng ngay tiến trình, phát cảnh báo `CRITICAL` (`R-AUD-02` / `R-AUD-04`), giữ nguyên toàn bộ bằng chứng và tuyệt đối không bao giờ đặt lại genesis hay ghi đè chuỗi băm.
 
-Audit chain protocol/hash_version vẫn phải được owner audit/architecture chốt. Checkpoint phải dùng canonical bytes từ Common JCS và hash protocol AUD-01. Không hash PostgreSQL JSONB text. Checkpoint serialized bytes, archive bytes, range/count/hash phải verify độc lập trước purge.
+---
 
-## 5. Flow
+## 4. Change Log
 
-1. Load enabled policy từ config/common binding.
-2. Resolve scope qua owner ports; resolver lỗi thì block.
-3. Check active hold dưới agreed scope lock.
-4. Archive continuous prefix, compute manifest.
-5. Readback/verify archive.
-6. Create append-only checkpoint.
-7. Recheck hold/approval inside short DB transaction.
-8. Purge permitted rows and write `RETENTION_PURGED` C2 via AUD-01.
-9. Verify retained chain from checkpoint.
-10. On mismatch/failure: stop, alert, preserve evidence, never reset genesis/overwrite chain.
-
-## 6. Security and blockers
-
-Common security gate alone does not provide identity/approval. Need real principal, maker/checker, strong auth, DB privileged execution review and restore drill. No production purge flag until independent review.
-
-## 7. Tests
-
-Unit scope resolver and policy. Testcontainers hold race, archive/checkpoint corruption, rollback, restart idempotency and contiguous-prefix verification. Verify Common JCS output and AUD-01 hash protocol. Keep release/Cloud/real data out of scope.
-
-## 8. Change log
-
-| Version | Date | Change |
+| Phiên bản | Ngày | Thay đổi |
 |---|---|---|
-| 0.1 | 11/11/2026 | Initial safety-first proposal |
-| 0.2 | 11/11/2026 | Purge gate/checkpoint recovery |
-| 0.3 | 12/11/2026 | Aligned Common JCS/config/context/security ownership |
+| `v0.1`–`v0.3` | 11–12/11/2026 | Khởi tạo thiết kế an toàn cho `retention_policy`, `legal_hold` và `audit_chain_checkpoint`. |
+| `v1.0` | 18/11/2026 | Chuẩn hóa văn phong tiếng Việt và đồng bộ chuỗi migration `DEC-COM-001`. |

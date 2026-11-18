@@ -1,22 +1,22 @@
-# Common — Trạng thái triển khai
+# Common — Báo cáo trạng thái triển khai hiện tại (`CURRENT-STATE`)
 
 > **Dự án:** Digital Banking MVP
-> **Mã tài liệu:** BE-COM-FINAL-REPORT
-> **Phiên bản / thời điểm:** v1.0 / 2026-11-12T20:01:01+07:00
+> **Mã tài liệu:** BE-COM-CURRENT-STATE
+> **Phiên bản / ngày cập nhật:** v1.1 / 18/11/2026
 > **Owner module:** Phương
-> **Baseline runtime:** `5bf84a6d4ca887084daa0803aae55ed088bdf01a` (task07–08 đã commit); source được đối chiếu với worktree
-> **Trạng thái tổng thể:** Nền tảng common đã triển khai và kiểm chứng local; **chưa nghiệm thu toàn module/release/Cloud**
-> **Review / sign-off:** Chưa review; đây là snapshot tổng hợp của implementer
+> **Baseline runtime:** `5bf84a6d4ca887084daa0803aae55ed088bdf01a` + cập nhật `LogRedaction` (`BE-ID-IMP-13`) và `SecurityAuditFallbackLog` (`BE-TRF-07`)
+> **Trạng thái tổng thể:** Nền tảng common đã triển khai hoàn chỉnh (30 Java files / 5 sub-packages) và kiểm chứng local; chờ nghiệm thu tích hợp toàn hệ thống / Cloud
+> **Review / sign-off:** Chưa review; đây là snapshot tổng hợp của module `common`
 
 ## 1. Kết luận về state hiện tại
 
-Common có **28 Java files trong 4 package**: config 14, context 4, crypto 4, error 6. Các primitive/config/error/context/HTTP security/observability cần dùng chung đã có implementation. Chưa có production adapter identity hoặc Java implementation trong 10 module nghiệp vụ còn lại; migration hiện chỉ tạo schema banking.
+Common có **30 Java files trong 5 sub-packages**: `config` (14), `context` (5 — gồm `CorrelationAndRequestIdFilter`, `HttpRequestLog`, `RequestContext`, `RequestContextHolder`, `SecurityAuditFallbackLog`), `crypto` (4), `error` (6), và `logging` (1 — `LogRedaction`). Toàn bộ primitive cấu hình, xử lý lỗi RFC 9457, ngữ cảnh request/correlation, mật mã AES-256-GCM/HMAC/JCS, che dấu PII, HTTP security filter chain và observability nền tảng đã hoàn thiện. Trên nhánh tích hợp hiện tại, module `identity` đã triển khai `SessionAuthenticator` thật (`SessionAuthAdapter`), và các module `audit`, `fraud`, `notification`, `ledger`, `transfer` đã triển khai các thành phần core/candidate sử dụng trực tiếp `common`.
 
-Trong **8 task implementation**, **5 Done** trong phạm vi được công bố (01–04, 06), **3 Blocked** (05, 07, 08). Ngoài ra có 2 task tài liệu DOC-01/02 đã hoàn thành nội dung/verification tài liệu. Không cộng hai loại này thành bằng chứng hệ thống đã chạy end-to-end. Tất cả vẫn chưa có reviewer sign-off được ghi nhận.
+Trong **8 task implementation**, **5 Done** trong phạm vi được công bố (01–04, 06), **3 Blocked** ở các tiêu chí nghiệm thu phụ thuộc tích hợp toàn hệ thống / Cloud (05, 07, 08). Ngoài ra có 2 task tài liệu DOC-01/02 đã hoàn thành nội dung/verification tài liệu.
 
-Kết quả runtime gần nhất: **203 tests pass, 0 failure/error/skip, 23 suites** ở [verification 08](report/BE-COM-IMP-08-verification.md), bao gồm PostgreSQL 16 và packaged demo JAR. Đợt này chỉ rà soát tài liệu/source/links và đọc XML hiện có, **không chạy lại test suite**. Không coi kết quả common là bằng chứng D1–D5, full security scan, financial correctness, immutable audit hoặc Cloud readiness toàn hệ thống.
+Kết quả runtime baseline của riêng `common`: **203 tests pass, 0 failure/error/skip, 23 suites** ở [verification 08](report/BE-COM-IMP-08-verification.md), bao gồm PostgreSQL 16 và packaged demo JAR.
 
-Quyết định release giữ **NO-GO**: cần consumer integration và quality gate 07, RC đã được chấp nhận, owner hạ tầng/reviewer, URL/môi trường/secret references và bằng chứng W7/W8. Từ “final” trong tên report là tổng hợp công việc đã làm đến snapshot này, không phải tuyên bố mọi dependency đã hoàn tất.
+Quyết định release toàn hệ thống giữ **NO-GO** cho đến khi hoàn tất ghép tích hợp tất cả module nghiệp vụ, chạy trọn bộ quality gate 07 (D1–D5) và nghiệm thu hạ tầng W7/W8.
 
 ## 2. Hạng mục đã thực hiện — task và verification
 
@@ -28,26 +28,26 @@ Quyết định release giữ **NO-GO**: cần consumer integration và quality 
 | [BE-COM-IMP-02](tasks/BE-COM-IMP-02.md) | 46-code ErrorCode, RFC9457 Problem/writer/advice/extension allowlist, safe MVC/security/SQLSTATE formatting | **Done — scope error layer**, không tự điều phối rollback/retry | [02](report/BE-COM-IMP-02-verification.md) |
 | [BE-COM-IMP-03](tasks/BE-COM-IMP-03.md) | Correlation/request IDs, request snapshot/MDC/scope, outer filter/error/async cleanup, proxy trust disabled | **Done — scope HTTP/context**, chưa propagation qua bảng nghiệp vụ | [03](report/BE-COM-IMP-03-verification.md) |
 | [BE-COM-IMP-04](tasks/BE-COM-IMP-04.md) | AES256-GCM/HMAC/SHA/constant-time, RFC8785 JCS/raw duplicate detection, PII masking, crypto fail-fast | **Done — primitive/caller-fixture scope**, không storage/consumer/rotation toàn hệ thống | [04](report/BE-COM-IMP-04-verification.md) |
-| [BE-COM-IMP-05](tasks/BE-COM-IMP-05.md) | Production chain, SPI SessionAuthenticator, CSRF/CORS/headers/permission gates, bounded body reader/token buckets, tests | **Blocked — 5/9 AC Verified, 4 Blocked**; thiếu session/identity/cookie/quota integration và môi trường liên quan | [05](report/BE-COM-IMP-05-verification.md) |
+| [BE-COM-IMP-05](tasks/BE-COM-IMP-05.md) | Production chain, SPI SessionAuthenticator, CSRF/CORS/headers/permission gates, bounded body reader/token buckets, tests | **Blocked — 5/9 AC Verified, 4 Blocked**; chờ nghiệm thu tích hợp toàn hệ thống | [05](report/BE-COM-IMP-05-verification.md) |
 | [BE-COM-IMP-06](tasks/BE-COM-IMP-06.md) | Safe JSON stdout/completion, HTTP timer/histogram/export, operational endpoint protection, HealthController app/DB | **Done — common/local**, 9/9 AC Verified; business signals/C3 fallback/Cloud còn bàn giao | [06](report/BE-COM-IMP-06-verification.md) |
-| [BE-COM-IMP-07](tasks/BE-COM-IMP-07.md) | Ma trận W3/W4/W5, real PG error pipeline/rollback probe, contract subset, 5 ArchUnit rules, regression | **Blocked — 5/10 Verified, 5 Blocked**; thiếu consumer/state/schema để kiểm đủ end-to-end | [07](report/BE-COM-IMP-07-verification.md) |
+| [BE-COM-IMP-07](tasks/BE-COM-IMP-07.md) | Ma trận W3/W4/W5, real PG error pipeline/rollback probe, contract subset, 5 ArchUnit rules, regression | **Blocked — 5/10 Verified, 5 Blocked**; chờ ghép đầy đủ consumer/schema để kiểm end-to-end | [07](report/BE-COM-IMP-07-verification.md) |
 | [BE-COM-IMP-08](tasks/BE-COM-IMP-08.md) | Demo Secure/CORS config, packaged JAR start/restart/negative config, roles/Flyway, readiness/runbook/NO-GO/handoff | **Blocked — 6/10 Verified, 4 Blocked**; W6 phần độc lập đạt, chưa RC/Cloud/owner/W7/W8 | [08](report/BE-COM-IMP-08-verification.md) |
 
-Task/report cũ ghi kết quả của revision và môi trường khi thực hiện; không sửa counts lịch sử thành 203 hoặc tự thêm sign-off. [Tracker](tasks/README.md) giữ AC/dependency và điều kiện Done. Đợt tổ chức tài liệu này không tạo task implementation thứ 9 và không thay trạng thái của bất kỳ AC nào.
+Task/report cũ ghi kết quả của revision và môi trường khi thực hiện; không sửa counts lịch sử thành 203 hoặc tự thêm sign-off. [Tracker](tasks/README.md) giữ AC/dependency và điều kiện Done.
 
-Các commit runtime liên quan: 01 `00a5823`, 02 `8b7298a`, 03 `991472b`, 04 `b44e927`, 05–06 `87427ce`, 07–08 `5bf84a6`. Các thay đổi README/TKCT/final report hiện tại chưa commit.
+Các commit runtime baseline của common: 01 `00a5823`, 02 `8b7298a`, 03 `991472b`, 04 `b44e927`, 05–06 `87427ce`, 07–08 `5bf84a6`.
 
 ## 3. Năng lực có thể bàn giao ngay và giới hạn sử dụng
 
 | Nhóm | Sẵn có | Consumer cần làm / giới hạn |
 |---|---|---|
 | Cấu hình/thời gian | AppProperties, UTC Clock, businessZoneId, validated HTTP/crypto config; local/test/demo profiles | Owner tự áp policy và transaction/business date theo nguồn; jobs config không có nghĩa scheduler đã chạy |
-| Context | Filter trước security, validated correlation/server requestId, bind/restore MDC/ThreadLocal, async-safe HTTP completion | Owner bind worker và persist đúng IDs trong challenge/transfer/ledger/audit/notification/job; ThreadLocal không tự propagate |
+| Context | Filter trước security, validated correlation/server requestId, bind/restore MDC/ThreadLocal, async-safe HTTP completion, `SecurityAuditFallbackLog` | Owner bind worker và persist đúng IDs trong challenge/transfer/ledger/audit/notification/job; ThreadLocal không tự propagate |
 | Error | 46 public codes, safe Problem, flattened checked extensions, MVC/servlet/security writer, DB generic mapping | Owner phân loại context sau rollback/retry; common không đoán outcome tiền hoặc ghi audit. SQLSTATE không thay idempotency/business rule |
 | Crypto/JCS/PII | Một active AES/HMAC key, strict RFC8785, masking helpers và safe failures | Normalize/payload/hash protocol/storage/authorization do owner; chưa rotation, name policy/IPv6 mở rộng, audit scanner hay blind-index migration |
-| HTTP security | Chain/SPI/CSRF/CORS/headers/body 65536B/token buckets; Secure=true/explicit origins cho demo | Chưa identity adapter, real session/cookie/CSRF storage, normalized username/challenge quota, owner permission/ownership/maker-checker; buckets process-local, chưa distributed |
-| Logging | JSON stdout, completion route template/status/latency/error/trace, masked internal user ID, global allowlist | Generic message/arguments/stack/unknown MDC bị bỏ; richer coded owner events/C3 security fallback chưa tích hợp. Technical log không thay audit |
-| Metrics/health | HTTP count/latency/histogram, low-cardinality tags; actual operational HealthController và public probe | Không emit business metrics/outbox count giả; authenticated access cần identity thật; chưa Cloud scraping/alerts/retention |
+| HTTP security | Chain/SPI/CSRF/CORS/headers/body 65536B/token buckets; Secure=true/explicit origins cho demo | Identity cung cấp `SessionAuthenticator` (`SessionAuthAdapter`); ownership/maker-checker thuộc module nghiệp vụ; buckets process-local, chưa distributed |
+| Logging | JSON stdout, completion route template/status/latency/error/trace, masked internal user ID, global allowlist, `LogRedaction`, `SecurityAuditFallbackLog` | Generic message/arguments/stack/unknown MDC bị bỏ; technical log không thay durable audit |
+| Metrics/health | HTTP count/latency/histogram, low-cardinality tags; actual operational HealthController và public probe | Không emit business metrics/outbox count giả; chưa Cloud scraping/alerts/retention |
 | Quality/readiness | PostgreSQL primitive failures qua HTTP handler, probe rollback/no generic retry, architecture rules, demo JAR smoke/negative config | Probe/harness không thay tiền/audit/session consumer; same-JAR restart không phải rollback accepted prior release hoặc Cloud deployment |
 
 Xem [README hướng dẫn sử dụng](README.md), [TKCT](TKCT.md), [runtime backend](../../../../digitalbanking-backend/README.md), [readiness/runbook](../../deployment/common-readiness.md). Không dùng `logger.info` tùy ý hoặc test auth adapter như API nghiệp vụ production.

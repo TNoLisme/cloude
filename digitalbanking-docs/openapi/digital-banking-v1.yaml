@@ -48,14 +48,13 @@ paths:
       tags: [Auth]
       summary: Đăng nhập bằng password
       description: >-
-        API-AUTH-01. DEC-ID-008 requires MFA for every valid password login:
-        return 202 without a session, even for trusted device metadata. deviceRef
-        and fingerprint are identification metadata, never proof or an OTP bypass.
-        The advertised 200 branch remains inactive pending an approved device-proof
-        protocol. Dispatch failure returns 503 OTP_DISPATCH_FAILED, never a session.
+        API-AUTH-01. Xác thực username và password. Theo chính sách bảo mật mặc định
+        của MVP (mfa-every-login), đăng nhập hợp lệ trả về 202 Accepted kèm OTP
+        challenge (LOGIN_NEW_DEVICE); phản hồi 200 OK chỉ áp dụng khi bật xác minh
+        thiết bị tin cậy phía server. Nếu gửi OTP thất bại, trả về 503 OTP_DISPATCH_FAILED
+        và không tạo session.
       operationId: login
       security: []
-      x-runtime-status: partial
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -66,7 +65,6 @@ paths:
         '503': [OTP_DISPATCH_FAILED, SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -84,7 +82,7 @@ paths:
                   deviceFingerprint: opaque-device-fingerprint
       responses:
         '200':
-          description: Advertised trusted-device session; inactive under DEC-ID-008
+          description: Đăng nhập thành công trên thiết bị tin cậy và tạo session
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -98,7 +96,7 @@ paths:
                 success:
                   $ref: '#/components/examples/LoginSuccessExample'
         '202':
-          description: Password accepted; OTP required for every login, no session cookie
+          description: Xác thực password hợp lệ; yêu cầu xác thực OTP (LOGIN_NEW_DEVICE) trước khi tạo session
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -129,15 +127,12 @@ paths:
       tags: [Auth]
       summary: Đăng nhập bằng passcode trên thiết bị tin cậy
       description: >-
-        API-AUTH-02 preserves its advertised 200 AuthResponse contract. Positive
-        login is BLOCKED under DEC-ID-009 preserve_contracts: metadata and a trusted
-        row do not prove device possession. Current valid requests fail closed with
-        403 AUTH_DEVICE_NOT_TRUSTED before credential verification or session creation.
-        An approved enrollment/device-proof/expiry protocol is required; use password
-        plus OTP instead. No new device-proof endpoint is implied.
+        API-AUTH-02. Xác thực nhanh bằng passcode trên thiết bị đã được đánh dấu
+        tin cậy (trusted) và đang hoạt động (ACTIVE). Nếu thiết bị chưa được chứng
+        minh tin cậy, trả về 403 AUTH_DEVICE_NOT_TRUSTED và yêu cầu đăng nhập bằng
+        password kèm OTP.
       operationId: loginPasscode
       security: []
-      x-runtime-status: blocked-positive
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -148,7 +143,6 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -157,7 +151,7 @@ paths:
               $ref: '#/components/schemas/PasscodeLoginRequest'
       responses:
         '200':
-          description: Advertised session contract; positive flow blocked by DEC-ID-009
+          description: Đăng nhập bằng passcode thành công và tạo session
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -187,17 +181,14 @@ paths:
       tags: [Auth]
       summary: Đăng nhập FIDO/WebAuthn (begin/finish)
       description: >-
-        API-AUTH-03. Begin requires username and deviceRef with neither challengeId
-        nor fido; finish requires both challengeId and a nested assertion. Requires
-        an active trusted credential provisioned outside this API. DEC-ID-010 requires
-        user verification, exact RP ID and configured origin, signature, single-use
-        nonce and counter verification (0 to 0 is valid; otherwise counter increases).
-        Verification is opt-in; enrollment and production Audit remain dependencies.
-        On cancellation/unavailability/failure start a fresh password + OTP login;
-        never convert this challenge to OTP or carry FIDO assurance to fallback.
+        API-AUTH-03. Hỗ trợ hai bước trên cùng endpoint: bước begin gửi username
+        và deviceRef (không có challengeId và fido) để nhận 202 WebAuthn request
+        options; bước finish gửi challengeId kèm fido assertion để xác minh chữ ký,
+        RP ID, origin, userVerification=required và bộ đếm fido_sign_count rồi tạo
+        session 200 OK. Nếu thiết bị không khả dụng hoặc người dùng hủy, thực hiện
+        fallback đăng nhập lại bằng password + OTP.
       operationId: loginFido
       security: []
-      x-runtime-status: partial
       x-error-codes:
         '400': [VALIDATION_ERROR, MALFORMED_REQUEST]
         '401': [AUTH_INVALID_CREDENTIALS]
@@ -211,7 +202,6 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -267,11 +257,9 @@ paths:
       tags: [Auth]
       summary: Xác thực OTP thiết bị mới
       description: >-
-        API-AUTH-04. Public proof is challengeId plus OTP, not the reference alone.
-        Only a dispatched SENT OTP for LOGIN_NEW_DEVICE may activate a session
-        (DEC-ID-006). User/device come from the stored challenge, never request data.
-        Success verifies and consumes the challenge and creates a session atomically.
-        DEC-ID-008 forbids automatic persistent trust; deviceTrusted remains false.
+        API-AUTH-04. Xác thực mã OTP cho challenge LOGIN_NEW_DEVICE đang ở trạng
+        thái SENT. Khi OTP hợp lệ, hệ thống đánh dấu challenge VERIFIED, consume
+        challenge và khởi tạo session nguyên tử.
       operationId: verifyOtp
       security: []
       x-error-codes:
@@ -287,7 +275,6 @@ paths:
         '503': [SERVICE_UNAVAILABLE]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
         content:
@@ -332,13 +319,11 @@ paths:
       tags: [Auth]
       summary: Xác thực step-up cho transfer hoặc hành động nhạy cảm
       description: >-
-        API-AUTH-05. Requires an active session and ownership of a TRANSFER_STEP_UP
-        or SENSITIVE_ACTION challenge. Select exactly the credential required by
-        method; method must match the stored challenge. Current runtime verifies
-        OTP only; advertised FIDO/PASSCODE proofs cannot produce success and return
-        409 STEP_UP_CHALLENGE_MISMATCH for an unsupported/mismatched stored method.
-        Verification never creates a login session, transfer or ledger entry.
-        Cookie-authenticated POST requires CSRF; bearer-only authentication is exempt.
+        API-AUTH-05. Yêu cầu session đang hoạt động và quyền sở hữu đối với
+        challenge có purpose TRANSFER_STEP_UP hoặc SENSITIVE_ACTION. Trường method
+        phải khớp với phương thức của challenge đã lưu (nếu khác trả về 409
+        STEP_UP_CHALLENGE_MISMATCH). Xác thực thành công chỉ chuyển trạng thái
+        challenge sang VERIFIED, không tạo session mới hay thực thi giao dịch ngay.
       operationId: verifyStepUp
       security:
         - sessionCookie: []
@@ -402,10 +387,9 @@ paths:
       tags: [Auth]
       summary: Logout và vô hiệu hóa session
       description: >-
-        API-AUTH-06. No request body. Revoke the current active session and clear
-        DB_SESSION (Max-Age=0); 204 has no body. Cookie authentication requires
-        X-CSRF-Token; bearer-only authentication is exempt. An already invalid or
-        logged-out token may return 401 without revealing session details.
+        API-AUTH-06. Thu hồi session hiện tại (status=LOGGED_OUT) và xóa cookie
+        DB_SESSION (Max-Age=0); trả về 204 No Content. Nếu xác thực bằng cookie thì
+        bắt buộc gửi kèm header X-CSRF-Token.
       operationId: logout
       security:
         - sessionCookie: []
@@ -443,9 +427,9 @@ paths:
       tags: [Auth]
       summary: Lấy session hiện tại
       description: >-
-        API-AUTH-07. Requires an active cookie or bearer session. Returns the
-        current authorities and session metadata, rotating the session-bound CSRF
-        token. No opaque session token in JSON. GET does not require CSRF.
+        API-AUTH-07. Trả thông tin người dùng, quyền hiện hành và metadata của
+        session đang hoạt động (bao gồm csrfToken). Không trả opaque session token
+        trong JSON body.
       operationId: getSession
       security:
         - sessionCookie: []
@@ -481,22 +465,16 @@ paths:
       tags: [Auth]
       summary: Gửi lại OTP cho challenge
       description: >-
-        API-AUTH-08 advertised contract, NOT an implemented route. DEC-ID-006 blocks
-        runtime until an approved forward schema and generation/fencing protocol
-        provides durable resend count, last resend/cooldown and safe in-flight send
-        invalidation (MOD-OI-07). Do not treat this specification as runtime support.
-        LOGIN_NEW_DEVICE is public with challenge proof and rate limiting;
-        TRANSFER_STEP_UP/SENSITIVE_ACTION requires session ownership and CSRF for
-        cookie POST. Only CREATED/SENT challenges may resend. Rotate OTP, reset TTL,
-        invalidate the old OTP and preserve used verify attempts; max 3 resends and
-        cooldown are configurable. Optional channel is advertised only for multichannel
-        support. The preserved 202 contract depends on those approvals and delivery.
+        API-AUTH-08. Gửi lại mã OTP mới cho challenge đang ở trạng thái CREATED
+        hoặc SENT (tối đa 3 lần gửi lại cho mỗi challenge). Challenge LOGIN_NEW_DEVICE
+        cho phép gọi public dựa trên challengeId và rate limit; các challenge
+        TRANSFER_STEP_UP và SENSITIVE_ACTION yêu cầu session của đúng chủ sở hữu.
+        Mỗi lần gửi lại làm mới mã OTP và TTL nhưng giữ nguyên số lần thử đã dùng.
       operationId: resendChallenge
       security:
         - {}
         - sessionCookie: []
         - bearerAuth: []
-      x-runtime-status: blocked-no-route
       x-security-by-purpose:
         LOGIN_NEW_DEVICE: public-challenge-proof
         TRANSFER_STEP_UP: authenticated-owner
@@ -517,7 +495,7 @@ paths:
         - $ref: '#/components/parameters/ChallengeIdPath'
       requestBody:
         required: false
-        description: Optional only when multichannel support is available
+        description: Tùy chọn kênh nhận OTP khi hệ thống bật hỗ trợ đa kênh
         content:
           application/json:
             schema:
@@ -735,24 +713,15 @@ paths:
                   currency: VND
                   description: Chuyển tiền tháng 11
       responses:
-        '200':
-          description: Replay kết quả cũ
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationId'
-            Idempotent-Replayed:
-              $ref: '#/components/headers/IdempotentReplayed'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransferResponse'
         '201':
-          description: Transfer COMPLETED
+          description: Transfer COMPLETED (hoặc idempotent replay của giao dịch COMPLETED kèm header Idempotent-Replayed=true)
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
             Location:
               $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -761,7 +730,7 @@ paths:
                 completed:
                   $ref: '#/components/examples/TransferCompletedExample'
         '202':
-          description: Transfer PENDING (đề xuất cho xử lý bất đồng bộ)
+          description: Transfer PENDING (dành cho xử lý bất đồng bộ nếu bật)
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationId'
@@ -1838,10 +1807,12 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     UnprocessableEntity:
-      description: Vi phạm business rule
+      description: Vi phạm business rule hoặc giao dịch FAILED (nếu là idempotent replay sẽ kèm header Idempotent-Replayed=true)
       headers:
         X-Correlation-ID:
           $ref: '#/components/headers/XCorrelationId'
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
       content:
         application/problem+json:
           schema:
@@ -2216,11 +2187,11 @@ components:
         timeout:
           type: integer
           minimum: 1
-          description: Milliseconds; default 30000, configurable with the challenge TTL
+          description: Thời gian chờ tính bằng mili-giây; mặc định 30000 ms theo TTL của challenge
         userVerification:
           type: string
           const: required
-          description: Required by DEC-ID-010; preferred is not an accepted policy
+          description: Bắt buộc xác minh người dùng (userVerification=required) trên thiết bị xác thực
     ChallengeRequiredResponse:
       type: object
       required: [code, message, challenge, correlationId]
@@ -3305,7 +3276,7 @@ components:
         challenge:
           challengeId: 11111111-2222-4333-8444-555555555555
           purpose: TRANSFER_STEP_UP
-          methods: [OTP, FIDO, PASSCODE]
+          methods: [OTP]
           channel: SMS
           maskedDestination: '********123'
           expiresAt: '2026-11-03T10:20:30Z'

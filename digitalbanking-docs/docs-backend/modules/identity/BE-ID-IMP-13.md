@@ -1,8 +1,8 @@
 # BE-ID-IMP-13 — Audit integration, metrics, username rate limit và log redaction
 
 > **Ngày:** 16/11/2026 · **Owner module:** Đạt (Identity) · **Branch:** `datht-backend-rework`
-> **Baseline:** `origin/dev2@56210cc` + thay đổi chưa commit của IMP-01..12 trên worktree (giữ nguyên, không tạo branch mới).
-> **Trạng thái:** **PARTIAL** — phần Identity-side (audit port semantics + metrics + username quota + redaction) đã triển khai và kiểm thử; **durable audit persistence C2/C3 BLOCKED** vì module Audit runtime chưa tồn tại. Không đánh DONE toàn task.
+> **Baseline:** `origin/dev2@56210cc`
+> **Trạng thái:** **PARTIAL** — phần Identity-side (audit port semantics + metrics + username quota + redaction) đã triển khai và kiểm thử; **durable audit persistence C2/C3 BLOCKED** vì module Audit chưa đấu nối trực tiếp với Identity. Không đánh DONE toàn task.
 > **Quyết định ghi nhận:** [DEC-ID-013](../../../../DECISIONS.md).
 
 Nguồn chuẩn: `docs-common/design/01. audit-traceability.md` §5.2/§5.3/§5.6/§8.2/§12; `design/04. security.md` §7.1/§7.2/§8.3/§9.1; `design/05. Modules contract.md` §3.2/§11.1/§12.2; `07. API contracts.md` §2.8/§4.4; `docs-backend/00. architecture & conventions.md` §9.4/§10.5/§10.6; DEC-ID-003; DEC-05/DEC-02 của `docs-backend/modules/common/report/BE-COM-IMP-05-verification.md`/`BE-COM-IMP-02-verification.md`.

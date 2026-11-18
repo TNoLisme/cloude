@@ -2,14 +2,14 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-TRANSFER-01`
-> **Phiên bản:** v1.6 — quyết định thiết kế, chờ review và kiểm chứng
-> **Ngày cập nhật:** 16/11/2026
-> **Trạng thái:** Draft — có candidate chưa nối runtime; chờ review và sign-off
+> **Phiên bản:** v1.7
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Đã triển khai candidate (`BE-TRF-01..07`) — chờ ghép tích hợp runtime
 > **Owner:** Vũ
 > **Reviewer:** Backend Lead, chủ module phụ thuộc, QA, Security — chờ review
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] §4.4; [[digitalbanking-docs/docs-common/06. System architecture.md]] §6–§8; [[digitalbanking-docs/docs-common/07. API contracts.md]] §4–§6, §7.2, §8.3; [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] §5–§10; [[digitalbanking-docs/docs-common/09. Test plan.md]] §7; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.
 
-Tài liệu này là kế hoạch thiết kế, không phải bằng chứng runtime. Thứ tự nguồn là `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; `07` quyết định ngữ nghĩa API, OpenAPI là hợp đồng máy đọc cần đồng bộ. Không tự phân xử khi các nguồn `01–11` mâu thuẫn; đề xuất và thiết kế chuyên sâu chưa được phê duyệt vẫn giữ nhãn đó. [Checklist](tasks/README.md) là nguồn theo dõi task; kiểm tra lại code và quyết định trước mỗi task.
+Thứ tự nguồn chuẩn là `docs-common/01–11` → `docs-common/design/` → `docs-backend/`; `07` quyết định ngữ nghĩa API, OpenAPI là hợp đồng máy đọc cần đồng bộ. [Checklist](tasks/README.md) là nguồn theo dõi tiến độ các task của module.
 
 ## 1. Phạm vi & Truy vết Yêu cầu
 
@@ -58,7 +58,7 @@ Common đã có `JcsCanonicalizer`, `HmacService` (bao gồm SHA), masking, `Clo
 
 ### 1.4. Quyết định và kiểm chứng còn thiếu
 
-[DEC-TRF-001–012](../../../../DECISIONS.md) là quyết định theo chỉ đạo người điều hành, không phải xác nhận provider/QA/Security đã review hay runtime đã hoạt động.
+Các quyết định thiết kế của module Transfer được ghi nhận tại [DEC-TRF-001–019](../../../../DECISIONS.md); bảng dưới đây tổng hợp các hạng mục cần kiểm chứng tích hợp khi ghép các provider thật:
 
 | Phạm vi | Quyết định thiết kế | Evidence/review còn thiếu |
 |---|---|---|
@@ -208,10 +208,11 @@ Release gate: `./gradlew check`, ArchUnit, migration sạch và upgrade, contrac
 
 | Version | Ngày | Người cập nhật | Mô tả |
 |---|---|---|---|
-| 1.6 draft | 16/11/2026 | Qoder | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3, port consumer `05` §13.4) theo DEC-TRF-016; cập nhật hiện trạng parser 10 test và check 338/135 Transfer; chưa kích hoạt production, provider thật/review vẫn Blocked. |
-| 1.5 draft | 16/11/2026 | Codex | Đồng bộ preflight, T2/recovery candidate, evidence synthetic và các giới hạn bảo mật. |
-| 1.4 draft | 16/11/2026 | Codex | Cập nhật hiện trạng primitive độc lập, T1/T2 candidate và metadata TTL/fencing theo DEC-TRF-013; chưa xác nhận money path hoặc tích hợp provider. |
-| 1.3 draft | 16/11/2026 | Codex | Chốt thiết kế key/quota, scope đọc, version boundary và lifecycle OTP; implementation, integration, security/owner review vẫn chờ evidence. |
-| 1.2 draft | 16/11/2026 | Codex | Đồng bộ DEC-TRF-003–008, guard customer, fencing, retry/TTL/recovery và audit; chưa có bằng chứng integration hay owner review. |
-| 1.1 draft | 15/11/2026 | Codex | Làm rõ khác biệt `03`/`07` và `04`/`07`, bổ sung oracle theo thời điểm và phương án recovery cần owner review; không thay quyết định hay trạng thái phê duyệt. |
-| 1.0 | 15/11/2026 | Codex | Thiết kế và truy vết Transfer theo nguồn dự án; ghi các sai lệch và cổng quyết định chưa chốt. |
+| 1.7 | 18/11/2026 | Backend Team | Đồng bộ hiện trạng candidate `BE-TRF-01..07` với `README.md` và `tasks/README.md`, chuẩn hóa metadata và dọn các ghi chú quá trình. |
+| 1.6 draft | 16/11/2026 | Vũ (`transfer`) | Ghi boundary HTTP candidate BE-TRF-03 (controller/DTO/query/service/C3, port consumer `05` §13.4) theo DEC-TRF-016; cập nhật hiện trạng parser 10 test và check 338/135 Transfer; chưa kích hoạt production, provider thật/review vẫn Blocked. |
+| 1.5 draft | 16/11/2026 | Vũ (`transfer`) | Đồng bộ preflight, T2/recovery candidate, evidence synthetic và các giới hạn bảo mật. |
+| 1.4 draft | 16/11/2026 | Vũ (`transfer`) | Cập nhật hiện trạng primitive độc lập, T1/T2 candidate và metadata TTL/fencing theo DEC-TRF-013; chưa xác nhận money path hoặc tích hợp provider. |
+| 1.3 draft | 16/11/2026 | Vũ (`transfer`) | Chốt thiết kế key/quota, scope đọc, version boundary và lifecycle OTP; implementation, integration, security/owner review vẫn chờ evidence. |
+| 1.2 draft | 16/11/2026 | Vũ (`transfer`) | Đồng bộ DEC-TRF-003–008, guard customer, fencing, retry/TTL/recovery và audit; chưa có bằng chứng integration hay owner review. |
+| 1.1 draft | 15/11/2026 | Vũ (`transfer`) | Làm rõ khác biệt `03`/`07` và `04`/`07`, bổ sung oracle theo thời điểm và phương án recovery cần owner review; không thay quyết định hay trạng thái phê duyệt. |
+| 1.0 | 15/11/2026 | Vũ (`transfer`) | Thiết kế và truy vết Transfer theo nguồn dự án; ghi các sai lệch và cổng quyết định chưa chốt. |

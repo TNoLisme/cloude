@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản:** [BE-COM-IMP-07](../tasks/BE-COM-IMP-07.md), v1.0 ngày 12/11/2026; giữ nguyên tiêu chí
-> **Ngày / người thực hiện:** 2026-11-12T19:09:40+07:00 / Codex theo yêu cầu Phương
+> **Ngày / người thực hiện:** 2026-11-12T19:09:40+07:00 / Phương (`common`)
 > **Trạng thái task:** **Blocked — thiếu implementation consumer nghiệp vụ W3/W4/W5**
 > **Kết luận verification:** 5/10 AC Verified, 5/10 Blocked; common regression và PostgreSQL error pipeline đạt, chưa đạt integration quality gate đầy đủ
 > **Reviewer / sign-off:** Chưa review

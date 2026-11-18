@@ -18,7 +18,7 @@ Rà soát working tree 17/11: provider posting `banking.ledger` đã triển kha
 
 | Provider → consumer | Hợp đồng và trách nhiệm | Tình trạng / kiểm chứng |
 |---|---|---|
-| Ledger → Transfer | `postDoubleEntry(transferId, sourceId, destinationId, amount, currency, sourceBalanceAfter, destinationBalanceAfter, correlationId)` → hai entry ID; JOIN T2, fail fast nếu thiếu transaction; không commit riêng. `findEvidence(transferId)` trả từng entry, phân biệt vắng/thiếu/lệch/lỗi. | Baseline v1 §9/§13.4; chưa có provider thật. |
+| Ledger → Transfer | `postDoubleEntry(transferId, sourceId, destinationId, amount, currency, sourceBalanceAfter, destinationBalanceAfter, correlationId)` → hai entry ID; JOIN T2, fail fast nếu thiếu transaction; không commit riêng. `findEvidence(transferId)` trả từng entry, phân biệt vắng/thiếu/lệch/lỗi. | `postDoubleEntry` đã triển khai candidate tại `banking.ledger` ([BE-LED-03](tasks/BE-LED-03.md), `DEC-LED-005`, 103 tests `LED-POST-01..14`); `findEvidence` chờ BE-LED-06. |
 | Account → Transfer/read composition | Resolve/ownership/masked view; lock account tăng dần, debit có điều kiện, credit và trả `ledgerBalanceAfter` trong T2. | Account owner; kiểm lại dưới lock; không đọc repository private. |
 | Transfer → read composition | Intent/status/reference/description và source/destination cho history, kể cả PENDING/FAILED; nhận scope server-side. | Baseline §12.3 và DEC-LED-002; scope/projection provider và wiring chờ review. |
 | Account → reconciliation | Opening balance bất biến có provenance và số dư materialized trong snapshot primary. | Job đối soát Ledger dùng dependency đề xuất tại `05` §9 (DEC-LED-003); dùng fake test-only đến khi provider sẵn sàng. |
