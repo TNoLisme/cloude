@@ -31,11 +31,34 @@ class FlywayMigrationTest {
                     "user_privilege"}) {
                 assertThat(sql).contains("CREATE TABLE banking." + table + " (");
             }
-            // Bảng customer thuộc module customer (V3), không nằm trong V2.
+            // Bảng customer thuộc module customer (V5), không nằm trong V2.
             assertThat(sql).doesNotContain("CREATE TABLE banking.customer");
             // Partial unique: một challenge step-up active cho mỗi (idempotency_key, request_hash).
             assertThat(sql).contains("uq_auth_challenge_active_stepup");
             assertThat(sql).contains("WHERE purpose = 'TRANSFER_STEP_UP'");
+        }
+    }
+
+    @Test
+    void accountMigrationDeclaresCanonicalAccountTable() throws IOException {
+        try (var stream = getClass().getClassLoader()
+                .getResourceAsStream("db/migration/V8__create_account_table.sql")) {
+            assertThat(stream).isNotNull();
+            var sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(sql).contains("CREATE TABLE banking.account (");
+            assertThat(sql).contains("account_id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY");
+            assertThat(sql).contains("fk_account_customer");
+            assertThat(sql).contains("REFERENCES banking.customer (customer_id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            assertThat(sql).contains("uq_account_no_hash");
+            assertThat(sql).contains("ck_account_status");
+            assertThat(sql).contains("ck_account_currency");
+            assertThat(sql).contains("ck_account_balance_within_ledger");
+            assertThat(sql).contains("ck_account_closed_at_required");
+            assertThat(sql).contains("ix_account_customer");
+            assertThat(sql).contains("ix_account_status");
+            // No cascading delete of financial records; ACC-DR-03/07 column omissions are asserted
+            // against real PostgreSQL metadata in AccountV8MigrationPostgreSqlIntegrationTest.
+            assertThat(sql).doesNotContain("CASCADE");
         }
     }
 

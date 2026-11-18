@@ -88,6 +88,25 @@ class CustomerPiiServiceTest {
     }
 
     @Test
+    void unauthorizedProfileUpdateIsRejectedBeforeDecryptAndLeavesEveryFieldUnchanged() {
+        OwnerCustomerPiiView created = service.create(
+                101, "Owner Name", "0900000123", "owner@example.com", CustomerStatus.ACTIVE);
+        CustomerProfileStore.StoredCustomer before = store.rows.get(created.getCustomerId());
+        protection.decryptCalls = 0;
+
+        assertThatThrownBy(() -> service.replaceFullNameForOwner(created.getCustomerId(), 202, "Foreign Update"))
+                .isInstanceOfSatisfying(BankingBusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo(ErrorCode.AUTH_FORBIDDEN));
+
+        CustomerProfileStore.StoredCustomer after = store.rows.get(created.getCustomerId());
+        assertThat(protection.decryptCalls).isZero();
+        assertThat(after.fullNameEncrypted()).containsExactly(before.fullNameEncrypted());
+        assertThat(after.phoneEncrypted()).containsExactly(before.phoneEncrypted());
+        assertThat(after.emailEncrypted()).containsExactly(before.emailEncrypted());
+        assertThat(after.updatedAt()).isEqualTo(before.updatedAt());
+    }
+
+    @Test
     void corruptedCiphertextFailsClosedWithoutProviderOrPiiDetails() {
         OwnerCustomerPiiView created = service.create(
                 101, "Protected Name", "0900000123", "safe@example.com", CustomerStatus.ACTIVE);
@@ -153,6 +172,11 @@ class CustomerPiiServiceTest {
             public String maskEmail(String email) {
                 return protection.maskEmail(email);
             }
+
+            @Override
+            public String maskFullName(String fullName) {
+                return protection.maskFullName(fullName);
+            }
         };
 
         CustomerPiiService failingService = new CustomerPiiService(store, failing);
@@ -209,6 +233,11 @@ class CustomerPiiServiceTest {
         @Override
         public String maskEmail(String email) {
             return delegate.maskEmail(email);
+        }
+
+        @Override
+        public String maskFullName(String fullName) {
+            return delegate.maskFullName(fullName);
         }
     }
 

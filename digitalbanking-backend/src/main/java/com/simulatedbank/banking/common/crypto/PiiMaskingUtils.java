@@ -44,6 +44,31 @@ public final class PiiMaskingUtils {
         return email.substring(0, 1) + "***" + email.substring(email.indexOf('@'));
     }
 
+    /**
+     * Staff-facing {@code fullName} masking (BE-CUS-IMP-06; DEC-CUS-005 — oracle CUS-OI-02 vẫn
+     * chờ owner sign-off, đây là quy tắc bảo thủ tạm thời): mỗi token (phân tách bằng khoảng
+     * trắng, đã chuẩn hóa) chỉ giữ ký tự đầu nếu token dài từ 2 ký tự, các ký tự còn lại thay
+     * bằng `***`; token một ký tự bị che toàn bộ. Ví dụ `"Nguyễn Văn An"` → `"N*** V*** A***"`.
+     * Không bao giờ trả nguyên văn hay một phần tên dài hơn quy tắc trên.
+     */
+    public static String maskFullName(String fullName) {
+        if (fullName == null) {
+            return null;
+        }
+        String[] tokens = fullName.trim().split("\\s+");
+        if (tokens.length == 1 && tokens[0].isEmpty()) {
+            throw invalid();
+        }
+        StringBuilder masked = new StringBuilder();
+        for (String token : tokens) {
+            if (masked.length() > 0) {
+                masked.append(' ');
+            }
+            masked.append(token.length() >= 2 ? token.charAt(0) + "***" : "***");
+        }
+        return masked.toString();
+    }
+
     public static String maskIp(String ip) {
         if (ip == null) {
             return null;

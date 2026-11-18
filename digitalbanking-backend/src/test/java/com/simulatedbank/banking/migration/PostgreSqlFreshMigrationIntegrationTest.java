@@ -40,12 +40,30 @@ class PostgreSqlFreshMigrationIntegrationTest {
         var flyway = PostgreSqlIntegrationTestSupport.flyway(postgres);
         var first = flyway.migrate();
 
-        assertThat(first.migrationsExecuted).isEqualTo(7);
+        assertThat(first.migrationsExecuted).isEqualTo(8);
         try (Connection connection = connection()) {
             assertThat(queryStrings(connection,
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
-                    .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+            assertThat(queryStrings(connection,
+                    "SELECT table_name FROM information_schema.tables "
+                            + "WHERE table_schema = 'banking' AND table_name = 'account'"))
+                    .containsExactly("account");
+            assertThat(queryStrings(connection,
+                    "SELECT conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
+                            + "WHERE n.nspname = 'banking' AND c.conrelid = 'banking.account'::regclass "
+                            + "ORDER BY conname"))
+                    .contains("account_pkey", "fk_account_customer", "uq_account_no_hash",
+                            "ck_account_status", "ck_account_currency",
+                            "ck_account_available_balance_non_negative",
+                            "ck_account_ledger_balance_non_negative",
+                            "ck_account_balance_within_ledger", "ck_account_closed_at_required");
+            assertThat(queryStrings(connection,
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'banking' "
+                            + "AND tablename = 'account' ORDER BY indexname"))
+                    .containsExactly("account_pkey", "ix_account_customer", "ix_account_status",
+                            "uq_account_no_hash");
             assertThat(queryStrings(connection,
                     "SELECT table_name FROM information_schema.tables "
                             + "WHERE table_schema = 'banking' AND table_name = 'approval_request'"))

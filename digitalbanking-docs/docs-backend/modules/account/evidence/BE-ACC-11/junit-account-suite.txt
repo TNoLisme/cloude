@@ -1,0 +1,22 @@
+BE-ACC-11 / BE-ACC-12 — JUnit summary (Account module)
+Generated: 2026-11-18T02:18:55Z
+Source revision: 07188e9c25ced5db5f934d2b75a771df299c9b0b + working tree, branch datht-backend-rework
+Command: ./gradlew test --tests 'com.simulatedbank.banking.account.*' --console=plain
+Result: BUILD SUCCESSFUL in 1m 8s (fresh isolated copy; compile included)
+
+TEST CLASS                                                                     TESTS  FAIL ERROR  SKIP
+adapter.in.AccountControllerPostgreSqlIntegrationTest                             19     0     0     0
+adapter.in.AdminCustomerAccountsControllerPostgreSqlIntegrationTest               11     0     0     0
+adapter.out.AccountPersistencePostgreSqlIntegrationTest                            5     0     0     0
+adapter.out.AccountSecurityLogAuditAdapterTest                                     3     0     0     0
+adapter.out.CommonAccountNumberProtectionAdapterTest                               7     0     0     0
+api.AccountApiContractTest                                                         6     0     0     0
+application.AccountAccessServiceTest                                              12     0     0     0
+application.AccountBalancePostgreSqlIntegrationTest                               14     0     0     0
+application.AccountBalanceServiceTest                                             10     0     0     0
+application.AccountConcurrencyPostgreSqlIntegrationTest                            6     0     0     0
+application.AccountLockPostgreSqlIntegrationTest                                  11     0     0     0
+application.AccountQueryServiceTest                                               14     0     0     0
+application.AccountReadPostgreSqlIntegrationTest                                  10     0     0     0
+
+TOTAL: 13 classes / 128 tests / 0 failures / 0 errors / 0 skipped

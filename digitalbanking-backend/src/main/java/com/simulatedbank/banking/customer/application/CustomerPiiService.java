@@ -50,6 +50,31 @@ public class CustomerPiiService {
         return view(stored, pii.fullName(), pii.phoneMasked(), pii.emailMasked());
     }
 
+    /**
+     * Staff projection của `API-ADM-01` (BE-CUS-IMP-06): decrypt trong scope Customer rồi mask
+     * TẤT CẢ PII (fullName theo DEC-CUS-005/CUS-OI-02; phone/email như owner). Không kiểm
+     * ownership theo {@code actorUserId} — caller ({@code StaffCustomerDetailService}) chịu trách
+     * nhiệm xác thực staff permission/scope trước khi gọi. Row `INACTIVE` vẫn trả hồ sơ kèm
+     * status (07 §8.2.4; eligibility CUS-OI-06 chưa được duyệt, không tự thêm điều kiện).
+     */
+    @Transactional(readOnly = true)
+    public StaffCustomerPiiView getForStaff(long customerId) {
+        requirePositive(customerId);
+        CustomerProfileStore.StoredCustomer stored = store.findById(customerId)
+                .orElseThrow(() -> new BankingBusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
+        DecryptedPii pii = decrypt(stored);
+        String fullNameMasked;
+        try {
+            fullNameMasked = protection.maskFullName(pii.fullName());
+        } catch (RuntimeException failure) {
+            // Fail-closed: masking sai phải chặn response, không bao giờ trả tên nguyên văn.
+            throw cryptoFailure();
+        }
+        return new StaffCustomerPiiView(stored.customerId(), stored.userId(), fullNameMasked,
+                pii.phoneMasked(), pii.emailMasked(), stored.status(), stored.createdAt(),
+                stored.updatedAt());
+    }
+
     @Transactional
     public OwnerCustomerPiiView replaceFullNameForOwner(long customerId, long actorUserId, String fullName) {
         requireFullName(fullName);

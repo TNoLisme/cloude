@@ -1,0 +1,111 @@
+package com.simulatedbank.banking.account.adapter.in;
+
+import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.account.application.AccountAccessService;
+import com.simulatedbank.banking.common.config.SessionAuthenticator;
+import com.simulatedbank.banking.common.error.BankingBusinessException;
+import com.simulatedbank.banking.common.error.ErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Set;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * `API-ACC-01` `GET /api/v1/accounts` và `API-ACC-02` `GET /api/v1/accounts/{accountId}`
+ * (`07` §8.2.2–8.2.3, OpenAPI `/accounts`, `/accounts/{accountId}`) — BE-ACC-05.
+ *
+ * <p>Bảo mật: authentication (401 khi thiếu/invalid/expired) và coarse authorization
+ * ({@code ACCOUNT_READ_SELF} cho list; {@code ACCOUNT_READ_SELF} hoặc {@code ACCOUNT_READ} cho
+ * detail) do security chain dùng chung thực thi trước handler
+ * ({@code common.config.SecurityFilterChainConfig}); controller fail-closed khi snapshot phiên
+ * vắng mặt, không decode token, không nhận {@code userId}/{@code customerId} từ query/body
+ * (anti-IDOR theo cấu trúc). Data scope của staff (ACC-DR-13) và durable C3 (ACC-DR-15) vẫn
+ * BLOCKED — xem BE-ACC-05 §G.</p>
+ *
+ * <p>Scope detail được chọn từ authority server-side của principal, không từ tham số client:
+ * có {@code ACCOUNT_READ_SELF} → owner scope (mismatch → 403 + C3); ngược lại có
+ * {@code ACCOUNT_READ} → staff read scope sau permission gate của chain. Staff read không kiểm
+ * ownership cá nhân đúng như {@link AccountQuery.AccountViewQuery#forStaff} đã chốt ở BE-ACC-04;
+ * Account không tự chế điều kiện chi nhánh/segment khi chưa có hợp đồng.</p>
+ *
+ * <p>GET là read thuần: không tạo/đổi row, không audit read thường, không cần idempotency.
+ * {@code Cache-Control: no-store} (ApiSecurityHeadersFilter + response) và
+ * {@code X-Correlation-ID} do trung gian dùng chung bảo đảm.</p>
+ */
+@RestController
+@ConditionalOnProperty(name = "app.account.enabled", havingValue = "true", matchIfMissing = true)
+@RequestMapping("/api/v1/accounts")
+public class AccountController {
+
+    static final String OWNER_READ = "ACCOUNT_READ_SELF";
+    static final String STAFF_READ = "ACCOUNT_READ";
+
+    private final AccountAccessService accounts;
+
+    public AccountController(AccountAccessService accounts) {
+        this.accounts = accounts;
+    }
+
+    /** `API-ACC-01`: chỉ tài khoản thuộc customer của principal; filter status tùy chọn. */
+    @GetMapping
+    public ResponseEntity<AccountsResponse> list(@RequestParam(name = "status", required = false) String status,
+            HttpServletRequest servlet) {
+        SessionAuthenticator.Session principal = AccountHttpSupport.principal(servlet);
+        AccountAccessService.AccountList owned = accounts.listOwnAccounts(
+                Long.parseLong(principal.userId()), AccountHttpSupport.status(status),
+                AccountHttpSupport.correlationId(servlet));
+        List<AccountSummaryResponse> items = owned.items().stream()
+                .map(AccountHttpSupport::toSummary)
+                .toList();
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new AccountsResponse(items, owned.asOf()));
+    }
+
+    /**
+     * `API-ACC-02`: owner scope hoặc staff scope đã qua permission gate của security chain.
+     * `accountId` sai định dạng → 400 trước persistence; vắng → 404; khác chủ → 403 + C3.
+     */
+    @GetMapping("/{accountId}")
+    public ResponseEntity<AccountDetailResponse> detail(@PathVariable String accountId,
+            HttpServletRequest servlet) {
+        long accountKey = AccountHttpSupport.parseId(accountId);
+        SessionAuthenticator.Session principal = AccountHttpSupport.principal(servlet);
+        String correlation = AccountHttpSupport.correlationId(servlet);
+        Set<String> authorities = principal.authorities();
+        AccountQuery.AccountView view;
+        if (authorities.contains(OWNER_READ)) {
+            view = accounts.getOwnAccount(Long.parseLong(principal.userId()), accountKey, correlation);
+        } else if (authorities.contains(STAFF_READ)) {
+            view = accounts.getAccountForStaff(accountKey, correlation);
+        } else {
+            // Defense-in-depth: chain đã chặn trước handler; không bao giờ suy scope từ client.
+            throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+        }
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(toDetail(view));
+    }
+
+    private static AccountDetailResponse toDetail(AccountQuery.AccountView view) {
+        return new AccountDetailResponse(
+                Long.toString(view.accountId()),
+                view.accountNumberMasked(),
+                view.accountNumberLast4(),
+                view.currency(),
+                view.status().name(),
+                AccountHttpSupport.money(view.availableBalance()),
+                AccountHttpSupport.money(view.ledgerBalance()),
+                view.asOf(),
+                new AccountDetailResponse.Owner(Long.toString(view.customerId()), view.status().name()),
+                view.createdAt(),
+                view.updatedAt());
+    }
+}

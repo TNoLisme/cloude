@@ -35,6 +35,11 @@ public class CommonCustomerPiiProtectionAdapter implements CustomerPiiProtection
     }
 
     @Override
+    public String maskFullName(String fullName) {
+        return PiiMaskingUtils.maskFullName(fullName);
+    }
+
+    @Override
     public String toString() {
         return "CommonCustomerPiiProtectionAdapter[redacted]";
     }

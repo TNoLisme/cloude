@@ -193,6 +193,28 @@ class CustomerPiiPostgreSqlIntegrationTest {
     }
 
     @Test
+    void duplicateUserCreationIsRejectedWithoutReplacingExistingEncryptedProfile() {
+        long userId = seedUser("duplicate-create");
+        OwnerCustomerPiiView existing = service.create(
+                userId, "Original Name", "0900000123", "original@example.com", CustomerStatus.ACTIVE);
+        Map<String, byte[]> before = encryptedColumns(existing.getCustomerId());
+
+        assertThatThrownBy(() -> service.create(
+                userId, "Replacement Name", "0900000999", "replacement@example.com", CustomerStatus.INACTIVE))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM banking.customer WHERE user_id = ?", Long.class, userId)).isEqualTo(1L);
+        Map<String, byte[]> after = encryptedColumns(existing.getCustomerId());
+        assertThat(after.get("full_name_enc")).containsExactly(before.get("full_name_enc"));
+        assertThat(after.get("phone_enc")).containsExactly(before.get("phone_enc"));
+        assertThat(after.get("email_enc")).containsExactly(before.get("email_enc"));
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM banking.customer WHERE customer_id = ?", String.class, existing.getCustomerId()))
+                .isEqualTo("ACTIVE");
+    }
+
+    @Test
     @DisplayName("BE-CUS-IMP-08 database: FK failure rolls back the encrypted Customer create atomically")
     void foreignKeyFailureRollsBackEncryptedCustomerCreation() {
         long rowsBefore = jdbc.queryForObject("SELECT count(*) FROM banking.customer", Long.class);

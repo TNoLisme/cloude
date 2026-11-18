@@ -24,6 +24,26 @@ class PiiMaskingUtilsTest {
     }
 
     @Test
+    void staffFullNameMaskingKeepsOnlyFirstCharacterPerToken() {
+        // DEC-CUS-005 (BE-CUS-IMP-06): chỉ giữ ký tự đầu mỗi token, còn lại `***`.
+        assertThat(PiiMaskingUtils.maskFullName("Nguyễn Văn An")).isEqualTo("N*** V*** A***");
+        assertThat(PiiMaskingUtils.maskFullName("Trần  Thị   B")).isEqualTo("T*** T*** ***");
+        // Token hai ký tự vẫn giữ ký tự đầu (`A***`); token MỘT ký tự (`C`) che toàn bộ.
+        assertThat(PiiMaskingUtils.maskFullName("An Binh C")).isEqualTo("A*** B*** ***");
+        // Chuẩn hóa khoảng trắng: không trả về khoảng trắng thừa hay ký tự điều khiển.
+        assertThat(PiiMaskingUtils.maskFullName("  Le\tVan\nTeo ")).isEqualTo("L*** V*** T***");
+    }
+
+    @Test
+    void staffFullNameMaskingStaysNullSafeAndFailsClosedOnBlank() {
+        assertThat(PiiMaskingUtils.maskFullName(null)).isNull();
+        assertThatThrownBy(() -> PiiMaskingUtils.maskFullName("")).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid masking input");
+        assertThatThrownBy(() -> PiiMaskingUtils.maskFullName("   ")).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid masking input");
+    }
+
+    @Test
     void missingValuesStayAbsent() {
         assertThat(PiiMaskingUtils.maskAccountLast4(null)).isNull();
         assertThat(PiiMaskingUtils.maskNationalIdLast4(null)).isNull();
