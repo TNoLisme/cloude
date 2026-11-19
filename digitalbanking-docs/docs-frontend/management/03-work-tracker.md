@@ -38,11 +38,14 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 | FE-01-01-LOGIN-UI | Bố cục login theo ảnh người dùng, BrandDB/Digital Banking, không CAPTCHA/hotline | FE | Yêu cầu sửa UI trong chat18/11; không đổi contract | Chờ review bố cục UI | 6 gates/151 tests đạt; browser1440/768/360 và login/reload/logout mock có kết quả. Không thay nghiệm thu parent. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]] |
 | FE-01-01-SCENARIOS | Kịch bản auth v2 FE/mock đã trình bày | FE | Contract v2 FE/mock và chốt người phụ trách FE | Đã chốt kịch bản | User chốt các kịch bản hiện tại ngày18/11; không suy ra duyệt bố cục/toàn bộ mock hay tích hợp. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/run-04.md]] |
 | FE-01-02 | Trusted-device passcode/FIDO và fallback | FE + BE | FE-01-01, GAP-04 | Bị chặn | Chờ enrollment/provider và test runtime WebAuthn |
-| FE-02-01 | Profile, account list/detail, ownership | FE | FE-01-01, FE-FND-03 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-02-customer-and-accounts.md]] |
+| FE-02-01 | Profile, account list/detail, ownership | FE | FE-01-01, FE-FND-03 | Đang làm | Preview customer riêng đã nối, API thật/FE-FND-03 và FET đầy đủ còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/result.md]] |
+| FE-02-01-MOCK | Preview riêng customer self: hồ sơ/list/detail theo v2 FE/mock | FE | Chốt FE18/11; mock v2 đã duyệt | Chờ review UI/mock | Browser subset, tests và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]]; không coi là duyệt task cha/API thật. |
 | FE-03-01 | Form/review/create transfer và 428 step-up | FE + BE | FE-02-01, FE-FND-02, GAP-02, GAP-08 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-03-transfers.md]] |
 | FE-03-02 | Same-key retry, pending/timeout/reload và receipt | FE + QA | FE-03-01, GAP-09 | Chưa bắt đầu | Cần browser + backend invariant evidence |
 | FE-04-01 | History filter/page/detail theo reference | FE | FE-02-01, FE-FND-02 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-04-transaction-history.md]] |
+| FE-04-01-MOCK | CUSTOMER history list/filter/page/detail v2 mock | FE | Contract v2 FE/mock, customer session preview; sort whitelist BE mở | Demo mock sẵn xem — UI chưa chốt | [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]] |
 | FE-05-01 | Hạn mức customer và form limit maker | FE + BE | FE-FND-02, FE-01-01, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-05-limits-and-approvals.md]] |
+| FE-05-01-MOCK | CUSTOMER xem hạn mức qua getLimits v2 mock | FE | Contract v2 FE/mock; maker/checker GAP-07/08 ngoài phạm vi | Đang làm — code/mock đạt, browser chưa kiểm được | [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-b9ba604/run-01.md]] |
 | FE-05-02 | Approval list/detail và approve/reject dùng chung | FE + BE | FE-05-01, GAP-08 | Chưa bắt đầu | FE-08 tái dùng cơ chế này |
 | FE-06-01 | Staff đọc customer/account và liên kết history | FE + BE | FE-FND-02, GAP-03 | Chưa bắt đầu | Theo ID trước, search cần hợp đồng |
 | FE-06-02 | Fraud list, review và trạng thái cuối | FE + BE | FE-06-01, GAP-11 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-06-operations-and-fraud.md]] |
@@ -204,3 +207,22 @@ Mở rộng thông tin dev2 cùng ngày: handoff mục 3.1 tổng hợp DEC-TRF-
 Theo yêu cầu thực hiện task và giao tài liệu kết quả chi tiết: đã bổ sung shared JSON client và memory session với mock v2 theo ADR-002/07a đã duyệt. 6 gate local đạt, 12 files/119 tests (47 mới), inputs YAML/mock không drift; không sửa preview legacy. Controller/guards/signal đa tab và cleanup callback chờ review task con; UI wiring/verify flow và API/browser tiếp tục theo FE-01-01, task cha/GAP không tự đóng. Không áp semantics Transfer dev2, không tự chọn budget retry/poll hoặc mapping quyền. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]].
 
 Ngày18/11/2026, theo yêu cầu trình duyệt UI mock FE-01-01: đã khởi động Vite mock port5174, gửi mở panel (queued) và hướng dẫn review. Chưa có xác nhận duyệt UI; giữ task/integration/browser verification mở. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/run-02.md]].
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].
+
+
+### Run-04 ngày 18/11/2026 — trang chủ customer theo ảnh tham khảo
+
+Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùng topbar thương hiệu/lời chào, sidebar trắng với icon và vùng active kiểu ảnh tham khảo. Menu chỉ có Trang chủ, Thông tin tài khoản và Hồ sơ của tôi, là các màn v2 đã nối trong FE-02-01. Nội dung chính hiển thị masked account, số dư khả dụng/asOf và thông tin tài khoản đọc từ GET /accounts; không dựng lãi suất, thẻ, vay, hóa đơn, khuyến mãi hoặc số liệu tổng hợp không có nguồn. Transfer/history có contract nhưng UI v2 thuộc task khác nên chưa mở menu ở đây. Dashboard tiếp tục không có nhãn trạng thái; màn chi tiết vẫn hiển thị status. Browser mock đã xem tại `/customer?authPreview=v2`; ảnh và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-04.md]]. Chờ review UI, không khẳng định API thật.
+
+
+### FE-FND-03-ICONS — ngày 18/11/2026
+
+Task con FE-FND-03 theo yêu cầu iconography trong chat. Đã dựng SVG ba nhóm, catalog và component tái sử dụng; typecheck/lint đạt. Người phụ trách FE chốt áp dụng customer mock hiện tại trong chat; đã thay icon menu/account/empty và có audit screenshot trước/sau. Trạng thái Chờ review UI/mock; Không đổi logic/route/API hoặc đóng FE-FND-03. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-03-ICONS/2026-11-18-b9ba604/run-01.md]].
+
+## Thứ tự demo UI được chốt ngày 18/11/2026
+
+Người phụ trách FE muốn hoàn thành các task có UI demo trước khi thiết kế lại và duyệt UI cuối. FE-01/02 và FE-FND-03-ICONS hiện giữ trạng thái demo đang chỉnh, chưa phải UI/mock được duyệt. Có thể mở FE-04-01-MOCK phạm vi CUSTOMER read-only theo contract v2 FE/mock; trước khi làm phải lập phiếu riêng và rà filter/response theo nguồn. FE-03-01/02 vẫn giữ phần phụ thuộc GAP-02/08/09 và xác nhận contract/version giao FE. Không tự tích hợp BE hoặc merge từ mốc demo. [[digitalbanking-docs/docs-frontend/evidence/FE-DOC-03/2026-11-18-b9ba604/run-03.md]].

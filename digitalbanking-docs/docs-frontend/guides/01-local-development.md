@@ -1,5 +1,13 @@
 # Chạy local, debug và giao ước build
 
+> FE-02-01 ngày18/11: đã có preview customer v2 riêng theo chốt user tại `/customer?customerPreview=v2`; mock fixture được seed cho preview và không chứng minh API thật. Xem chi tiết tại [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
+## FE-02-01 — Xem customer mock riêng
+
+Chạy `pnpm dev:mock --port 5174` từ digitalbanking-frontend rồi mở `http://127.0.0.1:5174/customer?customerPreview=v2`. Đây là viewer fixture riêng, không phải trang đích sau login: dùng sidebar/nút mobile chuyển tài khoản/hồ sơ, “Xem chi tiết tài khoản” mở detail và quay lại. Mở “Điều khiển bản xem thử” chọn dữ liệu mẫu/rỗng/tải chậm/lỗi dịch vụ; hai nút fixture403 (account3002 của customer khác) và404 (account9999) giúp xem lỗi. Chuyển về Dữ liệu mẫu để xem bình thường; link auth v2 dẫn bản login/session riêng.
+
+Fixture seed chỉ có customer tổng hợp, không dùng dữ liệu thật. Không cung cấp PIN/transfer/history, role staff hay backend session/security. Nếu mở trực tiếp detail, giữ query `customerPreview=v2`. Không tự suy diễn browser/mock là bằng chứng ownership server; xem result và phiếu chạy để biết các kiểm tra, giới hạn và lỗi còn theo dõi.
+
 
 | Thuộc tính | Giá trị |
 |---|---|
@@ -128,3 +136,18 @@ Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chu
 ### Xem bố cục mới theo ảnh18/11
 
 URL vẫn `/login?authPreview=v2`. Form mới dùng hình trái/logoDB và Digital Banking bên phải; mobile ẩn hình. Thanh chọn kịch bản/OTP fixture được thu gọn: mở “Điều khiển bản xem thử” ở góc dưới trái trước khi chọn scenario hoặc lấy mã sau resend. User/password/OTP thử và API version không đổi. Có browser smoke login/reload/logout và ảnh1440/768/360 tại [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]]; chưa phải full browser/security acceptance.
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].
+
+
+### Run-04 ngày 18/11/2026 — trang chủ customer theo ảnh tham khảo
+
+Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùng topbar thương hiệu/lời chào, sidebar trắng với icon và vùng active kiểu ảnh tham khảo. Menu chỉ có Trang chủ, Thông tin tài khoản và Hồ sơ của tôi, là các màn v2 đã nối trong FE-02-01. Nội dung chính hiển thị masked account, số dư khả dụng/asOf và thông tin tài khoản đọc từ GET /accounts; không dựng lãi suất, thẻ, vay, hóa đơn, khuyến mãi hoặc số liệu tổng hợp không có nguồn. Transfer/history có contract nhưng UI v2 thuộc task khác nên chưa mở menu ở đây. Dashboard tiếp tục không có nhãn trạng thái; màn chi tiết vẫn hiển thị status. Browser mock đã xem tại `/customer?authPreview=v2`; ảnh và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-04.md]]. Chờ review UI, không khẳng định API thật.
+
+
+## FE-04-01-MOCK — demo customer ngày 19/11/2026
+
+Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/11, đã dựng demo CUSTOMER đọc danh sách `/transactions` và chi tiết `/transactions/{reference}` theo v2 FE/mock: status/account/direction/from-to/min-max/page20, masked counterparty, Money string, loading/empty/error và 403/404. `sort` dùng mặc định server theo chốt trong chat ngày 18/11: “Dùng thứ tự mặc định, chờ BE (đề xuất)”; whitelist sort của endpoint vẫn cần BE xác nhận trước bộ chọn. Không triển khai staff scope, transfer mutation/recovery hoặc kết luận quyền BE từ fixture. UI demo còn sửa sau, không ghi duyệt UI. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].
