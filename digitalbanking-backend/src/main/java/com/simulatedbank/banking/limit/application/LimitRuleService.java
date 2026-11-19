@@ -33,7 +33,9 @@ public class LimitRuleService implements LimitRules {
     public java.util.Optional<com.simulatedbank.banking.limit.api.LimitConfiguration> current(long customerId, Long accountId, Instant asOf) {
         return repository.findScope(customerId, accountId).stream()
                 .filter(config -> config.customerId() == customerId
-                        && config.status() == com.simulatedbank.banking.limit.api.LimitConfiguration.Status.ACTIVE
+                        && (config.status() == com.simulatedbank.banking.limit.api.LimitConfiguration.Status.ACTIVE
+                            || (config.status() == com.simulatedbank.banking.limit.api.LimitConfiguration.Status.SUPERSEDED
+                                && config.effectiveTo() != null))
                         && !config.effectiveFrom().isAfter(asOf)
                         && (config.effectiveTo() == null || config.effectiveTo().isAfter(asOf)))
                 .findFirst();

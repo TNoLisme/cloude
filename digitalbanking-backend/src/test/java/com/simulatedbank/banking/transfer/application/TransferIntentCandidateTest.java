@@ -146,28 +146,16 @@ class TransferIntentCandidateTest {
     }
 
     @Test
-    void invalidTtlSnapshotIsRejectedBeforeAnyWrite() {
-        assertThatThrownBy(() -> command(CHALLENGE_REF, 86399, "ttl-v1")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> command(CHALLENGE_REF, 86400, " ")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> command(CHALLENGE_REF, 86400, "v".repeat(129))).isInstanceOf(IllegalArgumentException.class);
-        assertThat(ports.calls).isEmpty();
-    }
-
-    @Test
     void commandCannotPreSetTheChallengeForeignKey() {
         assertThatThrownBy(() -> new TransferIntentCandidate.Command(new TransferIdentity("R", 1, 2, 3, 4, 9L),
                 new TransferAmount(new BigDecimal("1.00"), "VND"), null, "correlation", "key", HASH,
-                86400, "ttl-v1", CHALLENGE_REF)).isInstanceOf(IllegalArgumentException.class);
+                CHALLENGE_REF)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static TransferIntentCandidate.Command command(UUID challengeRef) {
-        return command(challengeRef, 86400, "ttl-v1");
-    }
-
-    private static TransferIntentCandidate.Command command(UUID challengeRef, long ttlSeconds, String ttlVersion) {
         return new TransferIntentCandidate.Command(new TransferIdentity("R", 1, 2, 3, 4, null),
                 new TransferAmount(new BigDecimal("1.00"), "VND"), null, "correlation", "key", HASH,
-                ttlSeconds, ttlVersion, challengeRef);
+                challengeRef);
     }
 
     private static final class FakePorts implements TransferIntentCandidate.Ports {

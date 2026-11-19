@@ -1,5 +1,9 @@
 # customer
 
+Với POST Transfer và key mới, Customer INACTIVE nhận 403 trước preflight account. Request có key đã tồn tại đi theo phân loại idempotency. CustomerQuery tiếp tục cung cấp snapshot cho các consumer. [BE-INT-05](../../workofteam/integration%20modules/BE-INT-05.md)
+
+[BE-INT-03](../../workofteam/integration%20modules/BE-INT-03.md) xác minh Customer self và hồ sơ staff đã mask trên PostgreSQL. Staff exact-ID theo DEC-INT-008 cho single-bank MVP. Deny sau xác thực nối với Audit C3 theo DEC-INT-009.
+
 > Baseline thiết kế `dev2@56210cc` (16/11/2026); BE-CUS-IMP-01/02/03 đã có implementation và PostgreSQL evidence trên branch `datht-backend-rework`.
 
 - [Thiết kế chi tiết và phụ thuộc](design.md)

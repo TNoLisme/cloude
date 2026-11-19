@@ -22,7 +22,7 @@ public interface LimitConfigStore {
 
     /**
      * Locks the scope's ACTIVE row, if any, for the rest of the caller's transaction.
-     * Must be called after {@link #lockScope(long, Long)}.
+     * Must be called after {@link #lockCustomerScope(long)}.
      */
     Optional<LimitConfig> lockActive(long customerId, Long accountId);
 
@@ -30,21 +30,23 @@ public interface LimitConfigStore {
     Optional<LimitConfig> lockByApprovalId(long approvalId);
 
     /**
-     * Takes a PostgreSQL transaction-scoped advisory lock for the customer/account scope.
+     * Takes the shared PostgreSQL transaction-scoped advisory lock for the customer.
      * The lock serializes version capture between a reservation and a checker apply even when
      * the scope has no ACTIVE row to lock yet (first version), avoiding a unique-index race.
      * Different scopes may occasionally share a key; that only serializes unrelated work.
      */
-    void lockScope(long customerId, Long accountId);
+    void lockCustomerScope(long customerId);
+
+    Instant currentTime();
 
     /** Inserts the PENDING_APPROVAL row and returns its generated identifier. */
     long insertPending(LimitConfig pending);
 
     /** {@code ACTIVE -> SUPERSEDED}; returns {@code false} when the row was not ACTIVE. */
-    boolean supersede(long limitConfigId, Instant updatedAt);
+    boolean supersede(long limitConfigId, Instant effectiveTo, Instant updatedAt);
 
     /** {@code PENDING_APPROVAL -> ACTIVE}; returns {@code false} when the row was not pending. */
-    boolean activate(long limitConfigId, long approvedBy, Instant approvedAt);
+    boolean activate(long limitConfigId, Instant effectiveFrom, long approvedBy, Instant approvedAt);
 
     /** {@code PENDING_APPROVAL -> REJECTED}; returns {@code false} when the row was not pending. */
     boolean reject(long limitConfigId, Instant updatedAt);

@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.identity.application;
 
+import com.simulatedbank.banking.identity.api.StepUpChallengePort.VerifiedChallenge;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -55,6 +56,11 @@ public interface ChallengeRepository {
 
     /** Challenge step-up còn active theo (idempotency_key, request_hash) — partial unique. */
     Optional<ChallengeSnapshot> findActiveByIdempotencyKey(String idempotencyKey, String requestHash);
+
+    void expireTransferBindingIfDue(long userId, String key, String hash);
+
+    Optional<VerifiedChallenge> findVerifiedTransferBinding(
+            long userId, String key, String hash);
 
     /**
      * Expiry enforcement lazy: `status → EXPIRED` cho CREATED/SENT/VERIFIED-chưa-consume khi

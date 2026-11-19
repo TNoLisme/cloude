@@ -26,14 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
  * detail) do security chain dùng chung thực thi trước handler
  * ({@code common.config.SecurityFilterChainConfig}); controller fail-closed khi snapshot phiên
  * vắng mặt, không decode token, không nhận {@code userId}/{@code customerId} từ query/body
- * (anti-IDOR theo cấu trúc). Data scope của staff (ACC-DR-13) và durable C3 (ACC-DR-15) vẫn
- * BLOCKED — xem BE-ACC-05 §G.</p>
+ * (anti-IDOR theo cấu trúc). Phạm vi staff single-bank MVP và Audit C3 theo DEC-INT-008/009.</p>
  *
  * <p>Scope detail được chọn từ authority server-side của principal, không từ tham số client:
- * có {@code ACCOUNT_READ_SELF} → owner scope (mismatch → 403 + C3); ngược lại có
- * {@code ACCOUNT_READ} → staff read scope sau permission gate của chain. Staff read không kiểm
- * ownership cá nhân đúng như {@link AccountQuery.AccountViewQuery#forStaff} đã chốt ở BE-ACC-04;
- * Account không tự chế điều kiện chi nhánh/segment khi chưa có hợp đồng.</p>
+ * {@code ACCOUNT_READ} → service tái kiểm quyền và role staff.
+ * {@code ACCOUNT_READ_SELF} → owner scope (mismatch → 403 + C3).</p>
  *
  * <p>GET là read thuần: không tạo/đổi row, không audit read thường, không cần idempotency.
  * {@code Cache-Control: no-store} (ApiSecurityHeadersFilter + response) và
@@ -80,21 +77,22 @@ public class AccountController {
         SessionAuthenticator.Session principal = AccountHttpSupport.principal(servlet);
         String correlation = AccountHttpSupport.correlationId(servlet);
         Set<String> authorities = principal.authorities();
-        AccountQuery.AccountView view;
-        if (authorities.contains(OWNER_READ)) {
-            view = accounts.getOwnAccount(Long.parseLong(principal.userId()), accountKey, correlation);
-        } else if (authorities.contains(STAFF_READ)) {
-            view = accounts.getAccountForStaff(accountKey, correlation);
+        AccountAccessService.AccountDetail detail;
+        if (authorities.contains(STAFF_READ)) {
+            detail = accounts.getAccountForStaff(accountKey, principal, correlation);
+        } else if (authorities.contains(OWNER_READ)) {
+            detail = accounts.getOwnAccount(Long.parseLong(principal.userId()), accountKey, correlation);
         } else {
             // Defense-in-depth: chain đã chặn trước handler; không bao giờ suy scope từ client.
             throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
         }
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(toDetail(view));
+                .body(toDetail(detail));
     }
 
-    private static AccountDetailResponse toDetail(AccountQuery.AccountView view) {
+    private static AccountDetailResponse toDetail(AccountAccessService.AccountDetail detail) {
+        AccountQuery.AccountView view = detail.account();
         return new AccountDetailResponse(
                 Long.toString(view.accountId()),
                 view.accountNumberMasked(),
@@ -104,7 +102,7 @@ public class AccountController {
                 AccountHttpSupport.money(view.availableBalance()),
                 AccountHttpSupport.money(view.ledgerBalance()),
                 view.asOf(),
-                new AccountDetailResponse.Owner(Long.toString(view.customerId()), view.status().name()),
+                new AccountDetailResponse.Owner(Long.toString(view.customerId()), detail.ownerStatus().name()),
                 view.createdAt(),
                 view.updatedAt());
     }

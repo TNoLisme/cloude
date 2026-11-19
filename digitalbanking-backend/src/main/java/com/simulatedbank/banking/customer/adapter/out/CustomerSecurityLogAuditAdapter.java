@@ -1,16 +1,17 @@
 package com.simulatedbank.banking.customer.adapter.out;
 
 import com.simulatedbank.banking.customer.application.CustomerAuditPort;
+import com.simulatedbank.banking.common.config.ReadAccessDenied;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Adapter audit tạm thời cho đến khi module audit triển khai persistence `audit_log`
- * (design/01 §5.2/§6.1). Semantics khớp hợp đồng {@link CustomerAuditPort} và pattern đã duyệt
- * của identity ({@code SecurityLogAuditAdapter}, DEC-ID-003):
+ * Emits safe Customer read denials for Audit C3, with a local security log and metric
+ * (design/01 §5.2/§6.1, DEC-INT-009).
  *
  * <ul>
  *   <li>`SECURITY_ACCESS_DENIED` là C3 — best-effort: lỗi bị nuốt + fallback security log +
@@ -28,16 +29,22 @@ public class CustomerSecurityLogAuditAdapter implements CustomerAuditPort {
     private static final Logger LOG = LoggerFactory.getLogger("com.simulatedbank.banking.customer.AUDIT");
 
     private final MeterRegistry meterRegistry;
+    private final ApplicationEventPublisher events;
 
     @Autowired
-    public CustomerSecurityLogAuditAdapter(MeterRegistry meterRegistry) {
+    public CustomerSecurityLogAuditAdapter(MeterRegistry meterRegistry, ApplicationEventPublisher events) {
         this.meterRegistry = meterRegistry;
+        this.events = events;
     }
 
     @Override
     public void recordStandalone(CustomerAuditEvent event, String correlationId) {
         try {
             emit(event, correlationId);
+            if (event.actorUserId() != null) {
+                events.publishEvent(new ReadAccessDenied(event.actorUserId(), event.actorRoleCodes(),
+                        event.entityType(), event.entityId(), correlationId));
+            }
         } catch (RuntimeException failure) {
             counter("customer.audit.failures", event.action().name());
             LOG.atError()

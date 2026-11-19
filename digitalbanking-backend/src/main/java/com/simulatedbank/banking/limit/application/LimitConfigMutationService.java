@@ -8,7 +8,6 @@ import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
 import com.simulatedbank.banking.limit.domain.LimitConfig;
 import com.simulatedbank.banking.limit.domain.LimitConfigStatus;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * locks the ACTIVE row and requires exactly that version. Any mismatch is
  * {@code ROLE_CONFLICT} (409); the shared error catalog has no limit-specific version-conflict
  * code, so the documented role/version conflict code is reused rather than adding a new one.
- * The customer/account scope also takes a transaction advisory lock, so two first-version
+ * The customer guard is shared with Transfer and the legacy Limit API, so two first-version
  * applies cannot race past the unique index without a deterministic conflict result.</p>
  *
  * <h2>Duplicate application</h2>
@@ -65,15 +64,13 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
     private final LimitPolicy policy;
     private final CustomerQuery customers;
     private final AccountQuery accounts;
-    private final Clock clock;
 
     public LimitConfigMutationService(LimitConfigStore store, LimitPolicy policy, CustomerQuery customers,
-            AccountQuery accounts, Clock clock) {
+            AccountQuery accounts) {
         this.store = store;
         this.policy = policy;
         this.customers = customers;
         this.accounts = accounts;
-        this.clock = clock;
     }
 
     @Override
@@ -90,11 +87,9 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
     @Transactional(propagation = Propagation.MANDATORY)
     public PendingChange reservePendingChange(LimitChangeRequest request) {
         Objects.requireNonNull(request, "request is required");
-        // Structural validation and money/currency normalization happen before any database access.
-        // 07 §8.5.2 makes effectiveFrom optional ("mặc định now"); the Admin payload keeps the client value
-        // (null) so the canonical step-up hash stays stable across retries, and the provider defaults here.
+        // Keep the client value in the step-up hash. Default the persisted proposal timestamp on primary.
         java.time.Instant effectiveFrom = request.effectiveFrom() == null
-                ? clock.instant() : request.effectiveFrom();
+                ? store.currentTime() : request.effectiveFrom();
         LimitConfig pending = LimitConfig.pending(request.approvalId(), request.actorUserId(),
                 request.customerId(), request.accountId(), request.perTransactionLimit(), request.dailyLimit(),
                 request.currency() == null ? DEFAULT_CURRENCY : request.currency(), effectiveFrom,
@@ -104,7 +99,7 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
         requireAccountOwnership(pending.accountId(), pending.customerId(), approvalCorrelation(request.approvalId()));
         policy.requireWithinPolicy(pending.perTransactionLimit(), pending.dailyLimit());
 
-        store.lockScope(pending.customerId(), pending.accountId());
+        store.lockCustomerScope(pending.customerId());
         if (store.findByApprovalId(pending.approvalId()).isPresent()) {
             // One approval may own exactly one configuration row; a retry is not a second proposal.
             throw new BankingBusinessException(ErrorCode.INVALID_STATE_TRANSITION);
@@ -136,7 +131,7 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
         requireCustomerExists(pending.customerId());
         requireAccountOwnership(pending.accountId(), pending.customerId(), change.correlationId());
 
-        store.lockScope(pending.customerId(), pending.accountId());
+        store.lockCustomerScope(pending.customerId());
         // Re-read under the lock: the checker transaction is the only place allowed to transition it.
         LimitConfig locked = store.lockByApprovalId(change.approvalId())
                 .orElseThrow(LimitConfigMutationService::invalidPendingState);
@@ -146,17 +141,22 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
         locked.requirePendingVersion(change.expectedVersion());
         policy.requireWithinPolicy(locked.perTransactionLimit(), locked.dailyLimit());
 
-        Instant now = clock.instant();
+        Instant now = store.currentTime();
+        if (active.filter(config -> !config.effectiveFrom().isBefore(now)).isPresent()) {
+            // Only one scheduled replacement can be outstanding for a scope.
+            throw new BankingBusinessException(ErrorCode.ROLE_CONFLICT);
+        }
         // Checks happen before writes so an illegal maker/checker pair leaves no partial state.
         LimitConfig activated = locked.activate(change.checkerUserId(), now);
-        if (active.isPresent() && !store.supersede(active.get().limitConfigId(), now)) {
+        Instant cutover = activated.effectiveFrom();
+        if (active.isPresent() && !store.supersede(active.get().limitConfigId(), cutover, now)) {
             throw new IllegalStateException("ACTIVE limit configuration changed while locked");
         }
-        if (!store.activate(activated.limitConfigId(), change.checkerUserId(), now)) {
+        if (!store.activate(activated.limitConfigId(), cutover, change.checkerUserId(), now)) {
             throw new IllegalStateException("Pending limit configuration changed while locked");
         }
 
-        return new ConfigApplied(activated.limitConfigId(), activated.version(),
+        return new ConfigApplied(activated.limitConfigId(), activated.version(), cutover,
                 moneyText(active.map(LimitConfig::perTransactionLimit).orElse(null)),
                 moneyText(active.map(LimitConfig::dailyLimit).orElse(null)),
                 moneyText(activated.perTransactionLimit()), moneyText(activated.dailyLimit()));
@@ -169,13 +169,16 @@ public class LimitConfigMutationService implements LimitConfigMutationPort {
         requirePositive(checkerUserId, "checkerUserId");
         requireCorrelationId(correlationId);
 
+        LimitConfig initial = store.findByApprovalId(approvalId)
+                .orElseThrow(LimitConfigMutationService::invalidPendingState);
+        store.lockCustomerScope(initial.customerId());
         LimitConfig pending = store.lockByApprovalId(approvalId)
                 .orElseThrow(LimitConfigMutationService::invalidPendingState);
         requirePendingState(pending);
         // The rejecting staff member and decision time live in the Admin approval row; V9 has no
         // rejected_by column (the DB check requires approved_by/approved_at to stay NULL when REJECTED).
         pending.reject();
-        if (!store.reject(pending.limitConfigId(), clock.instant())) {
+        if (!store.reject(pending.limitConfigId(), store.currentTime())) {
             throw new IllegalStateException("Pending limit configuration changed while locked");
         }
         return new RejectedLimitChange(approvalId, pending.limitConfigId());

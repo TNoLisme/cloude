@@ -48,7 +48,7 @@ public class LimitChangeService implements LimitChanges {
         }
         validateAmounts(proposal.perTransactionLimit(), proposal.dailyLimit());
         policy.check(proposal.perTransactionLimit(), proposal.dailyLimit());
-        repository.lockChangeScope(proposal.customerId(), proposal.accountId());
+        repository.lockCustomerScope(proposal.customerId());
         Instant now = repository.currentTime();
         requireNonFuture(proposal.effectiveFrom(), now);
         var scope = repository.findScope(proposal.customerId(), proposal.accountId());
@@ -83,7 +83,7 @@ public class LimitChangeService implements LimitChanges {
         if (approvalId <= 0 || checkerId <= 0) throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         var initial = repository.findProposal(approvalId, false)
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.APPROVAL_NOT_FOUND));
-        repository.lockChangeScope(initial.customerId(), initial.accountId());
+        repository.lockCustomerScope(initial.customerId());
         var pending = repository.findProposal(approvalId, true).orElseThrow();
         if (pending.status() != Status.PENDING_APPROVAL) {
             throw new BankingBusinessException(ErrorCode.APPROVAL_ALREADY_DECIDED);

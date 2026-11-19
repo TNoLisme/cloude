@@ -1,0 +1,53 @@
+# BE-INT-04 — Tích hợp Limit cho Transfer, Admin và recovery
+
+> **Trạng thái** · **Verified** cho provider Limit, adapter Transfer và V20 trên PostgreSQL 16. [Báo cáo kiểm chứng](BE-INT-04-verification.md).  
+> **Người thực hiện và chốt** · Người điều hành tích hợp theo DEC-INT-003.  
+> **Phạm vi** · Provider Limit, schema do Limit sở hữu và adapter gọi qua `limit.api`. BE-INT-05/06/09/10 kiểm chứng lần lượt T0/T1, T2 money, luồng Admin đầu-cuối và recovery worker.
+
+## 1. Nguồn và baseline
+
+Áp dụng FR-016/031–033, AC-009/013/017/028/033/034, và các quyết định DEC-TRF-002/006/008/009/015, DEC-INT-001/005/010/011. BE-INT-02 đã xác minh chuỗi canonical V1–V19 cho DB mới. BE-INT-03 đã xác minh session, Customer và Account read cho single-bank MVP. Eligibility của Customer cho mutation/transfer vẫn theo CUS-OI-06. [SRS](../../../docs-common/03.%20SRS.md) · [Database design §4.5](../../../docs-common/04.%20Database%20design%20%26%20analysis.md) · [API contracts §§6, 8.5](../../../docs-common/07.%20API%20contracts.md) · [Quyết định](../../../../DECISIONS.md)
+
+| Lát tích hợp | Runtime |
+|---|---|
+| Snapshot và GET | `TransferLimits.getUsageSnapshot` dùng cùng đường đọc config/usage với API-LIM-01. Trả ID/version theo scope và ngày yêu cầu. GET dùng session server-side và Account provider để kiểm ownership. |
+| Guard và step-up | `LimitCustomerGuard` dùng advisory xact lock theo customer, chung đường JDBC Admin và JPA Limit. `TransferLimits` lấy mốc gate trên primary và đánh giá usage + mọi reservation PENDING. |
+| T2 enforcement | `TransferLimitAdapter` chuyển `Allowed` / `LIMIT_EXCEEDED` qua seam T2. Candidate truyền đúng `terminal_at` đã chụp. `TransferLimits` lock usage CUSTOMER rồi ACCOUNT và dùng `Allowed` cùng TX khi settlement. |
+| Reserve, settle và evidence | V20 có reservation FK tới Transfer và per-scope usage effects. `TRFC-LI-07` ghi usage atomically; `TRFC-LI-06` trả evidence hoặc phân biệt missing/mismatch/error. |
+| Admin mutation | `LimitConfigMutationPort` duyệt theo expected version dưới customer guard. Trả `effectiveFrom` thực tế trong kết quả Admin, giữ các counter đã có. |
+
+Tham chiếu [ma trận BE-INT-01](BE-INT-01.md), [Modules contract §§10–10.2, 12.1, 13.4](../../../docs-common/design/05.%20Modules%20contract.md) và [Consistency & Concurrency §§5–7, 9](../../../docs-common/design/02.%20consistency-concurrency.md).
+
+## 2. Hợp đồng và thứ tự thực thi
+
+1. **Read → LI-01.** Đọc config/usage đã commit từ primary, mỗi scope giữ riêng config ID/version, per-transaction/daily, used và remaining theo ngày yêu cầu. GET lấy customer từ actor server-side và kiểm ownership trước khi đọc account scope. `remainingDaily = max(0, dailyLimit − usedToday)` theo scope, effective remaining lấy min các scope áp dụng. GET giữ kết quả rỗng và effective fields null khi thiếu config theo §8.5.1. Enforcement đánh giá lại dưới lock và fail closed khi CUSTOMER bắt buộc thiếu, dữ liệu lỗi hoặc DB lỗi.
+2. **Gate/T1 → LI-04/05.** Giữ customer guard rồi re-read key trên primary và chụp mốc DB để tính ngày. Projected = CUSTOMER completed usage ngày hiện tại + tất cả reservation PENDING của customer, kể cả ngày trước + amount mới. Các ngưỡng mặc định là amount ≥ 10.000.000 VND hoặc projected > 20.000.000 VND. Khi cần step-up, kết thúc gate trước dispatch; request 428 tự nó tạo 0 Transfer, key, reservation, ledger. Khi đủ điều kiện, T1 giữ guard và insert đúng một reservation cho Transfer PENDING, cùng key, consume challenge khi cần và C1 CREATED. Thua unique hoặc C1 fail rollback cả T1; đọc replay bên ngoài TX đã rollback.
+3. **T2 → LI-02/07.** Đọc customer context bất biến để chọn guard, giữ guard → lock transfer/fence và kiểm lại context → khóa account ASC. Chụp `terminal_at` một lần từ PostgreSQL primary sau account locks và trước usage locks. Dùng timestamp UTC, quy đổi ngày theo zone cấu hình (mặc định `Asia/Ho_Chi_Minh`); rollback/alert nếu timestamp trước `created_at`. Đọc config CUSTOMER bắt buộc và ACCOUNT nếu áp dụng trong một statement, chọn khoảng hiệu lực theo `terminal_at`. Giữ snapshot ID/version/giá trị từng scope để check cả per-transaction và daily. Lock/upsert usage CUSTOMER rồi ACCOUNT. Vượt ngưỡng trả business outcome `LIMIT_EXCEEDED`; config thiếu, overlap, lock timeout, mismatch hoặc DB lỗi đi theo luồng lỗi hệ thống/invariant của caller. Khi COMPLETED, chuyển PENDING → SETTLED và tăng amount/count một lần cho từng scope trong snapshot, cùng TX với money, ledger, terminal, idempotency, outbox và audit. Khi FAILED, chuyển sang RELEASED và giữ nguyên amount/count; Tfail chỉ chạy khi rollback đã được xác nhận và fence bền vững hợp lệ. Audit cuối TX.
+4. **Recovery → LI-06.** Chỉ SYSTEM đọc per-transfer evidence trên primary sau guard và transfer/fence re-read. Phân biệt absent, pending hợp lệ, settled, released, partial/mismatch và lỗi đọc. Kiểm linkage transfer/customer/source account, amount/VND, T1 date/policy version và terminal date/config snapshot/usage-effect theo scope. Đã SETTLED khớp chứng cứ thì giữ usage hiện có. Chỉ tiếp tục PENDING khi mode đã lưu chứng minh writer duy nhất và caller có đủ evidence theo DEC-TRF-006. Thiếu/lệch/unknown commit → giữ trạng thái thực tế, alert/manual; aggregate usage chỉ dùng đối soát.
+5. **Admin.** Giữ `currentVersion`, `reservePendingChange`, `applyApprovedLimitChange`, `rejectPendingChange`. Proposal và decision JOIN Admin transaction với approval/idempotency/Identity consume/C2 tương ứng. Chụp expectedVersion trước step-up, re-check dưới lock; stale → `ROLE_CONFLICT`, provider apply lại → `INVALID_STATE_TRANSITION`. Cùng key và payload replay kết quả gốc. Customer/Account existence và ownership đi qua provider API. Mutations giữ nguyên usage đã ghi; kiểm các giá trị `app.limit.policy.*` đã cấu hình theo OI-API-05.
+
+## 3. Schema, chuyển đổi và hiệu lực
+
+- Limit sở hữu advisory xact lock theo `customer_id`. Reservation unique theo `transfer_id`, liên kết Customer/Account và facts Transfer bằng FK. Reservation lưu source account, amount/currency, ngày tạo và policy version, state có điều kiện `PENDING → SETTLED|RELEASED`. Với settlement, lưu mốc/ngày logic, config snapshot từng scope và dữ kiện usage effect liên kết từng transfer trong cùng TX với counter update. Bảo đảm state/timestamp/nullability, positive finite Money, index customer/PENDING xuyên ngày, quyền cột tối thiểu và đường đọc theo transfer. Row PENDING tồn tại đến khi có terminal outcome.
+- Dùng cùng datasource/transaction manager với Transfer; writer JOIN/`MANDATORY` và từ chối gọi ngoài writable TX. Rà khóa ngầm do FK/unique và Admin config keys theo cùng thứ tự; guard phải đứng trước mọi khóa Transfer/Account/usage do money path lấy. Guard/ref hết hiệu lực khi TX kết thúc. Admin giữ approval lock của mình trước khi gọi provider; Limit không gọi ngược Admin. Kiểm timeout/retry bằng connection độc lập.
+- V20 là migration forward-only. Role app ghi facts ban đầu và các cột terminal của reservation theo quyền cột, effect chỉ append. Giao dịch cũ thiếu evidence thuộc manual. Đường Transfer sử dụng `TRFC-LI-07` để cộng usage.
+- **Future-effective.** Bản đã áp dụng tiếp tục có hiệu lực đến cutover `max(effectiveFrom yêu cầu, approved_at trên primary)` nếu chưa hết hạn sớm hơn. Bản mới áp dụng từ đúng cutover. Mỗi scope có tối đa một bản đã duyệt đang chờ hiệu lực. Apply tiếp trước cutover trả `ROLE_CONFLICT`. GET dùng `asOf`, T2 dùng `terminal_at` để chọn khoảng hiệu lực. Enforcement dừng khi thiếu CUSTOMER hoặc ACCOUNT từng áp dụng nhưng khoảng hở chưa chứng minh được coverage.
+- **ACCOUNT lần đầu giữa ngày.** Tính lệnh có `terminal_at` từ cutover trở đi. Cutoff nằm ở `effective_from`; CUSTOMER tiếp tục tính cả ngày. Khi thay version, giữ nguyên hai counter đã tồn tại. [DEC-INT-011](../../../../DECISIONS.md) · [Modules contract §10.2](../../../docs-common/design/05.%20Modules%20contract.md)
+
+## 4. Kiểm thử và điều kiện đóng
+
+| Vector | Bằng chứng cần lưu |
+|---|---|
+| LI-INT-01 · Read | HTTP với real session/Customer/Account: scope customer và account đúng owner, IDOR 403, empty config đúng API, remaining clamp về 0, lỗi provider phân biệt với absent, GET tạo 0 usage rows. |
+| LI-INT-02 · Guard | Hai TX độc lập, cùng customer khác account/key, chạy sát ngưỡng 10M/20M và hơn 0,01 VND. Request sau tính PENDING lần trước kể cả ngày cũ; 428 không có business rows do chính request. Customer khác có thể tiến hành đồng thời. Lỗi audit/unique sau reserve trả T1 về trạng thái đầu. |
+| LI-INT-03 · Ngày & version | Barrier chụp terminal trước/sau 00:00; chụp trước rồi commit sau vẫn vào ngày cũ. Clock lùi rollback. Admin approve song song với T2 chứng minh một snapshot CUSTOMER/ACCOUNT nhất quán. Kiểm biên future-effective và ACCOUNT lần đầu theo DEC-INT-011. |
+| LI-INT-04 · Daily & settlement | Same customer/multi-account đủ số dư nhưng tổng vượt cap; amount bằng cap được phép và +0,01 bị chặn trước debit. COMPLETED tăng đúng cả amount/count các scope áp dụng; gọi trùng, sai ref/TX, release và audit/ledger fault đều kiểm trạng thái reservation và counter bằng connection khác sau rollback. |
+| LI-INT-05 · Admin | Proposal PENDING chưa đổi effective config. Approve/reject, hai checker, stale version, same-key replay, self-approval, ownership, policy và lỗi C2. Assert rollback cả approval/idempotency/challenge/config khi cần; count/amount hiện có giữ nguyên. |
+| LI-INT-06 · Recovery | Provider đọc đúng PENDING/SETTLED/RELEASED; absent, partial/mismatch, DB error và legacy/unknown mode có outcome riêng. Kiểm retry đã SETTLED không tăng usage, case thiếu chứng cứ giữ nguyên, rollback phục hồi. Multi-worker fence và proof xuyên provider thuộc BE-INT-10. |
+
+Chạy focused Gradle `--tests` theo DEC-INT-007. Bắt đầu với `LimitEnforcementIT`, `LimitBusinessDateIT`, `LimitCustomerHttpIT` và `LimitConfigMutationPostgreSqlIntegrationTest` cho các lát bị thay đổi; bổ sung lớp test mới cho guard/reservation/evidence khi hiện thực. Dùng PostgreSQL 16, barrier và ít nhất hai connection cho race. Khi thiếu module, dùng fake test-only theo §13.4 để kiểm mapping; bằng chứng lock/rollback cần provider thật. Lưu revision, migration/checksum, lệnh, số test/fail/skip, các assertion trên database và raw JUnit XML theo Test Plan §10. [Test Plan §§7, 10](../../../docs-common/09.%20Test%20plan.md)
+
+- [x] Hoàn tất API/DTO, migration, rollback và quyền role app cho Limit provider.
+- [x] Chốt hai trường hợp effective config và kiểm Admin với Transfer snapshot.
+- [x] Có bằng chứng focused cho LI-INT-01…06 và ghi phần còn chờ ở BE-INT-05/06/09/10.
+- [x] Cập nhật trạng thái BE-INT-04 theo evidence. G0/G2/G3 được xác minh riêng theo [kế hoạch tích hợp](README.md).

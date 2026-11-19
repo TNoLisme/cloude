@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.common.crypto.HmacService;
+import com.simulatedbank.banking.limit.api.TransferLimits;
 import com.simulatedbank.banking.notification.api.OtpGateway;
 import com.simulatedbank.banking.testsupport.PostgreSqlIntegrationTestSupport;
 import java.net.URI;
@@ -200,6 +201,36 @@ class LimitApprovalHttpPostgreSqlIntegrationTest {
     }
 
     @Test
+    void scheduledApprovalKeepsPreviousLimitEffectiveAndReplaysTheCutover(@Autowired JdbcTemplate jdbc,
+            @Autowired TransferLimits limits) throws Exception {
+        long first = propose("adm-lim-schedule-first", "adm-lim-schedule-initial");
+        approve(first, checkerToken, "adm-lim-schedule-first-approval", "adm-lim-schedule-initial-dec");
+        Instant cutover = Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        var proposed = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(limitBody("4000000.00", DAILY));
+        proposed.put("effectiveFrom", cutover.toString());
+        long second = propose("adm-lim-schedule-second", "adm-lim-schedule-propose", proposed.toString());
+
+        String decision = "{\"decision\":\"APPROVE\"}";
+        String key = "adm-lim-schedule-decide";
+        String challenge = decisionChallenge(second, checkerToken, "adm-lim-schedule-challenge", decision);
+        var response = decide(second, checkerToken, "adm-lim-schedule-applied", decision, key, challenge);
+        assertThat(response.statusCode()).isEqualTo(200);
+        var applied = JSON.readTree(response.body());
+        assertThat(applied.path("result").path("effectiveFrom").asText()).isEqualTo(cutover.toString());
+        var replay = decide(second, checkerToken, "adm-lim-schedule-replay", decision, key, challenge);
+        assertThat(replay.statusCode()).isEqualTo(200);
+        assertThat(replay.headers().firstValue("Idempotent-Replayed")).contains("true");
+        assertThat(JSON.readTree(replay.body()).path("result")).isEqualTo(applied.path("result"));
+        assertThat(auditCount(jdbc, second, "LIMIT_CHANGE_APPROVED")).isEqualTo(1);
+
+        var date = cutover.atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate();
+        assertThat(limits.getUsageSnapshot(customerId, null, cutover.minusSeconds(1), date)
+                .scopes().getFirst().configVersion()).isEqualTo(1);
+        assertThat(limits.getUsageSnapshot(customerId, null, cutover, date)
+                .scopes().getFirst().configVersion()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("INT-01: a stale expected version is 409 ROLE_CONFLICT and never applies")
     void staleExpectedVersionIsRejected(@Autowired JdbcTemplate jdbc) throws Exception {
         long first = propose("adm-lim-key-4a", "adm-lim-create-4a");
@@ -341,7 +372,10 @@ class LimitApprovalHttpPostgreSqlIntegrationTest {
     // ------------------------------------------------------------------ flow helpers
 
     private long propose(String idempotencyKey, String correlationId) throws Exception {
-        String body = limitBody(PER_TX, DAILY);
+        return propose(idempotencyKey, correlationId, limitBody(PER_TX, DAILY));
+    }
+
+    private long propose(String idempotencyKey, String correlationId, String body) throws Exception {
         HttpResponse<String> challengeRequired = call("/api/v1/admin/limits", makerToken, correlationId + "-428",
                 body, idempotencyKey, null);
         assertProblem(challengeRequired, 428, "STEP_UP_REQUIRED", correlationId + "-428");

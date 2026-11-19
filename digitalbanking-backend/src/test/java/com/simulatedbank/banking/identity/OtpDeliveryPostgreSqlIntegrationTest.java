@@ -17,6 +17,7 @@ import com.simulatedbank.banking.identity.adapter.out.Argon2PasswordHasher;
 import com.simulatedbank.banking.identity.adapter.out.JdbcChallengeRepository;
 import com.simulatedbank.banking.identity.adapter.out.SecurityLogAuditAdapter;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort;
+import com.simulatedbank.banking.identity.application.SessionCustomerBinding;
 import com.simulatedbank.banking.identity.application.AuthAuditPort;
 import com.simulatedbank.banking.identity.application.OtpChallengeService;
 import com.simulatedbank.banking.identity.application.OtpCodeGenerator;
@@ -241,7 +242,8 @@ class OtpDeliveryPostgreSqlIntegrationTest {
                 org.mockito.Mockito.mock(
                         com.simulatedbank.banking.identity.application.LoginSessionService.class),
                 new com.simulatedbank.banking.identity.application.AuthMetrics(
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()),
+                org.mockito.Mockito.mock(SessionCustomerBinding.class));
 
         assertBusiness(() -> unconfiguredService.requestChallenge(request("unconfigured")),
                 ErrorCode.OTP_DISPATCH_FAILED);

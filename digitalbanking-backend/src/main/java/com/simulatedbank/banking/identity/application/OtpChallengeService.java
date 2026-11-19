@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DuplicateKeyException;
@@ -60,10 +61,12 @@ public class OtpChallengeService implements StepUpChallengePort {
     private final LoginSessionService loginSessions;
     private final AuthMetrics metrics;
 
+    private final SessionCustomerBinding customers;
+
     public OtpChallengeService(ChallengeRepository challenges, AuthAuditPort audit, PasswordHasher hasher,
             OtpCodeGenerator otpGenerator, Clock clock, AppProperties properties,
             PlatformTransactionManager transactionManager, OtpDispatchService dispatch,
-            LoginSessionService loginSessions, AuthMetrics metrics) {
+            LoginSessionService loginSessions, AuthMetrics metrics, SessionCustomerBinding customers) {
         this.challenges = challenges;
         this.audit = audit;
         this.hasher = hasher;
@@ -76,6 +79,7 @@ public class OtpChallengeService implements StepUpChallengePort {
         this.dispatch = dispatch;
         this.loginSessions = loginSessions;
         this.metrics = metrics;
+        this.customers = customers;
     }
 
     // ------------------------------------------------------------------ issue (OWN/T0)
@@ -83,6 +87,36 @@ public class OtpChallengeService implements StepUpChallengePort {
     @Override
     public ChallengeView requestChallenge(ChallengeRequest request) {
         return issueChallenge(request, null);
+    }
+
+    @Override
+    public ChallengeView requestTransferChallenge(TransferBinding binding, String correlationId) {
+        requireTransferCustomer(binding);
+        return requestChallenge(new ChallengeRequest(ChallengePurpose.TRANSFER_STEP_UP, binding.userId(),
+                binding.requestHash(), binding.bindingKey(), correlationId));
+    }
+
+    @Override
+    public Optional<VerifiedChallenge> findVerifiedBindingIfPresent(TransferBinding binding) {
+        requireTransferCustomer(binding);
+        return challenges.findVerifiedTransferBinding(binding.userId(), binding.bindingKey(), binding.requestHash());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ConsumedChallenge consumeTransferChallenge(TransferBinding binding, String challengeRef) {
+        requireTransferCustomer(binding);
+        return consumeVerified(new ConsumeCommand(challengeRef, binding.userId(), ChallengePurpose.TRANSFER_STEP_UP,
+                binding.requestHash(), binding.bindingKey()));
+    }
+
+    private void requireTransferCustomer(TransferBinding binding) {
+        if (binding == null || binding.userId() <= 0 || binding.customerId() <= 0
+                || binding.requestHash() == null || !REQUEST_HASH.matcher(binding.requestHash()).matches()
+                || binding.bindingKey() == null || !binding.bindingKey().matches("[A-Za-z0-9._:~\\-]{1,255}")
+                || !Long.toString(binding.customerId()).equals(customers.resolve(binding.userId(), "CUSTOMER"))) {
+            throw mismatch();
+        }
     }
 
     /** Password-authenticated login attempt; device metadata is bound before delivery. */
@@ -110,6 +144,9 @@ public class OtpChallengeService implements StepUpChallengePort {
         ChallengeRepository.ChallengeSnapshot snapshot;
         try {
             snapshot = ownTransaction.execute(status -> {
+                if (request.purpose() == ChallengePurpose.TRANSFER_STEP_UP) {
+                    challenges.expireTransferBindingIfDue(request.userId(), request.bindingKey(), request.requestHash());
+                }
                 var created = challenges.insert(new ChallengeRepository.NewChallenge(
                         request.userId(), request.purpose().name(), METHOD_OTP, CHANNEL_DEFAULT,
                         otpHash, request.requestHash(), request.bindingKey(),
@@ -117,7 +154,8 @@ public class OtpChallengeService implements StepUpChallengePort {
                 // Mandatory audit belongs to the INSERT transaction, never after its commit.
                 audit.recordInTransaction(AuthAuditPort.AuthAuditEvent
                         .c2Challenge(AuthAuditPort.AuthAction.AUTH_CHALLENGE_CREATED, request.userId(),
-                                created.challengeRef(), null, null), request.correlationId());
+                                created.challengeRef(), null, null)
+                        .withChallenge(created, "CREATED", 0), request.correlationId());
                 return created;
             });
         } catch (DuplicateKeyException duplicate) {
@@ -331,12 +369,14 @@ public class OtpChallengeService implements StepUpChallengePort {
             // design/01 §5.3: state lock commit trước; AUTH_CHALLENGE_LOCKED là C3 standalone.
             audit.recordStandalone(AuthAuditPort.AuthAuditEvent
                     .c3Challenge(AuthAuditPort.AuthAction.AUTH_CHALLENGE_LOCKED, command.userId(),
-                            snapshot.challengeRef(), "MAX_ATTEMPTS", null), command.correlationId());
+                            snapshot.challengeRef(), "MAX_ATTEMPTS", null)
+                    .withChallenge(snapshot, "LOCKED", bump.get().attemptCount()), command.correlationId());
             throw locked();
         }
         audit.recordStandalone(AuthAuditPort.AuthAuditEvent
                 .c3Challenge(AuthAuditPort.AuthAction.AUTH_STEP_UP_FAILED, command.userId(),
-                        snapshot.challengeRef(), "OTP_MISMATCH", null), command.correlationId());
+                        snapshot.challengeRef(), "OTP_MISMATCH", null)
+                .withChallenge(snapshot, bump.get().status(), bump.get().attemptCount()), command.correlationId());
         throw otpInvalid();
     }
 
@@ -348,7 +388,8 @@ public class OtpChallengeService implements StepUpChallengePort {
             markVerifiedOrReject(snapshot);
             audit.recordInTransaction(AuthAuditPort.AuthAuditEvent
                     .c2Challenge(AuthAuditPort.AuthAction.AUTH_STEP_UP_VERIFIED, snapshot.userId(),
-                            snapshot.challengeRef(), null, null), correlationId);
+                            snapshot.challengeRef(), null, null)
+                    .withChallenge(snapshot, "VERIFIED", snapshot.attemptCount() + 1), correlationId);
             return new VerifiedChallenge(snapshot.challengeRef(),
                     ChallengePurpose.valueOf(snapshot.purpose()), clock.instant(), snapshot.expiresAt());
         });

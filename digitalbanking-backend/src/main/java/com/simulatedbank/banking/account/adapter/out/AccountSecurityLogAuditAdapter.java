@@ -1,17 +1,19 @@
 package com.simulatedbank.banking.account.adapter.out;
 
 import com.simulatedbank.banking.account.application.AccountAuditPort;
+import com.simulatedbank.banking.common.config.ReadAccessDenied;
+import com.simulatedbank.banking.customer.api.CustomerQuery;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Adapter audit tạm thời cho {@link AccountAuditPort} cho tới khi module audit triển khai
- * persistence {@code audit_log} (design/01 §5.2/§6.1; ACC-DR-15 BLOCKED). Semantics khớp tiền lệ
- * đã duyệt của Identity/Customer (DEC-ID-003, DEC-CUS-005):
+ * Emits safe Account ownership denials for Audit C3, with a local security log and metric
+ * (design/01 §5.2/§6.1, DEC-INT-009).
  *
  * <ul>
  *   <li>{@code SECURITY_ACCESS_DENIED} là C3 — best-effort: lỗi bị nuốt + fallback security log +
@@ -30,16 +32,26 @@ public class AccountSecurityLogAuditAdapter implements AccountAuditPort {
     private static final Logger LOG = LoggerFactory.getLogger("com.simulatedbank.banking.account.AUDIT");
 
     private final MeterRegistry meterRegistry;
+    private final CustomerQuery customers;
+    private final ApplicationEventPublisher events;
 
     @Autowired
-    public AccountSecurityLogAuditAdapter(MeterRegistry meterRegistry) {
+    public AccountSecurityLogAuditAdapter(MeterRegistry meterRegistry, CustomerQuery customers,
+            ApplicationEventPublisher events) {
         this.meterRegistry = meterRegistry;
+        this.customers = customers;
+        this.events = events;
     }
 
     @Override
     public void recordStandalone(AccountAuditEvent event, String correlationId) {
         try {
             emit(event, correlationId);
+            var actor = customers.findByCustomerId(event.actorCustomerId());
+            if (actor.isPresent()) {
+                events.publishEvent(new ReadAccessDenied(actor.get().userId(), "CUSTOMER",
+                        event.entityType(), event.entityId(), correlationId));
+            }
         } catch (RuntimeException failure) {
             counter("account.audit.failures", event.action().name());
             LOG.atError()

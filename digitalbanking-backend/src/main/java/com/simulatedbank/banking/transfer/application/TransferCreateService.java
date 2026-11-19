@@ -34,6 +34,11 @@ public final class TransferCreateService {
                     "OWNERSHIP_DENIED", "TRANSFER_CREATE");
             throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
         }
+        if (outcome instanceof TransferCreateOutcome.CustomerInactive) {
+            denyAudit.accessDenied(actor, "CUSTOMER", Long.toString(actor.customerId()),
+                    "CUSTOMER_INACTIVE", "TRANSFER_CREATE");
+            throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+        }
         if (outcome instanceof TransferCreateOutcome.Conflict) {
             denyAudit.idempotencyConflict(actor);
         }

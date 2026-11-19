@@ -73,7 +73,7 @@ class CustomerQueryPostgreSqlIntegrationTest {
         transaction = new TransactionTemplate(transactionManager);
         transaction.executeWithoutResult(ignored -> {
             jdbc.update("DELETE FROM banking.customer");
-            jdbc.update("DELETE FROM banking.app_user");
+            jdbc.update("DELETE FROM banking.app_user WHERE username <> '__fraud_rule_bootstrap__'");
         });
     }
 

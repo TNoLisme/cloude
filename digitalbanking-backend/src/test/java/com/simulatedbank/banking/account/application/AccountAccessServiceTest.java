@@ -62,7 +62,8 @@ class AccountAccessServiceTest {
         AccountQueryService queryService =
                 new AccountQueryService(accounts, protection, audit, Clock.fixed(NOW, ZoneOffset.UTC));
         service = new AccountAccessService(
-                customers, accounts, protection, queryService, Clock.fixed(NOW, ZoneOffset.UTC));
+                customers, accounts, protection, queryService, Clock.fixed(NOW, ZoneOffset.UTC),
+                org.mockito.Mockito.mock(com.simulatedbank.banking.common.config.SecurityAccessDeniedAuditor.class));
     }
 
     @Test
@@ -128,7 +129,7 @@ class AccountAccessServiceTest {
 
     @Test
     void getOwnAccountReturnsOwnerViewForTheAuthenticatedCustomer() {
-        AccountView view = service.getOwnAccount(CUSTOMER_A_USER, accountA, CORRELATION_ID);
+        AccountView view = service.getOwnAccount(CUSTOMER_A_USER, accountA, CORRELATION_ID).account();
 
         assertThat(view.accountId()).isEqualTo(accountA);
         assertThat(view.customerId()).isEqualTo(customerA);
@@ -163,7 +164,7 @@ class AccountAccessServiceTest {
         accounts.seed(customerB, AccountStatus.ACTIVE, "0022222222");
 
         AccountAccessService.AccountList page = service.listCustomerAccounts(
-                customerA, null, Set.of("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID);
+                customerA, null, staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID);
 
         assertThat(page.items()).extracting(AccountView::accountId).containsExactly(accountA, lockedAccount);
         assertThat(page.items()).allSatisfy(view -> {
@@ -184,7 +185,7 @@ class AccountAccessServiceTest {
         long lockedAccount = accounts.seed(customerA, AccountStatus.LOCKED, "0022222222");
 
         AccountAccessService.AccountList page = service.listCustomerAccounts(
-                customerA, Status.LOCKED, Set.of("ACCOUNT_READ"), CORRELATION_ID);
+                customerA, Status.LOCKED, staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID);
 
         assertThat(page.items()).extracting(AccountView::accountId).containsExactly(lockedAccount);
         assertThat(accounts.lastStatusFilter).isEqualTo(AccountStatus.LOCKED);
@@ -193,7 +194,7 @@ class AccountAccessServiceTest {
     @Test
     void staffListRejectsACallerWithoutAccountReadBeforePersistence() {
         assertThatThrownBy(() -> service.listCustomerAccounts(customerA, null,
-                Set.of("ACCOUNT_READ_SELF"), CORRELATION_ID))
+                staff("ACCOUNT_READ_SELF", "ROLE_CUSTOMER"), CORRELATION_ID))
                 .isInstanceOfSatisfying(BankingBusinessException.class,
                         failure -> assertThat(failure.code()).isEqualTo(ErrorCode.AUTH_FORBIDDEN));
         assertThatThrownBy(() -> service.listCustomerAccounts(customerA, null, null, CORRELATION_ID))
@@ -202,7 +203,7 @@ class AccountAccessServiceTest {
         // Fail-closed on an inconsistent identity snapshot: a customer principal never gets staff data,
         // even if the permission were mis-seeded onto it.
         assertThatThrownBy(() -> service.listCustomerAccounts(customerA, null,
-                Set.of("ACCOUNT_READ", "ROLE_CUSTOMER"), CORRELATION_ID))
+                staff("ACCOUNT_READ", "ROLE_CUSTOMER"), CORRELATION_ID))
                 .isInstanceOfSatisfying(BankingBusinessException.class,
                         failure -> assertThat(failure.code()).isEqualTo(ErrorCode.AUTH_FORBIDDEN));
 
@@ -214,7 +215,7 @@ class AccountAccessServiceTest {
     @Test
     void staffListUnknownCustomerIsNotFoundBeforeAnyAccountRead() {
         assertThatThrownBy(() -> service.listCustomerAccounts(999_999, null,
-                Set.of("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID))
+                staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID))
                 .isInstanceOfSatisfying(BankingBusinessException.class,
                         failure -> assertThat(failure.code()).isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND));
 
@@ -229,7 +230,7 @@ class AccountAccessServiceTest {
         customers.failure = failure;
 
         assertThatThrownBy(() -> service.listCustomerAccounts(customerA, null,
-                Set.of("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID))
+                staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID))
                 .isSameAs(failure);
         // A technical provider error is fail-closed: no account data is read and it is not converted
         // into 404 (which would hide an outage) or an empty page.
@@ -238,11 +239,16 @@ class AccountAccessServiceTest {
 
     @Test
     void staffListRejectsInvalidCustomerOrCorrelationBeforePersistence() {
-        assertValidation(() -> service.listCustomerAccounts(0, null, Set.of("ACCOUNT_READ"), CORRELATION_ID));
-        assertValidation(() -> service.listCustomerAccounts(-5, null, Set.of("ACCOUNT_READ"), CORRELATION_ID));
-        assertValidation(() -> service.listCustomerAccounts(customerA, null, Set.of("ACCOUNT_READ"), "has space"));
+        assertValidation(() -> service.listCustomerAccounts(0, null, staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID));
+        assertValidation(() -> service.listCustomerAccounts(-5, null, staff("ACCOUNT_READ", "ROLE_OPERATIONS"), CORRELATION_ID));
+        assertValidation(() -> service.listCustomerAccounts(customerA, null, staff("ACCOUNT_READ", "ROLE_OPERATIONS"), "has space"));
 
         assertThat(accounts.customerLookups).isZero();
+    }
+
+    private static com.simulatedbank.banking.common.config.SessionAuthenticator.Session staff(String... authorities) {
+        return new com.simulatedbank.banking.common.config.SessionAuthenticator.Session(
+                "71", null, Set.of(authorities), "a".repeat(64));
     }
 
     private static void assertValidation(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {

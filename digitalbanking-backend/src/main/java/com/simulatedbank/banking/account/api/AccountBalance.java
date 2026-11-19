@@ -2,6 +2,7 @@ package com.simulatedbank.banking.account.api;
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Hợp đồng public nội bộ money path của Account, chỉ dành cho orchestrator Transfer trong T2
@@ -123,6 +124,9 @@ public interface AccountBalance {
      */
     LockedAccounts lockTransferAccounts(long sourceAccountId, long destinationAccountId);
 
+    /** Empty means a row was missing under lock. Technical errors still abort T2. */
+    Optional<LockedAccounts> findAndLockTransferAccounts(long sourceAccountId, long destinationAccountId);
+
     /**
      * Conditional debit: {@code UPDATE … SET available_balance = available_balance - :amount,
      * ledger_balance = ledger_balance - :amount WHERE account_id = :id AND status = 'ACTIVE' AND
@@ -143,4 +147,7 @@ public interface AccountBalance {
      * rollback toàn T2 (không commit FAILED trong transaction đang có debit).</p>
      */
     CreditResult credit(long destinationAccountId, BigDecimal amount);
+
+    /** Empty means a successful SQL statement updated zero rows. Use only under a money savepoint. */
+    Optional<CreditResult> creditUnderSavepoint(long destinationAccountId, BigDecimal amount);
 }

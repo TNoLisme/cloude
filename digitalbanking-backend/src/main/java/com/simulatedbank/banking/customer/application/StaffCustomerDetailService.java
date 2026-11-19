@@ -1,5 +1,6 @@
 package com.simulatedbank.banking.customer.application;
 
+import com.simulatedbank.banking.common.config.StaffReadAccess;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import java.util.Set;
@@ -19,11 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
  * query/body của client cho danh tính, role hay scope. CUSTOMER không bao giờ có
  * {@code CUSTOMER_READ} (07 §3.4 + {@code JpaAuthorityReader} user-type isolation) → 403 + audit.</p>
  *
- * <p>Data scope: CUS-OI-05 (Admin/Audit/Security chưa chốt runtime scope) — phần scope ngoài
- * role/permission chưa có hợp đồng, KHÔNG tự chế scope; hợp đồng này chỉ enforce permission
- * đã duyệt và ghi BLOCKED cho phần scope (BE-CUS-IMP-06.md §G).</p>
+ * <p>Staff có role và permission đã duyệt được đọc hồ sơ masked qua exact ID trên toàn ngân hàng
+ * single-bank MVP (DEC-INT-008/009).</p>
  *
- * <p>Erro semantics: thiếu permission → {@code 403 AUTH_FORBIDDEN} + audit
+ * <p>Error semantics: thiếu permission → {@code 403 AUTH_FORBIDDEN} + audit
  * `SECURITY_ACCESS_DENIED` C3 (REJECTED); {@code customerId} không hợp lệ →
  * {@code 400 VALIDATION_ERROR} TRƯỚC khi chạm persistence (không lộ tồn tại); row không tồn tại
  * → {@code 404 CUSTOMER_NOT_FOUND} (không audit — 404 không phải security denial, design/01 §5.7).
@@ -35,9 +35,6 @@ public class StaffCustomerDetailService {
 
     /** Permission đã duyệt của `API-ADM-01` (07 §3.4 seed: OPERATIONS/ADMIN; §8.2.4). */
     static final String REQUIRED_PERMISSION = "CUSTOMER_READ";
-
-    /** Marker role CUSTOMER: không bao giờ được dùng tra cứu staff (DAR-001, design/04 §5.1). */
-    static final String CUSTOMER_ROLE_AUTHORITY = "ROLE_CUSTOMER";
 
     private final CustomerPiiService piiService;
     private final CustomerAuditPort audit;
@@ -63,8 +60,7 @@ public class StaffCustomerDetailService {
         if (customerId <= 0 || actorUserId <= 0) {
             throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         }
-        if (actorAuthorities == null || !actorAuthorities.contains(REQUIRED_PERMISSION)
-                || actorAuthorities.contains(CUSTOMER_ROLE_AUTHORITY)) {
+        if (!StaffReadAccess.allows(actorAuthorities, REQUIRED_PERMISSION)) {
             // 403 trước lookup: không tiết lộ sự tồn tại của customer cho caller thiếu quyền. Một
             // snapshot mang cả role CUSTOMER và permission staff là identity context không nhất quán
             // (design/04 §5.1: user_type tách biệt cứng) nên bị từ chối thay vì coi là staff.

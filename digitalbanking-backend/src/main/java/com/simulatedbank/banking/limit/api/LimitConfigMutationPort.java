@@ -34,7 +34,7 @@ public interface LimitConfigMutationPort {
 
     /**
      * Applies the approved change: the pending row becomes the new ACTIVE version and the previous ACTIVE row is
-     * superseded, all inside the checker transaction. Duplicate application is impossible (the pending row is
+     * superseded with its effective interval ending at the cutover, inside the checker transaction. Duplicate application is impossible (the pending row is
      * transitioned once and {@code limit_config.approval_id} is unique).
      */
     ConfigApplied applyApprovedLimitChange(ApprovedLimitChange change);
@@ -60,7 +60,7 @@ public interface LimitConfigMutationPort {
     }
 
     /** Applied configuration with the previous/new values for the C2 audit state (strings, no PII). */
-    record ConfigApplied(long limitConfigId, long version, String previousPerTransactionLimit,
+    record ConfigApplied(long limitConfigId, long version, Instant effectiveFrom, String previousPerTransactionLimit,
             String previousDailyLimit, String perTransactionLimit, String dailyLimit) {
     }
 

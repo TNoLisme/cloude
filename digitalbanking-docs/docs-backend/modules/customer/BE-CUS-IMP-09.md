@@ -37,7 +37,7 @@ Không có production mutation endpoint hoặc public command được thêm. Th
 | `CUS-OI-01` | **OPEN / BLOCKED** | Create, update, status | BA/DB/API/Security sửa nguồn chuẩn và chốt schema/status | Overview đề xuất CIF/national ID/KYC/FROZEN/CLOSED; `03/04/07` chỉ duyệt name/phone/email và ACTIVE/INACTIVE. Task giữ nguồn ưu tiên, không thêm field/status. |
 | `CUS-OI-03` | **OPEN / BLOCKED** | Staff create/update | Admin/BA/API phê duyệt API, request/response/error, permission/scope | FE `OPS-CREATE-CUSTOMER` tự ghi GAP-01; API chuẩn không có create route. |
 | `CUS-OI-04` | **PARTIAL / BLOCKED workflow** | Provisioning/create | Identity/DB/Customer chốt command và transaction/order tạo `app_user↔customer` | V2/V5 FK và session/query binding đã có, nhưng không có production provisioning caller/interface hoặc failure/rollback contract. |
-| `CUS-OI-06` | **OPEN / BLOCKED** | Status update và downstream eligibility | BA/Account/Transfer phê duyệt policy | Không rõ INACTIVE chặn Account/Transfer lúc nào; Customer chỉ trả snapshot status, không tự cascade. |
+| `CUS-OI-06` | **Đã chốt POST Transfer** | Customer INACTIVE trả 403 với key mới theo DEC-INT-013 | Status update và cascade còn mở | Customer trả snapshot status cho consumer. |
 
 ## D. Phần triển khai an toàn và thay đổi code test
 

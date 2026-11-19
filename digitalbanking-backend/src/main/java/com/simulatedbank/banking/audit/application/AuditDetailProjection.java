@@ -73,7 +73,7 @@ public final class AuditDetailProjection {
 
     public static final Map<String, Set<String>> ALLOWED_ENTITY_FIELDS = Map.ofEntries(
             Map.entry("TRANSFER", Set.of("reference", "status", "failureCode", "sourceAccountId",
-                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType")),
+                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType", "reasonCode")),
             Map.entry("ACCOUNT", Set.of("accountId", "customerId", "status", "last4",
                     "availableBalance", "ledgerBalance", "reasonCode")),
             Map.entry("APP_USER", Set.of("userId", "roleCodes", "status", "lockedUntil", "reasonCode")),
@@ -85,7 +85,7 @@ public final class AuditDetailProjection {
             Map.entry("FRAUD_FLAG", Set.of("flagId", "transferReference", "ruleCode", "ruleVersion",
                     "severity", "status", "decision", "matchedValue")),
             Map.entry("AUTH_CHALLENGE", Set.of("challengeId", "purpose", "method", "status",
-                    "attemptCount", "expiresAt")),
+                    "attemptCount", "expiresAt", "reasonCode")),
             Map.entry("SESSION", Set.of("sessionId", "userId", "deviceId", "status", "reasonCode")),
             Map.entry("LEGAL_HOLD", Set.of("holdId", "entityType", "entityId", "status", "reasonCode",
                     "placedAt", "releasedAt")),

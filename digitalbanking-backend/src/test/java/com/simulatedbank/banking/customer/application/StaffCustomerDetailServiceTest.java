@@ -132,12 +132,12 @@ class StaffCustomerDetailServiceTest {
     @Test
     void invalidCustomerIdIsRejectedBeforeLookupWithoutAudit() {
         assertThatThrownBy(() -> service.getCustomerDetail(0L, 501L,
-                Set.of("CUSTOMER_READ"), "OPERATIONS", "corr-bad-id"))
+                Set.of("CUSTOMER_READ", "ROLE_OPERATIONS"), "OPERATIONS", "corr-bad-id"))
                 .isInstanceOf(BankingBusinessException.class)
                 .extracting(e -> ((BankingBusinessException) e).code())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
         assertThatThrownBy(() -> service.getCustomerDetail(-7L, 501L,
-                Set.of("CUSTOMER_READ"), "OPERATIONS", "corr-bad-id"))
+                Set.of("CUSTOMER_READ", "ROLE_OPERATIONS"), "OPERATIONS", "corr-bad-id"))
                 .isInstanceOf(BankingBusinessException.class)
                 .extracting(e -> ((BankingBusinessException) e).code())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
@@ -148,7 +148,7 @@ class StaffCustomerDetailServiceTest {
     @Test
     void nonexistentCustomerReturnsNotFoundWithoutAudit() {
         assertThatThrownBy(() -> service.getCustomerDetail(424_242L, 501L,
-                Set.of("CUSTOMER_READ"), "OPERATIONS", "corr-404"))
+                Set.of("CUSTOMER_READ", "ROLE_OPERATIONS"), "OPERATIONS", "corr-404"))
                 .isInstanceOf(BankingBusinessException.class)
                 .extracting(e -> ((BankingBusinessException) e).code())
                 .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND);
@@ -162,7 +162,7 @@ class StaffCustomerDetailServiceTest {
         long customerId = seed("Hồ Sơ Ngừng Hoạt", null, null, CustomerStatus.INACTIVE);
 
         StaffCustomerPiiView view = service.getCustomerDetail(customerId, 501L,
-                Set.of("CUSTOMER_READ"), "OPERATIONS", "corr-inactive");
+                Set.of("CUSTOMER_READ", "ROLE_OPERATIONS"), "OPERATIONS", "corr-inactive");
 
         assertThat(view.getStatus()).isEqualTo(CustomerStatus.INACTIVE);
         assertThat(view.getFullName()).isEqualTo("H*** S*** N*** H***");
@@ -176,7 +176,7 @@ class StaffCustomerDetailServiceTest {
                 CustomerStatus.ACTIVE);
 
         StaffCustomerPiiView view = service.getCustomerDetail(customerId, 501L,
-                Set.of("CUSTOMER_READ"), "ADMIN", "corr-leak");
+                Set.of("CUSTOMER_READ", "ROLE_ADMIN"), "ADMIN", "corr-leak");
 
         assertThat(view.toString()).isEqualTo("StaffCustomerPiiView[redacted]");
         assertThat(view.getFullName()).doesNotContain("Nguyễn", "Thị", "Minh");

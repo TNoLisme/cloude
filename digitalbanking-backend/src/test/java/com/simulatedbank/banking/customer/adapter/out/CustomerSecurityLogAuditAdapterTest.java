@@ -48,7 +48,7 @@ class CustomerSecurityLogAuditAdapterTest {
     @Test
     @DisplayName("CT-API-017/T-AUD-16 Customer boundary: denied audit evidence contains only PII-safe fields")
     void deniedOperationProducesTraceablePiiSafeEvidence() {
-        var adapter = new CustomerSecurityLogAuditAdapter(registry);
+        var adapter = new CustomerSecurityLogAuditAdapter(registry, event -> {});
 
         adapter.recordStandalone(DENIED, "cus-audit-correlation-1");
 
@@ -97,7 +97,7 @@ class CustomerSecurityLogAuditAdapterTest {
 
     private static final class FailingAdapter extends CustomerSecurityLogAuditAdapter {
         private FailingAdapter(SimpleMeterRegistry registry) {
-            super(registry);
+            super(registry, event -> {});
         }
 
         @Override

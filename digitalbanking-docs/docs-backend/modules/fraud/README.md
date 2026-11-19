@@ -3,8 +3,8 @@
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-FRAUD-00`
 > **Phiên bản:** 1.0
-> **Ngày cập nhật:** 18/11/2026
-> **Trạng thái:** Đã triển khai component/candidate (45 tests PASS — chờ ghép tích hợp `T2` & REST Controller)
+> **Ngày cập nhật:** 19/11/2026
+> **Trạng thái:** Bộ đánh giá Fraud đã ghép T2 theo BE-INT-07. REST tra cứu/thẩm định thuộc luồng tích hợp riêng.
 > **Owner:** Thịnh
 > **Phối hợp / Reviewer:** Vũ (`transfer`, `limit`), Đạt (`admin`, `identity`), Phương (`common`), Thắng (`FE`)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (FR-044..048, AC-026, AC-027), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§4.7.1, §4.7.2), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6.2, §7.6), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§8.7), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§5.3, §5.6), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]], [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] (§11.2), [[digitalbanking-docs/docs-backend/modules/_overview/08-fraud.md]], [[DECISIONS.md]] (`DEC-COM-001`, `DEC-TRF-007/009`)
@@ -19,7 +19,7 @@ Module `com.simulatedbank.banking.fraud` thực thi bộ quy tắc phát hiện 
 
 ## 2. Hiện trạng Triển khai trong `digitalbanking-backend/src/main/java/com/simulatedbank/banking/fraud`
 
-Đã triển khai **24 classes Java** theo đúng kiến trúc Hexagonal (`00. architecture & conventions.md` §4.2) và đạt **45 tests PASS** (unit + PostgreSQL 16 Testcontainers):
+Fraud cung cấp `fraud.api.FraudEvaluation` cho Transfer. `JdbcFraudEvaluation` ghép T2 bằng JDBC savepoint, đọc rule/version và lịch sử intent, rồi ghi cờ OPEN. Các thành phần phát triển độc lập gồm
 - **`domain/` (12 classes):** `RuleType` (`LARGE_VALUE`, `HIGH_FREQUENCY`, `UNUSUAL_PATTERN`), `Severity`, `FlagStatus` (`OPEN`, `UNDER_REVIEW`, `ALLOWED`, `BLOCKED`, `CLOSED`), `ReviewDecision` (`ALLOW`, `BLOCK`, `ESCALATE`, `CLOSE`), `FrequencyComparator`, `FraudRuleConfig`, `FraudTransferSnapshot`, `FraudRuleMatch`, `FraudEvaluationResult`, `FraudFlagItem`, `FraudRuleEvaluator`, `FraudMatchedValueValidator` (chặn tuyệt đối PII/secret tại ranh giới JSONB), `ReviewStateTransition`.
 - **`application/` & `application/port/` & `application/dto/` (4 classes):** `FraudReviewService`, `FraudConfiguration`, `FraudPersistencePort`, `ReviewFraudFlagRequest` (Bean Validation, tách biệt `trustedReviewerId` khỏi payload).
 - **`adapter/out/` & `adapter/out/persistence/` (8 classes):** `FraudJdbcRepository` (`SELECT ... FOR UPDATE NOWAIT` + cập nhật quyết định nguyên tử), `FraudRuleConfigEntity`, `FraudRuleConfigId` (`@IdClass`), `FraudRuleConfigJpaRepository`, `FraudRuleConfigMapper` (MapStruct), `FraudFlagEntity` (`@JdbcTypeCode(SqlTypes.JSON)`), `FraudFlagJpaRepository`, `FraudFlagMapper` (MapStruct).
@@ -29,12 +29,13 @@ Module `com.simulatedbank.banking.fraud` thực thi bộ quy tắc phát hiện 
 ## 3. Bảng Sở hữu & Hợp đồng Giao tiếp Nội bộ
 
 - **Bảng sở hữu độc quyền (`Write-Owner`):**
-  1. `banking.fraud_rule_config`: PK tổ hợp `(rule_code, version)` (`04` §4.7.1, migration `V10` theo `DEC-COM-001`).
-  2. `banking.fraud_flag`: PK `flag_id`, FK tổ hợp `(rule_code, rule_version)`, `matched_value JSONB`, `notes VARCHAR(500)`, `UNIQUE (transfer_id, rule_code, rule_version)` (`04` §4.7.2, migration `V10`).
+  1. `banking.fraud_rule_config`: PK tổ hợp `(rule_code, version)` (`04` §4.7.1, migration `V15`, bổ sung cấu hình và rule seed ở `V21`).
+  2. `banking.fraud_flag`: PK `flag_id`, FK tổ hợp `(rule_code, rule_version)`, `matched_value JSONB`, `notes VARCHAR(500)`, `UNIQUE (transfer_id, rule_code, rule_version)` (`04` §4.7.2, migration `V15`).
 - **Quy tắc chuẩn trong MVP (`DEC-TRF-009`):**
   - `LARGE_VALUE`: `amount >= threshold_amount`.
   - `HIGH_FREQUENCY`: số lượng lệnh chuyển tiền của cùng khách hàng trong cửa sổ trượt `600 giây` (10 phút) `> 5` (tức từ lệnh thứ 6 trở đi).
   - `UNUSUAL_PATTERN`: tắt mặc định trong phạm vi MVP.
+- **Kiểm chứng** · [BE-INT-07 trên PostgreSQL 16](../../workofteam/integration%20modules/BE-INT-07-verification.md).
 - **Thứ tự ghi kiểm toán `C2` (`DEC-TRF-007`):** Các cờ gian lận hợp lệ được giữ lại sau savepoint sẽ được ghi nhận kiểm toán `FRAUD_FLAG_CREATED` (`C2`) tuần tự theo `flag_id ASC` ở pha kiểm toán cuối của `T2` trước sự kiện `C1` (`TRANSFER_COMPLETED`/`FAILED`).
 
 ---

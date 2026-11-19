@@ -18,6 +18,7 @@ import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.identity.adapter.out.Argon2PasswordHasher;
 import com.simulatedbank.banking.identity.adapter.out.SecureRandomOtpCodeGenerator;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort;
+import com.simulatedbank.banking.identity.application.SessionCustomerBinding;
 import com.simulatedbank.banking.identity.application.AuthAuditPort;
 import com.simulatedbank.banking.identity.application.ChallengeRepository;
 import com.simulatedbank.banking.identity.application.LoginSessionService;
@@ -103,7 +104,8 @@ class OtpChallengeServiceTest {
                 Clock.fixed(NOW, ZoneId.of("UTC")), appProperties(), txManager, dispatch,
                 mock(LoginSessionService.class),
                 new com.simulatedbank.banking.identity.application.AuthMetrics(
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()),
+                org.mockito.Mockito.mock(SessionCustomerBinding.class));
     }
 
     // ------------------------------------------------------------------ issue

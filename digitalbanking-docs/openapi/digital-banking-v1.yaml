@@ -592,6 +592,7 @@ paths:
       tags: [Account]
       summary: Danh sách tài khoản của customer
       operationId: listAccounts
+      description: Danh sách theo ánh xạ Customer của user đã xác thực. Mapping vắng trả 404 CUSTOMER_NOT_FOUND.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - name: status
@@ -609,10 +610,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccountsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
         '503':
@@ -623,6 +628,11 @@ paths:
       tags: [Account]
       summary: Chi tiết tài khoản
       operationId: getAccount
+      description: >
+        Customer chỉ đọc tài khoản của mình; staff có ACCOUNT_READ đọc trong phạm vi single-bank MVP.
+        404 trả ACCOUNT_NOT_FOUND cho account vắng hoặc CUSTOMER_NOT_FOUND cho chính chủ chưa có mapping.
+        Runtime BE-INT-03 trả owner.customerId và owner.status từ Customer; owner.fullName còn là
+        chênh lệch với schema release theo DEC-INT-008.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/AccountIdPath'
@@ -652,8 +662,9 @@ paths:
   /admin/customers/{customerId}:
     get:
       tags: [Customer]
-      summary: Hồ sơ customer cho Operations/Admin/Auditor
+      summary: Hồ sơ customer đã mask cho Operations/Admin
       operationId: getAdminCustomer
+      description: Yêu cầu vai trò staff và CUSTOMER_READ. Seed AUDITOR không có permission này.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CustomerIdPath'
@@ -685,9 +696,17 @@ paths:
       tags: [Customer, Account]
       summary: Danh sách tài khoản của customer cho staff
       operationId: getAdminCustomerAccounts
+      description: >
+        Staff có ACCOUNT_READ. Customer tồn tại mà không có tài khoản trả 200 với items rỗng.
+        Customer vắng trả 404 CUSTOMER_NOT_FOUND.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CustomerIdPath'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountStatus'
       responses:
         '200':
           description: Danh sách tài khoản
@@ -723,7 +742,8 @@ paths:
         worker recovery nội bộ xử lý. Record terminal hết TTL nhưng chưa purge
         vẫn replay/conflict; sau purge key có thể tạo yêu cầu mới. Step-up chỉ trả
         428 sau gateway ACK và SENT được lưu cho generation hiện tại; lỗi
-        dispatch hoặc quota store không sẵn sàng trả 503.
+        dispatch hoặc quota store không sẵn sàng trả 503. Với key mới, Customer
+        INACTIVE nhận 403 trước khi resolve đích hoặc phát OTP.
       operationId: createTransfer
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -786,6 +806,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
         '422':
           description: >-
             Vi phạm business rule; nếu terminal FAILED thì replay giữ nguyên
@@ -926,6 +948,10 @@ paths:
     get:
       tags: [Limit]
       summary: Hạn mức hiện tại và còn lại
+      description: >-
+        Trả cấu hình có hiệu lực tại asOf. Bản bị thay đang còn trong khoảng
+        hiệu lực được dùng đến mốc bản mới bắt đầu. ACCOUNT lần đầu tính usage
+        từ mốc kích hoạt, còn CUSTOMER tính usage của cả ngày nghiệp vụ.
       operationId: getLimits
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -1025,8 +1051,11 @@ paths:
         Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409
         IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS.
         APPROVE áp version mới sau khi kiểm expectedVersion/policy (409
-        ROLE_CONFLICT khi stale, 422 LIMIT_OUT_OF_POLICY); REJECT đánh dấu cấu
-        hình pending REJECTED và idempotent.
+        ROLE_CONFLICT khi stale hoặc scope đã có bản chờ hiệu lực, 422
+        LIMIT_OUT_OF_POLICY). Bản cũ còn hiệu lực đến mốc bản mới bắt đầu nếu
+        chưa hết hạn sớm hơn. result.effectiveFrom là mốc hiệu lực thực tế,
+        lấy thời điểm muộn hơn giữa yêu cầu và thời điểm duyệt trên primary.
+        REJECT đánh dấu cấu hình pending REJECTED và idempotent.
       operationId: approveLimitChange
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -2332,6 +2361,7 @@ components:
           items:
             $ref: '#/components/schemas/PrivilegeCode'
         customerId:
+          description: ID theo CustomerQuery khi user là CUSTOMER và đã có mapping, kể cả INACTIVE. Staff hoặc mapping vắng trả null.
           type: [string, 'null']
           pattern: '^[1-9][0-9]{0,18}$'
     SessionInfo:

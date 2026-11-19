@@ -89,7 +89,7 @@ class AccountReadPostgreSqlIntegrationTest {
         transaction.executeWithoutResult(ignored -> {
             jdbc.update("DELETE FROM banking.account");
             jdbc.update("DELETE FROM banking.customer");
-            jdbc.update("DELETE FROM banking.app_user");
+            // Keep uniquely named users because durable C3 rows reference them.
         });
         inTransaction(() -> {
             userA = seedUser("account-owner-a");
@@ -126,7 +126,7 @@ class AccountReadPostgreSqlIntegrationTest {
 
     @Test
     void selfDetailReturnsMaskedOwnerViewFromTheRealCustomerMapping() {
-        AccountView view = accessService.getOwnAccount(userA, accountA, CORRELATION_ID);
+        AccountView view = accessService.getOwnAccount(userA, accountA, CORRELATION_ID).account();
 
         assertThat(view.customerId()).isEqualTo(customerA);
         assertThat(view.accountNumberMasked()).isEqualTo("**** **** 5678");

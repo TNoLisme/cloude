@@ -29,6 +29,13 @@ public sealed interface TransferCreateOutcome {
     record InProgress() implements TransferCreateOutcome { }
 
     /** Stored terminal response replayed verbatim; body keeps the original correlationId. */
+    record Committed(String reference, TransferPreflightCandidate.ReplayResponse response) implements TransferCreateOutcome {
+        public Committed {
+            Objects.requireNonNull(reference, "reference");
+            Objects.requireNonNull(response, "response");
+        }
+    }
+
     record Replay(int httpStatus, String body) implements TransferCreateOutcome {
         public Replay {
             if ((httpStatus != 201 && httpStatus != 422) || body == null) {
@@ -43,6 +50,8 @@ public sealed interface TransferCreateOutcome {
     record AccountNotFound() implements TransferCreateOutcome { }
 
     record AccountInactive() implements TransferCreateOutcome { }
+
+    record CustomerInactive() implements TransferCreateOutcome { }
 
     record SourceNotOwned() implements TransferCreateOutcome { }
 

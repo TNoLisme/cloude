@@ -52,7 +52,7 @@ class AccountSecurityLogAuditAdapterTest {
 
     @Test
     void accessDeniedEmitsPiiSafeEvidenceAndMetric() {
-        var adapter = new AccountSecurityLogAuditAdapter(registry);
+        var adapter = new AccountSecurityLogAuditAdapter(registry, customers(), event -> {});
 
         adapter.recordStandalone(DENIED, "acc-audit-correlation-1");
 
@@ -99,7 +99,7 @@ class AccountSecurityLogAuditAdapterTest {
 
     @Test
     void metricsInfrastructureFailureDoesNotRemoveTheSecurityLogEvidence() {
-        var adapter = new AccountSecurityLogAuditAdapter(new FailingRegistry());
+        var adapter = new AccountSecurityLogAuditAdapter(new FailingRegistry(), customers(), event -> {});
 
         assertThatCode(() -> adapter.recordStandalone(DENIED, "acc-audit-correlation-3"))
                 .doesNotThrowAnyException();
@@ -121,9 +121,13 @@ class AccountSecurityLogAuditAdapterTest {
                 .collect(Collectors.toMap(pair -> pair.key, pair -> pair.value));
     }
 
+    private static com.simulatedbank.banking.customer.api.CustomerQuery customers() {
+        return org.mockito.Mockito.mock(com.simulatedbank.banking.customer.api.CustomerQuery.class);
+    }
+
     private static final class FailingAdapter extends AccountSecurityLogAuditAdapter {
         private FailingAdapter(MeterRegistry registry) {
-            super(registry);
+            super(registry, customers(), event -> {});
         }
 
         @Override

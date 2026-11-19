@@ -143,8 +143,8 @@ class AuditModulePostgreSqlIntegrationTest {
 
         @Bean
         AuditModuleApi auditModuleApi(AuditEventValidator validator, AuditChainWriter writer,
-                MeterRegistry meters) {
-            return new AuditModuleService(validator, writer, meters);
+                MeterRegistry meters, PlatformTransactionManager transactionManager) {
+            return new AuditModuleService(validator, writer, meters, transactionManager);
         }
     }
 

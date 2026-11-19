@@ -3,8 +3,8 @@
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-TRANSFER-00`
 > **Phiên bản:** v1.5
-> **Ngày cập nhật:** 18/11/2026
-> **Trạng thái:** Đã triển khai candidate (`BE-TRF-01..07`) — chờ ghép tích hợp runtime
+> **Ngày cập nhật:** 19/11/2026
+> **Trạng thái:** T0/T1 đã ghép theo BE-INT-05. T2 Account/Ledger/Limit đã ghép theo BE-INT-06. Fraud thật, Audit C2→C1 và C3 fallback đã được xác minh theo BE-INT-07. Kích hoạt production còn phụ thuộc BE-INT-08/10. [Kiểm chứng Fraud và Audit](../../workofteam/integration%20modules/BE-INT-07-verification.md)
 > **Owner:** Vũ
 > **Reviewer:** Backend Lead, Account/Ledger/Identity, QA, Security — chờ review
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] §2.4, §2.13; [[digitalbanking-docs/docs-common/06. System architecture.md]] §6–§8; [[digitalbanking-docs/docs-backend/00. architecture & conventions.md]] §12.
@@ -19,6 +19,8 @@
 - [BE-TRF-07](tasks/BE-TRF-07.md): candidate security/context/audit (`TransferStaffScope`), metrics/alerts (`TransferTelemetry`) và mapping outbox T2 (`TransferNotifications`). [Evidence kiểm thử](tasks/evidence/BE-TRF-07-candidate.md).
 - [[digitalbanking-docs/docs-backend/modules/_overview/04-transfer.md]]: tài liệu tổng quan module Transfer (đã đồng bộ với `04`, `07` và `DEC-TRF-001..017`).
 
+**BE-INT-05 (19/11/2026).** `TransferCreateIntegrationConfiguration` nối POST Transfer với Customer, Account, Limit, Identity, Audit và persistence V13/V20. HTTP retry tra global key trước preflight. T0 dispatch sau commit. T1 commit intent, key, reservation, consume/attach nếu cần và C1 trước handoff. [Chi tiết task](../../workofteam/integration%20modules/BE-INT-05.md)
+
 **Hiện trạng (18/11/2026):** Toàn bộ các thành phần ứng viên `BE-TRF-01..07` đã được triển khai và kiểm chứng độc lập trong `com.simulatedbank.banking.transfer` và `com.simulatedbank.transfercandidate` (ngoài component-scan mặc định cho đến khi hoàn tất wiring với các provider thật):
 - **Domain & Persistence (`BE-TRF-02`):** Value objects, state machine, `TransferRequestHash`, `IdempotencyDecision`, `StepUpAmountPolicy`, `IdempotencyRetention`, `TransferReferenceGenerator`, SQL primitives (`TransferPersistence`), JPA adapter (`transfercandidate.persistence`) và migration candidate `db/transfer-candidate/V2__transfer.sql` (12 migration tests + 8 JPA PostgreSQL tests).
 - **HTTP Boundary & Query (`BE-TRF-03`, `DEC-TRF-016`):** `TransferCreateInput` (10 tests), `TransferController`, `TransferCreateService`, `TransferQueryService`, `SecurityDenyAudit` và 38 unit/slice/OpenAPI contract tests.
@@ -27,7 +29,7 @@
 - **Recovery, Reconciliation & Purge (`BE-TRF-06`):** `TransferRecoveryCandidate` và `TransferRecoveryJob` (quét định kỳ 60 giây, 2-phase claim fence, evidence reconciliation, TTL purge).
 - **Security Scope, Telemetry & Notification Outbox (`BE-TRF-07`):** `TransferStaffScope`, `TransferTelemetry`, `TransferNotifications` và bộ quy tắc cảnh báo Ops ([tasks/ops/README.md](tasks/ops/README.md)).
 
-Việc kích hoạt bean production và đóng các task `BE-TRF-02..09` phụ thuộc vào bước ghép tích hợp với các provider thật (`Account`, `Limit`, `Ledger`, `Identity`, `Audit`, `Fraud`, `Notification`) và chuỗi Flyway hợp nhất (`V1`–`V10`).
+Việc kích hoạt bean production và đóng các task `BE-TRF-02..09` phụ thuộc vào bước ghép tích hợp với các provider thật (`Account`, `Limit`, `Ledger`, `Identity`, `Audit`, `Fraud`, `Notification`) và bằng chứng trên chuỗi Flyway canonical đến V20.
 
 ## Change Log
 

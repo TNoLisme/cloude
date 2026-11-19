@@ -16,9 +16,11 @@ import org.slf4j.event.KeyValuePair;
 public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
     private final ObjectMapper mapper = new ObjectMapper();
     private String service = "digital-banking-backend";
+    private static final String ACCOUNT_AUDIT_LOGGER = "com.simulatedbank.banking.account.AUDIT";
     private static final Set<String> AUDIT_LOGGERS = Set.of(
             "com.simulatedbank.banking.common.AUDIT",
             "com.simulatedbank.banking.customer.AUDIT",
+            ACCOUNT_AUDIT_LOGGER,
             "com.simulatedbank.banking.admin.AUDIT");
     private static final Set<String> AUDIT_EVENTS = Set.of(
             "SECURITY_AUDIT", "SECURITY_AUDIT_WRITE_FAILED");
@@ -70,11 +72,26 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 && SecurityAuditFallbackLog.EVENT.equals(event.getMessage());
         boolean workflow = WORKFLOW_LOGGER.equals(event.getLoggerName())
                 && WORKFLOW_EVENT.equals(event.getMessage());
+        boolean fraudEngineError = "com.simulatedbank.banking.fraud.adapter.out.JdbcFraudEvaluation".equals(event.getLoggerName())
+                && "FRAUD_ENGINE_ERROR".equals(event.getMessage());
         fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
                 : securityGap ? "SECURITY_AUDIT_GAP"
                 : securityFallback ? SecurityAuditFallbackLog.EVENT
                 : securityAudit ? event.getMessage()
-                : workflow ? WORKFLOW_EVENT : "APPLICATION_LOG");
+                : workflow ? WORKFLOW_EVENT
+                : fraudEngineError ? "FRAUD_ENGINE_ERROR" : "APPLICATION_LOG");
+        if (fraudEngineError && event.getKeyValuePairs() != null) {
+            for (KeyValuePair pair : event.getKeyValuePairs()) {
+                if (("category".equals(pair.key)
+                            && ("ENGINE_SQL".equals(pair.value) || "EVIDENCE_ENCODING".equals(pair.value)
+                                || "EVALUATION_BUDGET".equals(pair.value)))
+                        || ("fallback".equals(pair.key) && "ALLOW".equals(pair.value))
+                        || ("correlation_id".equals(pair.key) && pair.value instanceof String id
+                            && RequestContext.isValidCorrelationId(id))) {
+                    fields.put(pair.key, pair.value);
+                }
+            }
+        }
         if ((completion || securityGap || securityFallback) && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 Object value = pair.value;
@@ -125,6 +142,8 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 case "outcome" -> "REJECTED".equals(value) || "WRITE_FAILED".equals(value)
                         || "SUCCESS".equals(value);
                 case "actor_user_id" -> value == null || value instanceof Long id && id > 0;
+                case "actor_customer_id" -> ACCOUNT_AUDIT_LOGGER.equals(event.getLoggerName())
+                        && value instanceof Long id && id > 0;
                 case "actor_roles" -> value instanceof String roles && roles.length() <= 128
                         && roles.matches("(?:[A-Z][A-Z0-9_]*(?:,[A-Z][A-Z0-9_]*)*)?");
                 case "entity_type" -> value instanceof String type && AUDIT_ENTITY_TYPES.contains(type);

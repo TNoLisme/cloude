@@ -1,5 +1,9 @@
 # Module `audit` — Chỉ mục & Đặc tả Kỹ thuật
 
+Transfer T1 ghi C1 `TRANSFER_CREATED` qua Audit API ở cuối transaction. OTP Transfer ghi C2 khi tạo và verify challenge, còn C3 ghi standalone và dùng reason code an toàn. [BE-INT-05](../../workofteam/integration%20modules/BE-INT-05.md)
+
+[BE-INT-03](../../workofteam/integration%20modules/BE-INT-03.md) xác minh C3 ghi bền vững đối với deny trên các route đọc Customer/Account. Khi PostgreSQL từ chối ghi, audit đếm một lần thất bại và log fallback có correlation/request ID cùng actor đã che. HTTP trả 403.
+
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** `BE-MOD-AUDIT-00`
 > **Phiên bản:** 1.0
@@ -10,6 +14,8 @@
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (FR-034..038, FR-053, AC-018..022, AC-034), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§4.6), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6.2, §8.5), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§8.6), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]], [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] (§11.1, §13.4), [[digitalbanking-docs/docs-backend/modules/_overview/07-audit.md]], [[DECISIONS.md]] (`DEC-COM-001/002`, `DEC-TRF-007`)
 
 ---
+
+> **Tích hợp Transfer:** BE-INT-07 xác minh Audit C2 theo ID cờ tăng dần, tiếp theo C1, trên cùng transaction PostgreSQL. C3 deny/conflict ghi riêng và phát log/metric dự phòng khi lỗi. [Bằng chứng](../../workofteam/integration%20modules/BE-INT-07-verification.md)
 
 ## 1. Phạm vi và Trách nhiệm
 

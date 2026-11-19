@@ -41,7 +41,7 @@ class CustomerProfileServiceTest {
         protection = new CountingProtection(new CommonCustomerPiiProtectionAdapter(new PiiCryptoService(KEY)));
         CustomerPiiService piiService = new CustomerPiiService(store, protection);
         CustomerQuery customerQuery = new CustomerQueryService(reader);
-        service = new CustomerProfileService(customerQuery, piiService);
+        service = new CustomerProfileService(customerQuery, piiService, org.mockito.Mockito.mock(CustomerAuditPort.class));
     }
 
     @Test

@@ -16,11 +16,12 @@ public interface LimitStore {
     Optional<LimitConfiguration> findConfiguration(long limitId);
     Optional<LimitUsage> findUsage(long customerId, Long accountId, LocalDate date);
     List<LimitConfiguration> findEffective(long customerId, long sourceAccountId, Instant asOf);
+    List<LimitConfiguration> findTransferConfigurations(long customerId, long sourceAccountId, Instant asOf);
     boolean hasActivationAfter(long customerId, long sourceAccountId, Instant asOf);
     Instant transactionStart();
     LimitUsage lockUsage(long customerId, Long accountId, LocalDate date);
     void incrementUsage(LimitUsage usage, BigDecimal amount, BigDecimal dailyLimit);
-    void lockChangeScope(long customerId, Long accountId);
+    void lockCustomerScope(long customerId);
     Instant currentTime();
     List<LimitConfiguration> findScope(long customerId, Long accountId);
     Optional<LimitConfiguration> findProposal(long approvalId, boolean forUpdate);

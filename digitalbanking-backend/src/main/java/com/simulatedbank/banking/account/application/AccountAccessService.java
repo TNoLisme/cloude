@@ -5,6 +5,9 @@ import com.simulatedbank.banking.account.api.AccountQuery.AccountView;
 import com.simulatedbank.banking.account.api.AccountQuery.AccountViewQuery;
 import com.simulatedbank.banking.account.api.AccountQuery.Status;
 import com.simulatedbank.banking.account.domain.AccountStatus;
+import com.simulatedbank.banking.common.config.SecurityAccessDeniedAuditor;
+import com.simulatedbank.banking.common.config.SessionAuthenticator.Session;
+import com.simulatedbank.banking.common.config.StaffReadAccess;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.customer.api.CustomerQuery;
@@ -12,7 +15,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -52,15 +54,13 @@ public class AccountAccessService {
     /** Permission đã duyệt của `API-ADM-02` (07 §3.4 seed: OPERATIONS/ADMIN/AUDITOR; §8.2.5). */
     static final String STAFF_READ_PERMISSION = "ACCOUNT_READ";
 
-    /** Customer actor marker: a customer principal never satisfies a staff lookup (DAR-001). */
-    static final String CUSTOMER_ROLE_AUTHORITY = "ROLE_CUSTOMER";
-
     private static final Pattern CORRELATION_ID = Pattern.compile("^[A-Za-z0-9._:-]{1,64}$");
 
     private final CustomerQuery customers;
     private final AccountReadPort accounts;
     private final AccountNumberProtection protection;
     private final AccountQuery accountQuery;
+    private final SecurityAccessDeniedAuditor audit;
     private final Clock clock;
 
     public AccountAccessService(
@@ -68,12 +68,14 @@ public class AccountAccessService {
             AccountReadPort accounts,
             AccountNumberProtection protection,
             AccountQuery accountQuery,
-            Clock clock) {
+            Clock clock,
+            SecurityAccessDeniedAuditor audit) {
         this.customers = customers;
         this.accounts = accounts;
         this.protection = protection;
         this.accountQuery = accountQuery;
         this.clock = clock;
+        this.audit = audit;
     }
 
     /**
@@ -87,6 +89,9 @@ public class AccountAccessService {
         }
     }
 
+    /** Account view plus the authoritative status of its Customer owner. */
+    public record AccountDetail(AccountView account, CustomerQuery.Status ownerStatus) {}
+
     /**
      * Danh sách account của chính customer đang đăng nhập (`API-ACC-01` use case).
      *
@@ -98,7 +103,7 @@ public class AccountAccessService {
     public AccountList listOwnAccounts(long userId, Status statusFilter, String correlationId) {
         requirePositiveId(userId);
         requireCorrelationId(correlationId);
-        long customerId = resolveCustomerId(userId);
+        long customerId = resolveCustomer(userId).customerId();
         Instant asOf = clock.instant();
         List<AccountView> items = accounts.findByCustomerId(customerId, toDomainStatus(statusFilter)).stream()
                 .map(account -> AccountViewMapper.toView(account, protection, asOf))
@@ -124,14 +129,14 @@ public class AccountAccessService {
      *
      * @param customerId       ID customer từ path (adapter đã validate schema `ID`)
      * @param statusFilter     {@code null} = không lọc
-     * @param actorAuthorities authority snapshot server-side của staff
+     * @param actor principal server-side của staff
      * @param correlationId    trace của request hiện tại
      */
     public AccountList listCustomerAccounts(long customerId, Status statusFilter,
-            Set<String> actorAuthorities, String correlationId) {
+            Session actor, String correlationId) {
         requirePositiveId(customerId);
         requireCorrelationId(correlationId);
-        requireStaffScope(actorAuthorities);
+        requireStaffScope(actor, "CUSTOMER", customerId, correlationId);
         // 07 §8.2.5: an unknown customer is 404 CUSTOMER_NOT_FOUND, not an empty page. The lookup is
         // exact-ID, PII-free and read-only (customer.api); Account never reads the customer table.
         if (customers.findByCustomerId(customerId).isEmpty()) {
@@ -150,10 +155,11 @@ public class AccountAccessService {
      * so a mixed snapshot means the identity context is inconsistent and is denied instead of being
      * treated as staff (design/04 §5.1, DAR-001).
      */
-    private static void requireStaffScope(Set<String> actorAuthorities) {
-        if (actorAuthorities == null || !actorAuthorities.contains(STAFF_READ_PERMISSION)
-                || actorAuthorities.contains(CUSTOMER_ROLE_AUTHORITY)) {
-            // 403 trước persistence: không tiết lộ customer/account nào cho caller thiếu quyền.
+    private void requireStaffScope(Session actor, String entityType, long entityId, String correlationId) {
+        if (actor == null || !StaffReadAccess.allows(actor.authorities(), STAFF_READ_PERMISSION)) {
+            if (actor != null) {
+                audit.recordReadDenial(actor, entityType, entityId, correlationId);
+            }
             throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
         }
     }
@@ -165,13 +171,14 @@ public class AccountAccessService {
      *         {@code ACCOUNT_NOT_FOUND} khi account vắng, {@code AUTH_FORBIDDEN} khi account thuộc
      *         customer khác (kèm audit C3)
      */
-    public AccountView getOwnAccount(long userId, long accountId, String correlationId) {
+    public AccountDetail getOwnAccount(long userId, long accountId, String correlationId) {
         requirePositiveId(userId);
         requirePositiveId(accountId);
         requireCorrelationId(correlationId);
-        long customerId = resolveCustomerId(userId);
-        return accountQuery.getAccountView(
-                AccountViewQuery.forOwner(accountId, customerId, correlationId));
+        var owner = resolveCustomer(userId);
+        AccountView account = accountQuery.getAccountView(
+                AccountViewQuery.forOwner(accountId, owner.customerId(), correlationId));
+        return new AccountDetail(account, owner.status());
     }
 
     /**
@@ -181,15 +188,18 @@ public class AccountAccessService {
      *
      * @throws BankingBusinessException {@code ACCOUNT_NOT_FOUND} khi account vắng
      */
-    public AccountView getAccountForStaff(long accountId, String correlationId) {
+    public AccountDetail getAccountForStaff(long accountId, Session actor, String correlationId) {
         requirePositiveId(accountId);
         requireCorrelationId(correlationId);
-        return accountQuery.getAccountView(AccountViewQuery.forStaff(accountId, correlationId));
+        requireStaffScope(actor, "ACCOUNT", accountId, correlationId);
+        AccountView account = accountQuery.getAccountView(AccountViewQuery.forStaff(accountId, correlationId));
+        var owner = customers.findByCustomerId(account.customerId())
+                .orElseThrow(() -> new BankingBusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
+        return new AccountDetail(account, owner.status());
     }
 
-    private long resolveCustomerId(long userId) {
+    private CustomerQuery.CustomerIdentity resolveCustomer(long userId) {
         return customers.findByUserId(userId)
-                .map(CustomerQuery.CustomerIdentity::customerId)
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
     }
 

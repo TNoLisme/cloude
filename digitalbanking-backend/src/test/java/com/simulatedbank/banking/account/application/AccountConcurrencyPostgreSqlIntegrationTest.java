@@ -94,7 +94,7 @@ class AccountConcurrencyPostgreSqlIntegrationTest {
         transaction.executeWithoutResult(ignored -> {
             jdbc.update("DELETE FROM banking.account");
             jdbc.update("DELETE FROM banking.customer");
-            jdbc.update("DELETE FROM banking.app_user");
+            jdbc.update("DELETE FROM banking.app_user WHERE username <> '__fraud_rule_bootstrap__'");
         });
         transaction.executeWithoutResult(ignored -> {
             customerA = seedCustomer(seedUser("acc-concurrency-a"));

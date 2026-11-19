@@ -58,7 +58,7 @@ public class AuditEventValidator {
 
     private static final Map<String, Set<String>> STATE_FIELDS = Map.ofEntries(
             Map.entry("TRANSFER", Set.of("reference", "status", "failureCode", "sourceAccountId",
-                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType")),
+                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType", "reasonCode")),
             Map.entry("ACCOUNT", Set.of("accountId", "customerId", "status", "last4", "availableBalance",
                     "ledgerBalance", "reasonCode")),
             Map.entry("APP_USER", Set.of("userId", "roleCodes", "status", "lockedUntil", "reasonCode")),
@@ -70,7 +70,7 @@ public class AuditEventValidator {
             Map.entry("FRAUD_FLAG", Set.of("flagId", "transferReference", "ruleCode", "ruleVersion", "severity",
                     "status", "decision", "matchedValue")),
             Map.entry("AUTH_CHALLENGE", Set.of("challengeId", "purpose", "method", "status", "attemptCount",
-                    "expiresAt")),
+                    "expiresAt", "reasonCode")),
             Map.entry("SESSION", Set.of("sessionId", "userId", "deviceId", "status", "reasonCode")),
             Map.entry("LEGAL_HOLD", Set.of("holdId", "entityType", "entityId", "status", "reasonCode",
                     "placedAt", "releasedAt")),
@@ -178,6 +178,18 @@ public class AuditEventValidator {
         String entityId = required(event.entityId(), MAX_ENTITY_ID);
         Map<String, Object> beforeState = validateState(entityType, event.beforeState());
         Map<String, Object> afterState = validateState(entityType, event.afterState());
+        if (action == AuditAction.FRAUD_FLAG_CREATED
+                && (actorType != AuditActorType.SYSTEM || !"FRAUD_FLAG".equals(entityType)
+                || event.outcome() != AuditOutcome.SUCCESS
+                || !entityId.matches("[1-9][0-9]{0,18}") || afterState == null
+                || !(afterState.get("ruleVersion") instanceof Integer version) || version <= 0
+                || !(afterState.get("ruleCode") instanceof String code) || !code.matches("[A-Za-z][A-Za-z0-9_:-]{0,31}")
+                || !Set.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(afterState.getOrDefault("severity", ""))
+                || !"OPEN".equals(afterState.get("status"))
+                || !(afterState.get("transferReference") instanceof String reference)
+                || !reference.matches("TXN[A-Za-z0-9]{8,29}"))) {
+            throw rejection();
+        }
         Map<String, Object> clientInfo = validateClientInfo(event.clientInfoMasked());
         BigDecimal amount = validatedAmount(event.amount());
         String currency = event.currency();

@@ -1,5 +1,7 @@
 # BE-INT-01 — Khóa ma trận hợp đồng tích hợp Backend
 
+Các hàng dưới đây ghi baseline của BE-INT-01. Runtime Limit và V20 ở [BE-INT-04](BE-INT-04.md). Fraud, Audit và V21 ở [BE-INT-07](BE-INT-07.md).
+
 > **Ưu tiên:** P0 — gate G0, ngày T1 của W6  
 > **Thực hiện/chốt:** người điều hành/merge owner, toàn quyền sửa mọi module theo DEC-INT-003  
 > **Trạng thái:** DONE phần ma trận/định danh và xử lý xung đột phát hiện; **G0 vẫn BLOCKED** vì một số provider API/adapter v1 chưa có và vector xuyên provider chưa chạy  

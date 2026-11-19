@@ -323,13 +323,13 @@ class FraudJpaRepositoryIT {
         FraudRuleConfigEntity b1 = FraudRuleConfigEntity.builder()
                 .ruleCode("RULE_B").version(1).ruleName("B1").ruleType(RuleType.LARGE_VALUE)
                 .thresholdAmount(new BigDecimal("1000000.00"))
-                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(null)
+                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(now.plusSeconds(1))
                 .createdBy(1L).createdAt(now).updatedAt(now).build();
 
         FraudRuleConfigEntity a1 = FraudRuleConfigEntity.builder()
                 .ruleCode("RULE_A").version(1).ruleName("A1").ruleType(RuleType.LARGE_VALUE)
                 .thresholdAmount(new BigDecimal("1000000.00"))
-                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(null)
+                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(now.plusSeconds(1))
                 .createdBy(1L).createdAt(now).updatedAt(now).build();
 
         FraudRuleConfigEntity b2 = FraudRuleConfigEntity.builder()

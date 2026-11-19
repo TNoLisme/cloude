@@ -63,6 +63,12 @@ public class AccountBalanceService implements AccountBalance {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<LockedAccounts> findAndLockTransferAccounts(long sourceAccountId, long destinationAccountId) {
+        return locks.findAndLockTransferAccounts(sourceAccountId, destinationAccountId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public DebitResult debitConditional(long sourceAccountId, BigDecimal amount) {
         requireAccountId(sourceAccountId);
         requirePositiveAmount(amount);
@@ -86,12 +92,17 @@ public class AccountBalanceService implements AccountBalance {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public CreditResult credit(long destinationAccountId, BigDecimal amount) {
+        return creditUnderSavepoint(destinationAccountId, amount)
+                .orElseThrow(() -> new BankingBusinessException(ErrorCode.INTERNAL_ERROR));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<CreditResult> creditUnderSavepoint(long destinationAccountId, BigDecimal amount) {
         requireAccountId(destinationAccountId);
         requirePositiveAmount(amount);
-
         return balances.creditIfActive(destinationAccountId, amount)
-                .map(row -> new CreditResult(balanceAfter(row)))
-                .orElseThrow(() -> new BankingBusinessException(ErrorCode.INTERNAL_ERROR));
+                .map(row -> new CreditResult(balanceAfter(row)));
     }
 
     private static BalanceAfter balanceAfter(AccountBalancePort.BalanceRow row) {

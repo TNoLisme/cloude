@@ -1,5 +1,7 @@
 package com.simulatedbank.banking.fraud.domain;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +19,8 @@ public class FraudMatchedValueValidator {
             "count",
             "thresholdCount",
             "windowSeconds",
+            "windowStartExclusive",
+            "windowEndInclusive",
             "comparator",
             "ruleCode",
             "version"
@@ -64,6 +68,18 @@ public class FraudMatchedValueValidator {
 
             if (!(value instanceof String || value instanceof Number || value instanceof Boolean || value instanceof Character)) {
                 throw new IllegalArgumentException("Nested structures are not permitted in matched_value for key: " + key);
+            }
+
+            if (key.equals("windowStartExclusive") || key.equals("windowEndInclusive")) {
+                if (!(value instanceof String timestamp)) throw new IllegalArgumentException("Invalid Fraud window timestamp");
+                try {
+                    if (!Instant.parse(timestamp).toString().equals(timestamp)) {
+                        throw new IllegalArgumentException("Noncanonical Fraud window timestamp");
+                    }
+                } catch (DateTimeParseException failure) {
+                    throw new IllegalArgumentException("Invalid Fraud window timestamp");
+                }
+                continue;
             }
 
             String strVal = value.toString();

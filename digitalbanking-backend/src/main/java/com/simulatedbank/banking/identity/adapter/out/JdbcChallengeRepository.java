@@ -1,5 +1,7 @@
 package com.simulatedbank.banking.identity.adapter.out;
 
+import com.simulatedbank.banking.identity.api.StepUpChallengePort.ChallengePurpose;
+import com.simulatedbank.banking.identity.api.StepUpChallengePort.VerifiedChallenge;
 import com.simulatedbank.banking.identity.application.ChallengeRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -7,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -182,6 +185,31 @@ public class JdbcChallengeRepository implements ChallengeRepository {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void expireTransferBindingIfDue(long userId, String key, String hash) {
+        jdbc.update("""
+                UPDATE banking.auth_challenge SET status = 'EXPIRED'
+                 WHERE user_id = ? AND idempotency_key = ? AND request_hash = ?
+                   AND purpose = 'TRANSFER_STEP_UP' AND status IN ('CREATED', 'SENT', 'VERIFIED')
+                   AND consumed_at IS NULL AND expires_at <= clock_timestamp()
+                """, userId, key, hash);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<VerifiedChallenge> findVerifiedTransferBinding(long userId, String key, String hash) {
+        return DataAccessUtils.optionalResult(jdbc.query("""
+                SELECT challenge_ref, verified_at, expires_at
+                  FROM banking.auth_challenge
+                 WHERE user_id = ? AND idempotency_key = ? AND request_hash = ?
+                   AND purpose = 'TRANSFER_STEP_UP' AND status = 'VERIFIED'
+                   AND consumed_at IS NULL AND expires_at > clock_timestamp()
+                """, (rs, row) -> new VerifiedChallenge(rs.getString("challenge_ref"),
+                ChallengePurpose.TRANSFER_STEP_UP, toInstant(rs.getTimestamp("verified_at")),
+                toInstant(rs.getTimestamp("expires_at"))), userId, key, hash));
+    }
+
+    @Override
     @Transactional
     public boolean expireIfDue(long challengeId) {
         return !jdbc.query(EXPIRE_IF_DUE,
@@ -258,7 +286,7 @@ public class JdbcChallengeRepository implements ChallengeRepository {
 
     private Optional<ChallengeSnapshot> queryOne(String sql, Object... args) {
         List<ChallengeSnapshot> rows = jdbc.query(sql, SNAPSHOT_MAPPER, args);
-        return rows.stream().findFirst();
+        return DataAccessUtils.optionalResult(rows);
     }
 
     private static ChallengeSnapshot requireOne(List<ChallengeSnapshot> rows) {

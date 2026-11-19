@@ -26,6 +26,7 @@ public class LimitJpaAdapter implements LimitStore {
     private final LimitUsageJpaRepository usages;
     private final LimitPersistenceMapper mapper;
     private final EntityManager entityManager;
+    private final LimitCustomerGuard guard;
 
     @Override @Transactional(propagation = Propagation.MANDATORY)
     public LimitConfiguration insertConfiguration(LimitConfiguration config) {
@@ -69,6 +70,9 @@ public class LimitJpaAdapter implements LimitStore {
     @Override public List<LimitConfiguration> findEffective(long customer, long account, Instant asOf) {
         return configs.effective(customer, account, asOf.truncatedTo(ChronoUnit.MICROS)).stream().map(this::snapshot).toList();
     }
+    @Override public List<LimitConfiguration> findTransferConfigurations(long customer, long account, Instant asOf) {
+        return configs.transferConfigurations(customer, account, asOf).stream().map(this::snapshot).toList();
+    }
     @Override public boolean hasActivationAfter(long customer, long account, Instant asOf) {
         return configs.hasActivationAfter(customer, account, asOf.truncatedTo(ChronoUnit.MICROS));
     }
@@ -91,9 +95,8 @@ public class LimitJpaAdapter implements LimitStore {
         if (count != 1) throw new IllegalStateException("Checked usage no longer permits completion");
     }
     @Override @Transactional(propagation = Propagation.MANDATORY)
-    public void lockChangeScope(long customer, Long account) {
-        configs.lockScope("limit:customer:" + customer);
-        if (account != null) configs.lockScope("limit:account:" + account);
+    public void lockCustomerScope(long customer) {
+        guard.lock(customer);
     }
     @Override public Instant currentTime() { return configs.clockTimestamp(); }
     @Override public List<LimitConfiguration> findScope(long customer, Long account) {

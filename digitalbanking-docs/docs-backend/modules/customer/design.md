@@ -106,7 +106,7 @@ CustomerProfile: `customerId`, `userId`, `fullName`, `phoneMasked?`, `emailMaske
 | CUS-OI-03 | FE mô tả OPS-CREATE-CUSTOMER nhưng API chuẩn chưa có create; OI-API-08 search chưa chốt | Admin/BA/API chốt scope và contract |
 | CUS-OI-04 | Customer provisioning, migration FK, Identity session mapping chưa có implementation | Identity/DB owner chốt giao diện, thứ tự migration |
 | CUS-OI-05 | Data scope staff và audit deny policy chưa có runtime integration xác nhận | Admin/Audit/Security |
-| CUS-OI-06 | Tác động của customer INACTIVE lên Account/Transfer phải thống nhất | BA/Account/Transfer |
+| CUS-OI-06 | POST Transfer với key mới trả 403 khi Customer INACTIVE theo DEC-INT-013. Các mutation và cascade khác vẫn chờ chính sách. | BA/Account/Transfer |
 
 ## 10. Implementation gates
 

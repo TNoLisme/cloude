@@ -7,9 +7,7 @@ package com.simulatedbank.banking.account.application;
  * đọc (AC-024). {@code ACCOUNT_STATUS_CHANGED} (C2) thuộc status transition — chưa được duyệt
  * (ACC-DR-12), nên không có operation C2 trong port này.</p>
  *
- * <p>Durable {@code audit_log} thuộc module audit chưa có runtime (ACC-DR-15); adapter mặc định
- * ghi structured security log + metric theo tiền lệ đã duyệt của Identity/Customer
- * (DEC-ID-003, DEC-CUS-005). Khi module audit sẵn sàng, chỉ thay adapter — port giữ nguyên.</p>
+ * <p>Adapter phát denied read event cho Audit C3 theo DEC-INT-009 và ghi log/metric cục bộ.</p>
  */
 public interface AccountAuditPort {
 

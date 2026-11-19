@@ -31,7 +31,8 @@ public interface LimitReadRepository extends Repository<LimitConfigEntity, Long>
               AND u.account_id IS NOT DISTINCT FROM c.account_id AND u.usage_date = :usageDate
             WHERE c.customer_id = :customerId
               AND (c.account_id IS NULL OR c.account_id = :accountId)
-              AND c.status = 'ACTIVE' AND c.effective_from <= :asOf
+              AND (c.status = 'ACTIVE' OR (c.status = 'SUPERSEDED' AND c.effective_to IS NOT NULL))
+              AND c.effective_from <= :asOf
               AND (c.effective_to IS NULL OR c.effective_to > :asOf)
             ORDER BY c.account_id NULLS FIRST
             """, nativeQuery = true)

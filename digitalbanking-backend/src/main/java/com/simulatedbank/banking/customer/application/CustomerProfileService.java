@@ -1,5 +1,7 @@
 package com.simulatedbank.banking.customer.application;
 
+import com.simulatedbank.banking.common.context.RequestContext;
+import com.simulatedbank.banking.common.context.RequestContextHolder;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import com.simulatedbank.banking.customer.api.CustomerQuery;
@@ -35,10 +37,12 @@ public class CustomerProfileService {
 
     private final CustomerQuery customerQuery;
     private final CustomerPiiService piiService;
+    private final CustomerAuditPort audit;
 
-    public CustomerProfileService(CustomerQuery customerQuery, CustomerPiiService piiService) {
+    public CustomerProfileService(CustomerQuery customerQuery, CustomerPiiService piiService, CustomerAuditPort audit) {
         this.customerQuery = customerQuery;
         this.piiService = piiService;
+        this.audit = audit;
     }
 
     /**
@@ -51,6 +55,15 @@ public class CustomerProfileService {
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
         // Defense-in-depth: getForOwner tái kiểm stored.user_id == actorUserId trước khi decrypt
         // — nếu ánh xạ bị hỏng, request vẫn dừng ở 403, không bao giờ rò PII customer khác.
-        return piiService.getForOwner(binding.customerId(), actorUserId);
+        try {
+            return piiService.getForOwner(binding.customerId(), actorUserId);
+        } catch (BankingBusinessException denial) {
+            if (denial.code() == ErrorCode.AUTH_FORBIDDEN) {
+                RequestContextHolder.current().map(RequestContext::correlationId).ifPresent(correlationId ->
+                        audit.recordStandalone(CustomerAuditPort.CustomerAuditEvent.accessDenied(
+                                actorUserId, "CUSTOMER", binding.customerId()), correlationId));
+            }
+            throw denial;
+        }
     }
 }

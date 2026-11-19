@@ -74,7 +74,11 @@ public class CustomerAdminDetailController {
         if (customerId == null || !customerId.matches("[1-9][0-9]{0,18}")) {
             throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         }
-        return Long.parseLong(customerId);
+        try {
+            return Long.parseLong(customerId);
+        } catch (NumberFormatException tooLarge) {
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
+        }
     }
 
     /** Principal từ `SessionAuthenticationFilter` (attribute session snapshot, như AuthController). */

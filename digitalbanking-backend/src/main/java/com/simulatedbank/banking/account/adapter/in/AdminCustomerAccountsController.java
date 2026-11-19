@@ -31,11 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
  * đó. {@code status} optional đúng như rule của `API-ACC-01` (`07` §8.2.2; BE-ACC-01 §C rule 2),
  * giá trị lạ → 400 trước persistence.</p>
  *
- * <p>Hai giới hạn đã ghi nhận, không tự chế hợp đồng: (1) data scope staff theo chi nhánh/segment
- * chưa được duyệt (ACC-DR-13) nên gate hiện tại là permission {@code ACCOUNT_READ}; (2) `404
- * CUSTOMER_NOT_FOUND` chưa phát được vì module Customer chưa có operation existence theo
- * {@code customerId} (ACC-DR-10) — customer không tồn tại trả `200 {items: [], asOf}` như customer
- * chưa có tài khoản, không lộ dữ liệu. Xem BE-ACC-09 §G.</p>
+ * <p>Staff có scope exact-ID toàn ngân hàng theo DEC-INT-008. Customer vắng trả 404
+ * CUSTOMER_NOT_FOUND. Customer tồn tại chưa có account trả 200 với items rỗng.</p>
  */
 @RestController
 @ConditionalOnProperty(name = "app.account.enabled", havingValue = "true", matchIfMissing = true)
@@ -57,7 +54,7 @@ public class AdminCustomerAccountsController {
         AccountAccessService.AccountList page = accounts.listCustomerAccounts(
                 customerKey,
                 AccountHttpSupport.status(status),
-                principal.authorities(),
+                principal,
                 AccountHttpSupport.correlationId(servlet));
         List<AccountSummaryResponse> items = page.items().stream()
                 .map(AccountHttpSupport::toSummary)

@@ -324,10 +324,10 @@ app:
     max-amount-vnd: 10000000
     pin-otp-threshold-vnd: 5000000                 # Thuộc tính tương thích cũ; ngưỡng step-up chính thức dùng app.security.step-up.*
     daily-cap-vnd: 50000000
-    idempotency-ttl-hours: 24                      # Tối thiểu 24 giờ từ completed_at (DEC-TRF-005)
+    idempotency-ttl-hours: 24                      # Tối thiểu 24 giờ, dùng snapshot riêng tại T1 và terminal (DEC-TRF-005)
     t2-lock-timeout-ms: 2000                       # SET LOCAL lock_timeout = '2s'
-    t2-statement-timeout-ms: 5000                  # SET LOCAL statement_timeout = '5s'
-    fraud-eval-timeout-ms: 1000                    # Ngân sách tối đa cho fraud engine trong T2
+    t2-statement-timeout-ms: 5000                  # statement_timeout và ngân sách T2
+    fraud-eval-timeout-ms: 1000                    # Ngân sách Fraud kiểm tại mốc đọc/đánh giá/ghi; SQL theo deadline T2
 
   fraud:
     velocity-count: 5                              # DEC-TRF-009 / 04 §4.7.1: > 5 lệnh chuyển tiền
@@ -347,12 +347,15 @@ app:
     retention-cleanup-cron: "0 0 3 * * *"          # Hằng ngày (design/01 §7.6)
 ```
 
+BE-INT-06 áp dụng lock timeout và statement timeout cục bộ trong claim và T2. T2 kiểm ngân sách trước và sau audit, đồng thời giảm statement/lock timeout của audit theo thời gian còn lại. Lock timeout/deadlock có tối đa hai lần T2 trên fence hợp lệ sau rollback được xác nhận.
+
 ### 5.2. Ghi chú cấu hình quan trọng
 
 - `spring.jpa.open-in-view: false` và `ddl-auto: validate` là **bắt buộc** theo `05` §5.2.3 và `06` §8.8.
 - `spring.flyway.user/password` là tài khoản migration (`banking_migrator`); `spring.datasource.username/password` là tài khoản runtime (`banking_app`). Không dùng chung (`DEC-COM-002`, `design/04` §6.5).
 - `spring.jackson.deserialization.fail-on-unknown-properties=true` chống Mass Assignment (`design/04` §8.1).
 - `management.endpoint.health.show-details=never` và chỉ public `/actuator/health`; không public `/actuator/metrics` và `/actuator/prometheus` ra Internet (`06` §12.3, `08` §3.3).
+- BE-INT-05 lưu `ttl_t1_config_version=transfer-ttl-hours-<giá trị>` cùng TTL giây. T1 tính expiry từ `created_at`. Reservation lưu policy version gồm hai ngưỡng step-up để truy vết cấu hình đã dùng.
 - Ngưỡng tiền kích hoạt Step-up cho giao dịch chuyển tiền được quy định duy nhất tại `app.security.step-up.single-amount-vnd` (`>= 10.000.000 VND`) và `app.security.step-up.daily-amount-vnd` (`> 20.000.000 VND`) theo `DEC-TRF-001/002/008`. Thuộc tính `app.transfer.pin-otp-threshold-vnd` chỉ giữ để tương thích cấu hình cũ và không dùng làm điều kiện kích hoạt OTP.
 - `AppProperties` cung cấp giá trị mặc định an toàn và kiểm tra tính hợp lệ lúc khởi động (các trường giới hạn/timeout phải là số nguyên dương; `APP_TIMEZONE` phải là `ZoneId` hợp lệ). Inject `Clock` UTC (`clock.instant()`) cho mọi mốc thời gian hệ thống và `ZoneId businessZoneId` (`LocalDate.now(clock.withZone(businessZoneId))`) cho ngày nghiệp vụ; xem hướng dẫn tại [backend README](../../../digitalbanking-backend/README.md#common-configuration-and-time).
 
@@ -489,7 +492,8 @@ Hệ thống xuất JSON log qua `logback-spring.xml` và `SafeJsonLogEncoder`: 
 | Concurrency/DB | `db_deadlock_total`, `db_pool_active`, `db_pool_waiting` | Deadlock, pool |
 | Audit | `audit_write_total{action,criticality,outcome}`, `audit_write_failure_total`, `audit_write_latency_seconds`, `audit_lock_wait_seconds` | Ghi audit/độ trễ/khóa |
 | Audit integrity | `audit_chain_verify_failure_total`, `audit_gap_total` | Sai chuỗi/gap |
-| Fraud | `fraud_flag_total{rule}` | Flag theo rule |
+| Fraud | `banking_fraud_engine_error_total` | Tăng sau khi khôi phục phần Fraud và cho T2 tiếp tục. |
+| Transfer Audit | `transfer_security_deny_fallback_total` | Tăng một lần khi C3 không ghi bền; cảnh báo `TransferSecurityAuditFallback` trong `ops/prometheus/transfer-audit-alerts.yml`. |
 | Notification | `notification_backlog`, `notification_retry_total` | Backlog/retry |
 | Jobs | `reconciliation_total{result}`, `reconciliation_duration_seconds` | Đối soát |
 
@@ -563,7 +567,7 @@ Bảng dưới ghi lại các điểm Backend từng mô tả chưa khớp hoặ
 | Session đồng thời | `design/04` §4.3: Customer 3, Staff 1; `07` §3.2: nhiều session, thu hồi theo device/user Deferred | Theo `07`; IMP-01 bỏ keys trần 3/1 trong Java/YAML, không triển khai session/revocation |
 | Cookie session | `07` §3.2: `DB_SESSION`, `Path=/`, `Max-Age=28800`; design/04: `SESSION_TOKEN`, `Path=/api` | Đã phân xử theo `07`; không chờ chọn lại tên/path, không tự đóng issue ở tài liệu nguồn |
 | Step-up theo số tiền | `DEC-TRF-001/002/008`: `>= 10.000.000 VND`/lệnh hoặc tổng ngày dự kiến `> 20.000.000 VND` dưới customer guard. | `app.security.step-up.*` là cấu hình chuẩn duy nhất cho hai ngưỡng tiền; thuộc tính `app.transfer.pin-otp-threshold-vnd` chỉ giữ để tương thích cấu hình cũ. |
-| Fraud velocity | `DEC-TRF-009` & `04` §4.7.1: `> 5` lệnh chuyển tiền trong cửa sổ trượt `600 giây` (10 phút). | Đặt `app.fraud.velocity-count: 5` và `app.fraud.velocity-window-seconds: 600` theo `DEC-TRF-009`. |
+| Fraud velocity | V21 seed `HIGH_FREQUENCY_TRANSFER`: `> 5` intent trong `600 giây`. | T2 dùng version có hiệu lực từ `banking.fraud_rule_config` trên primary. Đổi ngưỡng bằng version và mốc cutover. |
 | Tài khoản DB | `DEC-COM-002` & `design/04` §6.5: `banking_app` / `banking_migrator`; `04` §9.2: `app_rw` / `audit_writer` / `auditor_ro` / `migration`. | Dùng 2 tài khoản `banking_app` (runtime least-privilege) và `banking_migrator` (Flyway DDL). |
 | Tên bảng | `DEC-DOC-001` & `04`/`06`: `app_user`, `device`, `session`, `auth_challenge`. | Sử dụng thống nhất tên bảng số ít chuẩn của `04`. |
 | Reconciliation | `DEC-TRF-010` & `design/02` §10.3: chu kỳ `60 giây` (`60000 ms`); quét `PENDING` có tuổi `>= 300 giây` (5 phút). | Đồng bộ `reconciliation-interval-ms: 60000` và `reconciliation-pending-age-seconds: 300`. |

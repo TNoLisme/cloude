@@ -2,11 +2,14 @@ package com.simulatedbank.banking.common.config;
 
 import com.simulatedbank.banking.common.context.CorrelationAndRequestIdFilter;
 import com.simulatedbank.banking.common.context.RequestContext;
+import com.simulatedbank.banking.common.context.RequestContextHolder;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import org.springframework.context.ApplicationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -21,9 +24,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>Nguồn sự kiện: {@code AuthorizationDeniedEvent} mà Spring Security phát mặc định cho các
  * quyết định DENY của {@code AuthorizationFilter} (cấu hình trong
- * {@link SecurityFilterChainConfig#securityFilterChain}). Cơ chế emit tạm thời giống hợp đồng
- * đã duyệt của identity (DEC-ID-003/BE-ID-IMP-13): security log + metric, persistence
- * `audit_log` thuộc module audit chưa có → thay adapter thật khi module audit hoàn tất.</p>
+ * {@link SecurityFilterChainConfig#securityFilterChain}). Mọi deny hợp lệ có security log và
+ * metric. Deny trên các route đọc BE-INT-03 còn phát {@link ReadAccessDenied} cho Audit.</p>
  *
  * <p>Ranh giới: KHÔNG import module nghiệp vụ (BE-CON-08/18); entity type suy ra bằng bảng ánh
  * xạ đóng tĩnh theo tài nguyên trong path (`customers` → `CUSTOMER`, …), không suy diễn gì thêm;
@@ -56,10 +58,16 @@ public class SecurityAccessDeniedAuditor {
      */
     private static final Set<String> ADMIN_APPROVAL_RESOURCES = Set.of("limits", "roles", "approvals");
 
-    private final MeterRegistry meterRegistry;
+    private static final Pattern CUSTOMER_DETAIL = Pattern.compile("/api/v1/admin/customers/([^/]+)");
+    private static final Pattern CUSTOMER_ACCOUNTS = Pattern.compile("/api/v1/admin/customers/([^/]+)/accounts");
+    private static final Pattern ACCOUNT_DETAIL = Pattern.compile("/api/v1/accounts/([^/]+)");
 
-    public SecurityAccessDeniedAuditor(MeterRegistry meterRegistry) {
+    private final MeterRegistry meterRegistry;
+    private final ApplicationEventPublisher events;
+
+    public SecurityAccessDeniedAuditor(MeterRegistry meterRegistry, ApplicationEventPublisher events) {
         this.meterRegistry = meterRegistry;
+        this.events = events;
     }
 
     @EventListener
@@ -69,11 +77,7 @@ public class SecurityAccessDeniedAuditor {
         } catch (RuntimeException failure) {
             // C3 best-effort: sự kiện audit không được làm hỏng response 403 của chain, nhưng không được im lặng —
             // metric failure + security log thay cho audit record (design/01 §5.2).
-            counter("security.audit.failures", "action", "SECURITY_ACCESS_DENIED", "outcome", "WRITE_FAILED");
-            LOG.atError()
-                    .addKeyValue("action", "SECURITY_ACCESS_DENIED")
-                    .addKeyValue("outcome", "WRITE_FAILED")
-                    .log("SECURITY_AUDIT_WRITE_FAILED");
+            recordFailure();
         }
     }
 
@@ -94,19 +98,78 @@ public class SecurityAccessDeniedAuditor {
         RequestContext context = request != null
                 && request.getAttribute(CorrelationAndRequestIdFilter.CONTEXT_ATTRIBUTE) instanceof RequestContext snapshot
                         ? snapshot : null;
+        logDenial(actorUserId, actorRoles, entity[0], entity[1],
+                context != null ? context.correlationId() : null, context != null ? context.requestId() : null);
+        if (request != null && context != null && "GET".equals(request.getMethod())) {
+            var target = readTarget(request.getRequestURI().substring(request.getContextPath().length()));
+            if (target != null) {
+                events.publishEvent(new ReadAccessDenied(actorUserId, actorRoles, target[0], target[1],
+                        context.correlationId()));
+            }
+        }
+    }
+
+    public void recordReadDenial(SessionAuthenticator.Session actor, String entityType, long entityId,
+            String correlationId) {
+        try {
+            long userId = Long.parseLong(actor.userId());
+            String roles = rolesOf(actor.authorities());
+            String target = Long.toString(entityId);
+            String requestId = RequestContextHolder.current()
+                    .map(RequestContext::requestId).orElse(null);
+            logDenial(userId, roles, entityType, target, correlationId, requestId);
+            events.publishEvent(new ReadAccessDenied(userId, roles, entityType, target, correlationId));
+        } catch (RuntimeException failure) {
+            recordFailure();
+        }
+    }
+
+    private void logDenial(long actorUserId, String actorRoles, String entityType, String entityId,
+            String correlationId, String requestId) {
         counter("security.audit.events", "action", "SECURITY_ACCESS_DENIED", "outcome", "REJECTED",
-                "entity_type", entity[0]);
+                "entity_type", entityType);
         LOG.atInfo()
                 .addKeyValue("action", "SECURITY_ACCESS_DENIED")
                 .addKeyValue("outcome", "REJECTED")
                 .addKeyValue("actor_user_id", actorUserId)
                 .addKeyValue("actor_roles", actorRoles)
-                .addKeyValue("entity_type", entity[0])
-                .addKeyValue("entity_id", entity[1])
+                .addKeyValue("entity_type", entityType)
+                .addKeyValue("entity_id", entityId)
                 .addKeyValue("reason_code", "AUTH_FORBIDDEN")
-                .addKeyValue("correlation_id", context != null ? context.correlationId() : null)
-                .addKeyValue("request_id", context != null ? context.requestId() : null)
+                .addKeyValue("correlation_id", correlationId)
+                .addKeyValue("request_id", requestId)
                 .log("SECURITY_AUDIT");
+    }
+
+    private void recordFailure() {
+        counter("security.audit.failures", "action", "SECURITY_ACCESS_DENIED", "outcome", "WRITE_FAILED");
+        LOG.atError()
+                .addKeyValue("action", "SECURITY_ACCESS_DENIED")
+                .addKeyValue("outcome", "WRITE_FAILED")
+                .log("SECURITY_AUDIT_WRITE_FAILED");
+    }
+
+    private static String[] readTarget(String path) {
+        if ("/api/v1/customers/me".equals(path)) {
+            return new String[] {"CUSTOMER", null};
+        }
+        if ("/api/v1/accounts".equals(path)) {
+            return new String[] {"ACCOUNT", null};
+        }
+        var customer = CUSTOMER_DETAIL.matcher(path);
+        if (customer.matches()) {
+            return new String[] {"CUSTOMER", safeId(customer.group(1))};
+        }
+        var customerAccounts = CUSTOMER_ACCOUNTS.matcher(path);
+        if (customerAccounts.matches()) {
+            return new String[] {"CUSTOMER", safeId(customerAccounts.group(1))};
+        }
+        var account = ACCOUNT_DETAIL.matcher(path);
+        return account.matches() ? new String[] {"ACCOUNT", safeId(account.group(1))} : null;
+    }
+
+    private static String safeId(String segment) {
+        return segment.matches("[1-9][0-9]{0,18}") ? segment : null;
     }
 
     private static String rolesOf(Set<String> authorities) {
@@ -141,7 +204,7 @@ public class SecurityAccessDeniedAuditor {
             return new String[] {"APPROVAL_REQUEST", lastNumericSegment(segments)};
         }
         String last = segments[segments.length - 1];
-        String entityId = last.matches("[1-9][0-9]{0,18}") ? last : null;
+        String entityId = safeId(last);
         String resource = entityId != null ? segments[segments.length - 2] : last;
         return new String[] {ENTITY_TYPES.getOrDefault(resource, "UNKNOWN"), entityId};
     }
@@ -155,7 +218,7 @@ public class SecurityAccessDeniedAuditor {
 
     private static String lastNumericSegment(String[] segments) {
         for (int index = segments.length - 1; index > 3; index--) {
-            if (segments[index].matches("[1-9][0-9]{0,18}")) {
+            if (safeId(segments[index]) != null) {
                 return segments[index];
             }
         }

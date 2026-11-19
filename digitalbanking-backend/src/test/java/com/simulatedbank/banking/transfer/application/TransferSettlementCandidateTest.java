@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -64,6 +65,7 @@ class TransferSettlementCandidateTest {
         when(ports.validateLockedState(context, DATE)).thenReturn(Optional.empty());
         when(ports.evaluateFraud(context, TERMINAL)).thenReturn(new FraudResult(false, List.of()));
         when(ports.debitConditional(context)).thenReturn(true);
+        doCallRealMethod().when(ports).moveMoney(any(), any());
     }
 
     @Test
@@ -181,7 +183,7 @@ class TransferSettlementCandidateTest {
         order.verify(ports).lockPendingAndReadFence(context);
         order.verify(ports).lockAccountsAscending(context);
         order.verify(ports).primaryClockTimestamp();
-        order.verify(ports).lockUsageCustomerThenAccount(context, DATE);
+        order.verify(ports).lockUsageCustomerThenAccount(context, TERMINAL, DATE);
         order.verify(ports).validateLockedState(context, DATE);
         order.verify(ports).evaluateFraud(context, TERMINAL);
         order.verify(ports).debitConditional(context);
@@ -332,7 +334,7 @@ class TransferSettlementCandidateTest {
         order.verify(ports).lockStepUpGuard(7);
         order.verify(ports).lockPendingAndReadFence(context);
         order.verify(ports).lockAccountsAscending(context);
-        order.verify(ports).lockUsageCustomerThenAccount(context, DATE);
+        order.verify(ports).lockUsageCustomerThenAccount(context, TERMINAL, DATE);
         order.verify(ports).debitConditional(context);
         order.verify(ports).recordTerminalAudit(eq(context), any(), eq(TERMINAL));
         verify(ports, never()).readContextOnPrimary(anyLong());

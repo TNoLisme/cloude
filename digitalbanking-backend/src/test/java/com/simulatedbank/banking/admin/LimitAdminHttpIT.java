@@ -506,6 +506,18 @@ class LimitAdminHttpIT {
         @Override public StepUpChallengePort.VerifiedChallenge verifyChallenge(StepUpChallengePort.VerifyCommand command) {
             throw new UnsupportedOperationException();
         }
+        @Override public Optional<VerifiedChallenge> findVerifiedBindingIfPresent(TransferBinding binding) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public ChallengeView requestTransferChallenge(TransferBinding binding, String correlationId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public ConsumedChallenge consumeTransferChallenge(TransferBinding binding, String challengeRef) {
+            throw new UnsupportedOperationException();
+        }
+
         @Override public Optional<ActorSummary> findActor(long id) { return Optional.of(new ActorSummary(id, "Ops " + id)); }
     }
 }

@@ -235,7 +235,7 @@ class TransferPreflightCandidateTest {
     private static TransferIntentCandidate.Command command(long actor, long customer, String key, String hash,
             long source, long destination, String amount, String description) {
         return new TransferIntentCandidate.Command(new TransferIdentity("R", customer, actor, source, destination, null),
-                new TransferAmount(new BigDecimal(amount), "VND"), description, "correlation", key, hash, 86400, "v1", null);
+                new TransferAmount(new BigDecimal(amount), "VND"), description, "correlation", key, hash, null);
     }
 
     private static final class FakePorts implements Ports {

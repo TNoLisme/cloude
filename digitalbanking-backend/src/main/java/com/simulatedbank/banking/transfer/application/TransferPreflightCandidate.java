@@ -12,11 +12,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/** Candidate create orchestration; deliberately not a runtime component.
- * Caller authenticates and authorizes the actor. The immutable payload is hashed
- * internally; the Account provider is authoritative for account-number resolution.
- * Provider wiring, PostgreSQL atomicity, challenge dispatch and recovery remain open.
- */
+/** Coordinates primary lookup, Account preflight, T1 and post-commit settlement. */
 public final class TransferPreflightCandidate {
     private final Ports ports;
     private final TransferRequestHash hasher;
@@ -43,6 +39,10 @@ public final class TransferPreflightCandidate {
         Optional<Stored> existing = lookup(request);
         if (existing.isPresent()) return classify(request, requestHash, existing.get());
 
+        var ineligible = ports.checkCustomer(request);
+        if (ineligible.isPresent()) {
+            return rejectAfterRecheck(request, requestHash, ineligible.get());
+        }
         OptionalLong resolved = payload.destination().type() == DestinationType.ACCOUNT_ID
                 ? OptionalLong.of(Long.parseLong(payload.destination().value()))
                 : Objects.requireNonNull(ports.resolveAccountNumber(payload.destination().value()), "account resolution");
@@ -55,7 +55,14 @@ public final class TransferPreflightCandidate {
         }
         TransferIntentCandidate.Command command = ((Accepted) preflight).command();
         verifyCommandBinding(request, requestHash, destinationId, command);
-        TransferIntentCandidate.Result intent = Objects.requireNonNull(ports.createIntent(command), "T1 result");
+        TransferIntentCandidate.Result intent;
+        try {
+            intent = Objects.requireNonNull(ports.createIntent(command), "T1 result");
+        } catch (TransferIntentCandidate.CommitUncertain uncertain) {
+            // Never hand off settlement without a confirmed commit from this invocation.
+            Stored stored = lookup(request).orElseThrow(() -> uncertain);
+            return classify(request, requestHash, stored);
+        }
         if (intent instanceof TransferIntentCandidate.ChallengeRequired challenge) {
             // Challenge dispatch must occur after the guard transaction has returned; the hash binds T0.
             return new ChallengeRequired(challenge.policyVersion(), requestHash);
@@ -115,6 +122,10 @@ public final class TransferPreflightCandidate {
     /** Lookup errors must throw; Optional.empty means a successful primary read found no record. */
     public interface Ports {
         Optional<Stored> findExistingOnPrimary(String key);
+        /** Eligibility for a new intent. Existing keys are classified before this lookup. */
+        default Optional<RejectionReason> checkCustomer(Request request) {
+            return Optional.empty();
+        }
         /** Delegate only to Account's trusted number lookup; absence differs from provider errors. */
         OptionalLong resolveAccountNumber(String accountNumber);
         /** Validate ownership/status and build T1 using the exact request, hash and resolved account. */
@@ -187,7 +198,7 @@ public final class TransferPreflightCandidate {
         public Accepted { Objects.requireNonNull(command, "command"); }
     }
     /** Internal reasons require an explicit API catalog mapping by the eventual adapter. */
-    public enum RejectionReason { ACCOUNT_NOT_FOUND, ACCOUNT_INACTIVE, SOURCE_NOT_OWNED, INSUFFICIENT_BALANCE, LIMIT_EXCEEDED }
+    public enum RejectionReason { ACCOUNT_NOT_FOUND, ACCOUNT_INACTIVE, SOURCE_NOT_OWNED, CUSTOMER_INACTIVE, SAME_ACCOUNT, INSUFFICIENT_BALANCE, LIMIT_EXCEEDED }
     public record Rejected(RejectionReason reason) implements Preflight {
         public Rejected { Objects.requireNonNull(reason, "reason"); }
     }
@@ -214,16 +225,28 @@ public final class TransferPreflightCandidate {
     }
 
     /** Terminal T2 outcome paired with the masked receipt stored for replay; the two must agree. */
-    public record Settlement(TransferSettlementCandidate.Outcome outcome, TransferView receipt) {
+    public record Settlement(TransferSettlementCandidate.Outcome outcome, TransferView receipt,
+                             TransferCreateOutcome.Committed committed) {
+        public Settlement(TransferSettlementCandidate.Outcome outcome, TransferView receipt) {
+            this(outcome, Objects.requireNonNull(receipt, "receipt"), null);
+        }
+
+        public Settlement(TransferSettlementCandidate.Outcome outcome, TransferCreateOutcome.Committed committed) {
+            this(outcome, null, Objects.requireNonNull(committed, "committed"));
+        }
+
         public Settlement {
             Objects.requireNonNull(outcome, "outcome");
-            Objects.requireNonNull(receipt, "receipt");
             boolean failed = outcome.failure().isPresent();
+            if ((receipt == null) == (committed == null)) {
+                throw new IllegalArgumentException("One settlement response is required");
+            }
             TransferStatus expected = failed ? TransferStatus.FAILED : TransferStatus.COMPLETED;
-            if (receipt.status() != expected) {
+            if (committed != null && committed.response().httpStatus() != (failed ? 422 : 201)
+                    || receipt != null && receipt.status() != expected) {
                 throw new IllegalArgumentException("Settlement receipt status does not match the outcome");
             }
-            if (failed && !receipt.failureCode().name().equals(outcome.failure().orElseThrow().name())) {
+            if (receipt != null && failed && !receipt.failureCode().name().equals(outcome.failure().orElseThrow().name())) {
                 throw new IllegalArgumentException("Settlement receipt failure code does not match the outcome");
             }
         }

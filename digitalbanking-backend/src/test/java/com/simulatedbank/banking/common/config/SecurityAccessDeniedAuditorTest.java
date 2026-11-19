@@ -63,7 +63,7 @@ class SecurityAccessDeniedAuditorTest {
         when(event.getAuthentication()).thenReturn(authenticationSupplier);
         when(event.getObject()).thenReturn(request);
 
-        new SecurityAccessDeniedAuditor(registry).onAuthorizationDenied(event);
+        new SecurityAccessDeniedAuditor(registry, ignored -> {}).onAuthorizationDenied(event);
 
         assertThat(logEvents.list).singleElement().satisfies(log -> {
             assertThat(log.getTimeStamp()).isPositive();
@@ -88,7 +88,7 @@ class SecurityAccessDeniedAuditorTest {
     @Test
     @SuppressWarnings("unchecked")
     void adminRoleProposalDenialAuditsTheApprovalRequestEntity() {
-        new SecurityAccessDeniedAuditor(registry).onAuthorizationDenied(
+        new SecurityAccessDeniedAuditor(registry, ignored -> {}).onAuthorizationDenied(
                 denial("POST", "/api/v1/admin/roles", new SessionAuthenticator.Session("501", null,
                         Set.of("ROLE_OPERATIONS", "LIMIT_MAKER"), "a".repeat(64))));
 
@@ -112,7 +112,7 @@ class SecurityAccessDeniedAuditorTest {
     @Test
     @SuppressWarnings("unchecked")
     void adminApproveDenialKeepsTheApprovalIdentifier() {
-        new SecurityAccessDeniedAuditor(registry).onAuthorizationDenied(
+        new SecurityAccessDeniedAuditor(registry, ignored -> {}).onAuthorizationDenied(
                 denial("POST", "/api/v1/admin/limits/7001/approve", new SessionAuthenticator.Session("502", null,
                         Set.of("ROLE_OPERATIONS", "LIMIT_MAKER"), "b".repeat(64))));
 
@@ -129,7 +129,7 @@ class SecurityAccessDeniedAuditorTest {
     @Test
     @SuppressWarnings("unchecked")
     void customerSelfLimitAndNonAdminResourcesKeepTheirCatalogEntity() {
-        var auditor = new SecurityAccessDeniedAuditor(registry);
+        var auditor = new SecurityAccessDeniedAuditor(registry, ignored -> {});
 
         auditor.onAuthorizationDenied(denial("GET", "/api/v1/limits", new SessionAuthenticator.Session("503",
                 null, Set.of("ROLE_CUSTOMER"), "c".repeat(64))));
@@ -152,7 +152,7 @@ class SecurityAccessDeniedAuditorTest {
         when(event.getAuthentication()).thenReturn(() -> null);
         when(event.getObject()).thenReturn(new MockHttpServletRequest("POST", "/api/v1/admin/roles"));
 
-        new SecurityAccessDeniedAuditor(registry).onAuthorizationDenied(event);
+        new SecurityAccessDeniedAuditor(registry, ignored -> {}).onAuthorizationDenied(event);
 
         // design/01 §5.7: 401 authentication failures are not 403 authorization denials.
         assertThat(logEvents.list).isEmpty();
@@ -168,7 +168,7 @@ class SecurityAccessDeniedAuditorTest {
             throw new IllegalStateException("snapshot unavailable");
         });
 
-        assertThatCode(() -> new SecurityAccessDeniedAuditor(registry).onAuthorizationDenied(event))
+        assertThatCode(() -> new SecurityAccessDeniedAuditor(registry, ignored -> {}).onAuthorizationDenied(event))
                 .doesNotThrowAnyException();
 
         assertThat(registry.counter("security.audit.failures", "action", "SECURITY_ACCESS_DENIED",

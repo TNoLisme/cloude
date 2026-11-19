@@ -14,8 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Durable audit provider behind {@link AuditModuleApi} (design/01 §4.3/§5.2/§7).
@@ -50,11 +53,15 @@ public class AuditModuleService implements AuditModuleApi {
     private final AuditEventValidator validator;
     private final AuditChainWriter writer;
     private final MeterRegistry meters;
+    private final TransactionTemplate standalone;
 
-    public AuditModuleService(AuditEventValidator validator, AuditChainWriter writer, MeterRegistry meters) {
+    public AuditModuleService(AuditEventValidator validator, AuditChainWriter writer, MeterRegistry meters,
+            PlatformTransactionManager transactionManager) {
         this.validator = validator;
         this.writer = writer;
         this.meters = meters;
+        this.standalone = new TransactionTemplate(transactionManager);
+        this.standalone.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
@@ -77,7 +84,6 @@ public class AuditModuleService implements AuditModuleApi {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<AuditRecordRef> recordStandalone(AuditEvent event) {
         if (event == null || event.action() == null) {
             count(FAILURE_METRIC, null);
@@ -90,9 +96,11 @@ public class AuditModuleService implements AuditModuleApi {
         }
         try {
             ValidatedAuditEvent validated = validator.validate(event);
-            AuditRecordRef reference = writer.append(validated);
+            // Catch begin, append and commit failures after the standalone transaction has ended.
+            AuditRecordRef reference = standalone.execute(status -> writer.append(validated));
+            var result = Optional.of(reference);
             count(WRITTEN_METRIC, event.action());
-            return Optional.of(reference);
+            return result;
         } catch (RuntimeException failure) {
             count(FAILURE_METRIC, event.action());
             logFailure(event, failure);

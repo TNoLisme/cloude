@@ -54,13 +54,13 @@ class JdbcLimitConfigStore implements LimitConfigStore {
 
     private static final String SUPERSEDE = """
             UPDATE banking.limit_config
-               SET status = 'SUPERSEDED', updated_at = ?
+               SET status = 'SUPERSEDED', effective_to = LEAST(COALESCE(effective_to, ?), ?), updated_at = ?
              WHERE limit_id = ? AND status = 'ACTIVE'
             """;
 
     private static final String ACTIVATE = """
             UPDATE banking.limit_config
-               SET status = 'ACTIVE', approved_by = ?, approved_at = ?, updated_at = ?
+               SET status = 'ACTIVE', effective_from = ?, approved_by = ?, approved_at = ?, updated_at = ?
              WHERE limit_id = ? AND status = 'PENDING_APPROVAL'
             """;
 
@@ -70,16 +70,13 @@ class JdbcLimitConfigStore implements LimitConfigStore {
              WHERE limit_id = ? AND status = 'PENDING_APPROVAL'
             """;
 
-    /**
-     * Namespace for the transaction advisory lock; keeps Limit keys apart from any future
-     * advisory-lock user in the same database.
-     */
-    private static final long ADVISORY_NAMESPACE = 0x4C494D49_54000000L;
-
     private final JdbcTemplate jdbc;
 
-    JdbcLimitConfigStore(JdbcTemplate jdbc) {
+    private final LimitCustomerGuard guard;
+
+    JdbcLimitConfigStore(JdbcTemplate jdbc, LimitCustomerGuard guard) {
         this.jdbc = jdbc;
+        this.guard = guard;
     }
 
     @Override
@@ -110,8 +107,14 @@ class JdbcLimitConfigStore implements LimitConfigStore {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public void lockScope(long customerId, Long accountId) {
-        jdbc.query("SELECT pg_advisory_xact_lock(?)", resultSet -> null, advisoryKey(customerId, accountId));
+    public void lockCustomerScope(long customerId) {
+        guard.lock(customerId);
+    }
+
+    @Override
+    public Instant currentTime() {
+        return jdbc.queryForObject("SELECT clock_timestamp()",
+                (rs, index) -> rs.getObject(1, OffsetDateTime.class).toInstant());
     }
 
     @Override
@@ -129,14 +132,14 @@ class JdbcLimitConfigStore implements LimitConfigStore {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public boolean supersede(long limitConfigId, Instant updatedAt) {
-        return jdbc.update(SUPERSEDE, timestamp(updatedAt), limitConfigId) == 1;
+    public boolean supersede(long limitConfigId, Instant effectiveTo, Instant updatedAt) {
+        return jdbc.update(SUPERSEDE, timestamp(effectiveTo), timestamp(effectiveTo), timestamp(updatedAt), limitConfigId) == 1;
     }
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public boolean activate(long limitConfigId, long approvedBy, Instant approvedAt) {
-        return jdbc.update(ACTIVATE, approvedBy, timestamp(approvedAt), timestamp(approvedAt), limitConfigId) == 1;
+    public boolean activate(long limitConfigId, Instant effectiveFrom, long approvedBy, Instant approvedAt) {
+        return jdbc.update(ACTIVATE, timestamp(effectiveFrom), approvedBy, timestamp(approvedAt), timestamp(approvedAt), limitConfigId) == 1;
     }
 
     @Override
@@ -179,16 +182,4 @@ class JdbcLimitConfigStore implements LimitConfigStore {
         return instant == null ? null : OffsetDateTime.ofInstant(instant, java.time.ZoneOffset.UTC);
     }
 
-    /**
-     * Stable 64-bit key for the scope. A collision between two scopes only serializes them
-     * extra (no correctness impact); the namespace keeps Limit locks distinguishable.
-     */
-    private static long advisoryKey(long customerId, Long accountId) {
-        long scope = accountId == null ? 0x9E3779B97F4A7C15L : accountId;
-        long mixed = customerId * 0x9E3779B97F4A7C15L + scope;
-        mixed ^= mixed >>> 33;
-        mixed *= 0xC2B2AE3D27D4EB4FL;
-        mixed ^= mixed >>> 33;
-        return ADVISORY_NAMESPACE ^ mixed;
-    }
 }

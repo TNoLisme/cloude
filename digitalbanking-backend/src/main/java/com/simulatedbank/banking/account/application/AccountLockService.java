@@ -5,6 +5,7 @@ import com.simulatedbank.banking.account.api.AccountQuery;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -45,6 +46,12 @@ public class AccountLockService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public AccountBalance.LockedAccounts lockTransferAccounts(long sourceAccountId, long destinationAccountId) {
+        return findAndLockTransferAccounts(sourceAccountId, destinationAccountId)
+                .orElseThrow(() -> new BankingBusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<AccountBalance.LockedAccounts> findAndLockTransferAccounts(long sourceAccountId, long destinationAccountId) {
         if (sourceAccountId <= 0 || destinationAccountId <= 0) {
             throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
         }
@@ -54,8 +61,7 @@ public class AccountLockService {
         List<AccountLockPort.LockedAccountRow> rows = accounts.lockTwoForUpdateOrderByIdAsc(
                 sourceAccountId, destinationAccountId);
         if (rows.size() != 2) {
-            // Không tiết lộ row nào thiếu; transaction của caller quyết định rollback/FAILED.
-            throw new BankingBusinessException(ErrorCode.ACCOUNT_NOT_FOUND);
+            return Optional.empty();
         }
         AccountBalance.LockedAccount source = null;
         AccountBalance.LockedAccount destination = null;
@@ -71,7 +77,7 @@ public class AccountLockService {
             // Không thể xảy ra với WHERE account_id IN (?, ?) + ORDER BY; fail closed nếu có.
             throw new BankingBusinessException(ErrorCode.INTERNAL_ERROR);
         }
-        return new AccountBalance.LockedAccounts(source, destination);
+        return Optional.of(new AccountBalance.LockedAccounts(source, destination));
     }
 
     private static AccountBalance.LockedAccount toLocked(AccountLockPort.LockedAccountRow row) {

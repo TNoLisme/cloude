@@ -9,10 +9,8 @@ import org.springframework.lang.Nullable;
  * design/01 §5.7 quy định view/search thành công chỉ ghi technical access log
  * ({@code HttpRequestLog}) để tránh write amplification.
  *
- * <p>Persistence `audit_log` thuộc module audit (BE-AUD) chưa có: adapter mặc định ghi security
- * log + metric theo đúng hợp đồng tạm đã duyệt của identity (DEC-ID-003, BE-ID-IMP-13). Khi
- * module audit hoàn tất, adapter thay bằng write `audit_log` với allowlist PII entity
- * `CUSTOMER` (design/01 §5.6: chỉ `customerId`, `status`, `reasonCode` — không tên/phone/email).</p>
+ * <p>Adapter phát denied read event cho Audit C3 theo DEC-INT-009 và ghi log/metric cục bộ.
+ * Payload chỉ chứa metadata an toàn theo allowlist CUSTOMER (design/01 §5.6).</p>
  */
 public interface CustomerAuditPort {
 

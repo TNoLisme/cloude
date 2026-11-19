@@ -86,7 +86,7 @@ class LimitConfigMutationPostgreSqlIntegrationTest {
             jdbc.update("DELETE FROM banking.account");
             jdbc.update("DELETE FROM banking.customer");
             jdbc.update("DELETE FROM banking.approval_request");
-            jdbc.update("DELETE FROM banking.app_user");
+            jdbc.update("DELETE FROM banking.app_user WHERE username <> '__fraud_rule_bootstrap__'");
         });
         maker = staff("limit-it-maker");
         checker = staff("limit-it-checker");

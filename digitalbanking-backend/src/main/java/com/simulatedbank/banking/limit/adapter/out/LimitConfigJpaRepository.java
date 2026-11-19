@@ -12,10 +12,19 @@ import org.springframework.data.repository.query.Param;
 interface LimitConfigJpaRepository extends JpaRepository<LimitConfigEntity, Long> {
     @Query(value = """
         SELECT * FROM banking.limit_config WHERE customer_id=:customer AND (account_id IS NULL OR account_id=:account)
-          AND status='ACTIVE' AND effective_from<=:asOf AND (effective_to IS NULL OR effective_to>:asOf)
+          AND (status='ACTIVE' OR (status='SUPERSEDED' AND effective_to IS NOT NULL)) AND effective_from<=:asOf AND (effective_to IS NULL OR effective_to>:asOf)
         ORDER BY account_id NULLS FIRST
         """, nativeQuery = true)
     List<LimitConfigEntity> effective(@Param("customer") long customer, @Param("account") long account, @Param("asOf") Instant asOf);
+
+    @Query(value = """
+        SELECT * FROM banking.limit_config WHERE customer_id=:customer AND (account_id IS NULL OR account_id=:account)
+          AND (status='ACTIVE' OR (status='SUPERSEDED' AND (
+            (effective_from<=:asOf AND effective_to>:asOf) OR account_id IS NOT NULL)))
+        ORDER BY account_id NULLS FIRST
+        """, nativeQuery = true)
+    List<LimitConfigEntity> transferConfigurations(@Param("customer") long customer, @Param("account") long account,
+            @Param("asOf") Instant asOf);
 
     @Query(value = """
         SELECT EXISTS (SELECT 1 FROM banking.limit_config WHERE customer_id=:customer
@@ -76,6 +85,4 @@ interface LimitConfigJpaRepository extends JpaRepository<LimitConfigEntity, Long
     Instant clockTimestamp();
     @Query(value = "SHOW transaction_isolation", nativeQuery = true)
     String isolation();
-    @Query(value = "SELECT pg_advisory_xact_lock(hashtextextended(:key, 0)) IS NULL", nativeQuery = true)
-    boolean lockScope(@Param("key") String key);
 }

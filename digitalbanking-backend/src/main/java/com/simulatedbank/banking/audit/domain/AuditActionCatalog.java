@@ -52,7 +52,7 @@ public final class AuditActionCatalog {
             Map.entry("ROLE_CHANGE_APPROVED", new Action(Criticality.C2, USER, "APPROVAL_REQUEST", APPROVAL_DECISION_FIELDS)),
             Map.entry("ROLE_CHANGE_REJECTED", new Action(Criticality.C2, USER, "APPROVAL_REQUEST", APPROVAL_DECISION_FIELDS)),
             Map.entry("ACCOUNT_STATUS_CHANGED", new Action(Criticality.C2, USER, "ACCOUNT", STATUS_FIELDS)),
-            Map.entry("FRAUD_FLAG_CREATED", new Action(Criticality.C2, SYSTEM, "FRAUD_FLAG", Set.of("after_state.transferReference", "after_state.ruleCode", "after_state.severity", "after_state.status"))),
+            Map.entry("FRAUD_FLAG_CREATED", new Action(Criticality.C2, SYSTEM, "FRAUD_FLAG", Set.of("after_state.transferReference", "after_state.ruleCode", "after_state.ruleVersion", "after_state.severity", "after_state.status"))),
             Map.entry("FRAUD_FLAG_REVIEWED", new Action(Criticality.C2, USER, "FRAUD_FLAG", Set.of("after_state.transferReference", "after_state.ruleCode", "after_state.severity", "after_state.decision", "after_state.status"))),
             Map.entry("FRAUD_ENGINE_ERROR", new Action(Criticality.C4, SYSTEM, "TRANSFER", Set.of("after_state.reasonCode"))),
             Map.entry("LEGAL_HOLD_PLACED", new Action(Criticality.C2, USER, "LEGAL_HOLD", Set.of("after_state.entityType", "after_state.entityId", "after_state.status", "after_state.reasonCode"))),

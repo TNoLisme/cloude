@@ -285,6 +285,7 @@ public class ApprovalDecisionService {
                 metrics.provider("LIMIT", "APPLY_LIMIT_CHANGE", "SUCCESS", System.nanoTime() - started);
                 Map<String, Object> body = new LinkedHashMap<>();
                 body.put("limitConfigId", Long.toString(applied.limitConfigId()));
+                body.put("effectiveFrom", applied.effectiveFrom().toString());
                 body.put("version", applied.version());
                 body.put("perTransactionLimit", applied.perTransactionLimit());
                 body.put("dailyLimit", applied.dailyLimit());

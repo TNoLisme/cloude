@@ -146,8 +146,9 @@ public final class LimitConfig {
             throw new BankingBusinessException(ErrorCode.ROLE_CONFLICT);
         }
         Objects.requireNonNull(approvedAt, "approvedAt is required");
+        Instant cutover = effectiveFrom.isAfter(approvedAt) ? effectiveFrom : approvedAt;
         return new LimitConfig(limitConfigId, customerId, accountId, perTransactionLimit, dailyLimit, currency,
-                effectiveFrom, LimitConfigStatus.ACTIVE, version, createdBy, checkerUserId, approvalId);
+                cutover, LimitConfigStatus.ACTIVE, version, createdBy, checkerUserId, approvalId);
     }
 
     /** {@code ACTIVE -> SUPERSEDED}; keeps the checker/time that made the version effective. */

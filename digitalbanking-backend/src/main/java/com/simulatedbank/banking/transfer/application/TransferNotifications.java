@@ -18,7 +18,7 @@ public final class TransferNotifications {
         this.outbox = Objects.requireNonNull(outbox);
     }
 
-    void enqueue(Facts facts, Outcome outcome) {
+    public void enqueue(Facts facts, Outcome outcome) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("Transfer notification must join T2");
         }
