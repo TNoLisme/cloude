@@ -1,5 +1,7 @@
 # CUST-PROFILE — Hồ sơ cá nhân
 
+> Cập nhật FE-02-01 18/11: preview riêng `/customer/profile?customerPreview=v2` gọi mock getMyProfile; `CustomerProfilePanel` dùng fullName, phoneMasked/emailMasked, status, createdAt; null/thiếu hiển thị “Chưa có thông tin”. Loading/error/retry có trong preview; không suy ra PIN. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |

@@ -1,5 +1,7 @@
 # CUST-HOME — Tổng quan khách hàng
 
+> Cập nhật FE-02-01 18/11: preview v2 riêng tại `/customer?customerPreview=v2` đã nối CustomerAccountCard với mock listAccounts. Thẻ tái dùng Panel/balance-card, đọc accountNumberMasked, availableBalance string, status và asOf; nút chi tiết nằm trong card để không bị breakpoint legacy ẩn trên mobile/tablet. Loading, rỗng, lỗi và retry có trong preview. Transfer/history chưa nối; auth v2 vẫn vào màn phiên chung. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |
@@ -70,3 +72,23 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 ## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
 
 Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].
+
+
+### Run-04 ngày 18/11/2026 — trang chủ customer theo ảnh tham khảo
+
+Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùng topbar thương hiệu/lời chào, sidebar trắng với icon và vùng active kiểu ảnh tham khảo. Menu chỉ có Trang chủ, Thông tin tài khoản và Hồ sơ của tôi, là các màn v2 đã nối trong FE-02-01. Nội dung chính hiển thị masked account, số dư khả dụng/asOf và thông tin tài khoản đọc từ GET /accounts; không dựng lãi suất, thẻ, vay, hóa đơn, khuyến mãi hoặc số liệu tổng hợp không có nguồn. Transfer/history có contract nhưng UI v2 thuộc task khác nên chưa mở menu ở đây. Dashboard tiếp tục không có nhãn trạng thái; màn chi tiết vẫn hiển thị status. Browser mock đã xem tại `/customer?authPreview=v2`; ảnh và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-04.md]]. Chờ review UI, không khẳng định API thật.
+
+
+### Iconography mock ngày 18/11/2026
+
+Người phụ trách FE chốt áp dụng trên customer mock hiện tại trong chat 18/11. Menu Trang chủ/Thông tin tài khoản/Hồ sơ dùng `Icon` outline trong catalog, màu theo trạng thái của nút; thẻ account dùng `FeatureIcon` hai màu; danh sách account rỗng dùng `Illustration` đi cùng text. Không đổi nội dung, route hay API. SVG và quy tắc tại [[digitalbanking-docs/docs-frontend/design/shared/03-iconography.md]], ảnh trước/sau ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-03-ICONS/2026-11-18-b9ba604/run-01.md]].
+
+
+### FE-04-01-MOCK dashboard gần đây ngày 19/11/2026
+
+Vùng Giao dịch gần đây trên CUST-HOME đọc GET `/transactions` page0/size5/status=COMPLETED, hiển thị counterparty masked theo response, Money và thời điểm; có link chi tiết và Xem lịch sử. Loading/empty/error/retry độc lập với tài khoản. Đây là demo mock theo FE-04, không thay quyết định về UI cuối hoặc chứng minh server. [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

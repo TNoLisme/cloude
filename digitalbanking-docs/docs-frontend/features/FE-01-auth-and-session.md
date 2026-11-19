@@ -123,3 +123,8 @@ Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chu
 ## 16. Phản hồi bố cục login ngày18/11
 
 User gửi ảnh và yêu cầu hai nửa hình/form, logo/tên dự án hiện tại, không CAPTCHA/hotline. Đã đổi preview v2 sang AuthSplitLayout, Brand DB/Digital Banking; mobile ưu tiên form, artwork tái dùng ảnh được cung cấp. Không thêm/xóa operation, payload, state/session policy; OTP LOGIN_MFA giữ nguyên. Browser subset mới: required validation, login200, reload giữ fixture, logout và reload anonymous; chưa đủ FET-01/02/13 toàn bộ hoặc nghiệm thu API thật. Bố cục có mốc review riêng FE-01-01-LOGIN-UI, parent/mock lifecycle còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]].
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].

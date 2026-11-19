@@ -9,21 +9,28 @@ import "./styles.css";
 async function mount() {
   const mock =
     import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === "true";
+  const customerPreview =
+    mock && new URLSearchParams(location.search).get("customerPreview") === "v2"
+      ? await import("./mocks/CustomerPreview")
+      : null;
   const authPreview =
     mock && new URLSearchParams(location.search).get("authPreview") === "v2"
       ? await import("./mocks/AuthPreview")
       : null;
   const Preview =
-    mock && !authPreview
+    mock && !authPreview && !customerPreview
       ? (await import("./mocks/PreviewShell")).PreviewShell
       : null;
   if (mock) {
     const { startMocks } = await import("./mocks/browser");
     await startMocks();
-    if (authPreview) authPreview.prepareV2AuthPreview();
+    if (customerPreview) customerPreview.prepareCustomerPreview();
+    else if (authPreview) authPreview.prepareV2AuthPreview();
     else (await import("./mocks/handlers")).selectPreviewSession();
   }
-  const app = authPreview ? (
+  const app = customerPreview ? (
+    <customerPreview.CustomerPreview />
+  ) : authPreview ? (
     <authPreview.AuthPreview />
   ) : Preview ? (
     <Preview>

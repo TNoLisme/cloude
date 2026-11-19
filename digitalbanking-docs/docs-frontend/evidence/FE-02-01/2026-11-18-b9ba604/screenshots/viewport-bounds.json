@@ -1,0 +1,14 @@
+{
+  "tablet": {
+    "scroll": 768,
+    "viewport": 768
+  },
+  "mobile": {
+    "scroll": 360,
+    "viewport": 360
+  },
+  "desktop": {
+    "scroll": 1440,
+    "viewport": 1440
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "status": "in progress; pending user decision",
+  "baseline": "b9ba604",
+  "date": "2026-11-18 Asia/Bangkok",
+  "files": [
+    {
+      "sha256": "2289f35ca9cd70f1910a3fc834b65ef2ceb0999b7e6bbd1ccee85383a8ef9f23",
+      "path": "digitalbanking-frontend/src/mocks/v2-auth.ts"
+    },
+    {
+      "sha256": "30beadfa284ee78db8a6f8d62c0e8c17b96a62e9ca3859a65e6b587d66650bf1",
+      "path": "digitalbanking-frontend/src/mocks/v2-customer.test.ts"
+    },
+    {
+      "sha256": "205154d73b71fafb66c6a26fcc270f0239c422485f4ff2ff3238125e3eaf4f0d",
+      "path": "digitalbanking-frontend/src/features/accounts/v2/CustomerPanels.tsx"
+    },
+    {
+      "sha256": "eede21358b805895e79dcc86e482de6833ccee78e9b107bee78ee2c443a14aff",
+      "path": "digitalbanking-frontend/src/features/accounts/v2/CustomerPanels.test.tsx"
+    },
+    {
+      "sha256": "71efc546fb6645be128ec83d391706343a6ff6b1fa6991910e42770d62ef796a",
+      "path": "digitalbanking-docs/openapi/digital-banking-v1.yaml"
+    },
+    {
+      "sha256": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4",
+      "path": "digitalbanking-docs/openapi/digital-banking-v2.yaml"
+    }
+  ]
+}

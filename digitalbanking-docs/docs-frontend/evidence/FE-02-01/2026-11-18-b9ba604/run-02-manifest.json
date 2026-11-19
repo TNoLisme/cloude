@@ -1,0 +1,111 @@
+{
+  "review": "UI/mock customer pending user review",
+  "baseline": "b9ba604",
+  "workingTree": "dirty; changes not committed",
+  "proof": "166 tests, 6 gates, browser mock subset",
+  "date": "2026-11-18 Asia/Bangkok",
+  "artifacts": [
+    {
+      "path": "screenshots/customer-desktop.jpg",
+      "sha256": "991fbb093c46e34c3aff75ebc03cef7e56e8dd8810fdef5a5b3ce6256e65ba18"
+    },
+    {
+      "path": "screenshots/customer-mobile.jpg",
+      "sha256": "7c0817d5a41a5aebc4bbbaab5baee42cc69c357dccbdd46c60c7e8eb8b7c9f58"
+    },
+    {
+      "path": "screenshots/customer-tablet.jpg",
+      "sha256": "cd00bf3344b89c39c368cad85b6a3c426411a934f1c9018871ed0d2bd12e0e4f"
+    },
+    {
+      "path": "screenshots/viewport-bounds.json",
+      "sha256": "d21ffc2818c359879353f3daf91179dc4d9cf9ca4c64808acab9d85d9c3454f3"
+    },
+    {
+      "path": "test-report/diff-check.log",
+      "sha256": "76a24616353a8dcbf3e96a9afaa0913cf2d07e9c124850083c732845dccd5c59"
+    },
+    {
+      "path": "test-report/final-static-checks.log",
+      "sha256": "029eef7582f988818fd3584c4e44d09422b1ad8df9fde431de1afd229f5c8c1e"
+    },
+    {
+      "path": "test-report/full-checks.log",
+      "sha256": "c76a8baadfd1356bd60bdf698b291ff8e41d6c7bea3294e84468e9ecf247d2e7"
+    },
+    {
+      "path": "test-report/git-status.txt",
+      "sha256": "1f32c0095fd6c198cdf784b0c973e125cb75f1f0d6334cc9c194aff86fc71954"
+    },
+    {
+      "path": "test-report/pre-responsive-checks.log",
+      "sha256": "3e64d3f236f4aed20f39e6690e05e43f0dc039c8e6e84b7165543e9230de8196"
+    },
+    {
+      "path": "test-report/pre-summary-checks.log",
+      "sha256": "7b925bda59146b7d89ca498ae953d464733d96167e5a8fb9b04c32c6e0e67899"
+    },
+    {
+      "path": "test-report/pre-validation-checks.log",
+      "sha256": "95de03cb4c908e3d9f1b92e7ac1f295a2e080471991595d2d32b3a3ccae5ecfb"
+    },
+    {
+      "path": "test-report/run-02-diff-check.log",
+      "sha256": "76a24616353a8dcbf3e96a9afaa0913cf2d07e9c124850083c732845dccd5c59"
+    },
+    {
+      "path": "test-report/run-02-full-checks.log",
+      "sha256": "1fbb44158453166c4e0640876d2b8be186c94a49a10e000344c902c702ade0e4"
+    },
+    {
+      "path": "test-report/run-02-status.txt",
+      "sha256": "9520ef7d2d8bb8145f453b681988d296cb6340bf22c5d06fecfb02f70e7dbd31"
+    }
+  ],
+  "source": [
+    {
+      "path": "digitalbanking-frontend/src/main.tsx",
+      "sha256": "7c179afe1b2d7950f8c58d3696674638fffa4cfca5d1494a1b16faf4d80b4a18"
+    },
+    {
+      "path": "digitalbanking-frontend/src/layouts/AppLayout.module.css",
+      "sha256": "c70a719cfaf54c145f67323ec6b46204cc5571bb7c9f3ed65f0a98f829781097"
+    },
+    {
+      "path": "digitalbanking-frontend/src/mocks/v2-auth.ts",
+      "sha256": "7ddc0f1c06b0080262cd98aa3c7d2364e0c5e9b153241e97bbbb3a762eda75ee"
+    },
+    {
+      "path": "digitalbanking-frontend/src/mocks/v2-customer.test.ts",
+      "sha256": "fb98ee79f05f94e13ffa1b48e3dfa5d0bb1156bc22bd68693c6c2f6b1b5043d6"
+    },
+    {
+      "path": "digitalbanking-frontend/src/mocks/CustomerPreview.tsx",
+      "sha256": "e8fabde7bb3a3daf1453f3903181c33decb8822750d67ec43dccacf4512660e8"
+    },
+    {
+      "path": "digitalbanking-frontend/src/mocks/CustomerPreview.test.tsx",
+      "sha256": "66ae95535f40543d051f2f8570567c60d1401127fdcc4481098f956b4bf6f70c"
+    },
+    {
+      "path": "digitalbanking-frontend/src/features/accounts/v2/CustomerPanels.tsx",
+      "sha256": "bb9b69964d47c2c05040fd5b1404d6b6e6f2169fafc1b4d374cd341c4d273912"
+    },
+    {
+      "path": "digitalbanking-frontend/src/features/accounts/v2/CustomerPanels.test.tsx",
+      "sha256": "eede21358b805895e79dcc86e482de6833ccee78e9b107bee78ee2c443a14aff"
+    },
+    {
+      "path": "digitalbanking-frontend/src/features/accounts/v2/customer-api.ts",
+      "sha256": "93375a001935d449726ff28d898c246da91b74e8db4589c8e3f6d8b902a6a8ed"
+    },
+    {
+      "path": "digitalbanking-frontend/src/features/accounts/v2/customer-api.test.ts",
+      "sha256": "5f7a679580c1d6b4413360307f2231fa7698aaa18c2940ea6731c4050558a49b"
+    },
+    {
+      "path": "digitalbanking-docs/openapi/digital-banking-v2.yaml",
+      "sha256": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4"
+    }
+  ]
+}

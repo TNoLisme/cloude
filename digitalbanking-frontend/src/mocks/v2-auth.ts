@@ -1,7 +1,11 @@
 import { delay, http, HttpResponse } from "msw";
 import { z } from "zod";
 import type { components } from "../shared/api/generated/v2/openapi";
-import { authFixture } from "./fixtures";
+import { account, accounts, authFixture, profile } from "./fixtures";
+import { historyDetail, historyItems } from "./history-fixtures";
+import { limitsFixture } from "./limits-fixtures";
+import { isApiId } from "../shared/lib/id";
+import { isMoney } from "../shared/lib/money";
 
 type Schema<K extends keyof components["schemas"]> = components["schemas"][K];
 const input = z.strictObject({
@@ -23,6 +27,20 @@ type Scenario =
   | "logout-error"
   | "expired-otp";
 let scenario: Scenario = "default";
+type CustomerScenario = "default" | "empty" | "slow" | "error";
+let customerScenario: CustomerScenario = "default";
+type HistoryScenario = "default" | "empty" | "slow" | "error";
+let historyScenario: HistoryScenario = "default";
+let limitsScenario: HistoryScenario = "default";
+export function selectLimitsScenario(value: HistoryScenario) {
+  limitsScenario = value;
+}
+export function selectHistoryScenario(value: HistoryScenario) {
+  historyScenario = value;
+}
+export function selectCustomerScenario(value: CustomerScenario) {
+  customerScenario = value;
+}
 let persistFixture = false;
 let fixtureChannel: BroadcastChannel | undefined;
 export const v2FixtureStorageKey = "digitalbanking.fixture.v2.signedIn";
@@ -90,6 +108,8 @@ export function resetV2MockSession() {
   resendGeneration = 0;
   challengeVerified = false;
   scenario = "default";
+  customerScenario = "default";
+  historyScenario = "default";
 }
 export function v2AuthFixture(): Schema<"AuthResponse"> {
   return authFixture();
@@ -273,5 +293,173 @@ export const v2AuthHandlers = [
         "Set-Cookie": `SESSION_TOKEN=; ${v2CookieAttributes}; Max-Age=0`,
       },
     });
+  }),
+  // Synthetic customer-self fixtures; they do not prove backend authorization.
+  http.get("*/api/v2/limits", async ({ request }) => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (limitsScenario === "slow") await delay(1500);
+    if (limitsScenario === "error") return problem(503, "SERVICE_UNAVAILABLE");
+    const query = new URL(request.url).searchParams;
+    if ([...query.keys()].some((key) => key !== "accountId"))
+      return problem(400, "VALIDATION_ERROR");
+    const accountId = query.get("accountId");
+    if (accountId && !isApiId(accountId))
+      return problem(400, "VALIDATION_ERROR");
+    if (accountId && accountId !== account.accountId)
+      return problem(403, "AUTH_FORBIDDEN");
+    return HttpResponse.json(
+      limitsScenario === "empty"
+        ? {
+            ...limitsFixture,
+            effectivePerTransactionLimit: null,
+            effectiveRemainingDaily: null,
+            items: [],
+          }
+        : limitsFixture,
+      { headers: correlationHeaders },
+    );
+  }),
+  http.get("*/api/v2/customers/me", async () => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (customerScenario === "slow") await delay(1500);
+    if (customerScenario === "error")
+      return problem(503, "SERVICE_UNAVAILABLE");
+    return HttpResponse.json(profile, { headers: correlationHeaders });
+  }),
+  http.get("*/api/v2/accounts", async ({ request }) => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (customerScenario === "slow") await delay(1500);
+    if (customerScenario === "error")
+      return problem(503, "SERVICE_UNAVAILABLE");
+    const status = new URL(request.url).searchParams.get("status");
+    // Invalid filters have no defined response in the current contract. Fail
+    // locally rather than inventing a successful empty result or reaching BE.
+    if (status !== null && !["ACTIVE", "LOCKED", "CLOSED"].includes(status))
+      return HttpResponse.error();
+    return HttpResponse.json(
+      customerScenario === "empty"
+        ? { ...accounts, items: [] }
+        : status
+          ? {
+              ...accounts,
+              items: accounts.items.filter((a) => a.status === status),
+            }
+          : accounts,
+      { headers: correlationHeaders },
+    );
+  }),
+  http.get("*/api/v2/accounts/:accountId", async ({ params }) => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (customerScenario === "slow") await delay(1500);
+    if (customerScenario === "error")
+      return problem(503, "SERVICE_UNAVAILABLE");
+    const id = String(params.accountId);
+    if (!isApiId(id)) return problem(400, "VALIDATION_ERROR");
+    if (id === account.accountId)
+      return HttpResponse.json(account, { headers: correlationHeaders });
+    // 3002 is a synthetic existing account belonging to a different customer.
+    return id === "3002"
+      ? problem(403, "AUTH_FORBIDDEN")
+      : problem(404, "ACCOUNT_NOT_FOUND");
+  }),
+  http.get("*/api/v2/transactions", async ({ request }) => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (historyScenario === "slow") await delay(1500);
+    if (historyScenario === "error") return problem(503, "SERVICE_UNAVAILABLE");
+    const query = new URL(request.url).searchParams;
+    const page = query.get("page") ?? "0",
+      size = query.get("size") ?? "20",
+      status = query.get("status"),
+      accountId = query.get("accountId"),
+      direction = query.get("direction"),
+      from = query.get("from"),
+      to = query.get("to"),
+      minAmount = query.get("minAmount"),
+      maxAmount = query.get("maxAmount");
+    if (
+      [...query.keys()].some(
+        (key) =>
+          ![
+            "page",
+            "size",
+            "status",
+            "accountId",
+            "direction",
+            "from",
+            "to",
+            "minAmount",
+            "maxAmount",
+          ].includes(key),
+      ) ||
+      !/^(0|[1-9][0-9]*)$/.test(page) ||
+      !Number.isSafeInteger(Number(page)) ||
+      !/^[1-9][0-9]*$/.test(size) ||
+      Number(size) > 100 ||
+      (status && !["PENDING", "COMPLETED", "FAILED"].includes(status)) ||
+      (accountId && !isApiId(accountId)) ||
+      (direction &&
+        (!accountId || !["DEBIT", "CREDIT", "INTERNAL"].includes(direction))) ||
+      (from && Number.isNaN(Date.parse(from))) ||
+      (to && Number.isNaN(Date.parse(to))) ||
+      (from && to && Date.parse(from) >= Date.parse(to)) ||
+      (minAmount && !isMoney(minAmount)) ||
+      (maxAmount && !isMoney(maxAmount)) ||
+      (minAmount &&
+        maxAmount &&
+        BigInt(minAmount.replace(".", "")) > BigInt(maxAmount.replace(".", "")))
+    )
+      return problem(400, "VALIDATION_ERROR");
+    if (accountId && accountId !== "3001")
+      return accountId === "3002"
+        ? problem(403, "AUTH_FORBIDDEN")
+        : problem(404, "ACCOUNT_NOT_FOUND");
+    const items =
+      historyScenario === "empty"
+        ? []
+        : historyItems.filter(
+            (item) =>
+              (!status || item.status === status) &&
+              (!direction || item.direction === direction) &&
+              (!from || Date.parse(item.createdAt) >= Date.parse(from)) &&
+              (!to || Date.parse(item.createdAt) < Date.parse(to)) &&
+              (!minAmount ||
+                BigInt(item.amount.replace(".", "")) >=
+                  BigInt(minAmount.replace(".", ""))) &&
+              (!maxAmount ||
+                BigInt(item.amount.replace(".", "")) <=
+                  BigInt(maxAmount.replace(".", ""))),
+          );
+    const number = Number(page),
+      pageSize = Number(size),
+      pages = Math.ceil(items.length / pageSize);
+    return HttpResponse.json(
+      {
+        items: items.slice(number * pageSize, (number + 1) * pageSize),
+        page: {
+          number,
+          size: pageSize,
+          totalElements: items.length,
+          totalPages: pages,
+          first: number === 0,
+          last: number >= pages - 1,
+        },
+        asOf: "2026-11-13T03:00:00Z",
+      },
+      { headers: correlationHeaders },
+    );
+  }),
+  http.get("*/api/v2/transactions/:reference", async ({ params }) => {
+    if (!signedIn) return problem(401, "AUTH_SESSION_EXPIRED");
+    if (historyScenario === "slow") await delay(1500);
+    if (historyScenario === "error") return problem(503, "SERVICE_UNAVAILABLE");
+    const reference = String(params.reference);
+    if (!/^TXN[0-9]{8}[A-Z0-9]{8,20}$/.test(reference))
+      return problem(400, "VALIDATION_ERROR");
+    if (reference === "TXN20261113FORBID00")
+      return problem(403, "AUTH_FORBIDDEN");
+    const item = historyItems.find((value) => value.reference === reference);
+    return item
+      ? HttpResponse.json(historyDetail(item), { headers: correlationHeaders })
+      : problem(404, "TRANSFER_NOT_FOUND");
   }),
 ];

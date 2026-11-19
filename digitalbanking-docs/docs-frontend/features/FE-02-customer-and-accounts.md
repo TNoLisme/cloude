@@ -84,3 +84,28 @@ FE-02-01 trong [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md
 ## 12. Vấn đề cần chốt
 
 PIN cũ theo GAP-01. Các field profile chưa có API được giữ theo contract hiện hành. Quyền staff được đối chiếu tại GAP-07.
+
+## 13. Bước độc lập FE-02-01 ngày18/11/2026
+
+Sau push frontend@b9ba604 đã bắt đầu mock customer self theo v2 FE/mock: GET customers/me, accounts, accounts/{accountId}; fixture chỉ có customer tổng hợp, 3002 đại diện account tồn tại của customer khác (403), ID sai400, ID khác404. Không khẳng định mock chứng minh ownership backend. Component trình bày `src/features/accounts/v2/CustomerPanels.tsx` tái dùng Panel/Descriptions/kiểu bố cục cũ; đọc masked phone/email/account, string ID/Money và formatMoney. Không chuyển DTO legacy, không suy ra PIN, không gắn action transfer/history hoặc route/quyền staff. Cách mở UI đang hỏi người phụ trách FE vì quyết định trước là màn phiên chung, chưa nối nghiệp vụ. Parent và API thật còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-01.md]].
+
+## 14. Preview riêng được chọn trong chat18/11
+
+User chốt nguyên ý “Preview customer riêng; giữ màn phiên chung sau login (đề xuất)”. FE-02-01-MOCK nối preview dev/mock riêng tại `/customer?customerPreview=v2`, `/customer/profile?customerPreview=v2`, `/customer/accounts/:accountId?customerPreview=v2` với customer API client, query key theo fixture user và signal/cancellation. Fixture customer tổng hợp được seed rõ ràng chỉ trong preview; không phải session hoặc authorization BE. Màn phiên sau login của auth v2 không thay đổi. Runtime response được kiểm tra cấu trúc, Money/ID, masked account; unexpected fields bị loại; status lạ hiển thị fallback và không cấp action. Retry chỉ thủ công, không tự đặt backoff/budget chưa chốt.
+
+Loading, empty, error,403/404 và direct detail có trong preview. Trong browser đã kiểm subset tổng quan/hồ sơ/detail/reload,403/404/empty/error và 1440/768/360; lần đầu reload khi Vite đang hot-reload từng quay về tổng quan, sau đó mở trực tiếp và reload giữ detail; nguyên nhân lần đầu chưa xác định, cần kiểm lại clean browser. Chưa kiểm chứng API thật, server ownership/audit, accessibility đầy đủ, liên kết transfer/history/PIN hoặc capability staff. Chờ người dùng review UI/mock; FE-02-01 và dependency tích hợp vẫn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].
+
+
+### Run-04 ngày 18/11/2026 — trang chủ customer theo ảnh tham khảo
+
+Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùng topbar thương hiệu/lời chào, sidebar trắng với icon và vùng active kiểu ảnh tham khảo. Menu chỉ có Trang chủ, Thông tin tài khoản và Hồ sơ của tôi, là các màn v2 đã nối trong FE-02-01. Nội dung chính hiển thị masked account, số dư khả dụng/asOf và thông tin tài khoản đọc từ GET /accounts; không dựng lãi suất, thẻ, vay, hóa đơn, khuyến mãi hoặc số liệu tổng hợp không có nguồn. Transfer/history có contract nhưng UI v2 thuộc task khác nên chưa mở menu ở đây. Dashboard tiếp tục không có nhãn trạng thái; màn chi tiết vẫn hiển thị status. Browser mock đã xem tại `/customer?authPreview=v2`; ảnh và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-04.md]]. Chờ review UI, không khẳng định API thật.
+
+
+### Iconography customer mock ngày 18/11/2026
+
+Đã áp icon navigation/feature/illustration theo cùng một catalog trên customer mock theo chốt người phụ trách FE. Icon chỉ hỗ trợ nhận diện; nội dung masked/account và trạng thái API giữ nguyên. Kết quả tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-03-ICONS/2026-11-18-b9ba604/run-01.md]].

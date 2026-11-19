@@ -20,6 +20,8 @@ export const v2PreviewPath = (path: string) => `${path}?authPreview=v2`;
 export function V2AuthFlow({
   session,
   renderAuthenticated,
+  renderFrame,
+  customerDashboard = false,
 }: {
   session: V2Session;
   renderAuthenticated: (
@@ -27,6 +29,8 @@ export function V2AuthFlow({
     logout: () => Promise<void>,
     busy: boolean,
   ) => ReactNode;
+  renderFrame?: (content: ReactNode) => ReactNode;
+  customerDashboard?: boolean;
 }) {
   const state = useSyncExternalStore(
     session.subscribe,
@@ -41,6 +45,10 @@ export function V2AuthFlow({
   const location = useLocation(),
     navigate = useNavigate();
   const previousPhase = useRef(state.phase);
+  const isCustomer =
+    customerDashboard &&
+    state.auth?.user.userType === "CUSTOMER" &&
+    state.auth.user.roles.includes("CUSTOMER");
   const mounted = useRef(true);
   const bootTicket = useRef(0);
   const bootstrap = useCallback(async () => {
@@ -83,18 +91,34 @@ export function V2AuthFlow({
     if (booting || bootError) return;
     const target =
       state.phase === "authenticated"
-        ? "/workspace"
+        ? isCustomer
+          ? "/customer"
+          : "/workspace"
         : state.phase === "challenge"
           ? "/auth/challenge"
           : "/login";
-    if (location.pathname !== target) {
+    const customerPath =
+      location.pathname === "/customer" ||
+      location.pathname === "/customer/profile" ||
+      /^\/customer\/accounts\/[^/]+$/.test(location.pathname) ||
+      location.pathname === "/customer/history" ||
+      location.pathname === "/customer/limits" ||
+      /^\/customer\/history\/[^/]+$/.test(location.pathname);
+    if (location.pathname !== target && !(isCustomer && customerPath)) {
       if (location.pathname === "/auth/challenge" && target === "/login")
         setNotice(
           "Yêu cầu xác minh không còn hiệu lực trên trang này. Vui lòng đăng nhập lại.",
         );
       void navigate(v2PreviewPath(target), { replace: true });
     }
-  }, [state.phase, booting, bootError, location.pathname, navigate]);
+  }, [
+    state.phase,
+    isCustomer,
+    booting,
+    bootError,
+    location.pathname,
+    navigate,
+  ]);
   useEffect(() => {
     document.querySelector<HTMLElement>("h1")?.focus();
   }, [state.phase, booting, location.pathname]);
@@ -124,8 +148,8 @@ export function V2AuthFlow({
       logoutLock.current = false;
     }
   }
-  if (booting || bootError)
-    return (
+  if (booting || bootError) {
+    const content = (
       <>
         <h1 tabIndex={-1}>Đang khôi phục phiên</h1>
         {booting ? (
@@ -159,7 +183,9 @@ export function V2AuthFlow({
         )}
       </>
     );
-  return (
+    return renderFrame ? renderFrame(content) : content;
+  }
+  const content = (
     <>
       {notice && (
         <Alert
@@ -190,4 +216,5 @@ export function V2AuthFlow({
       )}
     </>
   );
+  return isCustomer || !renderFrame ? content : renderFrame(content);
 }

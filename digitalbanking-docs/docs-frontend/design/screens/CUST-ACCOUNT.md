@@ -1,5 +1,7 @@
 # CUST-ACCOUNT — Chi tiết tài khoản
 
+> Cập nhật FE-02-01 18/11: preview riêng `/customer/accounts/:accountId?customerPreview=v2` gọi mock getAccount; `CustomerAccountDetailPanel` trình bày owner.fullName, masked number, availableBalance, currency/status/createdAt/asOf, giữ Money decimal string. Có loading/403/404/retry/quay lại, direct URL/reload theo fixture; không có action transfer. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |

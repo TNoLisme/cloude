@@ -1,5 +1,7 @@
 # Layout và điều hướng dùng chung
 
+> FE-02-01 run-02: preview customer v2 riêng tái dùng `.shell/.customer/.sidebar/.topbar/.main` của AppLayout.module.css và Brand/Heading/Panel; `.customerPreviewNav` hiện hai nút tài khoản/hồ sơ khi <=767px thay sidebar ẩn. Toolbar fixture thu gọn; không áp menu/route policy staff hoặc nối auth sau login. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |
@@ -98,3 +100,18 @@ PreviewShell bổ sung thanh chọn màn/trạng thái bằng AntD Select/Button
 ### Thay host theo ảnh người dùng ngày18/11
 
 Preview v2 nay dùng AuthSplitLayout (feature auth/v2) thay card AppLayout.module.css: artwork trái50%, Brand/form phải max500px; <=767px ẩn artwork. Login/bootstrap/challenge/summary cùng host, route và lifecycle giữ nguyên; legacy shell không đổi. Toolbar chuyển details thu gọn fixed bottom-left, vẫn có label/kịch bản/chức năng fixture. Chi tiết kích thước/nội dung tại AUTH-LOGIN; ảnh browser và phạm vi chờ kiểm chứng ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]]. Đây là thay đổi bố cục được user yêu cầu, chưa phải phê duyệt UI sau sửa.
+
+
+### Cập nhật ngày 18/11/2026 — CUSTOMER sau đăng nhập
+
+Người phụ trách FE chốt trong chat: “tôi muốn sau khi đăng nhập thành công thì vào phần dashboard của customer, và trên màn hình chính của customer thì bỏ phần hiển thị trạng thái hoạt động của tài khoản ( đang hoạt động )”. Quyết định này thay thế phần giữ màn phiên chung sau login **đối với CUSTOMER**: trong preview auth v2, người dùng có userType và role CUSTOMER đến tổng quan `/customer?authPreview=v2`, dùng cùng controller phiên; không seed phiên customer riêng. Màn tổng quan không hiển thị status tài khoản; chi tiết vẫn đọc status theo contract. Vai trò khác giữ màn phiên chung; chưa chốt mapping GAP-07. Preview riêng vẫn tồn tại. Bản mock đang chờ review, không chứng minh runtime v2 hay quyền/ownership BE. Chi tiết: [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-03.md]].
+
+
+### Run-04 ngày 18/11/2026 — trang chủ customer theo ảnh tham khảo
+
+Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùng topbar thương hiệu/lời chào, sidebar trắng với icon và vùng active kiểu ảnh tham khảo. Menu chỉ có Trang chủ, Thông tin tài khoản và Hồ sơ của tôi, là các màn v2 đã nối trong FE-02-01. Nội dung chính hiển thị masked account, số dư khả dụng/asOf và thông tin tài khoản đọc từ GET /accounts; không dựng lãi suất, thẻ, vay, hóa đơn, khuyến mãi hoặc số liệu tổng hợp không có nguồn. Transfer/history có contract nhưng UI v2 thuộc task khác nên chưa mở menu ở đây. Dashboard tiếp tục không có nhãn trạng thái; màn chi tiết vẫn hiển thị status. Browser mock đã xem tại `/customer?authPreview=v2`; ảnh và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-04.md]]. Chờ review UI, không khẳng định API thật.
+
+
+## FE-04-01-MOCK — demo customer ngày 19/11/2026
+
+Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/11, đã dựng demo CUSTOMER đọc danh sách `/transactions` và chi tiết `/transactions/{reference}` theo v2 FE/mock: status/account/direction/from-to/min-max/page20, masked counterparty, Money string, loading/empty/error và 403/404. `sort` dùng mặc định server theo chốt trong chat ngày 18/11: “Dùng thứ tự mặc định, chờ BE (đề xuất)”; whitelist sort của endpoint vẫn cần BE xác nhận trước bộ chọn. Không triển khai staff scope, transfer mutation/recovery hoặc kết luận quyền BE từ fixture. UI demo còn sửa sau, không ghi duyệt UI. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

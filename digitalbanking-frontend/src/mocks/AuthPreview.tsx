@@ -11,6 +11,7 @@ import { createV2Session } from "../shared/auth/session";
 import { browserSessionSync } from "../shared/auth/session-sync";
 import { V2AuthFlow } from "../features/auth/v2/AuthFlow";
 import { V2SessionSummary } from "../features/auth/v2/AuthScreens";
+import { CustomerDashboard } from "./CustomerPreview";
 import {
   currentV2FixtureOtp,
   enableV2FixturePersistence,
@@ -105,23 +106,37 @@ export function AuthPreview() {
           </span>
         </aside>
       </details>
-      <AuthSplitLayout>
-        {controller ? (
-          <BrowserRouter>
-            <V2AuthFlow
-              session={controller}
-              renderAuthenticated={(auth, logout, ending) => (
+      {controller ? (
+        <BrowserRouter>
+          <V2AuthFlow
+            session={controller}
+            customerDashboard
+            renderFrame={(content) => (
+              <AuthSplitLayout>{content}</AuthSplitLayout>
+            )}
+            renderAuthenticated={(auth, logout, ending) =>
+              auth.user.userType === "CUSTOMER" &&
+              auth.user.roles.includes("CUSTOMER") ? (
+                <CustomerDashboard
+                  client={controller.client}
+                  userId={auth.user.userId}
+                  displayName={auth.user.displayName}
+                  mode="authPreview"
+                  logout={logout}
+                  ending={ending}
+                />
+              ) : (
                 <V2SessionSummary auth={auth} logout={logout} ending={ending} />
-              )}
-            />
-          </BrowserRouter>
-        ) : (
-          <>
-            <h1>Đang khôi phục phiên</h1>
-            <Spin />
-          </>
-        )}
-      </AuthSplitLayout>
+              )
+            }
+          />
+        </BrowserRouter>
+      ) : (
+        <AuthSplitLayout>
+          <h1>Đang khôi phục phiên</h1>
+          <Spin />
+        </AuthSplitLayout>
+      )}
     </>
   );
 }
