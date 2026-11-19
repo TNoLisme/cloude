@@ -10,7 +10,7 @@
 
 ## 3. Thay đổi và kịch bản
 
-Merge đưa source FE/mock/docs/evidence vào main, không bật mock ở production, không đổi API BE hoặc đóng GAP. Push chờ gate và merge commit.
+Merge đưa source FE/mock/docs/evidence vào main, không bật mock ở production, không đổi API BE hoặc đóng GAP. Merge commit `da09602`.
 
 ## 4. Đối chiếu hoàn thành
 
@@ -22,4 +22,4 @@ Nguồn trạng thái ở tracker và phiếu từng task. Yêu cầu push main 
 
 ## 6. Kết quả lần chạy
 
-Đang chờ tạo merge commit và push main; đối chiếu kết quả Git thực tế ở phản hồi cuối.
+`git push origin main` exit 0: remote `main` tiến từ `d1efbc6` đến `da09602`. Đây là mốc Git do người dùng yêu cầu, không phải duyệt UI hoặc nghiệm thu task cha.
