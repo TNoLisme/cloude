@@ -100,3 +100,8 @@ Client gửi credentials include/cache no-store, request correlation UUID, mặc
 204 không parse JSON. HTML/JSON hỏng hoặc Problem sai shape/status trả lỗi transport an toàn; API error message từ catalog chung, không render raw detail. Form errors chỉ bind theo allowlist field; caller dùng ErrorPanel cho phần còn lại. Catalog hiện cung cấp thông báo nền tảng auth/transport/validation và fallback tiếng Việt; nội dung theo feature bổ sung khi triển khai feature. Chỉ AUTH_SESSION_EXPIRED/401 kích hoạt callback hết phiên, không gộp OTP/credential 401 thành logout. Adapter JSON không đọc/ghi cookie HttpOnly và không nhận Bearer; download/stream, query-key factory và feature integrations còn theo task cha.
 
 Chi tiết code/AC/test/giới hạn và cách tái lập: [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]]. Types/YAML v1/v2 và preview legacy chưa được đổi bởi task này.
+
+
+### FE-04-01-MOCK ngày 19/11/2026 — query GET an toàn
+
+Shared JSON client nhận `URLSearchParams` qua option `query` và ghép sau base/path đã kiểm tra; path tiếp tục từ chối `?`, `#`, traversal. FE-04 chỉ đưa các filter đã đối chiếu từ contract vào query, không tự retry. Chi tiết [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

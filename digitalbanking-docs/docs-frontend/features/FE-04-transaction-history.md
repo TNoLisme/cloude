@@ -79,3 +79,13 @@ FE-04-01 tại [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md
 ## 12. Vấn đề cần chốt
 
 Scope staff/permission theo GAP-07. Trường filter/sort được chốt bởi contract, mọi nhu cầu thêm query cần cập nhật nguồn API. Route là đề xuất FE chờ review.
+
+
+## FE-04-01-MOCK — demo customer ngày 19/11/2026
+
+Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/11, đã dựng demo CUSTOMER đọc danh sách `/transactions` và chi tiết `/transactions/{reference}` theo v2 FE/mock: status/account/direction/from-to/min-max/page20, masked counterparty, Money string, loading/empty/error và 403/404. `sort` dùng mặc định server theo chốt trong chat ngày 18/11: “Dùng thứ tự mặc định, chờ BE (đề xuất)”; whitelist sort của endpoint vẫn cần BE xác nhận trước bộ chọn. Không triển khai staff scope, transfer mutation/recovery hoặc kết luận quyền BE từ fixture. UI demo còn sửa sau, không ghi duyệt UI. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].
+
+
+### FE-04-01-MOCK dashboard gần đây ngày 19/11/2026
+
+Vùng Giao dịch gần đây trên CUST-HOME đọc GET `/transactions` page0/size5/status=COMPLETED, hiển thị counterparty masked theo response, Money và thời điểm; có link chi tiết và Xem lịch sử. Loading/empty/error/retry độc lập với tài khoản. Đây là demo mock theo FE-04, không thay quyết định về UI cuối hoặc chứng minh server. [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

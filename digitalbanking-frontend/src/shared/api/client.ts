@@ -119,6 +119,7 @@ const emptyMeta = (): ResponseMeta => ({
 type Options = {
   method?: "GET" | "POST";
   body?: unknown;
+  query?: URLSearchParams;
   signal?: AbortSignal;
   csrf?: "required" | "optional";
   csrfToken?: string;
@@ -213,14 +214,17 @@ export function createApiClient(config: {
     };
     try {
       assertCurrent();
-      const response = await fetcher(`${base}${path}`, {
-        method,
-        headers,
-        credentials: "include",
-        cache: "no-store",
-        body: serializedBody,
-        signal: controller.signal,
-      });
+      const response = await fetcher(
+        `${base}${path}${options.query?.size ? `?${options.query}` : ""}`,
+        {
+          method,
+          headers,
+          credentials: "include",
+          cache: "no-store",
+          body: serializedBody,
+          signal: controller.signal,
+        },
+      );
       meta.status = response.status;
       meta.correlationId =
         response.headers.get("X-Correlation-ID") ?? meta.correlationId;
