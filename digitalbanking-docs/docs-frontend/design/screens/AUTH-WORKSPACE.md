@@ -64,3 +64,21 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 | Ngày | Thay đổi | Kiểm chứng |
 |---|---|---|
 | 09/11/2026 | Ghi mô tả UI theo source | Đọc code/CSS, chưa chạy lại browser |
+
+## Bổ sung FE-01-01 — 17/11/2026, chưa duyệt UI
+
+Quyết định người phụ trách FE trong chat 17/11: “Chốt màn phiên chung cho mọi role; chưa nối nghiệp vụ (đề xuất)”. Trong chế độ `authPreview=v2`, `/workspace` dùng V2SessionSummary tại `src/features/auth/v2/AuthScreens.tsx`, working tree nền frontend@6bceb5d. Viewer legacy vẫn có màn chọn khu vực ở trên; v2 chưa áp mapping đó.
+
+Card dùng cùng AuthLayout CSS, h1 “Phiên hiện tại”, lời chào displayName, AntD Descriptions một cột: userId/customerId giữ string, userType, roles/privileges nguyên phản hồi, deviceTrusted, idleExpiresAt/absoluteExpiresAt định dạng vi-VN Asia/Ho_Chi_Minh; không render CSRF/token. Mọi role dùng cùng màn, không link tài khoản/staff, không suy ra capability từ fixture. Nút Đăng xuất khóa khi đang thực hiện; local state/cache/intent được xóa, nếu chưa xác nhận 204 thì thông báo chưa xác nhận thu hồi trên máy chủ và cho kiểm tra lại phiên.
+
+Label/value dạng text, `<time dateTime>` cho expiry, tiêu đề focusable và nút semantic. Bốn role CUSTOMER/OPERATIONS/ADMIN/AUDITOR có component test; browser mobile/desktop/keyboard chưa kiểm chứng. GAP-07 và tích hợp nghiệp vụ vẫn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
+
+Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chung sau reload; lỗi first-load đã thêm gate chờ ServiceWorker.controller trước mount. Bản sửa chưa retest browser do IAB18/11 không attach được. Các giới hạn browser nêu trên tiếp tục mở; kết quả cuối ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+### Host mới theo ảnh người dùng18/11/2026
+
+Preview v2 dùng AuthSplitLayout hai nửa thay card cũ: artwork trái/BrandDB và nội dung phải max500px; <=767px ẩn artwork. Component/nội dung/route/lifecycle riêng của màn này giữ nguyên; không đổi contract hoặc quyền. Toolbar fixture thu gọn trong details ở góc dưới trái. Browser run03 có screenshot/mobile login200/reload/logout; chưa kiểm lại toàn bộ challenge/đa tab/API thật. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-18-6bceb5d/layout-result.md]].

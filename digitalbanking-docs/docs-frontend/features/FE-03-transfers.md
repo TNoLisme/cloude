@@ -100,3 +100,7 @@ FE-03-01 và FE-03-02 trong [[digitalbanking-docs/docs-frontend/management/03-wo
 ## 12. Vấn đề cần chốt
 
 GAP-02 recipient lookup/UX, GAP-08 binding, GAP-09 reload khi chưa có reference. Ngưỡng/TTL cấu hình giữ trạng thái của 07. GAP-01 cho PIN legacy. Tất cả quyết định ở tracker.
+
+## 13. Đối chiếu nguồn mới ngày 17/11/2026
+
+Mô tả 200 replay ở mục 4 phản ánh baseline YAML trước audit. Main 07 yêu cầu replay nguyên status/body; DEC-TRF-004/005/012 và YAML dev2/rework đã chọn replay 201/422, nonterminal 409 + Retry-After, TTL tối thiểu 24h từ terminal, correlation body gốc/header hiện tại và customer source-or-destination ownership. Đây chưa phải quyết định đổi contract FE/mock v2 hoặc bằng chứng runtime. Trước migration phải xác nhận snapshot/version và đồng bộ máy đọc/test theo bước 0 tại [[digitalbanking-docs/docs-frontend/management/05-fe-be-contract-handoff.md]]; không tiếp tục dùng mô tả 200 làm căn cứ bất chấp nguồn mới. Các phần unknown/reload, staff scope và integration chờ input BE Q-01..05 và quyết định FE tương ứng ở handoff mục 4.2, sau phản hồi BE.

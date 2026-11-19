@@ -1,0 +1,153 @@
+[
+  {
+    "ref": "origin/main",
+    "sha": "d1efbc6b89418ccd5c3c8ac9af455a71caa4ae49",
+    "decisionBytes": 0,
+    "decisionsPresent": [],
+    "transferStatuses": [
+      "200",
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "12338cee5a7b0ade0235ba204e8593ae7cbeaa2879cb3ba9681f7774371684e9"
+  },
+  {
+    "ref": "origin/dev",
+    "sha": "0371bfc5547118a6722a403d4e61f94267995f97",
+    "decisionBytes": 0,
+    "decisionsPresent": [],
+    "transferStatuses": [
+      "200",
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "12338cee5a7b0ade0235ba204e8593ae7cbeaa2879cb3ba9681f7774371684e9"
+  },
+  {
+    "ref": "origin/dev2",
+    "sha": "bb6f23f33ccdad3fedd13582c46882ed1ed85c07",
+    "decisionBytes": 36356,
+    "decisionsPresent": [
+      "004",
+      "005",
+      "012"
+    ],
+    "transferStatuses": [
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "d719f9ea119ea26157318732961c1df4917ab35accc6a138c950638cf489ac79"
+  },
+  {
+    "ref": "origin/datht-backend-rework",
+    "sha": "159e08fb4ab85cf67f14cc97e4dd1299adb37a70",
+    "decisionBytes": 78056,
+    "decisionsPresent": [
+      "004",
+      "005",
+      "012"
+    ],
+    "transferStatuses": [
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "bc3ac80b37cd421de98c923ebbf94710173662366c124bb5cd1a0cb7a0b78619"
+  },
+  {
+    "ref": "origin/datht-identity-pr",
+    "sha": "da4a4bae27d31c22e17e4c6cdf0947af39d0d607",
+    "decisionBytes": 79999,
+    "decisionsPresent": [
+      "004",
+      "005",
+      "012"
+    ],
+    "transferStatuses": [
+      "200",
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "93688c9f6624e8a7d0cdc5bf931bd7b7572f39d5cbd868270b1ea92e84a8952f"
+  },
+  {
+    "ref": "origin/feature/be-trf-01-02-transfer",
+    "sha": "a5e010c07fb0cab220822a87cb34ebeacd97cafe",
+    "decisionBytes": 32151,
+    "decisionsPresent": [
+      "004",
+      "005",
+      "012"
+    ],
+    "transferStatuses": [
+      "201",
+      "202",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "422",
+      "428",
+      "429",
+      "500",
+      "503"
+    ],
+    "hasV2OpenApi": false,
+    "v1Sha256LF": "d719f9ea119ea26157318732961c1df4917ab35accc6a138c950638cf489ac79"
+  }
+]

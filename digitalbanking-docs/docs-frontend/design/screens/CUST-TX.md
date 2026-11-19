@@ -64,3 +64,12 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 | Ngày | Thay đổi | Kiểm chứng |
 |---|---|---|
 | 09/11/2026 | Ghi mô tả UI theo source | Đọc code/CSS, chưa chạy lại browser |
+
+## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
+
+Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+
+## FE-04-01-MOCK — demo customer ngày 19/11/2026
+
+Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/11, đã dựng demo CUSTOMER đọc danh sách `/transactions` và chi tiết `/transactions/{reference}` theo v2 FE/mock: status/account/direction/from-to/min-max/page20, masked counterparty, Money string, loading/empty/error và 403/404. `sort` dùng mặc định server theo chốt trong chat ngày 18/11: “Dùng thứ tự mặc định, chờ BE (đề xuất)”; whitelist sort của endpoint vẫn cần BE xác nhận trước bộ chọn. Không triển khai staff scope, transfer mutation/recovery hoặc kết luận quyền BE từ fixture. UI demo còn sửa sau, không ghi duyệt UI. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

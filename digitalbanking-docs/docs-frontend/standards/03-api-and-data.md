@@ -82,3 +82,26 @@ Thông tin tài chính lấy authoritative server, stale data có asOf và actio
 ## 2. Phụ thuộc
 
 [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]] giữ GAP-05/08/09 và task FE-FND-02. Session/step-up tại [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md]].
+
+## 3. Hiện thực Money/ID ngày 14/11/2026 — được FE duyệt
+
+FE-FND-02-DATA cung cấp `digitalbanking-frontend/src/shared/lib/money.ts` và `id.ts`. Các type Money/ApiId tham chiếu types sinh từ YAML mới, không dùng schema legacy. `moneyToMinorUnits(unknown)` nhận đúng Money wire format và trả BigInt minor units; `minorUnitsToMoney(bigint)` serialize đúng hai decimals, từ chối kết quả âm/vượt precision. `formatMoney(Money)` dùng Intl trên phần nguyên BigInt, ghép hai số thập phân và đơn vị VND để không mất precision. Input sai scale/kiểu/leading zero/whitespace không được tự sửa hoặc làm tròn.
+
+`isApiId/parseApiId` chỉ nhận string theo pattern ID, không đi qua Number hoặc tự thêm giới hạn số nguyên DB ngoài schema. Đây là kiểm tra định dạng; không xác nhận ID tồn tại hay quyền sở hữu. Money 0.00 hợp lệ ở cấp schema; rule amount chuyển tiền >0 thuộc feature/BE, không áp cho số dư hoặc hạn mức nullable. Caller phải phân biệt null/missing trước khi gọi formatter; helper không tự thay chúng bằng 0.
+
+Các utility chưa thay renderer/DTO/client cũ của preview. Unit tests tại shared/lib kiểm tra biên schema, cộng decimal, overflow, format và ID vượt MAX_SAFE_INTEGER. Bằng chứng/thực trạng task tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DATA/2026-11-14-cfde9ad/run-02.md]]. Đây không phải kết quả tích hợp API hoặc nghiệm thu toàn bộ FE-FND-02.
+
+## 4. Shared JSON client ngày 17/11/2026 — chờ review
+
+FE-FND-02-CLIENT-SESSION bổ sung `src/shared/api/client.ts` dùng cùng HTTP conventions của 07, với `baseUrl` được consumer truyền tường minh. API `request` trả `{status, data, correlationId, requestId, retryAfter, idempotentReplayed}`; lỗi `ApiError` giữ `code`, metadata header và Problem Details riêng. Không ghi đè correlation trong body bằng header. Đây là primitive giữ dữ liệu HTTP theo schema đã duyệt, chưa tiếp nhận semantics Transfer mới trên dev2 vào v2 FE/mock.
+
+Client gửi credentials include/cache no-store, request correlation UUID, mặc định CSRF bắt buộc cho POST; public login chọn optional và vẫn mang CSRF nếu có giá trị đã biết. Hủy bằng AbortSignal, timeout 10 giây theo 07 §2 và invalidate/dispose để hủy mọi request cũ; response vẫn bị loại nếu fetch implementation bỏ qua abort. Không tự retry, refresh token hoặc polling: các budget/policy đề xuất vẫn chờ quyết định của task feature.
+
+204 không parse JSON. HTML/JSON hỏng hoặc Problem sai shape/status trả lỗi transport an toàn; API error message từ catalog chung, không render raw detail. Form errors chỉ bind theo allowlist field; caller dùng ErrorPanel cho phần còn lại. Catalog hiện cung cấp thông báo nền tảng auth/transport/validation và fallback tiếng Việt; nội dung theo feature bổ sung khi triển khai feature. Chỉ AUTH_SESSION_EXPIRED/401 kích hoạt callback hết phiên, không gộp OTP/credential 401 thành logout. Adapter JSON không đọc/ghi cookie HttpOnly và không nhận Bearer; download/stream, query-key factory và feature integrations còn theo task cha.
+
+Chi tiết code/AC/test/giới hạn và cách tái lập: [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]]. Types/YAML v1/v2 và preview legacy chưa được đổi bởi task này.
+
+
+### FE-04-01-MOCK ngày 19/11/2026 — query GET an toàn
+
+Shared JSON client nhận `URLSearchParams` qua option `query` và ghép sau base/path đã kiểm tra; path tiếp tục từ chối `?`, `#`, traversal. FE-04 chỉ đưa các filter đã đối chiếu từ contract vào query, không tự retry. Chi tiết [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].

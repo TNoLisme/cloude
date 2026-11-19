@@ -1,0 +1,23 @@
+DEC-TRF-004
+ — Retry và reconciliation
+
+- **Ngày / thẩm quyền:** 16/11/2026; Codex theo chỉ đạo người điều hành ở DEC-TRF-003.
+- **Quyết định:** cùng key/hash và record chưa terminal → HTTP `409 IDEMPOTENCY_IN_PROGRESS` + `Retry-After`; request HTTP không trực tiếp resume T2. Scheduler/worker nội bộ claim và phục hồi an toàn. Terminal replay nguyên HTTP status/body đã lưu (`201` hoặc `422`) cùng `Idempotent-Replayed: true`; khác actor/hash conflict an toàn. Key global theo `04`/`07`. Replay body giữ correlation gốc, header dùng correlation của request hiện tại để trace; không tiết lộ dữ liệu actor khác.
+- **Lý do / ảnh hưởng:** chọn hành vi API `07`, phân biệt client retry với recovery của `04`; có thể tăng thời gian chờ worker. Cần API/FE/QA/Ops review, test crash, nhiều worker, replay và correlation; không khẳng định provider hiện đã sẵn sàng.
+
+DEC-TRF-005
+ — Retention idempotency
+
+- **Ngày / thẩm quyền:** 16/11/2026; Codex theo chỉ đạo người điều hành ở DEC-TRF-003.
+- **Quyết định:** TTL cấu hình mặc định và tối thiểu là 24 giờ tính từ `completed_at` được lưu khi transfer terminal; cấu hình nhỏ hơn phải bị từ chối khi triển khai. T1 vẫn đặt `expires_at = created_at + TTL` để tuân thủ NOT NULL; khi terminal cập nhật atomically `completed_at`, response và `expires_at = max(expires_at, completed_at + TTL)`. Đây là mốc DB lưu, không hứa đủ 24 giờ sau lúc client nhận response. PENDING/nonterminal không purge; job chỉ xóa terminal đã hết hạn sau khi lock/recheck. Dù quá timestamp, khi record còn tồn tại phải replay/conflict; chỉ sau purge key có thể thành lệnh mới.
+- **Thay đổi cấu hình:** T1 dùng snapshot `TTL_T1` hợp lệ; transaction terminal đọc một snapshot `TTL_terminal` hợp lệ tại thời điểm finalize, ghi cùng config version để truy vết và dùng `max(expires_at hiện có, completed_at + TTL_terminal)`. Giảm TTL không rút ngắn expiry đã lưu; cả hai snapshot phải ≥24 giờ. Không đọc được hoặc cấu hình không hợp lệ thì không commit terminal dựa trên giá trị đoán. Cơ chế lưu version/migration chưa có runtime và cần review.
+- **Khách hàng / ảnh hưởng:** giữ cùng key, query reference nếu biết; nếu chưa rõ kết quả hoặc không có reference thì liên hệ vận hành trước khi tạo lệnh mới. Sau purge không bảo đảm chống trùng vĩnh viễn. Cần migration, test terminal sau PENDING > TTL, concurrent purge/retry và review Product/Security/Ops; không thay dữ liệu đang chạy.
+
+DEC-TRF-012
+ — Bảo vệ key, quyền đọc và version module
+
+- **Ngày / thẩm quyền:** 16/11/2026; Codex theo chỉ đạo “chốt hết”.
+- **Idempotency:** giữ key global và contract 1–255 ký tự theo `07` và DEC-TRF-004; client nên tạo UUIDv4 hoặc giá trị CSPRNG ít nhất 128 bit mới cho mỗi logical request và giữ nguyên key/payload khi retry. Không thể chứng minh entropy chỉ bằng format; preclaim/DoS vẫn là rủi ro. Conflict giữa actor không trả chủ key hay response của người khác; C3 best-effort, log fingerprint HMAC thay raw key/hash. Quota POST transfer 30 request/phút/customer; khi chạy nhiều instance bắt buộc limiter atomic shared tại gateway tin cậy hoặc shared store, lỗi limiter trả 503 fail-closed, 429 có Retry-After. Limiter hiện per-instance không chứng minh quota toàn cụm.
+- **Read:** CUSTOMER cần `TRANSACTION_READ_SELF` và Account xác minh sở hữu source hoặc destination; staff cần `TRANSACTION_READ` và scope server-side. Chỉ trả fraud flags khi có `FRAUD_READ` hoặc `FRAUD_REVIEW`; cấp `FRAUD_READ` cho AUDITOR trong seed/matrix để khớp contract fraud hiện có. History ghép qua public API provider và projection mask, không đọc bảng private. Giữ hợp đồng hiện tại 403 khi có resource nhưng ngoài scope, 404 khi không tồn tại; điều này có thể lộ sự tồn tại, giảm bằng reference khó đoán, rate limit và security audit, không giả vờ triệt tiêu enumeration.
+- **Boundary/version:** chọn provider-owned immutable public API/DTO v1; consumer chỉ import `provider.api`, không entity hay private table. Thay đổi breaking, kể cả thay constructor Java record, sang v2; CI phải có ArchUnit cấm import nội bộ kèm negative fixture và provider/consumer contract suite cùng vector. Fake được dùng khi provider chưa có nhưng không chứng minh lock/rollback; cần PostgreSQL thật. Một test kiến trúc pass rỗng không phải bằng chứng enforcement.
+- **Nguồn / ảnh hưởng:** `07` §§3/5/8, `design/04`, `design/05` §§3/12/13; OI-CON-04/13, MOD-OI-08/09. Các control, quyền seed, test và owner review vẫn cần triển khai/chứng minh.

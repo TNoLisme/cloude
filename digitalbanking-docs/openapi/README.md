@@ -55,3 +55,12 @@ Khi hai bên mâu thuẫn, **`07. API contracts` là nguồn ngữ nghĩa**; c�
 | Tài liệu backend | [[digitalbanking-docs/docs-backend/README.md]] |
 | Tài liệu frontend | [[digitalbanking-docs/docs-frontend/README.md]] |
 | README gốc | [[digitalbanking-docs/README.md]] |
+
+## 7. Baseline v2 riêng ngày 14/11/2026
+
+| Contract | Version / base | Nguồn ngữ nghĩa | Trạng thái |
+|---|---|---|---|
+| [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | 1.0.0 /api/v1 | [[digitalbanking-docs/docs-common/07. API contracts.md]] | Giữ nguyên baseline cũ |
+| [[digitalbanking-docs/openapi/digital-banking-v2.yaml]] | 2.0.0 /api/v2 | [[digitalbanking-docs/docs-common/07a. API contracts v2.md]] | Draft FE/mock, chờ BE/Security runtime |
+
+Theo quyết định người phụ trách FE, v2 dùng SESSION_TOKEN/Path=/api/LOGIN_MFA, giữ v1. Tách version vì đây là thay đổi breaking; không sửa evidence/DDL cũ. Cookie header, DB purpose, coexistence và routing v2 phải được BE/Security/DB kiểm chứng trước tích hợp thật. Generated types v1/v2 tách riêng; api:check kiểm tra cả hai.

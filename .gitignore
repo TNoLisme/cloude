@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!digitalbanking-frontend/.env.mock
 
 .claude/
 .specify/
@@ -11,12 +12,22 @@ be/target/
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
+digitalbanking-frontend/node_modules/
+digitalbanking-frontend/dist/
+digitalbanking-frontend/*.tsbuildinfo
+digitalbanking-frontend/test-results/
+digitalbanking-frontend/playwright-report/
+.tmp/fe-fnd-01-*/
 
 .obsidian
 
 .qoderian
 .superpowers
 .qoder
+
+AGENTS.md
+!/AGENTS.md
+DECISIONS.md
 
 digitalbanking-docs/docs-references
 specs/

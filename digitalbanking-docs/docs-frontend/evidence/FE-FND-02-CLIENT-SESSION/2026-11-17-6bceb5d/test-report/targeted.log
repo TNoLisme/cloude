@@ -1,0 +1,10 @@
+
+ RUN  v3.2.4 C:/project/cloude/digitalbanking-frontend
+
+ ✓ src/shared/api/client.test.ts (23 tests) 39ms
+ ✓ src/shared/auth/session.test.ts (19 tests) 130ms
+
+ Test Files  2 passed (2)
+      Tests  42 passed (42)
+   Start at  11:44:54
+   Duration  2.37s (transform 205ms, setup 0ms, collect 1.40s, tests 169ms, environment 0ms, prepare 623ms)

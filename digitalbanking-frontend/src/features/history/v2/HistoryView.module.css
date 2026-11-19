@@ -1,0 +1,85 @@
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.filters label {
+  font-weight: 600;
+}
+.filters input,
+.filters select {
+  min-height: 38px;
+  border: 1px solid #e1e7ef;
+  border-radius: 6px;
+  padding: 6px;
+  background: #fff;
+  color: #223449;
+}
+.filters [role="alert"] {
+  color: #b53a3a;
+  width: 100%;
+}
+.filters :global(.ant-select) {
+  min-width: 180px;
+}
+.items {
+  display: grid;
+}
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 4px;
+  border: 0;
+  border-bottom: 1px solid #e1e7ef;
+  background: #fff;
+  color: #223449;
+  text-align: left;
+  cursor: pointer;
+}
+.item:hover {
+  background: #f7f9fc;
+}
+.item:focus-visible {
+  outline: 3px solid #8cb4e4;
+}
+.item > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.item > span:last-child {
+  text-align: right;
+}
+.item small {
+  color: #65768a;
+}
+.paging {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 18px;
+}
+.amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #173b5e;
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .item {
+    align-items: flex-start;
+  }
+  .item strong,
+  .item small {
+    overflow-wrap: anywhere;
+  }
+  .paging {
+    justify-content: space-between;
+  }
+}

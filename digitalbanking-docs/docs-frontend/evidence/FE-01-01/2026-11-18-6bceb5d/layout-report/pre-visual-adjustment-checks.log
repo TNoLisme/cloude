@@ -1,0 +1,256 @@
+Node v22.14.0 pnpm 10.34.9
+Start 2026-11-17T19:32:12.981Z
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run lint
+
+> digitalbanking-frontend@0.1.0 lint C:\project\cloude\digitalbanking-frontend
+> eslint . --max-warnings=0
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run typecheck
+
+> digitalbanking-frontend@0.1.0 typecheck C:\project\cloude\digitalbanking-frontend
+> tsc -b
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run api:check
+
+> digitalbanking-frontend@0.1.0 api:check C:\project\cloude\digitalbanking-frontend
+> node scripts/check-api.mjs
+
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v1.yaml → src/shared/api/generated/openapi.check.d.ts [154.5ms]
+OpenAPI v1 generated types match the contract.
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v2.yaml → src/shared/api/generated/v2/openapi.check.d.ts [123.8ms]
+OpenAPI v2 generated types match the contract.
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run format:check
+
+> digitalbanking-frontend@0.1.0 format:check C:\project\cloude\digitalbanking-frontend
+> prettier --check src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js
+
+Checking formatting...
+All matched files use Prettier code style!
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run test --reporter=verbose --maxWorkers=2
+
+> digitalbanking-frontend@0.1.0 test C:\project\cloude\digitalbanking-frontend
+> vitest run "--reporter=verbose" "--maxWorkers=2"
+
+
+ RUN  v3.2.4 C:/project/cloude/digitalbanking-frontend
+
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > renders the approved metadata-only summary for CUSTOMER without inferring business navigation 196ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > renders the approved metadata-only summary for OPERATIONS without inferring business navigation 42ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > renders the approved metadata-only summary for ADMIN without inferring business navigation 31ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > renders the approved metadata-only summary for AUDITOR without inferring business navigation 26ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > shows bootstrap loading before anonymous login and validates required fields in Vietnamese 789ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > logs in with username, renders an injected test-only authenticated slot and logs out 493ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > keeps username and clears password after invalid credentials 347ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > keeps a network bootstrap error distinct from anonymous and supports explicit retry 199ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > can intentionally return to login from bootstrap failure 200ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > prevents double login while a response is delayed 466ms
+ ✓ src/mocks/AuthPreview.test.tsx > mounts the actual preview host, clears old cache, restores its fixture on remount and clears it on logout 2072ms
+ ✓ src/mocks/AuthPreview.test.tsx > runs MFA through the actual preview host and exposes only an explicit synthetic OTP helper 1916ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > handles 202/incorrect OTP/resend and keeps attempts governed by server metadata 1552ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > shows an expired challenge and only offers a restart 483ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > a direct challenge URL without memory context returns to login 59ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > reports logout failure without claiming server revocation 930ms
+ ✓ src/features/auth/v2/AuthFlow.test.tsx > auth v2 UI wiring to real session primitives and MSW > is safe under StrictMode bootstrap effect replay 434ms
+ ✓ src/features/auth/AuthPages.test.tsx > recovery never opens password form before server verification; confirmation mismatch never sends reset 2228ms
+ ✓ src/features/auth/AuthPages.test.tsx > registration verifies OTP through the new API before displaying profile and sends proof without OTP 731ms
+ ✓ src/features/transfers/TransferPage.test.tsx > blocks a new transfer after an unknown response and manually reconciles with the original key and payload 1204ms
+ ✓ src/mocks/legacy-preview.test.ts > UI fixture adapter boundary > blocks every legacy mutation before a network request is made 6ms
+ ✓ src/mocks/legacy-preview.test.ts > UI fixture adapter boundary > does not silently lose new-contract decimal fractions in the legacy renderer 3ms
+ ✓ src/mocks/v2-auth-persistence.test.ts > stores one explicit fixture flag only and restores the synthetic session after reload setup 38ms
+ ✓ src/mocks/v2-auth-persistence.test.ts > ignores arbitrary storage data instead of decoding it as user/session metadata 3ms
+ ✓ src/mocks/v2-auth-persistence.test.ts > clears the fixture flag on failed logout but retains same-page mock state for explicit server recheck 9ms
+ ✓ src/mocks/handlers.test.ts > target-contract mock API > starts anonymous, exposes documented session/accounts after login and clears on logout 192ms
+ ✓ src/mocks/handlers.test.ts > target-contract mock API > rejects legacy phone login rather than silently accepting a changed payload 2ms
+ ✓ src/mocks/handlers.test.ts > target-contract mock API > fails closed for an unimplemented API instead of reaching backend 4ms
+ ✓ src/mocks/v2-auth.test.ts > v2 Security baseline mock > uses the v2 cookie name/path and clears it only after CSRF logout 41ms
+ ✓ src/mocks/v2-auth.test.ts > v2 Security baseline mock > returns LOGIN_MFA for the explicit challenge fixture without creating a session 4ms
+ ✓ src/mocks/v2-auth.test.ts > v2 Security baseline mock > keeps the v1 preview fixture independent from the v2 mock session 172ms
+ ✓ src/mocks/v2-auth.test.ts > v2 Security baseline mock > rejects malformed login JSON and the legacy phone payload 4ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > bootstraps anonymous, logs in without legacy token JSON, reloads metadata and logs out with CSRF/204 37ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > lowercases username and preserves password bytes 3ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > keeps LOGIN_MFA as pending challenge without authenticating 5ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > carries the previous session CSRF when a new login can have an ambient cookie 5ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > requires the explicit v2 base 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > rejects query/hash bases that only appear to end in v2 0ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > rejects legacy login DTO and unknown role before retaining a session 3ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > projects approved metadata only, stripping unexpected secret fields 2ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > distinguishes bootstrap network error from anonymous and permits explicit retry 3ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > clears local session/cache on offline logout and reports server outcome unconfirmed 5ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > does not let a delayed login restore data after logout 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > cannot let an old bootstrap overwrite a newer login 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > cannot let an old logout completion clear a newer login 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > clears the previous user's cache before a new login starts 2ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > retains an authenticated session for OTP 401 but clears for session expiry 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > returns unconfirmed logout for an already expired server session 2ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > rejects malformed challenge response without storing authentication 1ms
+ ✓ src/shared/auth/session.test.ts > v2 memory session with approved MSW handlers > disposal cancels requests and clears secret metadata 1ms
+ ✓ src/shared/auth/session.test.ts > tab invalidation signals > clears peers without sharing session data or producing an echo 4ms
+ ✓ src/shared/auth/session.test.ts > tab invalidation signals > browser adapter sends only a literal signal and ignores arbitrary incoming data 1ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > verifies the current challenge and refuses reuse without creating another session 44ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > resend changes the fixture OTP without resetting used attempts 11ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > locks after the attempt count declared by the synthetic challenge and cannot resend 39ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > does not accept or resend an expired fixture challenge 9ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > requires the exact current challenge and clears local context when restarting 7ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > rejects OTP outside the wire schema: "12345" 8ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > rejects OTP outside the wire schema: "123456789" 6ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > rejects OTP outside the wire schema: "12A456" 4ms
+ ✓ src/shared/auth/mfa.test.ts > login MFA controller and explicit MSW fixtures > rejects OTP outside the wire schema: "123456\n" 4ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > uses real base, credentials, authorization and the supplied idempotency key 51ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > handles 204 without parsing JSON 5ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > refreshes once for concurrent callers and checks server user shape 5ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > retries a safe read once after refresh 4ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > does not refresh/replay a money mutation after 401 4ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > never accepts a late response from a previous user 4ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > honors Retry-After before allowing another request 3ms
+ ✓ src/api/client.test.ts > HTTP and session lifecycle > treats network/invalid successful responses as unknown outcomes 3ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > preserves status and original body correlation separately from request headers 20ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > does not parse a 204 body 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > requires CSRF before protected POST but public login can explicitly omit it 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > does not invalidate session for AUTH_OTP_INVALID 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > does not invalidate session for AUTH_INVALID_CREDENTIALS 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > does not invalidate session for FUTURE_AUTH_CODE 2ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > invalidates only the current AUTH_SESSION_EXPIRED response 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > preserves error metadata, allows only known form fields, and renders safe messages 2ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects invalid upstream response without treating it as a session expiry 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects invalid upstream response without treating it as a session expiry 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > has no implicit retries even for retryable errors and Retry-After 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects a non-JSON-serializable body before sending a request 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > keeps only trace metadata when an error is constructed from a response envelope 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > cancels an in-flight request through the caller signal 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > uses a safe fallback for unknown code __proto__ 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > uses a safe fallback for unknown code constructor 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > blocks requests after client disposal 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects a stale response even when a fetch implementation ignores cancellation 1ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > honors external cancellation, including already aborted signals 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > times out ordinary requests at 10 seconds without claiming server failure 3ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path https://elsewhere.test/ 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path //elsewhere.test 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path /../auth/session 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path /%2e%2e/auth/session 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path /
+../auth/session 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path /%2e%2e%2fauth/session 0ms
+ ✓ src/shared/api/client.test.ts > shared transport primitives (fetch doubles, no business handlers) > rejects base escaping path /a\b 0ms
+ ✓ src/shared/api/contracts.test.mjs > separate v1/v2 contracts > preserves the original v1 contract (independent of Git line endings) 4ms
+ ✓ src/shared/api/contracts.test.mjs > separate v1/v2 contracts > applies only the approved Security/version deltas across all operations 12ms
+ ✓ src/mocks/wait-for-control.test.ts > permits startup immediately when a worker controls the page 2ms
+ ✓ src/mocks/wait-for-control.test.ts > holds startup until controllerchange, ignoring events without a controller 0ms
+ ✓ src/mocks/wait-for-control.test.ts > fails closed after the dev startup timeout and removes the listener 6ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > round-trips 0.00 without Number conversion 1ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > round-trips 0.01 without Number conversion 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > round-trips 1.05 without Number conversion 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > round-trips 150000.00 without Number conversion 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > round-trips 99999999999999999.99 without Number conversion 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > adds decimal amounts exactly and serializes a two-digit scale 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1.2" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1.230" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "01.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "-1.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "+1.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: ".10" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1e2" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1,00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1,000.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: " 1.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1.00 " 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "100000000000000000.00" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "NaN" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "Infinity" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: "1.00\n" 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: 1 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: 0 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: null 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: undefined 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects invalid Money rather than rounding/coercing: {} 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > rejects negative results and precision overflow 0ms
+ ✓ src/shared/lib/money.test.ts > Money contract and exact arithmetic > retains cents and large integer precision when formatting VND 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > preserves the exact string 1 1ms
+ ✓ src/shared/lib/id.test.ts > ID contract > preserves the exact string 3001 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > preserves the exact string 9007199254740993 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > preserves the exact string 9223372036854775807 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > preserves the exact string 9999999999999999999 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "0" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "01" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "-1" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "1.0" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "1e3" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "10000000000000000000" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: " 1" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: "1\n" 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: 3001 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: 9007199254740992 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: null 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: undefined 0ms
+ ✓ src/shared/lib/id.test.ts > ID contract > rejects invalid ID without coercion: {} 0ms
+ ✓ src/stores/session.test.ts > role routing and pending intents > requires customer PIN but never forces staff PIN 1ms
+ ✓ src/stores/session.test.ts > role routing and pending intents > uses the server transfer state rather than amount to choose OTP/results 0ms
+ ✓ src/stores/session.test.ts > role routing and pending intents > retains the same business intent without PIN and clears it on user change 1ms
+
+ Test Files  17 passed (17)
+      Tests  151 passed (151)
+   Start at  02:32:28
+   Duration  26.20s (transform 522ms, setup 0ms, collect 25.96s, tests 15.28s, environment 4.74s, prepare 2.18s)
+
+stderr | src/mocks/handlers.test.ts > target-contract mock API > fails closed for an unimplemented API instead of reaching backend
+[MSW] Error: intercepted a request without a matching request handler:
+
+  • GET http://localhost/api/v1/not-in-contract
+
+If you still wish to intercept this unhandled request, please create a request handler for it.
+Read more: https://mswjs.io/docs/http/intercepting-requests
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run build
+
+> digitalbanking-frontend@0.1.0 build C:\project\cloude\digitalbanking-frontend
+> tsc -b && vite build
+
+vite v7.3.8 building client environment for production...
+transforming...
+✓ 3442 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            0.46 kB │ gzip:   0.30 kB
+dist/assets/index-ULIuWFX6.css            12.45 kB │ gzip:   3.24 kB
+dist/assets/ReadOnlyPages-BvJJU9gs.js      4.59 kB │ gzip:   2.20 kB
+dist/assets/OperatorPages-C1F5nfPf.js     38.20 kB │ gzip:  13.00 kB
+dist/assets/index-D-fAAve8.js          1,198.34 kB │ gzip: 374.29 kB
+✓ built in 7.63s
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+EXIT 0
+Finished 2026-11-17T19:33:08.419Z

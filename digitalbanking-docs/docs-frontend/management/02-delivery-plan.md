@@ -5,6 +5,7 @@
 | Dự án / mã | Digital Banking MVP / FE-PLAN |
 | Phiên bản / ngày | 1.2 / 09/11/2026 |
 | Trạng thái tài liệu | Hoàn thành |
+| Bổ sung 13/11/2026 | Lộ trình bổ sung FE-DOC-03 được người phụ trách FE duyệt ngày 14/11/2026; UI/mock duyệt riêng, các gate API thật vẫn mở |
 | Phê duyệt v1.2 | Người phụ trách Frontend chốt trong chat ngày 09/11/2026 |
 | Baseline đã chốt | Nội dung trước phần bổ sung design được người phụ trách FE xác nhận ngày 09/11/2026 |
 | Owner / reviewer | Frontend / Backend, QA, người điều phối |
@@ -27,6 +28,8 @@ Kế hoạch theo [[digitalbanking-docs/docs-common/10. Master timelines.md]], p
 FE-01-02 chạy sau GAP-04. Phần UI độc lập có thể chuẩn bị với mock bám contract, mức chứng minh ghi trong tracker. FE-06-01 có thể tra cứu theo ID trong khi search chờ GAP-03.
 
 ## 3. Phụ thuộc
+
+Theo yêu cầu người phụ trách FE ngày 13/11/2026, các đợt implementation được chia thành UI/mock → người dùng review/chỉnh sửa/duyệt → tích hợp BE của phần đã duyệt → kiểm chứng và xác nhận merge. Xem [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]]. Các cổng API thật và nghiệm thu ở bảng trên vẫn áp dụng; mock không đóng task tích hợp. Mỗi lần chạy dùng [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]].
 
 ~~~mermaid
 flowchart TD

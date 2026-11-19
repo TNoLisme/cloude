@@ -1,0 +1,35 @@
+ M digitalbanking-docs/docs-frontend/README.md
+ M digitalbanking-docs/docs-frontend/design/README.md
+ M digitalbanking-docs/docs-frontend/design/screens/APP-BOOTSTRAP.md
+ M digitalbanking-docs/docs-frontend/design/screens/AUTH-CHALLENGE.md
+ M digitalbanking-docs/docs-frontend/design/screens/AUTH-LOGIN.md
+ M digitalbanking-docs/docs-frontend/design/screens/AUTH-WORKSPACE.md
+ M digitalbanking-docs/docs-frontend/design/shared/02-layouts-and-navigation.md
+ M digitalbanking-docs/docs-frontend/features/FE-01-auth-and-session.md
+ M digitalbanking-docs/docs-frontend/features/FE-03-transfers.md
+ M digitalbanking-docs/docs-frontend/guides/01-local-development.md
+ M digitalbanking-docs/docs-frontend/management/03-work-tracker.md
+ M digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md
+ M digitalbanking-docs/docs-frontend/standards/03-api-and-data.md
+ M digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md
+ M digitalbanking-frontend/README.md
+ M digitalbanking-frontend/src/features/auth/AuthPages.test.tsx
+ M digitalbanking-frontend/src/main.tsx
+ M digitalbanking-frontend/src/mocks/PreviewShell.tsx
+ M digitalbanking-frontend/src/mocks/browser.ts
+ M digitalbanking-frontend/src/mocks/v2-auth.ts
+?? digitalbanking-docs/docs-frontend/evidence/FE-01-01/
+?? digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/
+?? digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CONTRACT-AUDIT/
+?? digitalbanking-docs/docs-frontend/evidence/FE-FND-02-DEV-REVIEW/2026-11-16-6bceb5d/
+?? digitalbanking-docs/docs-frontend/management/05-fe-be-contract-handoff.md
+?? digitalbanking-frontend/public/images/
+?? digitalbanking-frontend/src/features/auth/v2/
+?? digitalbanking-frontend/src/mocks/AuthPreview.test.tsx
+?? digitalbanking-frontend/src/mocks/AuthPreview.tsx
+?? digitalbanking-frontend/src/mocks/v2-auth-persistence.test.ts
+?? digitalbanking-frontend/src/mocks/wait-for-control.test.ts
+?? digitalbanking-frontend/src/mocks/wait-for-control.ts
+?? digitalbanking-frontend/src/shared/api/client.test.ts
+?? digitalbanking-frontend/src/shared/api/client.ts
+?? digitalbanking-frontend/src/shared/auth/

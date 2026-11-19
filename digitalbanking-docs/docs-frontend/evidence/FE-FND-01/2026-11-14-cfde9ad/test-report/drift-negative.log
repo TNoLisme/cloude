@@ -1,0 +1,13 @@
+Intentional type declaration drift; expected nonzero exit.
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v1.yaml → src/shared/api/generated/openapi.check.d.ts [140.2ms]
+file:///C:/project/cloude/.tmp/fe-fnd-01-cfde9ad-20261114-01/digitalbanking-frontend/scripts/check-api.mjs:27
+    throw new Error("Generated API types differ. Run pnpm api:generate.");
+          ^
+
+Error: Generated API types differ. Run pnpm api:generate.
+    at file:///C:/project/cloude/.tmp/fe-fnd-01-cfde9ad-20261114-01/digitalbanking-frontend/scripts/check-api.mjs:27:11
+
+Node.js v22.14.0
+
+EXIT 1

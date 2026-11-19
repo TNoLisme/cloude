@@ -81,6 +81,8 @@ FET-09 chứng minh customer chỉ xem self, tạo PENDING, checker khác maker,
 
 FE-05-01 và FE-05-02 trong tracker. Cơ chế approval là public interface dùng lại tại FE-08. Evidence mới gắn FET-09 và AC-028.
 
+FE-05-01-MOCK ngày 19/11/2026 chỉ hiện `getLimits` cho CUSTOMER với fixture tổng hợp. Đây là demo đọc self, chưa chứng minh ownership BE hoặc FET-09 đầy đủ; maker/checker và mutation vẫn chờ GAP-07/08. [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-b9ba604/run-01.md]].
+
 ## 12. Vấn đề cần chốt
 
 GAP-07 về quyền/checker, GAP-08 về binding khi create và retry approval, GAP-11 về phạm vi milestone. Policy max/default đang đề xuất ở 07 được chốt bởi BA/BE.

@@ -1,0 +1,71 @@
+{
+  "name": "digitalbanking-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode mock --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "api:generate": "pnpm api:generate:v1 && pnpm api:generate:v2",
+    "api:check": "node scripts/check-api.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "format": "prettier --write src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js",
+    "format:check": "prettier --check src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js",
+    "dev:mock": "vite --mode mock --host 127.0.0.1",
+    "api:smoke:legacy": "node scripts/api-smoke.mjs",
+    "dev:api": "vite --mode development --host 127.0.0.1",
+    "lint": "eslint . --max-warnings=0",
+    "check": "pnpm lint && pnpm typecheck && pnpm api:check && pnpm format:check && pnpm test && pnpm build",
+    "api:generate:v1": "openapi-typescript ../digitalbanking-docs/openapi/digital-banking-v1.yaml -o src/shared/api/generated/openapi.d.ts",
+    "api:generate:v2": "openapi-typescript ../digitalbanking-docs/openapi/digital-banking-v2.yaml -o src/shared/api/generated/v2/openapi.d.ts"
+  },
+  "dependencies": {
+    "@ant-design/icons": "5.6.1",
+    "@hookform/resolvers": "7.0.6",
+    "@tanstack/react-query": "5.80.7",
+    "antd": "5.26.7",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "7.92.0",
+    "react-router-dom": "7.6.2",
+    "zod": "4.6.7",
+    "zustand": "5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.15.30",
+    "@types/react": "19.1.6",
+    "@types/react-dom": "19.1.6",
+    "@vitejs/plugin-react": "5.2.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "16.5.0",
+    "js-yaml": "4.3.2",
+    "jsdom": "26.1.0",
+    "msw": "2.15.0",
+    "openapi-typescript": "7.6.1",
+    "prettier": "3.5.3",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "7.3.8",
+    "vitest": "3.2.4"
+  },
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.14.0 <23"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

@@ -66,3 +66,23 @@ FE-REL-01 kiểm tra direct URL, action theo quyền, cross-user cache, session 
 ## 2. Quy tắc liên quan
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] và [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]]. Mọi khác biệt protocol ghi trong [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]].
+
+## 3. Baseline Security phía FE/mock ngày 14/11/2026
+
+Người phụ trách FE chọn SESSION_TOKEN, Path=/api và LOGIN_MFA theo Security. Đây là mục tiêu đồng bộ API semantics/YAML trước implementation phụ thuộc; các mô tả baseline cũ ở trên chưa được coi đã sửa chỉ từ quyết định. [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]] ghi quyết định giữ v1, tạo v2 riêng theo quy tắc breaking của 07. Ngữ nghĩa v2 ở [[digitalbanking-docs/docs-common/07a. API contracts v2.md]], YAML ở [[digitalbanking-docs/openapi/digital-banking-v2.yaml]]; preview/client v1 hiện tại không tự chuyển version. GAP-05 vẫn mở cho đồng bộ nguồn, DB mapping/migration và xác nhận BE/Security/runtime. Không tự chuyển UI hoặc client theo contract chưa đồng bộ.
+
+## 4. Nền tảng session mock v2 ngày 17/11/2026 — chờ review
+
+`src/shared/auth/session.ts` cung cấp `createV2Session`: base phải là /api/v2 tường minh, metadata/CSRF/challenge chỉ giữ memory; trạng thái idle/loading/anonymous/authenticated/challenge/error. Login/getSession nhận đúng runtime schema v2, không dùng accessToken/refreshToken legacy. Parse chỉ giữ field đã biết; auth payload thiếu field hoặc role/purpose không hỗ trợ không được lưu như phiên hợp lệ. Username lowercase theo 07, password không trim. 202 LOGIN_MFA chỉ giữ challenge; chưa có verify/resend/FIDO trong controller này.
+
+Mỗi lần đổi context hủy request cũ, loại response stale, clear metadata/challenge và gọi callback `onSessionCleared` bắt buộc để consumer hủy/xóa cache và intent. Consumer phải nối callback/query/router tại FE-01-01; callback đã được kiểm bằng QueryClient độc lập trong tests, chưa nối vào app legacy. Logout giữ CSRF cũ riêng cho request, clear local ngay, trả `serverConfirmed` chỉ khi nhận 204; mất mạng/403/401 hoặc thiếu CSRF trả kết quả chưa xác nhận. Nếu request thuộc context đã bị thay thế thì reject AbortError, không cập nhật phiên mới. Sau logout chưa xác nhận, bootstrap là nguồn đối chiếu server và lấy metadata/CSRF trước lần logout tiếp theo.
+
+`session-sync.ts` có adapter BroadcastChannel cho browser, chỉ truyền chuỗi `invalidate`; peer clear local và chờ bootstrap phù hợp tại lớp UI, không echo, không truyền secret/user/payload. Consumer truyền adapter vào controller và dispose khi kết thúc lifetime. Chưa đổi giao diện hoặc wiring preview, chưa thực thi capability mapping/quyền; chưa có bằng chứng cookie jar, DB session, CSRF/TLS thực. Báo cáo tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-CLIENT-SESSION/2026-11-17-6bceb5d/result.md]].
+
+## 5. Bổ sung FE-01-01 ngày 17/11/2026 — chưa review
+
+Sau giai đoạn mục4, controller có verifyOtp/resend cho challenge LOGIN_MFA đã được contract FE/mock duyệt. Verify phải khớp challengeId đang ở memory; response200 parse AuthResponse. Resend không body, response202 parse metadata; không tự reset attempts hay áp giới hạn gửi lại đang mở. Public auth request có thể giữ CSRF đã biết của ambient cookie trong memory khi login chuyển sang challenge; đổi context/accept/error xóa giá trị đó. Không bổ sung FIDO/passcode/device policy.
+
+Host preview v2 đã nối onSessionCleared để hủy/xóa query cache, transfer/operator intent và legacy metadata; render thông báo khi peer invalidate, không tự fetch hoặc tự retry. User chốt màn metadata/logout chung mọi role, chưa nối nghiệp vụ; GAP-07 không đóng. User cũng cho phép một cờ fixture dev/test không secret trong sessionStorage, xóa khi logout; key/value và giới hạn tại guide local. Đây là ngoại lệ fixture được chốt cho FE-01-01, không cho phép persist session metadata thật hoặc key/body recovery GAP-09. Kiểm chứng hiện tại source/unit/component/MSW; browser và API thật chưa đạt. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].
+
+Cập nhật18/11/2026: browser17/11 đã hiển thị login và màn phiên chung sau reload; lỗi first-load đã thêm gate chờ ServiceWorker.controller trước mount. Bản sửa chưa retest browser do IAB18/11 không attach được. Các giới hạn browser nêu trên tiếp tục mở; kết quả cuối ở [[digitalbanking-docs/docs-frontend/evidence/FE-01-01/2026-11-17-6bceb5d/result.md]].

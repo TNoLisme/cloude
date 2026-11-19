@@ -1,0 +1,32 @@
+.icon {
+  display: inline-block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex: none;
+  background-color: currentColor;
+  mask: var(--icon-url) center / contain no-repeat;
+  vertical-align: middle;
+}
+.inactive {
+  color: #65768a;
+}
+.active {
+  color: #2868b2;
+}
+.disabled {
+  color: #65768a;
+  opacity: 0.45;
+}
+.feature {
+  display: inline-block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex: none;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.illustration {
+  display: block;
+  width: min(100%, 240px);
+  height: auto;
+}

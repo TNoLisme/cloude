@@ -1,0 +1,161 @@
+{
+  "contract": "v2 2.0.0 FE/mock, v1 unchanged",
+  "files": [
+    {
+      "sha256": "678748185388c0740f3c2be7c3be2d8873349dbf771a093953d593b3a21e87e3",
+      "path": "digitalbanking-frontend/src/main.tsx"
+    },
+    {
+      "sha256": "c866b2f7b8809c68fe829dada16551ed79a877fe73fb332bc4f10015fc84f0a8",
+      "path": "digitalbanking-frontend/src/mocks/browser.ts"
+    },
+    {
+      "sha256": "2eb1ddd0aa2c6ea601b5a53e42075fa1077f948566b527820835b2c9a06c9124",
+      "path": "digitalbanking-frontend/src/mocks/v2-auth.ts"
+    },
+    {
+      "sha256": "8a69168a00422c8edce04733f86e5b7f0b0c477f99dd3089c721af300661441f",
+      "path": "digitalbanking-frontend/src/mocks/v2-auth-persistence.test.ts"
+    },
+    {
+      "sha256": "f08ddfb4f23354785aec50f33978eccc173581eb4d32888433331e6cc70b9c11",
+      "path": "digitalbanking-frontend/src/mocks/PreviewShell.tsx"
+    },
+    {
+      "sha256": "a194016926da05a4735ae1e8f27b24e4426a00a7fcba0b0d2c2613193baf3d01",
+      "path": "digitalbanking-frontend/src/mocks/AuthPreview.tsx"
+    },
+    {
+      "sha256": "bc0473043ff06a795e42a4d368d8eba6bdc6163c8b567dbdb82c6517375f4e97",
+      "path": "digitalbanking-frontend/src/mocks/AuthPreview.test.tsx"
+    },
+    {
+      "sha256": "18c35dbf33656c6cbaa8809be61914e6387f63084386c8804ca85ec99bd5e343",
+      "path": "digitalbanking-frontend/src/mocks/wait-for-control.ts"
+    },
+    {
+      "sha256": "25fa01180485402369a3746beef66c6949b1ac4dcc0c1eaa08034572a501ea3b",
+      "path": "digitalbanking-frontend/src/mocks/wait-for-control.test.ts"
+    },
+    {
+      "sha256": "88921d05451b5e5b9b21dd588a058b28386440fbd83ddeb431a054b37b3833c7",
+      "path": "digitalbanking-frontend/src/shared/api/client.ts"
+    },
+    {
+      "sha256": "b01dcde1f74d365b47e1616dc0590fe121905b1687ed2190d0b9269bf7910b24",
+      "path": "digitalbanking-frontend/src/shared/api/client.test.ts"
+    },
+    {
+      "sha256": "71efc546fb6645be128ec83d391706343a6ff6b1fa6991910e42770d62ef796a",
+      "path": "digitalbanking-docs/openapi/digital-banking-v1.yaml"
+    },
+    {
+      "sha256": "e9b09d8dce1aca0f63ab1ebffcda534274c2d3a05bcc90608ec905846facd8e4",
+      "path": "digitalbanking-docs/openapi/digital-banking-v2.yaml"
+    },
+    {
+      "sha256": "890bf1380306911c806e8a5dcaa7844197916d0237a53215815b8dba1a9d0f68",
+      "path": "digitalbanking-frontend/src/shared/auth/contracts.ts"
+    },
+    {
+      "sha256": "a47bf4bdd342638064676d72735b0eba40b5642b9193097b63a19e60d5993858",
+      "path": "digitalbanking-frontend/src/shared/auth/mfa.test.ts"
+    },
+    {
+      "sha256": "a79bab9dceb88e9fcb77ca0bd43272ef3e0d0544fae733b129dc3af5eb238acb",
+      "path": "digitalbanking-frontend/src/shared/auth/session-sync.ts"
+    },
+    {
+      "sha256": "5f2bd5c3efff918ba55705027fe39878ea327ebda8b2c11a8328dde230a7419e",
+      "path": "digitalbanking-frontend/src/shared/auth/session.test.ts"
+    },
+    {
+      "sha256": "38b8f34ee3552cedfa9a342aa8ebe70541c6e782c19168c950f24b119cc7f379",
+      "path": "digitalbanking-frontend/src/shared/auth/session.ts"
+    },
+    {
+      "sha256": "c2f460738a9043fda89adcfc62be12f3e1812b32ccc92e82d049c62f580d3c18",
+      "path": "digitalbanking-frontend/src/features/auth/v2/AuthFlow.test.tsx"
+    },
+    {
+      "sha256": "b882e963cae99cad5dcd20d158b53867ac71ee20bb49e0d24feb2f88a23c894f",
+      "path": "digitalbanking-frontend/src/features/auth/v2/AuthFlow.tsx"
+    },
+    {
+      "sha256": "a7d86caf0d671d01a32a94513ea8d9c9b2b3594000a9879e0f1321bac612135c",
+      "path": "digitalbanking-frontend/src/features/auth/v2/AuthScreens.tsx"
+    },
+    {
+      "sha256": "1a83ee8485159691e01e079793c83875cda89a5b75c1bf49e8156484b78349e4",
+      "path": "digitalbanking-frontend/README.md"
+    },
+    {
+      "path": "digitalbanking-frontend/src/features/auth/AuthPages.test.tsx",
+      "sha256": "b7a1b1113680823aa57484fccf9e45233d66005d3643c96c7bb7dea832d77415"
+    }
+  ],
+  "date": "2026-11-18 Asia/Bangkok",
+  "baseline": "6bceb5dc9f83e56530ddb04042e0eedd17ffcdcc",
+  "branch": "frontend",
+  "proof": "source/unit/component/MSW; browser subset before worker fix; post-fix browser blocked",
+  "workingTree": "dirty; includes earlier pending foundation/docs; not committed",
+  "checks": "6/6 gates PASS; 17 files/151 tests PASS; browser partial, retest blocked",
+  "artifacts": [
+    {
+      "path": "test-report/components-02.log",
+      "sha256": "671241e9679af955580e6f13e1b274e82f487f921c331d2eccd868260ba3af9b"
+    },
+    {
+      "path": "test-report/diff-check.log",
+      "sha256": "57c122c1db0de0d5c335df5bd5e3ff8d13ddb6f1796603d8c9effbc7e1bd4edc"
+    },
+    {
+      "path": "test-report/doc-links.log",
+      "sha256": "d12cbffd0b840c777a7eff9d60be5f22378342355634a0121d0e425938525f2c"
+    },
+    {
+      "path": "test-report/first-lint-failure.log",
+      "sha256": "3f30dde23eac27474bccfc01c855d36f702ea7e507e02aacccd6823f5aa6593b"
+    },
+    {
+      "path": "test-report/format-failure.log",
+      "sha256": "130023d1269327d386439ea8fb7e22f9b5e5ee49b6dc2dd41877115ae25237cf"
+    },
+    {
+      "path": "test-report/full-checks.log",
+      "sha256": "4a7bcebccdb417b06120ba09659b865e112061dff195d4d701328480deddc29a"
+    },
+    {
+      "path": "test-report/git-status.txt",
+      "sha256": "80eff021d7b4630a8d9ac488ce361c044156ecdcf632093e06b42218b651b2fe"
+    },
+    {
+      "path": "test-report/local-http.log",
+      "sha256": "b6a540aff4c7894670aba5d090f10e67136a16d9c0823990df175c94e085b769"
+    },
+    {
+      "path": "test-report/outside-sandbox-failure.log",
+      "sha256": "74f332a2e8a60d474dba1b2c2e26fdf0900f045a20cc264d5e33b0e75ce8ffb5"
+    },
+    {
+      "path": "test-report/parallel-test-failure.log",
+      "sha256": "f2f95ef20799b5ffe917db7695a2a5cebd8fe5e88fcd35cf8cb2dfb1484d79ae"
+    },
+    {
+      "path": "test-report/pre-host-full-checks.log",
+      "sha256": "5f9c2d9db651efb8b2d93e39f6da55f07e3f78eeb9be6b31fef6d6ea6343dca1"
+    },
+    {
+      "path": "test-report/pre-worker-checks.log",
+      "sha256": "4faac65ee18aa864d9f4f8e8d22d8a578d655bc5d6421517296d7f2f1dd56536"
+    },
+    {
+      "path": "test-report/preview-lint-failure.log",
+      "sha256": "641ba19d9521e8ddb277c028798df6697698f466d31b7782e8712930df903167"
+    },
+    {
+      "path": "test-report/two-worker-failure.log",
+      "sha256": "404bc451cb8f76c816596594c6e478d29e7219d73f4250bdd68e2e64b977ca41"
+    }
+  ]
+}

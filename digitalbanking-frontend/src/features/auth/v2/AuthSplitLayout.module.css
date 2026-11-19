@@ -1,0 +1,188 @@
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+  background: #fff;
+}
+.artwork {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(#d7ecfc, #c6e0f7);
+}
+.artwork::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 960 / 1028;
+  transform: translateY(-50%);
+  /* Reuse the unmodified reference. Only its left half is visible. */
+  background-image: url("/images/login-reference.png");
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+}
+.artworkName {
+  position: absolute;
+  top: clamp(40px, 7vh, 80px);
+  left: 9%;
+  color: #173b5e;
+  font-size: clamp(16px, 1.5vw, 25px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 64px clamp(32px, 5vw, 96px) 24px;
+}
+.content {
+  width: 100%;
+  max-width: 500px;
+  margin: auto;
+  padding: 36px 0;
+}
+.content :global(.brand) {
+  margin-bottom: 32px;
+}
+.content :global(.brand-mark) {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 24px;
+}
+.content :global(.brand strong) {
+  font-size: 24px;
+}
+.content :global(.brand small) {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.content h1 {
+  font-size: clamp(30px, 2.6vw, 42px);
+  color: #173b5e;
+  margin-bottom: 28px;
+}
+.content :global(.login-welcome) {
+  font-size: clamp(18px, 1.6vw, 27px);
+  line-height: 1.5;
+  color: #223449;
+  margin-bottom: 2px;
+}
+.content :global(.ant-form-item) {
+  margin-bottom: 24px;
+}
+.content :global(.ant-form-item-row) {
+  flex-direction: column;
+}
+.content :global(.ant-form-item-label) {
+  text-align: left;
+  padding: 0 0 10px;
+  white-space: normal;
+}
+.content :global(.ant-form-item-label > label) {
+  font-size: 15px;
+  font-weight: 600;
+}
+.content :global(.ant-form-item-required)::before {
+  display: none !important;
+}
+.content :global(.ant-input),
+.content :global(.ant-input-affix-wrapper) {
+  min-height: 56px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+}
+.content :global(.ant-input-affix-wrapper .ant-input) {
+  min-height: 0;
+}
+.content :global(.ant-input::placeholder) {
+  color: #8291a2;
+}
+.content :global(.ant-btn-primary) {
+  height: 52px;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.content :global(.auth-bottom) {
+  font-size: 12px;
+  margin-top: 24px;
+  padding-top: 18px;
+}
+.footer {
+  text-align: center;
+  padding-top: 24px;
+}
+.footer :global(.simulation) {
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+}
+.previewTools {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  max-width: min(520px, calc(100vw - 32px));
+  border: 1px solid #e8cc87;
+  border-radius: 8px;
+  background: #fff8e7;
+  box-shadow: 0 4px 20px #173b5e12;
+  color: #523b12;
+}
+.previewTools summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.previewTools[open] {
+  max-height: min(60dvh, 500px);
+  overflow-y: auto;
+}
+.previewTools :global(.preview-toolbar) {
+  border: 0;
+  background: transparent;
+  padding-top: 0;
+}
+@media (max-width: 1023px) {
+  .panel {
+    padding: 40px 28px 24px;
+  }
+  .content :global(.brand strong) {
+    font-size: 20px;
+  }
+  .content :global(.brand-mark) {
+    width: 48px;
+    height: 48px;
+    font-size: 21px;
+  }
+}
+@media (max-width: 767px) {
+  .layout {
+    display: block;
+  }
+  .artwork {
+    display: none;
+  }
+  .panel {
+    min-height: 100dvh;
+    padding: 36px 24px 72px;
+  }
+  .content {
+    padding: 24px 0;
+  }
+  .content h1 {
+    font-size: 32px;
+  }
+  .content :global(.brand) {
+    margin-bottom: 36px;
+  }
+  .footer {
+    padding-top: 20px;
+  }
+}

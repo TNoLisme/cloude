@@ -1,0 +1,10 @@
+ M digitalbanking-docs/docs-frontend/design/screens/CUST-ACCOUNT.md
+ M digitalbanking-docs/docs-frontend/design/screens/CUST-HOME.md
+ M digitalbanking-docs/docs-frontend/design/screens/CUST-PROFILE.md
+ M digitalbanking-docs/docs-frontend/features/FE-02-customer-and-accounts.md
+ M digitalbanking-docs/docs-frontend/guides/01-local-development.md
+ M digitalbanking-docs/docs-frontend/management/03-work-tracker.md
+ M digitalbanking-frontend/src/mocks/v2-auth.ts
+?? digitalbanking-docs/docs-frontend/evidence/FE-02-01/
+?? digitalbanking-frontend/src/features/accounts/v2/
+?? digitalbanking-frontend/src/mocks/v2-customer.test.ts

@@ -1,0 +1,44 @@
+Node v22.14.0 pnpm 10.34.9
+Start 2026-11-17T09:50:11.849Z
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run lint
+
+> digitalbanking-frontend@0.1.0 lint C:\project\cloude\digitalbanking-frontend
+> eslint . --max-warnings=0
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run typecheck
+
+> digitalbanking-frontend@0.1.0 typecheck C:\project\cloude\digitalbanking-frontend
+> tsc -b
+
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run api:check
+
+> digitalbanking-frontend@0.1.0 api:check C:\project\cloude\digitalbanking-frontend
+> node scripts/check-api.mjs
+
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v1.yaml → src/shared/api/generated/openapi.check.d.ts [155.9ms]
+OpenAPI v1 generated types match the contract.
+✨ openapi-typescript 7.6.1
+🚀 ../digitalbanking-docs/openapi/digital-banking-v2.yaml → src/shared/api/generated/v2/openapi.check.d.ts [140ms]
+OpenAPI v2 generated types match the contract.
+
+EXIT 0
+
+COMMAND: node C:/Users/ADMIN/AppData/Local/npm-cache/_npx/c80dab5832ec79ce/node_modules/pnpm/bin/pnpm.cjs run format:check
+
+> digitalbanking-frontend@0.1.0 format:check C:\project\cloude\digitalbanking-frontend
+> prettier --check src scripts vite.config.ts tsconfig.json package.json index.html eslint.config.js
+
+Checking formatting...
+ ELIFECYCLE  Command failed with exit code 1.
+[warn] src/features/auth/v2/AuthFlow.test.tsx
+[warn] Code style issues found in the above file. Run Prettier with --write to fix.
+
+EXIT 1
