@@ -35,7 +35,7 @@ class ApprovalRequestV6MigrationPostgreSqlIntegrationTest {
                 (request_type, target_type, target_id, payload, maker_id, correlation_id)
             """;
 
-    private static final int EXPECTED_MIGRATIONS = 21;
+    private static final int EXPECTED_MIGRATIONS = 22;
 
     @Container
     static final PostgreSQLContainer<?> postgres =
@@ -67,8 +67,8 @@ class ApprovalRequestV6MigrationPostgreSqlIntegrationTest {
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
                     .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
-                            "12", "13", "14", "15", "16", "17", "18", "19", "20", "21");
-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+                            "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22");
+            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("22");
             assertThat(queryInt(connection,
                     "SELECT count(*) FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND (NOT success OR checksum IS NULL)"))

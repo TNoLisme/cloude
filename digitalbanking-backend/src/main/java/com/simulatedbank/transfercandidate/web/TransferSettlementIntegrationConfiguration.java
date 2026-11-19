@@ -19,7 +19,9 @@ import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.ReplayResponse;
 import com.simulatedbank.banking.transfer.application.TransferTelemetry;
 import jakarta.persistence.EntityManagerFactory;
+import com.simulatedbank.banking.notification.api.NotificationOutboxPort;
 import java.time.ZoneId;
+import java.util.List;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,6 +30,18 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 /** Explicit activation requires the bootstrapped Fraud provider and a Notification policy. */
 public class TransferSettlementIntegrationConfiguration {
+    @Bean
+    TransferNotifications transferNotifications(NotificationOutboxPort outbox) {
+        return new TransferNotifications((facts, outcome) -> List.of(new TransferNotifications.Recipient(
+                facts.senderCustomerId(), TransferNotifications.Channel.SMS, "TRANSFER_RESULT")),
+                notices -> outbox.enqueueTransferSmsInT2(notices.stream()
+                        .map(notice -> new NotificationOutboxPort.TransferSms(notice.recipient().customerId(),
+                                notice.transferId(), notice.reference(), notice.amount().value(),
+                                notice.amount().currency(), notice.maskedDestination(),
+                                notice.outcome().failure().isEmpty(), notice.correlationId()))
+                        .toList()));
+    }
+
     @Bean
     TransferSettlementStore transferSettlementStore(JdbcTemplate jdbc) {
         return new TransferSettlementStore(jdbc);

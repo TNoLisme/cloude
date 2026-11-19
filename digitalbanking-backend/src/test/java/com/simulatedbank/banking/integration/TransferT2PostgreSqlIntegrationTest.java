@@ -33,17 +33,21 @@ import com.simulatedbank.banking.ledger.config.LedgerPostingConfiguration;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.ApprovedLimitChange;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.LimitChangeRequest;
-import com.simulatedbank.banking.notification.api.OtpGateway;
-import com.simulatedbank.banking.notification.api.NotificationOutboxPort;
-import com.simulatedbank.banking.notification.domain.NotificationChannel;
-import com.simulatedbank.banking.notification.domain.TransferNotice;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simulatedbank.banking.customer.application.CustomerPiiProtection;
+import com.simulatedbank.banking.identity.application.PasswordHasher;
+import com.simulatedbank.banking.notification.application.NotificationOutboxWorker;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.util.concurrent.LinkedBlockingQueue;
+import org.junit.jupiter.api.AfterAll;
 import com.simulatedbank.banking.testsupport.PostgreSqlIntegrationTestSupport;
 import com.simulatedbank.banking.transfer.adapter.out.integration.TransferCreateAdapters.PostCommitSettlement;
 import com.simulatedbank.banking.transfer.adapter.out.integration.TransferSettlementHandoff;
 import com.simulatedbank.banking.transfer.adapter.out.persistence.TransferSettlementStore;
 import com.simulatedbank.banking.transfer.application.AccountOwnershipPort;
 import com.simulatedbank.banking.transfer.application.FraudFlagReadPort;
-import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferReadPort;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.fraud.api.FraudEvaluation;
@@ -112,8 +116,37 @@ class TransferT2PostgreSqlIntegrationTest {
             .withCommand("postgres", "-c", "log_statement=all", "-c", "log_parameter_max_length=0",
                     "-c", "log_parameter_max_length_on_error=0", "-c", "log_line_prefix=%p ");
 
+    private static final LinkedBlockingQueue<Sms> MESSAGES = new LinkedBlockingQueue<>();
+    private static final AtomicInteger SMS_STATUS = new AtomicInteger(204);
+    private static final HttpServer SMS = smsBoundary();
+
+    private static HttpServer smsBoundary() {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext("/messages", exchange -> {
+                try (exchange) {
+                    var body = new ObjectMapper().readTree(exchange.getRequestBody());
+                    MESSAGES.add(new Sms(exchange.getRequestHeaders().getFirst("Idempotency-Key"), body));
+                    exchange.sendResponseHeaders(SMS_STATUS.get(), -1);
+                }
+            });
+            server.start();
+            return server;
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
+
+    @AfterAll
+    static void stopBoundary() {
+        SMS.stop(0);
+    }
+
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
+        registry.add("app.notification.sms.enabled", () -> true);
+        registry.add("app.notification.sms.demo-staff-contacts[80001]", () -> "0900000301");
+        registry.add("app.notification.sms.endpoint", () -> "http://127.0.0.1:" + SMS.getAddress().getPort() + "/messages");
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", () -> "banking_app");
         registry.add("spring.datasource.password", () -> "test_app");
@@ -123,6 +156,10 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     @Autowired MockMvc mvc;
+    @Autowired ObjectMapper json;
+    @Autowired CustomerPiiProtection pii;
+    @Autowired PasswordHasher hasher;
+    @Autowired NotificationOutboxWorker notificationWorker;
     @Autowired DataSource source;
     @Autowired Flyway flyway;
     @Autowired AccountNumberProtection numbers;
@@ -144,6 +181,8 @@ class TransferT2PostgreSqlIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        MESSAGES.clear();
+        SMS_STATUS.set(204);
         PostgreSqlIntegrationTestSupport.assertContainerDataSource(source, POSTGRES);
         observer = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), "banking_migrator", "test_migrator"));
         seams.afterIntent = id -> { };
@@ -157,9 +196,171 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     @Test
+    void loginResendUsesCurrentContactAndOnlyAcknowledgedCodeCanCreateSession() throws Exception {
+        Actor actor = actor();
+        contact(actor, "0900000101", true);
+        String username = key();
+        String password = "Synthetic-OTP-Pass9!";
+        observer.update("UPDATE banking.app_user SET username=?, password_hash=? WHERE user_id=?",
+                username, hasher.hash(password.toCharArray()), actor.user);
+        var login = json.readTree(mvc.perform(authPost("/login", Map.of("username", username, "password", password)))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString());
+        String ref = login.at("/challenge/challengeId").asText();
+        Sms first = sms();
+        assertThat(first.body().path("destination").asText()).isEqualTo("0900000101");
+        assertThat(first.body().path("otp").asText()).matches("[0-9]{6}");
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null))
+                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"));
+        assertThat(MESSAGES).isEmpty();
+
+        assertOtpRejected(ref, "000000", first);
+        contact(actor, "0900000102", true);
+        observer.update("""
+                UPDATE banking.auth_challenge SET created_at=now()-interval '2 minutes',
+                    sent_at=now()-interval '2 minutes' WHERE challenge_ref=?::uuid
+                """, ref);
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null)).andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.challenge.remainingAttempts").value(4));
+        Sms replacement = sms();
+        assertThat(replacement.key()).isNotEqualTo(first.key());
+        assertThat(replacement.body().path("destination").asText()).isEqualTo("0900000102");
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", first.body().path("otp").asText())))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTH_OTP_INVALID"));
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", replacement.body().path("otp").asText())))
+                .andExpect(status().isOk()).andExpect(header().exists("Set-Cookie"));
+        assertThat(count("""
+                SELECT count(*) FROM banking.auth_challenge WHERE challenge_ref=?::uuid
+                  AND resend_count=1 AND attempt_count=3 AND consumed_at IS NOT NULL
+                """, ref)).isEqualTo(1);
+        assertThat(count("""
+                SELECT count(*) FROM banking.audit_log WHERE entity_id=? AND action='AUTH_CHALLENGE_RESENT'
+                """, ref)).isEqualTo(1);
+    }
+
+    @Test
+    void configuredDemoStaffCanCompleteLoginWithoutACustomerRow() throws Exception {
+        String username = key();
+        String password = "Synthetic-OTP-Staff9!";
+        observer.update("""
+                INSERT INTO banking.app_user(user_id, username, password_hash, user_type, status)
+                OVERRIDING SYSTEM VALUE VALUES (80001, ?, ?, 'STAFF', 'ACTIVE')
+                """, username, hasher.hash(password.toCharArray()));
+        observer.update("""
+                INSERT INTO banking.user_role(user_id, role_id)
+                SELECT 80001, role_id FROM banking.role WHERE role_code='ADMIN'
+                """);
+        var login = json.readTree(mvc.perform(authPost("/login", Map.of("username", username, "password", password)))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString());
+        Sms message = sms();
+        assertThat(message.body().path("destination").asText()).isEqualTo("0900000301");
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", login.at("/challenge/challengeId").asText(),
+                        "otp", message.body().path("otp").asText())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.roles[0]").value("ADMIN"))
+                .andExpect(header().exists("Set-Cookie"));
+    }
+
+    @Test
+    void stepUpFailsClosedThenDeliversOutboxUsingContactAtSendTime() throws Exception {
+        Actor sender = actor();
+        Actor receiver = actor();
+        contact(sender, "0900000201", true);
+        Order order = order(sender, receiver, "11000000.00");
+        SMS_STATUS.set(503);
+        mvc.perform(post(sender, order, "int08-otp-rejected")).andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("OTP_DISPATCH_FAILED"));
+        sms();
+        assertThat(count("SELECT count(*) FROM banking.auth_challenge WHERE user_id=? AND status='CANCELLED'",
+                sender.user)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.idempotency_record WHERE idempotency_key=?", order.key)).isZero();
+
+        SMS_STATUS.set(204);
+        var required = json.readTree(mvc.perform(post(sender, order, "int08-otp-ready"))
+                .andExpect(status().isPreconditionRequired()).andReturn().getResponse().getContentAsString());
+        String ref = required.at("/challenge/challengeId").asText();
+        Sms proof = sms();
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null)
+                .header("Authorization", "Bearer " + receiver.token)).andExpect(status().isForbidden());
+        mvc.perform(authPost("/step-up/verify", Map.of("challengeId", ref, "method", "OTP",
+                        "otp", proof.body().path("otp").asText())).header("Authorization", "Bearer " + sender.token))
+                .andExpect(status().isOk());
+        mvc.perform(post(sender, order, "int08-committed")).andExpect(status().isCreated());
+        long transfer = id(order);
+        assertThat(count("""
+                SELECT count(*) FROM banking.notification WHERE transfer_id=? AND status='PENDING' AND channel='SMS'
+                  AND NOT (jsonb_exists(payload_masked, 'destination') OR jsonb_exists(payload_masked, 'otp'))
+                """, transfer)).isEqualTo(1);
+        assertThat(MESSAGES).isEmpty();
+        contact(sender, "0900000202", true);
+        SMS_STATUS.set(503);
+        deliverNoticeFor(transfer);
+        assertThat(observer.queryForObject("SELECT status FROM banking.notification WHERE transfer_id=?",
+                String.class, transfer)).isEqualTo("RETRYING");
+        Sms failed = sms();
+        assertThat(failed.body().path("destination").asText()).isEqualTo("0900000202");
+        assertThat(failed.body().at("/payload/outcome").asText()).isEqualTo("COMPLETED");
+
+        SMS_STATUS.set(204);
+        deliverNoticeFor(transfer);
+        assertThat(sms().key()).isEqualTo(failed.key());
+        assertThat(observer.queryForObject("SELECT status FROM banking.notification WHERE transfer_id=?",
+                String.class, transfer)).isEqualTo("SENT");
+        assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", transfer)).isEqualTo(2);
+        mvc.perform(post(sender, order, "int08-replay")).andExpect(status().isCreated())
+                .andExpect(header().string("Idempotent-Replayed", "true"));
+        assertThat(count("SELECT count(*) FROM banking.notification WHERE transfer_id=?", transfer)).isEqualTo(1);
+
+        Order afterFirst = order(sender, receiver, "2000.00");
+        mvc.perform(post(sender, afterFirst, "int08-revoke-consent")).andExpect(status().isCreated());
+        long revoked = id(afterFirst);
+        contact(sender, "0900000202", false);
+        deliverNoticeFor(revoked);
+        assertThat(MESSAGES).isEmpty();
+        assertThat(count("""
+                SELECT count(*) FROM banking.notification WHERE transfer_id=? AND status='FAILED'
+                  AND failure_code='DESTINATION_UNAVAILABLE'
+                """, revoked)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", revoked)).isEqualTo(2);
+    }
+
+    private void assertOtpRejected(String ref, String candidate, Sms first) throws Exception {
+        String wrong = first.body().path("otp").asText().equals(candidate) ? "111111" : candidate;
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", wrong)))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTH_OTP_INVALID"));
+    }
+
+    private void deliverNoticeFor(long transfer) {
+        // Make this fixture the oldest due row so existing T2 fixtures do not affect the claim.
+        observer.update("""
+                UPDATE banking.notification SET next_retry_at='1970-01-01', created_at='1970-01-01'
+                 WHERE transfer_id=?
+                """, transfer);
+        assertThat(notificationWorker.processBatch(1)).isEqualTo(1);
+    }
+
+    private void contact(Actor actor, String phone, boolean consent) {
+        observer.update("UPDATE banking.customer SET phone_enc=?, transfer_sms_allowed=?, updated_at=now() WHERE customer_id=?",
+                pii.encrypt(phone), consent, actor.customer);
+    }
+
+    private MockHttpServletRequestBuilder authPost(String path, Map<String, String> fields) throws Exception {
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/auth" + path);
+        return fields == null ? request : request.contentType("application/json").content(json.writeValueAsString(fields));
+    }
+
+    private Sms sms() throws InterruptedException {
+        var message = MESSAGES.poll(2, TimeUnit.SECONDS);
+        assertThat(message).as("one message delivered to the HTTP boundary").isNotNull();
+        return message;
+    }
+
+    private record Sms(String key, JsonNode body) {
+        @Override public String toString() { return "Sms[redacted]"; }
+    }
+
+    @Test
     void commitsMoneyLedgerBothScopesAuditAndOutboxThenReplaysExactBody() throws Exception {
         flyway.validate();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("22");
         Actor a = actor();
         Actor b = actor();
         addAccountConfig(a, a.account, "2000.00", "2500.00", "2020-01-01T00:00:00Z");
@@ -1394,21 +1595,6 @@ class TransferT2PostgreSqlIntegrationTest {
             };
         }
 
-        @Bean TransferNotifications transferNotifications(NotificationOutboxPort outbox) {
-            return new TransferNotifications((facts, outcome) -> List.of(new TransferNotifications.Recipient(
-                    facts.senderCustomerId(), TransferNotifications.Channel.IN_APP, "TRANSFER_RESULT")),
-                    notices -> outbox.enqueueTransferNotificationsInT2(notices.stream().map(notice ->
-                            new TransferNotice(notice.recipient().customerId(), notice.transferId(), notice.reference(),
-                                    NotificationChannel.IN_APP, notice.recipient().templateCode(), Map.of(
-                                    "amount", notice.amount().value(), "currency", notice.amount().currency(),
-                                    "maskedAccount", notice.maskedDestination(), "outcome",
-                                    notice.outcome().failure().isPresent() ? "FAILED" : "COMPLETED"),
-                                    notice.correlationId())).toList()));
-        }
-
-        @Bean OtpGateway unusedOtp() {
-            return (ref, user, channel, otp, expires, correlation) -> { throw new AssertionError("Unexpected OTP"); };
-        }
         @Bean TransferReadPort unusedRead() { return ref -> Optional.empty(); }
         @Bean FraudFlagReadPort unusedFraud() { return id -> List.of(); }
         @Bean AccountOwnershipPort unusedOwnership() { return (account, customer) -> AccountOwnershipPort.Ownership.NOT_FOUND; }

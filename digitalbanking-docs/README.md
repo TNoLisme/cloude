@@ -131,7 +131,7 @@ digitalbanking-docs/
 
 | Tài liệu | Nội dung | Trạng thái |
 |---|---|---|
-| [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Hoàn thành — v1.0.1 |
+| [[digitalbanking-docs/openapi/digital-banking-v1.yaml]] | Hợp đồng OpenAPI 3.1 (máy đọc) | Hoàn thành — v1.0.2 |
 | [[digitalbanking-docs/docs-backend/README.md]] | Chuẩn kiến trúc, cấu hình triển khai và tài liệu 11 module Backend | Hoàn thành — v1.0 |
 | [[digitalbanking-docs/docs-frontend/README.md]] | Phạm vi, tracker, 8 đặc tả tính năng và thiết kế màn hình Frontend | Hoàn thành — v1.2 |
 | [[digitalbanking-docs/docs-common/work/README.md]] | Kế hoạch và nhật ký bàn giao theo tuần (`week1`, `week2`) | Hoàn thành — v1.0 |

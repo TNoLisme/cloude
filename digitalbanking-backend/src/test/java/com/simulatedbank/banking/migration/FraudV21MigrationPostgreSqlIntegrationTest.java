@@ -38,7 +38,7 @@ class FraudV21MigrationPostgreSqlIntegrationTest {
                 VALUES ('LARGE_VALUE_TRANSFER',2,'Managed baseline','LARGE_VALUE',7000000,'HIGH','2026-01-01',?),
                        ('LARGE_VALUE_TRANSFER',3,'Managed later','LARGE_VALUE',8000000,'LOW','2027-01-01',?)
                 """, actor, actor);
-        var v21 = configure().load();
+        var v21 = configure().target("21").load();
         assertThatThrownBy(v21::migrate).isInstanceOf(FlywayException.class)
                 .hasStackTraceContaining("Reconcile duplicate open-ended enabled fraud rule versions");
         assertThat(owner.queryForObject("""

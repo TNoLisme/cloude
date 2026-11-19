@@ -33,7 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class AdminIdempotencyV7MigrationPostgreSqlIntegrationTest {
 
-    private static final int EXPECTED_MIGRATIONS = 21;
+    private static final int EXPECTED_MIGRATIONS = 22;
     private static final String HASH = "a".repeat(64);
     private static final String OTHER_HASH = "b".repeat(64);
 
@@ -67,8 +67,8 @@ class AdminIdempotencyV7MigrationPostgreSqlIntegrationTest {
                     "SELECT version FROM banking.flyway_schema_history "
                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
                     .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
-                            "12", "13", "14", "15", "16", "17", "18", "19", "20", "21");
-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+                            "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22");
+            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("22");
             // Re-running the chain must not execute V7 again and must keep the recorded checksum.
             assertThat(flyway.migrate().migrationsExecuted).isZero();
             assertThat(queryInt(connection,

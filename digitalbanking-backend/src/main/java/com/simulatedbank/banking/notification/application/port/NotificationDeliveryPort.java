@@ -10,6 +10,12 @@ public interface NotificationDeliveryPort {
 
     void send(NotificationItem item);
 
+    final class PermanentFailure extends RuntimeException {
+        public PermanentFailure(String safeCode) {
+            super(safeCode);
+        }
+    }
+
     /**
      * Indicates whether this delivery provider is a test/development simulator
      * rather than a real external provider adapter.
