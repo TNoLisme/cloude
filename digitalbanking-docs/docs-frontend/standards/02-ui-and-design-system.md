@@ -63,3 +63,8 @@ PII hiển thị từ field masked do server trả. Cảnh báo fraud mô tả d
 ## FE-UI-06 — Đồng bộ design với code
 
 Mỗi Screen ID có một file design riêng trong design/screens. Phần đã có UI mô tả component/field/label/layout/CSS/state/responsive theo commit cụ thể. Phần chưa có UI giữ các mục trống và trạng thái chờ cập nhật. Mọi thay đổi UI cập nhật file màn hình cùng PR theo [[digitalbanking-docs/docs-frontend/design/README.md#UI-DOC-01 — Cập nhật theo màn hình]]. Component dùng chung cập nhật shared design và các override của màn liên quan.
+
+
+### FE-UI-01 / iconography draft ngày 18/11/2026
+
+Navigation dùng SVG outline một màu/currentColor; feature dùng cùng họ flat duotone theo primary/navy; illustration vector riêng. Dùng `Icon`, `FeatureIcon`, `Illustration` và catalog tập trung; không dùng emoji. Kích thước, trạng thái và phạm vi áp dụng tại [[digitalbanking-docs/docs-frontend/design/shared/03-iconography.md]]. Bản bổ sung này chờ review, không tự đổi baseline đã duyệt.
