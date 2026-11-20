@@ -41,7 +41,8 @@ class ApprovalRequestEntity {
     private String targetId;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    // The proposal is immutable; JSON dirty checking must not emit an UPDATE after the Audit append.
+    @Column(name = "payload", nullable = false, updatable = false, columnDefinition = "jsonb")
     private Map<String, Object> payload;
 
     @Enumerated(EnumType.STRING)

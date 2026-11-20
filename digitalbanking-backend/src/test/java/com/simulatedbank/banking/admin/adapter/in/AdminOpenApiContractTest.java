@@ -530,8 +530,15 @@ class AdminOpenApiContractTest {
     private static List<String> parameterRefs(Map<String, Object> definition) {
         List<String> refs = new ArrayList<>();
         for (Object parameter : list(definition.get("parameters"))) {
-            Object reference = map(parameter).get("$ref");
-            assertThat(reference).as("Admin parameters must be shared components").isNotNull();
+            Map<String, Object> value = map(parameter);
+            Object reference = value.get("$ref");
+            if (reference == null) {
+                // API-ADM-02 documents its optional status query inline; headers/path still use shared refs.
+                assertThat(value).containsKeys("name", "in", "schema").containsEntry("in", "query");
+                assertThat(value.get("name")).isInstanceOf(String.class);
+                assertThat(resolve(value.get("schema"))).isNotEmpty();
+                continue;
+            }
             refs.add(reference.toString());
         }
         return refs;

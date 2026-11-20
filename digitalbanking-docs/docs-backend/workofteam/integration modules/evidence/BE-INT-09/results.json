@@ -1,0 +1,2447 @@
+{
+  "revision": "f82993355bcfb5a4afebdf3a17d4b5d4b84986d1",
+  "runs": [
+    {
+      "name": "baseline-daemon",
+      "command": "./gradlew --offline test --tests '*AdminAc028AcceptancePostgreSqlIntegrationTest' --tests '*ApprovalDecisionHttpPostgreSqlIntegrationTest' --tests '*LimitApprovalHttpPostgreSqlIntegrationTest' --console=plain",
+      "exit": 1,
+      "result": "Test worker could not start: stale Gradle daemon JDK spawn-helper mismatch. No tests ran."
+    },
+    {
+      "name": "baseline-no-daemon",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminAc028AcceptancePostgreSqlIntegrationTest' --tests '*ApprovalDecisionHttpPostgreSqlIntegrationTest' --tests '*LimitApprovalHttpPostgreSqlIntegrationTest' --console=plain",
+      "exit": 0,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.AdminAc028AcceptancePostgreSqlIntegrationTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "16.231"
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.ApprovalDecisionHttpPostgreSqlIntegrationTest",
+          "tests": "8",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "26.608"
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.LimitApprovalHttpPostgreSqlIntegrationTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "38.333"
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.482"
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.552"
+        }
+      ]
+    },
+    {
+      "name": "red-integration",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminMakerCheckerPostgreSqlIntegrationTest' --console=plain",
+      "exit": 1,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.661",
+          "cases": [
+            {
+              "name": "applicationMustNotDependOnOutboundAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "externalModulesMustNotImportAuditInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.579",
+          "cases": [
+            {
+              "name": "commonMustNotDependOnBusinessModules",
+              "result": "PASS"
+            },
+            {
+              "name": "commonMustNotOwnPersistenceOrTransactionBoundaries",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "inboundAdapterMustNotAccessOutboundAdapterDirectly",
+              "result": "PASS"
+            },
+            {
+              "name": "modulesMustBeFreeOfCycles",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotExposeEntitiesOrInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "customerMustNotReachCrossModuleInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerQueryIsImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountApiMustDependOnJdkOrCommonOnly",
+              "result": "PASS"
+            },
+            {
+              "name": "accountInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "accountPortsAreImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountMustNotReachSiblingOrOrchestratorInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotCarryTextualPiiFields",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInboundAdapterMustNotDependOnPersistenceModel",
+              "result": "PASS"
+            },
+            {
+              "name": "adminDomainMustNotDependOnPersistenceOrAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "adminPublicApiMustNotExposePersistenceOrInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+          "tests": "26",
+          "failures": "9",
+          "errors": "0",
+          "skipped": "0",
+          "time": "30.124",
+          "cases": [
+            {
+              "name": "[1] type=roles",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/roles/1/approve\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-576f67ec-c3f4-46d9-bc3e-4f2e680151e5\",\"timestamp\":\"2026-11-19T18:51:35.422040560Z\",\"retryable\":true}] \nexpected: 200\n but was: 500"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/roles\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-6f20506d-0a09-4e8e-8fe6-ae5dabbcc095\",\"timestamp\":\"2026-11-19T18:51:38.615846695Z\",\"retryable\":true}] \nexpected: 201\n but was: 500"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/limits\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-36c5643f-10d1-406e-89bf-a877997fe54a\",\"timestamp\":\"2026-11-19T18:51:39.546577281Z\",\"retryable\":true}] \nexpected: 201\n but was: 500"
+            },
+            {
+              "name": "[1] type=roles, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=limits, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, failure=provider",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/roles/11/approve\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-6ea48f42-8a2a-4636-8ff2-f13d19d4fb66\",\"timestamp\":\"2026-11-19T18:51:43.470177965Z\",\"retryable\":true}] \nexpected: 503\n but was: 500"
+            },
+            {
+              "name": "[2] type=limits, failure=provider",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/limits/12/approve\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-7d17bc12-779c-4b39-ae4f-17af4754d6d1\",\"timestamp\":\"2026-11-19T18:51:44.566476603Z\",\"retryable\":true}] \nexpected: 503\n but was: 500"
+            },
+            {
+              "name": "[3] type=roles, failure=audit",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: \"AUDIT_WRITE_FAILED\"\n but was: \"INTERNAL_ERROR\""
+            },
+            {
+              "name": "[4] type=limits, failure=audit",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: \"{\"approvalId\":\"15\",\"requestType\":\"ROLE_CHANGE\",\"targetType\":\"APP_USER\",\"targetId\":\"26\",\"status\":\"PENDING\",\"maker\":{\"userId\":\"91001\",\"displayName\":\"int09-staff-91001\"},\"checker\":null,\"createdAt\":\"2026-11-19T18:51:47.499689789Z\",\"decidedAt\":null,\"appliedAt\":null,\"decisionNote\":null,\"correlationId\":\"int09-0309ee0e-34b6-41a8-a0a4-1efd39318c44\"}\"\n but was: \"{\"maker\":{\"userId\":\"91001\",\"displayName\":\"int09-staff-91001\"},\"status\":\"PENDING\",\"checker\":null,\"targetId\":\"26\",\"appliedAt\":null,\"createdAt\":\"2026-11-19T18:51:47.499689789Z\",\"decidedAt\":null,\"approvalId\":\"15\",\"targetType\":\"APP_USER\",\"requestType\":\"ROLE_CHANGE\",\"decisionNote\":null,\"correlationId\":\"int09-0309ee0e-34b6-41a8-a0a4-1efd39318c44\"}\""
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: \"{\"approvalId\":\"16\",\"requestType\":\"LIMIT_CHANGE\",\"targetType\":\"CUSTOMER\",\"targetId\":\"14\",\"status\":\"PENDING\",\"maker\":{\"userId\":\"91001\",\"displayName\":\"int09-staff-91001\"},\"checker\":null,\"createdAt\":\"2026-11-19T18:51:48.078967901Z\",\"decidedAt\":null,\"appliedAt\":null,\"decisionNote\":null,\"correlationId\":\"int09-bdc4bd91-f0d9-4489-9f47-6472f5140953\"}\"\n but was: \"{\"maker\":{\"userId\":\"91001\",\"displayName\":\"int09-staff-91001\"},\"status\":\"PENDING\",\"checker\":null,\"targetId\":\"14\",\"appliedAt\":null,\"createdAt\":\"2026-11-19T18:51:48.078967901Z\",\"decidedAt\":null,\"approvalId\":\"16\",\"targetType\":\"CUSTOMER\",\"requestType\":\"LIMIT_CHANGE\",\"decisionNote\":null,\"correlationId\":\"int09-bdc4bd91-f0d9-4489-9f47-6472f5140953\"}\""
+            },
+            {
+              "name": "[1] type=roles, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=roles, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[5] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[6] type=limits, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[7] type=limits, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[8] type=limits, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[9] type=limits, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[10] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "FAIL",
+              "failure": "java.lang.AssertionError: \nExpecting actual:\n  [500, 500]\nto contain exactly in any order:\n  [200, 409]\nelements not found:\n  [200, 409]\nand elements not expected:\n  [500, 500]\n"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "diagnose-privilege-and-flush",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminMakerCheckerPostgreSqlIntegrationTest.staleVersionAfterAnotherApprovalIsRejected' --tests '*AdminMakerCheckerPostgreSqlIntegrationTest.businessWritesFinishBeforeAuditAppend' --console=plain",
+      "exit": 1,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.554"
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.622"
+        },
+        {
+          "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+          "tests": "4",
+          "failures": "3",
+          "errors": "0",
+          "skipped": "0",
+          "time": "7.434",
+          "postgresErrors": [
+            "2026-11-19 18:53:56.280 UTC [65] ERROR:  42501: permission denied for table role",
+            "2026-11-19 18:53:59.303 UTC [65] ERROR:  23514: Business write after audit",
+            "2026-11-19 18:54:00.333 UTC [65] ERROR:  23514: Business write after audit"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "post-fix-fault-fixture-check",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminMakerCheckerPostgreSqlIntegrationTest' --tests '*IdentityRoleLockV23PostgreSqlIntegrationTest' --console=plain",
+      "exit": 1,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.232",
+          "cases": [
+            {
+              "name": "applicationMustNotDependOnOutboundAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "externalModulesMustNotImportAuditInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.554",
+          "cases": [
+            {
+              "name": "commonMustNotDependOnBusinessModules",
+              "result": "PASS"
+            },
+            {
+              "name": "commonMustNotOwnPersistenceOrTransactionBoundaries",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "inboundAdapterMustNotAccessOutboundAdapterDirectly",
+              "result": "PASS"
+            },
+            {
+              "name": "modulesMustBeFreeOfCycles",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotExposeEntitiesOrInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "customerMustNotReachCrossModuleInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerQueryIsImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountApiMustDependOnJdkOrCommonOnly",
+              "result": "PASS"
+            },
+            {
+              "name": "accountInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "accountPortsAreImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountMustNotReachSiblingOrOrchestratorInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotCarryTextualPiiFields",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInboundAdapterMustNotDependOnPersistenceModel",
+              "result": "PASS"
+            },
+            {
+              "name": "adminDomainMustNotDependOnPersistenceOrAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "adminPublicApiMustNotExposePersistenceOrInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+          "tests": "26",
+          "failures": "4",
+          "errors": "0",
+          "skipped": "0",
+          "time": "34.852",
+          "cases": [
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=limits, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, failure=provider",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/roles/13/approve\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-a64d022a-3314-4cbf-a964-e5f729494880\",\"timestamp\":\"2026-11-19T18:57:09.355610489Z\",\"retryable\":true}] \nexpected: 503\n but was: 500"
+            },
+            {
+              "name": "[2] type=limits, failure=provider",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: [{\"type\":\"https://api.demo.local/problems/internal-error\",\"title\":\"Internal error\",\"status\":500,\"detail\":\"Không thể xử lý yêu cầu. Vui lòng thử lại với thao tác an toàn.\",\"instance\":\"/api/v1/admin/limits/14/approve\",\"code\":\"INTERNAL_ERROR\",\"correlationId\":\"int09-589489bd-4adc-4425-82da-55e0a35653dc\",\"timestamp\":\"2026-11-19T18:57:10.560633638Z\",\"retryable\":true}] \nexpected: 503\n but was: 500"
+            },
+            {
+              "name": "[3] type=roles, failure=audit",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: \"AUDIT_WRITE_FAILED\"\n but was: \"INTERNAL_ERROR\""
+            },
+            {
+              "name": "[4] type=limits, failure=audit",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: \"AUDIT_WRITE_FAILED\"\n but was: \"INTERNAL_ERROR\""
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=roles, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[5] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[6] type=limits, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[7] type=limits, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[8] type=limits, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[9] type=limits, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[10] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            }
+          ],
+          "postgresErrors": [
+            "2026-11-19 18:57:09.341 UTC [66] ERROR:  08006: Synthetic INT09 failure",
+            "2026-11-19 18:57:10.555 UTC [331] ERROR:  08006: Synthetic INT09 failure",
+            "2026-11-19 18:57:11.772 UTC [356] ERROR:  08006: Synthetic INT09 failure",
+            "2026-11-19 18:57:12.930 UTC [381] ERROR:  08006: Synthetic INT09 failure"
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.IdentityRoleLockV23PostgreSqlIntegrationTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.698",
+          "cases": [
+            {
+              "name": "upgradePreservesHistoryAndAllowsOnlyTheCatalogueReadLock()",
+              "result": "PASS"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "acceptance-v23",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminMakerCheckerPostgreSqlIntegrationTest' --tests '*IdentityRoleLockV23PostgreSqlIntegrationTest' --console=plain",
+      "exit": 0,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "4.094",
+          "cases": [
+            {
+              "name": "applicationMustNotDependOnOutboundAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "externalModulesMustNotImportAuditInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.644",
+          "cases": [
+            {
+              "name": "commonMustNotDependOnBusinessModules",
+              "result": "PASS"
+            },
+            {
+              "name": "commonMustNotOwnPersistenceOrTransactionBoundaries",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "inboundAdapterMustNotAccessOutboundAdapterDirectly",
+              "result": "PASS"
+            },
+            {
+              "name": "modulesMustBeFreeOfCycles",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotExposeEntitiesOrInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "customerMustNotReachCrossModuleInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerQueryIsImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountApiMustDependOnJdkOrCommonOnly",
+              "result": "PASS"
+            },
+            {
+              "name": "accountInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "accountPortsAreImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountMustNotReachSiblingOrOrchestratorInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotCarryTextualPiiFields",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInboundAdapterMustNotDependOnPersistenceModel",
+              "result": "PASS"
+            },
+            {
+              "name": "adminDomainMustNotDependOnPersistenceOrAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "adminPublicApiMustNotExposePersistenceOrInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+          "tests": "30",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "38.592",
+          "cases": [
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=limits, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, failure=provider",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits, failure=provider",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, failure=audit",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, failure=audit",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=roles, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[5] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[6] type=limits, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[7] type=limits, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[8] type=limits, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[9] type=limits, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[10] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, phase=REQUESTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits, phase=REQUESTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, phase=REJECTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, phase=REJECTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.IdentityRoleLockV23PostgreSqlIntegrationTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.679",
+          "cases": [
+            {
+              "name": "upgradePreservesHistoryAndAllowsOnlyTheCatalogueReadLock()",
+              "result": "PASS"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "affected-regression",
+      "command": "sh '../digitalbanking-docs/docs-backend/workofteam/integration modules/evidence/BE-INT-09/verify.sh'",
+      "exit": 1,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.admin.ApprovalDecisionIdempotencyPostgreSqlIntegrationTest",
+          "tests": "11",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "6.748",
+          "cases": [
+            {
+              "name": "limitApproveAppliesOnceAndRejectIsIdempotent()",
+              "result": "PASS"
+            },
+            {
+              "name": "providerFailureRollsBackClaimAndTheSameKeyRetries()",
+              "result": "PASS"
+            },
+            {
+              "name": "rejectReplayAndConflictWithoutProviderMutation()",
+              "result": "PASS"
+            },
+            {
+              "name": "sameKeyIsScopedByApprovalResource()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentDifferentKeysOnlyOneApplies()",
+              "result": "PASS"
+            },
+            {
+              "name": "durableInProgressRecordReturns409WithoutExecuting()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentSameKeyHasOneBusinessEffect()",
+              "result": "PASS"
+            },
+            {
+              "name": "expiredRecordStillReplaysButPurgeDoesNotReopenATerminalApproval()",
+              "result": "PASS"
+            },
+            {
+              "name": "c2AuditFailureRollsBackApprovalProviderAndChallengeConsumption()",
+              "result": "PASS"
+            },
+            {
+              "name": "anotherCheckerCannotReplayTheStoredResponse()",
+              "result": "PASS"
+            },
+            {
+              "name": "approveThenReplayConflictAndOneBusinessEffect()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.ApprovalProposalPostgreSqlIntegrationTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "4.752",
+          "cases": [
+            {
+              "name": "expiredRecordStillReplaysUntilPurge()",
+              "result": "PASS"
+            },
+            {
+              "name": "sameKeyAcrossActorsIsIsolated()",
+              "result": "PASS"
+            },
+            {
+              "name": "failedChallengeConsumptionRollsBackClaimAndRetrySucceeds()",
+              "result": "PASS"
+            },
+            {
+              "name": "changedPayloadAfterChallengeIsRejectedByTheStepUpBinding()",
+              "result": "PASS"
+            },
+            {
+              "name": "sameKeyDifferentPayloadIsAConflict()",
+              "result": "PASS"
+            },
+            {
+              "name": "firstRequestWithoutChallengeReturns428AndCreatesNothing()",
+              "result": "PASS"
+            },
+            {
+              "name": "limitProposalRequiresStepUpAndRejectsAnUnknownCustomerWithoutState()",
+              "result": "PASS"
+            },
+            {
+              "name": "retryWithVerifiedChallengeCreatesOneApprovalAndReplays()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentSameKeyCreatesExactlyOneApproval()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.ApprovalStepUpPostgreSqlIntegrationTest",
+          "tests": "22",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "7.431",
+          "cases": [
+            {
+              "name": "makerCanNeitherIssueNorUseAStepUpForOwnRequest()",
+              "result": "PASS"
+            },
+            {
+              "name": "validStepUpApprovesOnceAndAppliesTheRole()",
+              "result": "PASS"
+            },
+            {
+              "name": "providerFailureRollsBackConsumptionAndKeepsTheApprovalPending()",
+              "result": "PASS"
+            },
+            {
+              "name": "expiredChallengeIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "rejectConsumesStepUpWithoutTouchingTheProvider()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentApproveAndRejectLeaveOneTerminalDecision()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingApprovalIdIsRejectedAndNeverCreatesAChallenge()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingChallengeIssuesBound428AndDoesNotTransition()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentConsumersHaveExactlyOneWinner()",
+              "result": "PASS"
+            },
+            {
+              "name": "changedApprovalPayloadRejectsTheChallenge()",
+              "result": "PASS"
+            },
+            {
+              "name": "wrongChallengePurposeIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "forgedBindingKeyIsRejectedEvenWithTheCorrectHash()",
+              "result": "PASS"
+            },
+            {
+              "name": "anotherCheckerCannotUseTheChallenge()",
+              "result": "PASS"
+            },
+            {
+              "name": "successfulChallengeCannotBeReplayedForASecondDecision()",
+              "result": "PASS"
+            },
+            {
+              "name": "aDifferentDecisionOnTheSameApprovalIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "checkerWithoutPrivilegeIsDeniedBeforeAnyLockOrChallenge()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingChallengeIsNotAuditedAsAnAccessDenial()",
+              "result": "PASS"
+            },
+            {
+              "name": "challengeBoundToAnotherApprovalIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "unknownApprovalIsRejectedWithoutBindingAnything()",
+              "result": "PASS"
+            },
+            {
+              "name": "previouslyConsumedChallengeIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "twoCheckersRacingApproveApplyTheRoleOnce()",
+              "result": "PASS"
+            },
+            {
+              "name": "makerSelfRejectionWithoutChallengeIsAudited()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.AdminAc028AcceptancePostgreSqlIntegrationTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "4.378",
+          "cases": [
+            {
+              "name": "AC-028: Checker approval applies the limit change",
+              "result": "PASS"
+            },
+            {
+              "name": "AC-028: Checker rejection applies neither the role nor the limit change",
+              "result": "PASS"
+            },
+            {
+              "name": "AC-028: the Maker cannot decide their own request, even when holding CHECKER",
+              "result": "PASS"
+            },
+            {
+              "name": "AC-028: Checker approval applies the role/privilege change",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest",
+          "tests": "6",
+          "failures": "3",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.084",
+          "cases": [
+            {
+              "name": "requestSchemasMatchTheControllerDtosAndDomainEnums()",
+              "result": "PASS"
+            },
+            {
+              "name": "documentedAdminOperationsMatchTheImplementedControllersExactly()",
+              "result": "PASS"
+            },
+            {
+              "name": "documentEnvelopeAndPathParametersMatchEveryAdminOperation()",
+              "result": "FAIL",
+              "failure": "java.lang.AssertionError: [Admin parameters must be shared components] \nExpecting actual not to be null"
+            },
+            {
+              "name": "documentedStatusSetsMatchTheApprovedContract()",
+              "result": "PASS"
+            },
+            {
+              "name": "everyDocumentedReferenceResolvesToACompleteComponent()",
+              "result": "FAIL",
+              "failure": "java.lang.AssertionError: [Admin parameters must be shared components] \nExpecting actual not to be null"
+            },
+            {
+              "name": "adminOperationsRequireAuthenticationAndTheDocumentedWriteHeaders()",
+              "result": "FAIL",
+              "failure": "java.lang.AssertionError: [Admin parameters must be shared components] \nExpecting actual not to be null"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.ApprovalDecisionHttpPostgreSqlIntegrationTest",
+          "tests": "8",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "6.959",
+          "cases": [
+            {
+              "name": "INT-01: role approval revokes the target's active sessions",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: verified checker step-up applies the role once and returns 200 APPLIED",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: a checker lacking the type permission is denied before any challenge or lock",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: a session revocation failure rolls the role change back",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: concurrent checkers produce exactly one APPLIED winner and one conflict",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: a challenge bound to another approval is rejected without state change",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: a maker cannot decide their own request even with CHECKER privilege",
+              "result": "PASS"
+            },
+            {
+              "name": "API-02: rejection returns 200 REJECTED, keeps the provider untouched and records C2",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.LimitApprovalHttpPostgreSqlIntegrationTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "9.791",
+          "cases": [
+            {
+              "name": "INT-01: a second approved change supersedes version 1 with version 2",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: a durable audit C2 failure rolls back the limit change and retries once",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: proposal persists approval + PENDING_APPROVAL limit and one C2 audit row",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: rejection marks the pending configuration REJECTED and keeps the effective limit",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: approval activates the pending version once and records C2 evidence",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: a configured policy bound rejects the proposal with 422 and no state",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: a stale expected version is 409 ROLE_CONFLICT and never applies",
+              "result": "PASS"
+            },
+            {
+              "name": "INT-01: a checker without the Limit permission is denied before any state change",
+              "result": "PASS"
+            },
+            {
+              "name": "scheduledApprovalKeepsPreviousLimitEffectiveAndReplaysTheCutover(JdbcTemplate, TransferLimits)",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.out.ApprovalRequestPostgreSqlIntegrationTest",
+          "tests": "10",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.476",
+          "cases": [
+            {
+              "name": "storedTargetColumnsMustMatchTypedPayload()",
+              "result": "PASS"
+            },
+            {
+              "name": "databaseEnforcesCanonicalChecksAndForeignKeys()",
+              "result": "PASS"
+            },
+            {
+              "name": "mutationRequiresCallerTransaction()",
+              "result": "PASS"
+            },
+            {
+              "name": "rejectPersistsDecisionWithoutAppliedTimestamp()",
+              "result": "PASS"
+            },
+            {
+              "name": "approveCommitsAppliedAndDuplicateDecisionIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "rolePayloadRoundTripsThroughJsonb()",
+              "result": "PASS"
+            },
+            {
+              "name": "limitPayloadRoundTripsAndMapsAccountTarget()",
+              "result": "PASS"
+            },
+            {
+              "name": "jpaMetamodelMatchesCanonicalIdentifierEnumMappingsAndHasNoVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "lockContentionHonorsLockTimeoutWithoutSilentlyBypassingRowLock()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentCheckersSerializeOnRowLockAndOnlyOneApplies()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.975",
+          "cases": [
+            {
+              "name": "applicationMustNotDependOnOutboundAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "externalModulesMustNotImportAuditInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.665",
+          "cases": [
+            {
+              "name": "commonMustNotDependOnBusinessModules",
+              "result": "PASS"
+            },
+            {
+              "name": "commonMustNotOwnPersistenceOrTransactionBoundaries",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "inboundAdapterMustNotAccessOutboundAdapterDirectly",
+              "result": "PASS"
+            },
+            {
+              "name": "modulesMustBeFreeOfCycles",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotExposeEntitiesOrInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "customerMustNotReachCrossModuleInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerQueryIsImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountApiMustDependOnJdkOrCommonOnly",
+              "result": "PASS"
+            },
+            {
+              "name": "accountInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "accountPortsAreImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountMustNotReachSiblingOrOrchestratorInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotCarryTextualPiiFields",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInboundAdapterMustNotDependOnPersistenceModel",
+              "result": "PASS"
+            },
+            {
+              "name": "adminDomainMustNotDependOnPersistenceOrAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "adminPublicApiMustNotExposePersistenceOrInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.audit.AuditModulePostgreSqlIntegrationTest",
+          "tests": "7",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.507",
+          "cases": [
+            {
+              "name": "C2 record is inserted in the caller transaction with the fixed genesis hash vector",
+              "result": "PASS"
+            },
+            {
+              "name": "C2 insert rolls back together with the caller transaction",
+              "result": "PASS"
+            },
+            {
+              "name": "C3 record commits in its own transaction even after the caller transaction fails",
+              "result": "PASS"
+            },
+            {
+              "name": "recordInTransaction without a caller transaction fails before any insert",
+              "result": "PASS"
+            },
+            {
+              "name": "append-only triggers reject UPDATE, DELETE and TRUNCATE",
+              "result": "PASS"
+            },
+            {
+              "name": "the writer does not deduplicate identical events",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrent writers produce one unbroken chain ordered by audit_id",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.identity.RoleChangePostgreSqlIntegrationTest",
+          "tests": "45",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.4",
+          "cases": [
+            {
+              "name": "unauthenticatedCommandDenied()",
+              "result": "PASS"
+            },
+            {
+              "name": "noAmbientTransactionFailsBeforeMutation()",
+              "result": "PASS"
+            },
+            {
+              "name": "staffCannotReceiveCustomerSelfServiceRole()",
+              "result": "PASS"
+            },
+            {
+              "name": "forwardMigrationPreservesExistingUsersAndRejectsNegativeAssignmentVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "realHttpAdminAuthorizationAndDuplicateApprovalBehavior()",
+              "result": "PASS"
+            },
+            {
+              "name": "makerCannotUseApprovalToElevateSelf()",
+              "result": "PASS"
+            },
+            {
+              "name": "adminMakerCapturesVersionThroughIdentityApiWithoutDirectTableAccess()",
+              "result": "PASS"
+            },
+            {
+              "name": "auditFailureRollsBackApprovalStepUpRolesVersionAndSessions()",
+              "result": "PASS"
+            },
+            {
+              "name": "duplicateAssignmentAndAbsentRevocationAreConflictsWithoutVersionOrSessionChanges()",
+              "result": "PASS"
+            },
+            {
+              "name": "disabledRoleRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "staleApprovalLeavesApprovalAndStepUpUnchangedWithoutAudit()",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] code=CHECKER",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] code=SUPERADMIN",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] code=admin",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] status=LOCKED",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] status=DISABLED",
+              "result": "PASS"
+            },
+            {
+              "name": "checkerWithoutPrivilegeDeniedDespiteStalePrincipalClaims()",
+              "result": "PASS"
+            },
+            {
+              "name": "makerWithoutRoleManageDenied()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentSameVersionHasOneCommitAndOneConflict()",
+              "result": "PASS"
+            },
+            {
+              "name": "adminFixtureCommitsApprovalStepUpRoleRevocationAndAuditTogether()",
+              "result": "PASS"
+            },
+            {
+              "name": "wrongStepUpActorCannotCommitApprovedChange()",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] state=PENDING",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] state=REJECTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] state=APPLIED",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] state=CANCELLED",
+              "result": "PASS"
+            },
+            {
+              "name": "callerFailureRollsBackRoleVersionAndRevocation()",
+              "result": "PASS"
+            },
+            {
+              "name": "invalidPrivilegeRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] status=LOCKED",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] status=DISABLED",
+              "result": "PASS"
+            },
+            {
+              "name": "customerCannotReceiveStaffRoleOrCheckerPrivilege()",
+              "result": "PASS"
+            },
+            {
+              "name": "revokeRoleRemovesOnlyApprovedRoleAndBumpsOnce()",
+              "result": "PASS"
+            },
+            {
+              "name": "firstLevelCachedUserCannotBypassAuthoritativeVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "approvedAssignmentCommitsRoleVersionMetadataAndRevocationWithCaller()",
+              "result": "PASS"
+            },
+            {
+              "name": "staleVersionAndRetryCannotOverwriteOrRevokeNewSession()",
+              "result": "PASS"
+            },
+            {
+              "name": "forgedPrincipalAuthoritiesCannotReplaceDatabasePermissions()",
+              "result": "PASS"
+            },
+            {
+              "name": "absentTargetRejectedWithoutMutatingOtherUsers()",
+              "result": "PASS"
+            },
+            {
+              "name": "assignmentWriteFailureRestoresApprovalChallengeVersionAndSessions()",
+              "result": "PASS"
+            },
+            {
+              "name": "duplicatePrivilegeGrantDoesNotIncrementVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "sessionRevocationFailureCannotCommitRoleOrApprovalOrAudit()",
+              "result": "PASS"
+            },
+            {
+              "name": "incompatibleOperationFieldsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentCheckersCannotApplySameApprovalOrAuditTwice()",
+              "result": "PASS"
+            },
+            {
+              "name": "grantThenRevokePrivilegeUpdatesMetadataAndVersionWithoutDeletingHistory()",
+              "result": "PASS"
+            },
+            {
+              "name": "makerCannotApproveOwnRequest()",
+              "result": "PASS"
+            },
+            {
+              "name": "revokedOpaqueBearerAndCookieDeniedThroughRealHttpAndCannotRefresh()",
+              "result": "PASS"
+            },
+            {
+              "name": "checkerCannotChangeOwnRoles()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+          "tests": "30",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "36.297",
+          "cases": [
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=limits, mutation=key",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, failure=provider",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits, failure=provider",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, failure=audit",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, failure=audit",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=roles, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=roles, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[5] type=roles, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[6] type=limits, mutation=note",
+              "result": "PASS"
+            },
+            {
+              "name": "[7] type=limits, mutation=decision",
+              "result": "PASS"
+            },
+            {
+              "name": "[8] type=limits, mutation=approval",
+              "result": "PASS"
+            },
+            {
+              "name": "[9] type=limits, mutation=actor",
+              "result": "PASS"
+            },
+            {
+              "name": "[10] type=limits, mutation=payload",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles, phase=REQUESTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits, phase=REQUESTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[3] type=roles, phase=REJECTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[4] type=limits, phase=REJECTED",
+              "result": "PASS"
+            },
+            {
+              "name": "[1] type=roles",
+              "result": "PASS"
+            },
+            {
+              "name": "[2] type=limits",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.limit.LimitConfigMutationPostgreSqlIntegrationTest",
+          "tests": "15",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.312",
+          "cases": [
+            {
+              "name": "unknownCustomerIsRejectedWithCustomerNotFoundAndNoRow()",
+              "result": "PASS"
+            },
+            {
+              "name": "applyActivatesPendingAndSupersedesPreviousWithAuditVisiblePreviousValues()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentAppliesForAnExistingVersionProduceExactlyOneNextVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "concurrentAppliesForTheFirstVersionProduceExactlyOneActiveWinner()",
+              "result": "PASS"
+            },
+            {
+              "name": "currentVersionIsZeroWithoutActiveConfigurationAndTracksTheAppliedVersion()",
+              "result": "PASS"
+            },
+            {
+              "name": "duplicateReserveForTheSameApprovalIsAnInvalidStateTransition()",
+              "result": "PASS"
+            },
+            {
+              "name": "secondApplyOfTheSameApprovalIsAnInvalidStateTransition()",
+              "result": "PASS"
+            },
+            {
+              "name": "reserveWithStaleExpectedVersionConflictsWithoutWriting()",
+              "result": "PASS"
+            },
+            {
+              "name": "applyWithStaleExpectedVersionConflictsAndLeavesBothRowsUnchanged()",
+              "result": "PASS"
+            },
+            {
+              "name": "configuredPolicyBoundsRejectImpossibleProposalsWithoutWriting()",
+              "result": "PASS"
+            },
+            {
+              "name": "accountScopeIsIndependentFromTheCustomerScope()",
+              "result": "PASS"
+            },
+            {
+              "name": "reserveCreatesPendingApprovalWithNextVersionAndAuditActor()",
+              "result": "PASS"
+            },
+            {
+              "name": "rejectedPendingCannotBeApprovedLater()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingAccountIsRejectedWithAccountNotFoundAndNoRow()",
+              "result": "PASS"
+            },
+            {
+              "name": "foreignAccountIsRejectedWithAuthForbiddenAndNoRow()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest",
+          "tests": "10",
+          "failures": "2",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.57",
+          "cases": [
+            {
+              "name": "freshMigrationAppliesV8OnceAndValidationSucceeds()",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: 22\n but was: 23"
+            },
+            {
+              "name": "primaryForeignUniqueAndCheckConstraintsMatchApprovedDesign()",
+              "result": "PASS"
+            },
+            {
+              "name": "duplicateAccountNumberBlindIndexIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "customerDeleteAndKeyUpdateAreRestrictedByAccountForeignKey()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistWithoutDuplicatesOrPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "upgradeFromV7PreservesCustomerDataAndAddsAccountTable()",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: 15\n but was: 16"
+            },
+            {
+              "name": "validAccountUsesApprovedDefaultsAndSupportsClosedLifecycle()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingRequiredColumnsAndInvalidDomainValuesAreRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "invalidCustomerReferenceIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityDefaultsAndIdentityMatchCanonicalSchema()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest",
+          "tests": "8",
+          "failures": "1",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.123",
+          "cases": [
+            {
+              "name": "unsafeStatesAreRejectedByConstraints()",
+              "result": "PASS"
+            },
+            {
+              "name": "uniqueScopeIsActorOperationResourceAndKey()",
+              "result": "PASS"
+            },
+            {
+              "name": "foreignKeysRestrictReferencedActorDeleteAndApprovalDelete()",
+              "result": "PASS"
+            },
+            {
+              "name": "primaryKeyForeignKeysAndCanonicalChecksMatch()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistInOrderWithoutPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalInsertAppliesDefaultsAndRequiresExpiry()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()",
+              "result": "PASS"
+            },
+            {
+              "name": "freshMigrationAppliesV7OnceAndRecordsSuccessfulHistory()",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: 22\n but was: 23"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.598",
+          "cases": [
+            {
+              "name": "upgradePreservesV17ChecksumsAndRestrictsApprovalUpdates()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest",
+          "tests": "10",
+          "failures": "1",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.139",
+          "cases": [
+            {
+              "name": "canonicalTerminalStatesAndTimestampInvariantsAreAccepted()",
+              "result": "PASS"
+            },
+            {
+              "name": "foreignKeysRestrictReferencedUserDeleteAndKeyUpdate()",
+              "result": "PASS"
+            },
+            {
+              "name": "freshMigrationAppliesV6OnceAndRecordsSuccessfulHistory()",
+              "result": "FAIL",
+              "failure": "org.opentest4j.AssertionFailedError: \nexpected: 22\n but was: 23"
+            },
+            {
+              "name": "primaryKeyForeignKeysAndCanonicalChecksMatch()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistInOrderWithoutPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalLengthBoundsAndCheckConstraintsAreEnforced()",
+              "result": "PASS"
+            },
+            {
+              "name": "validInsertUsesCanonicalDefaultsAndTimestamptzSemantics()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingRequiredColumnsAndInvalidEnumerationsAreRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()",
+              "result": "PASS"
+            },
+            {
+              "name": "invalidForeignKeysAndMakerCheckerRelationshipsAreRejected()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.IdentityRoleLockV23PostgreSqlIntegrationTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.571",
+          "cases": [
+            {
+              "name": "upgradePreservesHistoryAndAllowsOnlyTheCatalogueReadLock()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.451",
+          "cases": [
+            {
+              "name": "completeMigrationChainIsOrderedRepeatableAndPreservesUnrelatedSchema()",
+              "result": "PASS"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "focused-followup",
+      "command": "./gradlew --offline --no-daemon test --tests '*AdminOpenApiContractTest' --tests '*AccountV8MigrationPostgreSqlIntegrationTest' --tests '*ApprovalRequestV6MigrationPostgreSqlIntegrationTest' --tests '*AdminIdempotencyV7MigrationPostgreSqlIntegrationTest' --console=plain --max-workers=1",
+      "exit": 0,
+      "classes": [
+        {
+          "name": "com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest",
+          "tests": "6",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.161",
+          "cases": [
+            {
+              "name": "requestSchemasMatchTheControllerDtosAndDomainEnums()",
+              "result": "PASS"
+            },
+            {
+              "name": "documentedAdminOperationsMatchTheImplementedControllersExactly()",
+              "result": "PASS"
+            },
+            {
+              "name": "documentEnvelopeAndPathParametersMatchEveryAdminOperation()",
+              "result": "PASS"
+            },
+            {
+              "name": "documentedStatusSetsMatchTheApprovedContract()",
+              "result": "PASS"
+            },
+            {
+              "name": "everyDocumentedReferenceResolvesToACompleteComponent()",
+              "result": "PASS"
+            },
+            {
+              "name": "adminOperationsRequireAuthenticationAndTheDocumentedWriteHeaders()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.666",
+          "cases": [
+            {
+              "name": "applicationMustNotDependOnOutboundAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "externalModulesMustNotImportAuditInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+          "tests": "18",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.641",
+          "cases": [
+            {
+              "name": "commonMustNotDependOnBusinessModules",
+              "result": "PASS"
+            },
+            {
+              "name": "commonMustNotOwnPersistenceOrTransactionBoundaries",
+              "result": "PASS"
+            },
+            {
+              "name": "domainMustRemainFrameworkFree",
+              "result": "PASS"
+            },
+            {
+              "name": "inboundAdapterMustNotAccessOutboundAdapterDirectly",
+              "result": "PASS"
+            },
+            {
+              "name": "modulesMustBeFreeOfCycles",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotExposeEntitiesOrInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "customerMustNotReachCrossModuleInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerQueryIsImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountApiMustDependOnJdkOrCommonOnly",
+              "result": "PASS"
+            },
+            {
+              "name": "accountInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "accountPortsAreImplementedOnlyByItsApplicationLayer",
+              "result": "PASS"
+            },
+            {
+              "name": "accountMustNotReachSiblingOrOrchestratorInternals",
+              "result": "PASS"
+            },
+            {
+              "name": "customerApiMustNotCarryTextualPiiFields",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInternalsMustNotBeConsumedByOtherModules",
+              "result": "PASS"
+            },
+            {
+              "name": "adminInboundAdapterMustNotDependOnPersistenceModel",
+              "result": "PASS"
+            },
+            {
+              "name": "adminDomainMustNotDependOnPersistenceOrAdapters",
+              "result": "PASS"
+            },
+            {
+              "name": "adminPublicApiMustNotExposePersistenceOrInternals",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest",
+          "tests": "10",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.926",
+          "cases": [
+            {
+              "name": "freshMigrationAppliesV8OnceAndValidationSucceeds()",
+              "result": "PASS"
+            },
+            {
+              "name": "primaryForeignUniqueAndCheckConstraintsMatchApprovedDesign()",
+              "result": "PASS"
+            },
+            {
+              "name": "duplicateAccountNumberBlindIndexIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "customerDeleteAndKeyUpdateAreRestrictedByAccountForeignKey()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistWithoutDuplicatesOrPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "upgradeFromV7PreservesCustomerDataAndAddsAccountTable()",
+              "result": "PASS"
+            },
+            {
+              "name": "validAccountUsesApprovedDefaultsAndSupportsClosedLifecycle()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingRequiredColumnsAndInvalidDomainValuesAreRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "invalidCustomerReferenceIsRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityDefaultsAndIdentityMatchCanonicalSchema()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest",
+          "tests": "8",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.245",
+          "cases": [
+            {
+              "name": "unsafeStatesAreRejectedByConstraints()",
+              "result": "PASS"
+            },
+            {
+              "name": "uniqueScopeIsActorOperationResourceAndKey()",
+              "result": "PASS"
+            },
+            {
+              "name": "foreignKeysRestrictReferencedActorDeleteAndApprovalDelete()",
+              "result": "PASS"
+            },
+            {
+              "name": "primaryKeyForeignKeysAndCanonicalChecksMatch()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistInOrderWithoutPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalInsertAppliesDefaultsAndRequiresExpiry()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()",
+              "result": "PASS"
+            },
+            {
+              "name": "freshMigrationAppliesV7OnceAndRecordsSuccessfulHistory()",
+              "result": "PASS"
+            }
+          ]
+        },
+        {
+          "name": "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest",
+          "tests": "10",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.216",
+          "cases": [
+            {
+              "name": "canonicalTerminalStatesAndTimestampInvariantsAreAccepted()",
+              "result": "PASS"
+            },
+            {
+              "name": "foreignKeysRestrictReferencedUserDeleteAndKeyUpdate()",
+              "result": "PASS"
+            },
+            {
+              "name": "freshMigrationAppliesV6OnceAndRecordsSuccessfulHistory()",
+              "result": "PASS"
+            },
+            {
+              "name": "primaryKeyForeignKeysAndCanonicalChecksMatch()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalIndexesExistInOrderWithoutPartialPredicates()",
+              "result": "PASS"
+            },
+            {
+              "name": "canonicalLengthBoundsAndCheckConstraintsAreEnforced()",
+              "result": "PASS"
+            },
+            {
+              "name": "validInsertUsesCanonicalDefaultsAndTimestamptzSemantics()",
+              "result": "PASS"
+            },
+            {
+              "name": "missingRequiredColumnsAndInvalidEnumerationsAreRejected()",
+              "result": "PASS"
+            },
+            {
+              "name": "columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()",
+              "result": "PASS"
+            },
+            {
+              "name": "invalidForeignKeysAndMakerCheckerRelationshipsAreRejected()",
+              "result": "PASS"
+            }
+          ]
+        }
+      ],
+      "artifact": "junit-followup.xml"
+    }
+  ],
+  "verifiedCoverage": {
+    "distinctTests": 228,
+    "classes": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "note": "Latest passing evidence per class from affected-regression and focused-followup; not a claim of one all-green 228-test run. Final changes after regression were test expectations only.",
+    "perClass": [
+      {
+        "name": "com.simulatedbank.banking.admin.ApprovalDecisionIdempotencyPostgreSqlIntegrationTest",
+        "tests": "11",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.ApprovalProposalPostgreSqlIntegrationTest",
+        "tests": "9",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.ApprovalStepUpPostgreSqlIntegrationTest",
+        "tests": "22",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.adapter.in.AdminAc028AcceptancePostgreSqlIntegrationTest",
+        "tests": "4",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest",
+        "tests": "6",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.adapter.in.ApprovalDecisionHttpPostgreSqlIntegrationTest",
+        "tests": "8",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.adapter.in.LimitApprovalHttpPostgreSqlIntegrationTest",
+        "tests": "9",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.admin.adapter.out.ApprovalRequestPostgreSqlIntegrationTest",
+        "tests": "10",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+        "tests": "3",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+        "tests": "18",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.audit.AuditModulePostgreSqlIntegrationTest",
+        "tests": "7",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.identity.RoleChangePostgreSqlIntegrationTest",
+        "tests": "45",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest",
+        "tests": "30",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.limit.LimitConfigMutationPostgreSqlIntegrationTest",
+        "tests": "15",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest",
+        "tests": "10",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest",
+        "tests": "8",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest",
+        "tests": "1",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest",
+        "tests": "10",
+        "sourceRun": "focused-followup"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.IdentityRoleLockV23PostgreSqlIntegrationTest",
+        "tests": "1",
+        "sourceRun": "affected-regression"
+      },
+      {
+        "name": "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest",
+        "tests": "1",
+        "sourceRun": "affected-regression"
+      }
+    ]
+  },
+  "sourceManifestSha256": "39c68d8e090e4d76a5cf1665e00161efc0b246dcb167efbd55eef6b06c7fb3e6",
+  "unchangedMigrations": [
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V10__create_audit_log_table.sql",
+      "sha256": "f641d8e81ef4dc46f578cf26128c81812d59075a6af36e2335acdb15b5fb8879"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V11__create_admin_approval_attempt_table.sql",
+      "sha256": "8094b2f3e1de61a72e89732669794f5d07c7e86fcaab555a76fd846dfba3f947"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V12__create_limit_usage_and_runtime_grants.sql",
+      "sha256": "2e738c88855e31cb3d10972f0c1046503e83a46ee083fbc629236ba048b55762"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V13__create_transfer_and_idempotency.sql",
+      "sha256": "bf9dc807ab74b57b2a2286821ac78d1239c8206a30c1279ae46eb55864cba5a3"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V14__create_ledger_entry.sql",
+      "sha256": "d643d1f223072b20db55b5c1f7261a3685dd7dc319df8c882fbca69d951f53fb"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V15__create_fraud_tables.sql",
+      "sha256": "acc4073cf2470364d7a1182085a9ebc8d0c7c7dc8d2c04d1f3d6a8a3452c2a52"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V16__create_notification_table.sql",
+      "sha256": "2078001f3f10accb7cb23da8a6cd3ca1f575f908c810de247d8c79ae009b529a"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V17__bridge_audit_canonical_payload.sql",
+      "sha256": "72ea87fe61ad99b7543f211fbab20519ddbbb231843e940668d1de0ddc83efb3"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V18__restrict_approval_update_privileges.sql",
+      "sha256": "6cc88d9863aede2783b89e51f501c548c6f8ac66c7a9cb7e95a49854fc951c75"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V19__reject_non_finite_limit_amounts.sql",
+      "sha256": "37027a4f88bb186eb5e3de97573ba5fbacdd2b12945e06d65b6942810fa1e0b3"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V1__init_schema.sql",
+      "sha256": "9e8f7acb2c6e9fca17541801bb96ee479937dc4fd582679b02fefb2b1aada484"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V20__create_limit_transfer_evidence.sql",
+      "sha256": "94d44d1fb89390705b167c9f5a85624cd687bffd10ee42865c4d52828f73323a"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V21__integrate_transfer_fraud.sql",
+      "sha256": "3055b5789fdc8fe733bde6e0c1773f22935cdedd589d901a572c071e0fe57899"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V22__fence_otp_resend.sql",
+      "sha256": "d000f7f65c88ed1904d0d6b3de82f055978a31f23029872b0df2a306d079a45b"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V2__create_identity_and_rbac_tables.sql",
+      "sha256": "3ba0c141a10c44279e01f689ac2ffcf34dd49956021bafcc8c8b79d0650c8fe2"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V3__add_fido_verification_material.sql",
+      "sha256": "f9aea5f7c5e95831be261983ea8d8786bc9cdfef8e879500b78adb099ef481e9"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V4__add_role_assignment_version.sql",
+      "sha256": "d714b2ef11c005afa2d3bdd195752316b6c174a8ae43ba0d34f821e09a0afe33"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V5__create_customer_table.sql",
+      "sha256": "f902b7eb1df6c4f3def1c4247eeaf5ff598cdedc123bbab996608e0d5c79b81e"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V6__create_approval_request_table.sql",
+      "sha256": "04ccec83198af819bb01c51bf4f627378aca1b9a6a2c459fc1a1b8a03089f76b"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V7__create_admin_idempotency_record_table.sql",
+      "sha256": "23993a1f2e611236fb8dcac0a046030a1f2dc89a62edae8229954254d626a696"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V8__create_account_table.sql",
+      "sha256": "6b397b7c4ba218b534e379dbd54626dcca3e642c761a4241086772b3a0e5885a"
+    },
+    {
+      "path": "digitalbanking-backend/src/main/resources/db/migration/V9__create_limit_config_table.sql",
+      "sha256": "78703370eb31547a561decb12a8e9153ceed0e7b67b2226460a4cb67114e8e0d"
+    }
+  ]
+}

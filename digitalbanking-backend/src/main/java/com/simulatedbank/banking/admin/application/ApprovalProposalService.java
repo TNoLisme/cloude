@@ -102,7 +102,7 @@ public class ApprovalProposalService {
             String correlationId, String requestId) {
     }
 
-    /** Limit proposal request; currently fail-closed before any state is written. */
+    /** Limit proposal request; the provider reserves pending configuration in the proposal transaction. */
     public record LimitProposalCommand(long customerId, Long accountId, BigDecimal perTransactionLimit,
             BigDecimal dailyLimit, String currency, Instant effectiveFrom, String reason,
             String idempotencyKey, String challengeRef, String correlationId, String requestId) {
