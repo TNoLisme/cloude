@@ -16,7 +16,7 @@ public final class TransferRecoveryEvidence {
         // Reads join the primary processing transaction; an empty list means a successful read found no records.
         List<Movement> movements(long transferId);
         List<Entry> entries(long transferId);
-        List<Limit> limits(long transferId);
+        List<Limit> limits(Intent intent, Basis basis);
         List<Completion> completions(long transferId);
     }
 
@@ -47,7 +47,7 @@ public final class TransferRecoveryEvidence {
     /** Usage flags and date/version are per transfer, established by the Limit owner. */
     public record Limit(long transferId, long customerId, BigDecimal amount, String currency, LimitState state,
                         String policyVersion, LocalDate t1Date, LocalDate usageDate, String usagePolicyVersion,
-                        boolean usageApplied, boolean noPriorUsageProven) { }
+                        boolean usageApplied, boolean noPriorUsageProven, Instant settledAt) { }
 
     public record Completion(long auditId, long transferId, String correlationId, String action, String outcome,
                              Instant occurredAt) {
@@ -66,9 +66,9 @@ public final class TransferRecoveryEvidence {
     }
 
     record Snapshot(List<Movement> movements, List<Entry> entries, List<Limit> limits, List<Completion> audits) {
-        static Snapshot read(Reads reads, long id) {
-            return new Snapshot(List.copyOf(reads.movements(id)), List.copyOf(reads.entries(id)),
-                    List.copyOf(reads.limits(id)), List.copyOf(reads.completions(id)));
+        static Snapshot read(Reads reads, Intent intent, Basis basis) {
+            return new Snapshot(List.copyOf(reads.movements(intent.id())), List.copyOf(reads.entries(intent.id())),
+                    List.copyOf(reads.limits(intent, basis)), List.copyOf(reads.completions(intent.id())));
         }
 
         boolean allowsResume(Intent intent, Basis basis) {
@@ -102,7 +102,7 @@ public final class TransferRecoveryEvidence {
             boolean settled = basis.mode() == Mode.RESERVATION_REQUIRED
                     ? limit.state() == LimitState.SETTLED : limit.state() == LimitState.LEGACY_USAGE;
             if (!settled || !limit.usageApplied() || limit.noPriorUsageProven()
-                    || !terminalDate.equals(limit.usageDate()) || !basis.policyVersion().equals(limit.usagePolicyVersion())) {
+                    || !audit.occurredAt().equals(limit.settledAt()) || !terminalDate.equals(limit.usageDate()) || !basis.policyVersion().equals(limit.usagePolicyVersion())) {
                 return Optional.empty();
             }
             return Optional.of(new Repair(audit.occurredAt(), terminalDate, Optional.empty()));
@@ -117,7 +117,7 @@ public final class TransferRecoveryEvidence {
 
         private static boolean pendingWithoutUsage(Limit limit) {
             return limit.state() == LimitState.PENDING && !limit.usageApplied() && limit.noPriorUsageProven()
-                    && limit.usageDate() == null && limit.usagePolicyVersion() == null;
+                    && limit.usageDate() == null && limit.usagePolicyVersion() == null && limit.settledAt() == null;
         }
 
         private static boolean matchesMovement(Intent intent, Movement movement) {

@@ -4,6 +4,7 @@ import com.simulatedbank.banking.transfer.application.IdempotencyRetention.Snaps
 import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.ReplayResponse;
 import com.simulatedbank.banking.transfer.application.TransferRecoveryEvidence.Intent;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
+import com.simulatedbank.banking.transfer.application.TransferRecoveryPersistence.State;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Context;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -42,7 +43,7 @@ public class TransferSettlementStore {
                 rs -> null, lockMs + "ms", statementMs + "ms");
     }
 
-    public ReplayResponse terminal(long id, AttemptFence fence, Instant instant, String failureCode,
+    public ReplayResponse terminal(long id, AttemptFence fence, State attemptState, Instant instant, String failureCode,
             ReplayResponse response, Snapshot ttl) {
         requireWritableTransaction();
         String status = failureCode == null ? "COMPLETED" : "FAILED";
@@ -52,10 +53,10 @@ public class TransferSettlementStore {
                 SET status = ?, completed_at = ?, failed_at = ?, updated_at = ?, failure_code = ?,
                     failure_message = NULL, attempt_state = 'DONE', attempt_token = NULL, attempt_owner = NULL,
                     attempt_lease_expires_at = NULL, recovery_next_attempt_at = NULL
-                WHERE transfer_id = ? AND status = 'PENDING' AND attempt_state = 'CLAIMED'
-                      AND attempt_epoch = ? AND attempt_token = ?
+                WHERE transfer_id = ? AND status = 'PENDING' AND attempt_state = ?
+                      AND attempt_epoch = ? AND attempt_token = ? AND attempt_lease_expires_at > clock_timestamp()
                 """, status, failureCode == null ? at : null, failureCode == null ? null : at, at, failureCode,
-                id, fence.epoch(), fence.token());
+                id, attemptState.name(), fence.epoch(), fence.token());
         if (matched != 1) throw new IllegalStateException("Transfer terminal fence changed");
         return jdbc.queryForObject("""
                 UPDATE banking.idempotency_record

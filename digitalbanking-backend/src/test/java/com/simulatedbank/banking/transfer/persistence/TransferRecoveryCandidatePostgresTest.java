@@ -3,6 +3,7 @@ package com.simulatedbank.banking.transfer.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -119,7 +120,8 @@ class TransferRecoveryCandidatePostgresTest {
             return null;
         }).when(ports).lockCustomerGuard(1);
         when(ports.findTransferBasis(any())).thenReturn(Optional.of(BASIS));
-        when(ports.limits(10)).thenReturn(List.of(limit(LimitState.PENDING)));
+        when(ports.hasNoResponse(any())).thenReturn(true);
+        when(ports.limits(argThat(intent -> intent != null && intent.id() == 10), any())).thenReturn(List.of(limit(LimitState.PENDING)));
         when(ports.terminalRetention()).thenReturn(TTL);
         when(ports.findSafeReplay(any())).thenReturn(Optional.of(ORIGINAL));
         doAnswer(call -> {
@@ -299,7 +301,8 @@ class TransferRecoveryCandidatePostgresTest {
             }
             first.get(10, TimeUnit.SECONDS);
         }
-        assertThat(field("status")).isEqualTo("COMPLETED");
+        assertThat(field("status")).isEqualTo("PENDING");
+        assertThat(field("attempt_state")).isEqualTo("MANUAL");
         verify(settlement).settleInRecoveryTransaction(eq(CONTEXT), any());
     }
 
@@ -312,7 +315,7 @@ class TransferRecoveryCandidatePostgresTest {
 
         assertThat(field("status")).isEqualTo("COMPLETED");
         assertThat(idemTime("expires_at")).isEqualTo(previousExpiry);
-        assertThat(idemTime("completed_at")).isAfter(TERMINAL);
+        assertThat(idemTime("completed_at")).isEqualTo(TERMINAL);
         assertThat(jdbc.queryForObject("SELECT response_status FROM banking.idempotency_record", Integer.class)).isEqualTo(201);
         assertThat(jdbc.queryForObject("SELECT response_body ->> 'reference' FROM banking.idempotency_record", String.class))
                 .isEqualTo("synthetic-ref");
@@ -331,7 +334,7 @@ class TransferRecoveryCandidatePostgresTest {
         assertThat(field("status")).isEqualTo("COMPLETED");
         assertThat(effects()).containsExactly("AUDIT");
         verify(ports, never()).settleForReconciliation(any(), any(), any(), any());
-        assertThat(idemTime("expires_at")).isEqualTo(idemTime("completed_at").plusSeconds(86400));
+        assertThat(idemTime("expires_at")).isAfter(idemTime("completed_at").plusSeconds(86400));
     }
 
     @ParameterizedTest
@@ -341,7 +344,7 @@ class TransferRecoveryCandidatePostgresTest {
         switch (gap) {
             case MOVEMENT -> when(ports.movements(10)).thenReturn(List.of());
             case DUPLICATE_LEDGER -> when(ports.entries(10)).thenReturn(List.of(debit(), debit()));
-            case LIMIT_RELEASED -> when(ports.limits(10)).thenReturn(List.of(limit(LimitState.RELEASED)));
+            case LIMIT_RELEASED -> when(ports.limits(argThat(intent -> intent != null && intent.id() == 10), any())).thenReturn(List.of(limit(LimitState.RELEASED)));
             case AUDIT -> when(ports.completions(10)).thenReturn(List.of());
             case MODE -> when(ports.findTransferBasis(any())).thenReturn(Optional.empty());
             case RESPONSE -> when(ports.findSafeReplay(any())).thenReturn(Optional.empty());
@@ -446,8 +449,8 @@ class TransferRecoveryCandidatePostgresTest {
             if (context.transferId() == 10) throw new IllegalStateException("synthetic processing failure");
             return TransferSettlementCandidate.Outcome.completed();
         });
-        when(ports.limits(11)).thenReturn(List.of(new Limit(11, 1, AMOUNT, "VND",
-                LimitState.PENDING, "policy-1", T1_DATE, null, null, false, true)));
+        when(ports.limits(argThat(intent -> intent != null && intent.id() == 11), any())).thenReturn(List.of(new Limit(11, 1, AMOUNT, "VND",
+                LimitState.PENDING, "policy-1", T1_DATE, null, null, false, true, null)));
         var outer = new RequestContext("job", UUID.randomUUID().toString(), "192.0.2.1", "fixture");
         try (var scope = RequestContextHolder.bind(outer)) {
             recovery.recoverBatch();
@@ -491,7 +494,7 @@ class TransferRecoveryCandidatePostgresTest {
         when(ports.entries(10)).thenReturn(List.of(debit(), new Entry(42, 10, 2, Side.CREDIT, 4, AMOUNT, "VND", AFTER)));
         when(ports.completions(10)).thenReturn(List.of(new Completion(50, 10, "corr-10",
                 "TRANSFER_COMPLETED", "SUCCESS", TERMINAL)));
-        when(ports.limits(10)).thenReturn(List.of(limit(limitState)));
+        when(ports.limits(argThat(intent -> intent != null && intent.id() == 10), any())).thenReturn(List.of(limit(limitState)));
     }
 
     private static Entry debit() {
@@ -501,7 +504,7 @@ class TransferRecoveryCandidatePostgresTest {
     private static Limit limit(LimitState state) {
         boolean posted = state == LimitState.SETTLED || state == LimitState.LEGACY_USAGE;
         return new Limit(10, 1, AMOUNT, "VND", state, "policy-1", T1_DATE, posted ? TERMINAL_DATE : null,
-                posted ? "policy-1" : null, posted, state == LimitState.PENDING);
+                posted ? "policy-1" : null, posted, state == LimitState.PENDING, posted ? TERMINAL : null);
     }
 
     private void dueNow() {

@@ -42,6 +42,8 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             "PROVIDER_FAILURE", "VERSION_CONFLICT", "AUDIT_FAILURE", "STEP_UP_FAILURE", "TECHNICAL_FAILURE");
     private static final Set<String> WORKFLOW_AGE_BUCKETS = Set.of(
             "LT_5M", "5M_30M", "30M_1H", "1H_6H", "6H_24H", "GT_24H");
+    private static final Set<String> RECOVERY_REASONS = Set.of("CONTEXT_INVALID", "CLAIM_UNCERTAIN", "FENCE_UNSAFE",
+            "EVIDENCE_UNSAFE", "OUTCOME_UNCERTAIN", "RETRY_EXHAUSTED");
     private String environment = "local";
 
     public void setService(String service) { this.service = service; }
@@ -74,12 +76,25 @@ public final class SafeJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 && WORKFLOW_EVENT.equals(event.getMessage());
         boolean fraudEngineError = "com.simulatedbank.banking.fraud.adapter.out.JdbcFraudEvaluation".equals(event.getLoggerName())
                 && "FRAUD_ENGINE_ERROR".equals(event.getMessage());
+        boolean recoveryIncident = "com.simulatedbank.banking.transfer.adapter.out.integration.TransferRecoveryAdapter"
+                .equals(event.getLoggerName()) && "TRANSFER_RECOVERY_INCIDENT".equals(event.getMessage());
+        boolean recoveryScanFailed = "com.simulatedbank.transfercandidate.recovery.TransferRecoveryJob"
+                .equals(event.getLoggerName()) && "TRANSFER_RECOVERY_SCAN_FAILED".equals(event.getMessage());
         fields.put("event", completion ? "HTTP_REQUEST_COMPLETED"
                 : securityGap ? "SECURITY_AUDIT_GAP"
                 : securityFallback ? SecurityAuditFallbackLog.EVENT
                 : securityAudit ? event.getMessage()
                 : workflow ? WORKFLOW_EVENT
+                : recoveryIncident || recoveryScanFailed ? event.getMessage()
                 : fraudEngineError ? "FRAUD_ENGINE_ERROR" : "APPLICATION_LOG");
+        if (recoveryIncident && event.getKeyValuePairs() != null) {
+            for (KeyValuePair pair : event.getKeyValuePairs()) {
+                if (("reason".equals(pair.key) && pair.value instanceof String reason && RECOVERY_REASONS.contains(reason))
+                        || ("transfer_id".equals(pair.key) && pair.value instanceof String id && id.matches("[1-9][0-9]{0,18}"))) {
+                    fields.put(pair.key, pair.value);
+                }
+            }
+        }
         if (fraudEngineError && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
                 if (("category".equals(pair.key)

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.account.api.AccountBalance;
 import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.account.api.AccountTransferEvidence;
+import com.simulatedbank.banking.audit.api.TransferAuditEvidence;
 import com.simulatedbank.banking.common.config.AppProperties;
 import com.simulatedbank.banking.common.error.ProblemResponse;
 import com.simulatedbank.banking.fraud.api.FraudEvaluation;
@@ -18,18 +20,27 @@ import com.simulatedbank.banking.transfer.application.IdempotencyRetention.Snaps
 import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.ReplayResponse;
 import com.simulatedbank.banking.transfer.application.TransferTelemetry;
+import com.simulatedbank.banking.transfer.application.TransferRecoveryCandidate;
+import com.simulatedbank.transfercandidate.recovery.TransferRecoveryJobConfiguration;
 import jakarta.persistence.EntityManagerFactory;
 import com.simulatedbank.banking.notification.api.NotificationOutboxPort;
 import java.time.ZoneId;
 import java.util.List;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.EntityManagerFactoryUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /** Explicit activation requires the bootstrapped Fraud provider and a Notification policy. */
+@Import(TransferRecoveryJobConfiguration.class)
 public class TransferSettlementIntegrationConfiguration {
+    @Bean
+    TransferRecoveryCandidate transferRecovery(TransferSettlementHandoff handoff) {
+        return handoff.newRecoveryWorker();
+    }
+
     @Bean
     TransferNotifications transferNotifications(NotificationOutboxPort outbox) {
         return new TransferNotifications((facts, outcome) -> List.of(new TransferNotifications.Recipient(
@@ -53,7 +64,8 @@ public class TransferSettlementIntegrationConfiguration {
             ZoneId businessZoneId, TransferTelemetry telemetry, AccountBalance accounts, AccountQuery accountQuery,
             LedgerPosting ledger, TransferLimits limits, TransferLimitAdapter limitAdapter, TransferAuditAdapter audit,
             TransferNotifications notifications, FraudEvaluation fraud,
-            AppProperties properties, ObjectMapper mapper, EntityManagerFactory entityManagers, TransferSettlementStore store) {
+            AppProperties properties, ObjectMapper mapper, EntityManagerFactory entityManagers, TransferSettlementStore store,
+            AccountTransferEvidence movements, TransferAuditEvidence auditReads) {
         fraud.verifyReady();
         var config = properties.transfer();
         return new TransferSettlementHandoff(jdbc, transactions, businessZoneId, telemetry, accounts, accountQuery,
@@ -69,7 +81,7 @@ public class TransferSettlementIntegrationConfiguration {
                     return new Snapshot(hours * 3600L, "transfer-ttl-hours-" + hours);
                 },
                 () -> EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagers).flush(),
-                store, config.t2LockTimeoutMs(), config.t2StatementTimeoutMs());
+                store, config.t2LockTimeoutMs(), config.t2StatementTimeoutMs(), movements, auditReads, mapper);
     }
 
     private static String encode(ObjectMapper mapper, Object value) {

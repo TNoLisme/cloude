@@ -26,9 +26,9 @@ class ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest {
         assertThat(columnUpdate("maker_id")).isTrue();
 
         Flyway latest = migration(null);
-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(6);
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(7);
         latest.validate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("23");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("24");
         assertThat(historyThroughV17()).isEqualTo(history);
         for (String column : List.of("approval_id", "maker_id", "request_type", "target_type", "target_id",
                 "created_at", "correlation_id")) {

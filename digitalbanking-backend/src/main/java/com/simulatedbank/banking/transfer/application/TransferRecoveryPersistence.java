@@ -15,6 +15,7 @@ public interface TransferRecoveryPersistence {
     List<Context> discover(Instant cutoff, Context after, int limit);
     Optional<Locked> lock(Context context);
     AttemptFence claim(Locked locked, String owner, Instant leaseUntil, int count, Instant first, Instant next);
+    void markFailurePending(Locked locked);
     void clear(Locked locked, State next, Instant nextAt);
     void complete(Locked locked, Replay replay, Instant repairedAt, IdempotencyRetention.Snapshot ttl);
     int purge(int limit);
@@ -32,7 +33,8 @@ public interface TransferRecoveryPersistence {
         }
 
         public boolean matches(AttemptFence fence) {
-            return state == State.CLAIMED && epoch == fence.epoch() && fence.token().equals(token);
+            return (state == State.CLAIMED || state == State.FAILURE_PENDING)
+                    && epoch == fence.epoch() && fence.token().equals(token);
         }
 
         @Override public String toString() { return "Locked[redacted]"; }

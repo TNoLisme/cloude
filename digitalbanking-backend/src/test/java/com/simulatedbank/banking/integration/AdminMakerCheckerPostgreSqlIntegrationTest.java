@@ -90,7 +90,7 @@ class AdminMakerCheckerPostgreSqlIntegrationTest {
                 POSTGRES.getUsername(), POSTGRES.getPassword()));
         assertThat(new JdbcTemplate(source).queryForObject("SELECT current_user", String.class)).isEqualTo("banking_app");
         assertThat(db.queryForObject("SELECT max(version::int) FROM banking.flyway_schema_history WHERE success",
-                Integer.class)).isEqualTo(23);
+                Integer.class)).isEqualTo(24);
         for (long user : List.of(MAKER, CHECKER, OTHER_CHECKER)) {
             db.update("INSERT INTO banking.app_user(user_id,username,password_hash,user_type) OVERRIDING SYSTEM VALUE "
                     + "VALUES (?,?,'synthetic','STAFF') ON CONFLICT DO NOTHING", user, "int09-staff-" + user);

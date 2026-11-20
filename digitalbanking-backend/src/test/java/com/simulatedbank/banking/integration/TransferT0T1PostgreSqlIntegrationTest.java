@@ -132,7 +132,7 @@ class TransferT0T1PostgreSqlIntegrationTest {
     @Test
     void httpAuthorizationOwnershipAndTtlBeforeHandoff() throws Exception {
         flyway.validate();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("22");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("24");
         Actor owner = actor();
         Actor other = actor();
         String key = key();
