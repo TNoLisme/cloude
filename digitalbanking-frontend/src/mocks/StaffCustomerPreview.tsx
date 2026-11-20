@@ -69,7 +69,7 @@ function Content({ client }: { client: ApiClient }) {
         <main className={styles.main}>
           <Heading
             title="Thông tin khách hàng"
-            sub="Bản xem mock theo customerId mẫu; quyền và phạm vi staff chờ BE/Security chốt."
+            sub="Bản xem mock theo customerId mẫu; phạm vi đọc theo ID single-bank đã có trong API v1, phiên staff v2 chưa tích hợp."
           />
           <Panel title="Tìm khách hàng theo số điện thoại">
             <label htmlFor="staff-phone-search">Số điện thoại</label>

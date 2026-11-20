@@ -15,6 +15,7 @@ import {
   type V2Session,
 } from "./AuthScreens";
 import type { AuthResponse } from "../../../shared/auth/contracts";
+import { canOpenCustomerDashboard } from "../../../shared/auth/feature-policy";
 
 export const v2PreviewPath = (path: string) => `${path}?authPreview=v2`;
 export function V2AuthFlow({
@@ -47,8 +48,8 @@ export function V2AuthFlow({
   const previousPhase = useRef(state.phase);
   const isCustomer =
     customerDashboard &&
-    state.auth?.user.userType === "CUSTOMER" &&
-    state.auth.user.roles.includes("CUSTOMER");
+    !!state.auth &&
+    canOpenCustomerDashboard(state.auth.user);
   const mounted = useRef(true);
   const bootTicket = useRef(0);
   const bootstrap = useCallback(async () => {

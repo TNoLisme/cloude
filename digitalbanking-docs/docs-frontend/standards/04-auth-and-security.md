@@ -65,6 +65,12 @@ FE-REL-01 kiểm tra direct URL, action theo quyền, cross-user cache, session 
 
 ## 2. Quy tắc liên quan
 
+### GAP-07 — lát đọc staff single-bank đã có căn cứ ngày 21/11/2026
+
+Theo quyết định của người phụ trách FE trong chat ngày 21/11/2026, ưu tiên `docs-common` và kết quả `dev2` cho phần đã rõ. `07. API contracts.md` §3.4–3.6 và DEC-INT-008/BE-INT-03 cho phép `OPERATIONS`/`ADMIN` đọc hồ sơ customer đã mask và tài khoản theo ID; `AUDITOR` chỉ đọc tài khoản, không đọc hồ sơ customer vì seed thiếu `CUSTOMER_READ`. FE gom điều kiện hiển thị cho lát này trong `src/shared/auth/feature-policy.ts`, kiểm `userType=STAFF` và từ chối snapshot có `CUSTOMER` trộn với role staff. Customer dashboard chỉ cho `userType=CUSTOMER` và role `CUSTOMER`. Đây là policy hiển thị phía FE; API trả `403` vẫn là quyết định cuối cùng. Preview staff độc lập chưa nối phiên đăng nhập và không chứng minh phân quyền BE v2.
+
+GAP-07 chưa đóng: SRS §4.2 và Security §5.1 còn mô tả Auditor đọc dữ liệu khách hàng, trái với permission seed/API-ADM-01; BE/BA/Security cần đồng bộ nguồn. `UserSummary` v1/v2 chỉ có roles/privileges, không có permission/capability; phương án cấp capability runtime hoặc ánh xạ đầy đủ cho mọi route/action vẫn chờ owner chốt. Không dùng lát đọc trên để tự mở search, mutation, approval hay export.
+
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md]] và [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]]. Mọi khác biệt protocol ghi trong [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]].
 
 ## 3. Baseline Security phía FE/mock ngày 14/11/2026

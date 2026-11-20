@@ -8,6 +8,7 @@ import { transferFlow } from "../stores/transfer";
 import { operatorFlow } from "../stores/operator";
 import { session as legacySession } from "../stores/session";
 import { createV2Session } from "../shared/auth/session";
+import { canOpenCustomerDashboard } from "../shared/auth/feature-policy";
 import { browserSessionSync } from "../shared/auth/session-sync";
 import { V2AuthFlow } from "../features/auth/v2/AuthFlow";
 import { V2SessionSummary } from "../features/auth/v2/AuthScreens";
@@ -115,8 +116,7 @@ export function AuthPreview() {
               <AuthSplitLayout>{content}</AuthSplitLayout>
             )}
             renderAuthenticated={(auth, logout, ending) =>
-              auth.user.userType === "CUSTOMER" &&
-              auth.user.roles.includes("CUSTOMER") ? (
+              canOpenCustomerDashboard(auth.user) ? (
                 <CustomerDashboard
                   client={controller.client}
                   userId={auth.user.userId}

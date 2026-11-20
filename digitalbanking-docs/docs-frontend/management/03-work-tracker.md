@@ -101,12 +101,23 @@ Tất cả GAP dưới đây đang Mở. Owner ghi quyết định, ngày, link 
 | GAP-04 | YAML đã có begin/finish tại loginFido, còn provider, enrollment và khả năng thực thi WebAuthn cần xác nhận, OI-API-13/17 | BE + Security | Chốt enrollment/provider, ceremony/options runtime và fallback, có test tích hợp begin/finish theo YAML |
 | GAP-05 | Ngày 14/11/2026 người dùng chọn baseline FE/mock theo Security: SESSION_TOKEN, Path=/api, LOGIN_MFA. Đã chốt giữ v1 và tạo v2 riêng; contract/types/mock v2 đã được người phụ trách FE duyệt ngày 14/11/2026. BE/Security/DB runtime và migration vẫn chờ xác nhận | BE + Security | Thống nhất 07/YAML/security/BE docs và runtime session/CSRF, kiểm chứng reload/logout |
 | GAP-06 | Người phụ trách FE đã chọn Ant Design + Vite 7/pnpm/RHF+Zod ngày 13/11/2026; package/lockfile đã kiểm chứng cho preview. Xác nhận liên vai trò và gate đầy đủ của task cha còn mở | FE + kiến trúc | Duyệt ADR-001, chốt package versions/lockfile/runtime và lệnh CI. Đồng bộ 05 nếu giữ Ant Design |
-| GAP-07 | UserSummary chỉ có roles/privileges trong YAML, seed quyền khác nhau ở SRS/API/security, ví dụ quyền export ADMIN | BE + Security + BA | Một permission matrix thống nhất, chốt session capability hoặc mapping FE theo matrix |
+| GAP-07 | **Mở một phần.** FE chốt ngày 21/11/2026 ưu tiên docs-common/API 07 và dev2 cho lát đọc staff exact-ID single-bank theo DEC-INT-008/BE-INT-03; policy hiển thị FE đã tập trung và kiểm tra. SRS §4.2/Security §5.1 vẫn ghi Auditor đọc customer, khác API 07/seed (không có CUSTOMER_READ); UserSummary chỉ có roles/privileges, chưa có capability/permission runtime. Preview staff còn độc lập với auth. | BE + Security + BA | Đồng bộ một permission matrix trong common, chốt session capability hoặc mapping FE đầy đủ cho menu/direct URL/action, xác nhận backend version và kiểm chứng API/browser; không đóng GAP chỉ vì policy FE lát đọc đã có |
 | GAP-08 | Step-up transfer gắn request/key và sensitive action gắn approval/decision, create approval chưa có approvalId. 07 còn OI-API-19 về retry trùng | BE + Security | Chốt binding/create approval, challenge header/payload và quy tắc retry, có test contract |
 | GAP-09 | Reload mất transfer intent/key memory khi chưa có reference, contract chưa có lookup by idempotency key | BE + FE + BA | Chốt recovery theo history/reference hoặc endpoint lookup được bảo vệ. Chốt retention nếu lưu key cục bộ |
 | GAP-10 | Notification inbox và retention/legal hold UI chưa có API, OI-API-07 | BA + BE + Audit | Xác nhận trách nhiệm FE và kênh thông báo, thêm endpoint hoặc quyết định thao tác nội bộ có kiểm soát |
 | GAP-11 | Timeline chia P0/P1 Fraud Option B trong khi SRS có Must/Should cho fraud và các module mới | BA + người điều phối | Duyệt scope theo FR/AC và milestone, ghi các mục hoãn có owner và trigger |
 | GAP-12 | Audit export format/giới hạn/time range/stream hoặc async và quyền còn cần đối chiếu, OI-API-11 | BE + Audit + FE | Đồng bộ 07/YAML, có sample file và kiểm chứng size/permission |
+
+### Việc còn lại của GAP-07 sau lát đọc exact-ID
+
+Người phụ trách FE yêu cầu ngày 21/11/2026 lưu rõ phần chưa làm được để tiếp tục sau. Policy hiện có chỉ là điều kiện hiển thị cho customer dashboard và hai quyền đọc staff exact-ID; preview staff vẫn độc lập với phiên thật. Không dùng nó làm căn cứ mở các màn/hành động khác.
+
+| Mã theo dõi | Phần chưa làm | Căn cứ thiếu/mâu thuẫn | Owner cần chốt / điều kiện mở lại |
+|---|---|---|---|
+| GAP-07-A | Một ma trận role → permission → endpoint/action thống nhất | SRS §4.2 và Security §5.1 cho Auditor đọc dữ liệu customer; 07 §3.4–3.6, seed và BE-INT-03 từ chối `GET /admin/customers/{customerId}` vì thiếu `CUSTOMER_READ`. Các quyền khác cũng cần rà theo endpoint, gồm export và maker/checker. | BE + BA + Security đồng bộ SRS, 07, design/security, seed và OpenAPI khi cần; ghi quyết định/review cụ thể. |
+| GAP-07-B | Cách FE biết permission hiện hành | `UserSummary` v1/v2 chỉ trả `roles`/`privileges`, không có permission/capability; role assignment có thể đổi sau login. | BE + Security chốt capability/permission trong session hoặc ma trận tĩnh có version và cơ chế refresh/invalidate; FE chốt policy hiển thị sau phản hồi. Không tự thêm field vào YAML. |
+| GAP-07-C | Nối route/menu/action staff với phiên | Staff customer, approval và fraud hiện là preview độc lập; auth preview dùng v2 Draft, còn handoff dev2 là v1. UI cuối chưa duyệt. | Sau GAP-07-A/B, GAP-05 runtime version và duyệt UI phần tương ứng: FE dùng policy tập trung, chặn direct URL, ẩn/khóa action theo quyền, xử lý `403` từ server và xóa cache khi đổi phiên/quyền. |
+| GAP-07-D | Xác minh phân quyền thật | Unit/mock chỉ kiểm điều kiện FE, không chứng minh quyền BE hay ownership. | FE + BE + QA chạy FET-12/13 và FET-10 liên quan trên API/browser thật với role, privilege CHECKER, quyền bị thu hồi, cross-user/scope, direct URL và action; lưu FE/BE SHA cùng evidence. |
 
 ## 4. Quyết định và giới hạn
 

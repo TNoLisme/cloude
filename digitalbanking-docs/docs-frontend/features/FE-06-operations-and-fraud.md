@@ -90,3 +90,7 @@ Người phụ trách FE chốt tìm khách hàng theo số điện thoại, nh�
 ### FE-06-02-MOCK ngày 20/11/2026
 
 Người phụ trách FE chốt preview staff fraud độc lập, chỉ đọc danh sách và chi tiết từ item `listFraudFlags`; ALLOW/BLOCK/ESCALATE/CLOSE bị khóa, chưa nối transfer. Không có GET detail theo flagId trong YAML; `matchedValue` object tự do không render. Fixture LARGE_VALUE/HIGH_FREQUENCY là dữ liệu tổng hợp để xem UI, không xác nhận rule/threshold hay tác động BLOCK. GAP-07/11, review mutation, FET-10 và API thật còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-06-02-MOCK/2026-11-20-ec8d548/run-01.md]].
+
+### GAP-07 — lát đọc theo ID ngày 21/11/2026
+
+Người phụ trách FE yêu cầu ưu tiên `docs-common` và kết quả `dev2`, rồi thực hiện phần GAP-07 đã rõ. Theo `07` §3.4–3.6/DEC-INT-008/BE-INT-03, `OPERATIONS` và `ADMIN` có `CUSTOMER_READ`/`ACCOUNT_READ`; `AUDITOR` chỉ có `ACCOUNT_READ`, nên hồ sơ customer bị từ chối còn danh sách/chi tiết tài khoản được đọc trong phạm vi single-bank MVP. Policy FE cho lát đọc nằm ở `src/shared/auth/feature-policy.ts`; preview staff vẫn độc lập với auth, chưa thể hiện quyền động của session thật. Tìm theo điện thoại tiếp tục chờ GAP-03; fraud decision/GAP-11 và quyền đầy đủ/GAP-07 tiếp tục mở. Bằng chứng [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-GAP07/2026-11-21-b0d695e/run-01.md]].
