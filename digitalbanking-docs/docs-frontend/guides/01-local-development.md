@@ -155,3 +155,7 @@ Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/1
 ## FE-05-02-MOCK — preview approval chỉ đọc
 
 Trong dev mock đã bật, mở `/staff/approvals?approvalPreview=v2` để xem danh sách và `/staff/approvals/8001?approvalPreview=v2` để xem chi tiết fixture. Đây là preview staff độc lập, không chứng minh session/quyền BE. Thanh kịch bản cho dữ liệu mẫu/rỗng/chậm/lỗi; UI không render `payload/result` và nút duyệt/từ chối bị khóa theo chốt người phụ trách FE ngày 19/11/2026. [[digitalbanking-docs/docs-frontend/evidence/FE-05-02-MOCK/2026-11-19-65bd72f/run-01.md]].
+
+## FE-06-01-MOCK — preview staff đọc customer theo ID
+
+Trong dev mock đã bật, mở `/staff/customers/2001?staffPreview=v2`. ID 2001 là fixture tổng hợp; ID khác cho kịch bản không tìm thấy. Có chọn dữ liệu mẫu, tài khoản rỗng, tải chậm, lỗi dịch vụ và 403. Ô tìm số điện thoại và nút Tra cứu bị khóa vì GAP-03 chưa có contract; preview không gọi search API và không chứng minh quyền/scope BE. [[digitalbanking-docs/docs-frontend/evidence/FE-06-01-MOCK/2026-11-20-797d9bc/run-01.md]].

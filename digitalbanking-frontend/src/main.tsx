@@ -17,23 +17,35 @@ async function mount() {
     mock && new URLSearchParams(location.search).get("approvalPreview") === "v2"
       ? await import("./mocks/ApprovalPreview")
       : null;
+  const staffCustomerPreview =
+    mock && new URLSearchParams(location.search).get("staffPreview") === "v2"
+      ? await import("./mocks/StaffCustomerPreview")
+      : null;
   const authPreview =
     mock && new URLSearchParams(location.search).get("authPreview") === "v2"
       ? await import("./mocks/AuthPreview")
       : null;
   const Preview =
-    mock && !authPreview && !customerPreview && !approvalPreview
+    mock &&
+    !authPreview &&
+    !customerPreview &&
+    !approvalPreview &&
+    !staffCustomerPreview
       ? (await import("./mocks/PreviewShell")).PreviewShell
       : null;
   if (mock) {
     const { startMocks } = await import("./mocks/browser");
     await startMocks();
-    if (approvalPreview) approvalPreview.prepareApprovalPreview();
+    if (staffCustomerPreview)
+      staffCustomerPreview.prepareStaffCustomerPreview();
+    else if (approvalPreview) approvalPreview.prepareApprovalPreview();
     else if (customerPreview) customerPreview.prepareCustomerPreview();
     else if (authPreview) authPreview.prepareV2AuthPreview();
     else (await import("./mocks/handlers")).selectPreviewSession();
   }
-  const app = approvalPreview ? (
+  const app = staffCustomerPreview ? (
+    <staffCustomerPreview.StaffCustomerPreview />
+  ) : approvalPreview ? (
     <approvalPreview.ApprovalPreview />
   ) : customerPreview ? (
     <customerPreview.CustomerPreview />
