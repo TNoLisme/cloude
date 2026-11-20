@@ -120,7 +120,7 @@ public class NotificationJdbcRepository implements NotificationPersistencePort {
                     claim_token = NULL,
                     locked_until = NULL,
                     updated_at = clock_timestamp()
-                WHERE notification_id = ? AND claim_token = ?
+                WHERE notification_id = ? AND claim_token = ? AND locked_until > clock_timestamp()
                 """;
 
         int affected = jdbc.update(sql, Timestamp.from(sentAt), notificationId, claimToken);
@@ -142,7 +142,7 @@ public class NotificationJdbcRepository implements NotificationPersistencePort {
                     claim_token = NULL,
                     locked_until = NULL,
                     updated_at = clock_timestamp()
-                WHERE notification_id = ? AND claim_token = ?
+                WHERE notification_id = ? AND claim_token = ? AND locked_until > clock_timestamp()
                 """;
 
         Timestamp nextRetry = nextRetryAt != null ? Timestamp.from(nextRetryAt) : null;

@@ -46,6 +46,8 @@ class JpaApprovalRequestStore implements ApprovalRequestStore {
         ApprovalRequestEntity entity = repository.findById(request.approvalId())
                 .orElseThrow(() -> new BankingBusinessException(ErrorCode.APPROVAL_NOT_FOUND));
         entity.apply(request, codec.encode(request.payload()));
+        // Audit uses JDBC and cannot flush JPA for us. Finish business writes before its chain lock.
+        repository.flush();
         return toDomain(entity);
     }
 

@@ -3,6 +3,7 @@ package com.simulatedbank.banking.transfer.adapter.out.integration;
 import com.simulatedbank.banking.account.api.AccountBalance;
 import com.simulatedbank.banking.account.api.AccountBalance.BalanceAfter;
 import com.simulatedbank.banking.account.api.AccountQuery;
+import com.simulatedbank.banking.account.api.AccountTransferEvidence;
 import com.simulatedbank.banking.account.api.AccountQuery.AccountSnapshot;
 import com.simulatedbank.banking.ledger.api.LedgerPosting;
 import com.simulatedbank.banking.ledger.api.dto.PostingCommand;
@@ -19,6 +20,9 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Comm
 import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferRecoveryEvidence.Intent;
+import com.simulatedbank.banking.transfer.application.TransferRecoveryPersistence.State;
+import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AuditWriteException;
+import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.CreditFailure;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Context;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Failure;
@@ -38,6 +42,7 @@ import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.TransactionTimedOutException;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -48,6 +53,7 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
     private final TransferSettlementStore store;
     private final TransferRecoveryStore claims;
     private final AccountBalance accounts;
+    private final AccountTransferEvidence movements;
     private final AccountQuery accountQuery;
     private final LedgerPosting ledger;
     private final TransferLimits limits;
@@ -63,6 +69,7 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
     private long started;
     private int completion = -1;
     private AttemptFence fence;
+    private State terminalFenceState = State.CLAIMED;
     private Guard guard;
     private Reservation reservation;
     private TransferLimitAdapter.Check limitCheck;
@@ -80,6 +87,7 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
         this.store = handoff.store;
         this.claims = handoff.claims;
         this.accounts = handoff.accounts;
+        this.movements = handoff.movements;
         this.accountQuery = handoff.accountQuery;
         this.ledger = handoff.ledger;
         this.limits = handoff.limits;
@@ -172,6 +180,8 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
     @Override
     public Optional<Failure> moveMoney(Context context, TransactionStatus status) {
         Intent intent = details.intent();
+        verifyTimeBudget();
+        if (!fence.equals(claims.lockUsableFence(context))) throw new IllegalStateException("Stale money fence");
         // Both Account mutations use JDBC. No ORM mutations occur inside this savepoint.
         return jdbc.execute((ConnectionCallback<Optional<Failure>>) connection -> {
             var savepoint = connection.setSavepoint();
@@ -181,10 +191,18 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
                 case INACTIVE -> Optional.of(Failure.ACCOUNT_INACTIVE);
                 case APPLIED -> {
                     debitBalance = debit.balanceAfter();
-                    var credit = accounts.creditUnderSavepoint(intent.destinationId(), intent.amount());
+                    Optional<AccountBalance.CreditResult> credit;
+                    try {
+                        credit = accounts.creditUnderSavepoint(intent.destinationId(), intent.amount());
+                    } catch (RuntimeException failureDuringCredit) {
+                        throw new CreditFailure(failureDuringCredit);
+                    }
                     if (credit.isEmpty()) {
                         connection.rollback(savepoint);
-                        if (status.isRollbackOnly()) throw new IllegalStateException("T2 is rollback-only after credit");
+                        if (status.isRollbackOnly()) {
+                            throw new CreditFailure(new UnexpectedRollbackException(
+                                    "T2 is rollback-only after credit"));
+                        }
                         // Account/usage locks predate the savepoint; JDBC rollback undid the debit.
                         debitBalance = null;
                         yield Optional.of(Failure.PROCESSING_ERROR);
@@ -201,6 +219,8 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
     @Override
     public void postAndVerifyBalancedLedger(Context context) {
         Intent intent = details.intent();
+        movements.recordMovement(new AccountTransferEvidence.Movement(intent.id(), intent.sourceId(),
+                intent.destinationId(), intent.amount(), intent.currency(), debitBalance, creditBalance));
         var pair = ledger.postDoubleEntry(new PostingCommand(intent.id(), intent.sourceId(), intent.destinationId(),
                 intent.amount(), intent.currency(), debitBalance.ledgerBalance(), creditBalance.ledgerBalance(),
                 intent.correlationId()));
@@ -234,7 +254,7 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
                     intent.correlationId(), intent.createdAt(), at, null, null, null);
         }
         var encoded = responses.encode(details, receipt, failure, at);
-        var saved = store.terminal(intent.id(), fence, at, failure == null ? null : failure.name(), encoded, ttl.get());
+        var saved = store.terminal(intent.id(), fence, terminalFenceState, at, failure == null ? null : failure.name(), encoded, ttl.get());
         response = new Committed(details.reference(), saved);
         preparedOutcome = outcome;
         if (source.isPresent() && destination.isPresent()) {
@@ -262,6 +282,25 @@ final class TransferSettlementAdapter implements Ports, TransactionSynchronizati
     @Override
     public void recordTerminalAudit(Context context, Outcome outcome, Instant at) {
         audit.recordTerminal(details, outcome, at);
+    }
+
+    void finalizeAbortedCredit(Context context, AttemptFence expected, Reservation provenPending, LocalDate date,
+            Instant at) {
+        lockStepUpGuard(context.customerId());
+        terminalFenceState = State.FAILURE_PENDING;
+        fence = claims.lockUsableFence(context, terminalFenceState);
+        if (!fence.equals(expected)) throw new IllegalStateException("Stale Tfail fence");
+        reservation = provenPending;
+        Outcome outcome = Outcome.failed(Failure.PROCESSING_ERROR);
+        releaseFailedReservation(context, at, date);
+        writeTerminalAndOutbox(context, outcome, at);
+        flushBusinessWrites();
+        try {
+            recordTerminalAudit(context, outcome, at);
+        } catch (RuntimeException failure) {
+            throw new AuditWriteException(failure);
+        }
+        readyToCommit();
     }
 
     @Override

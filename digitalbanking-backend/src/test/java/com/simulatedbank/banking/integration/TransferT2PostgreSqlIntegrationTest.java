@@ -33,18 +33,24 @@ import com.simulatedbank.banking.ledger.config.LedgerPostingConfiguration;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.ApprovedLimitChange;
 import com.simulatedbank.banking.limit.api.LimitConfigMutationPort.LimitChangeRequest;
-import com.simulatedbank.banking.notification.api.OtpGateway;
-import com.simulatedbank.banking.notification.api.NotificationOutboxPort;
-import com.simulatedbank.banking.notification.domain.NotificationChannel;
-import com.simulatedbank.banking.notification.domain.TransferNotice;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simulatedbank.banking.customer.application.CustomerPiiProtection;
+import com.simulatedbank.banking.identity.application.PasswordHasher;
+import com.simulatedbank.banking.notification.application.NotificationOutboxWorker;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.util.concurrent.LinkedBlockingQueue;
+import org.junit.jupiter.api.AfterAll;
 import com.simulatedbank.banking.testsupport.PostgreSqlIntegrationTestSupport;
 import com.simulatedbank.banking.transfer.adapter.out.integration.TransferCreateAdapters.PostCommitSettlement;
 import com.simulatedbank.banking.transfer.adapter.out.integration.TransferSettlementHandoff;
 import com.simulatedbank.banking.transfer.adapter.out.persistence.TransferSettlementStore;
 import com.simulatedbank.banking.transfer.application.AccountOwnershipPort;
 import com.simulatedbank.banking.transfer.application.FraudFlagReadPort;
-import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferReadPort;
+import com.simulatedbank.banking.transfer.application.TransferPendingMetrics;
+import com.simulatedbank.transfercandidate.recovery.TransferRecoveryJob;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.fraud.api.FraudEvaluation;
 import com.simulatedbank.banking.transfer.application.TransferStaffScope;
@@ -112,8 +118,37 @@ class TransferT2PostgreSqlIntegrationTest {
             .withCommand("postgres", "-c", "log_statement=all", "-c", "log_parameter_max_length=0",
                     "-c", "log_parameter_max_length_on_error=0", "-c", "log_line_prefix=%p ");
 
+    private static final LinkedBlockingQueue<Sms> MESSAGES = new LinkedBlockingQueue<>();
+    private static final AtomicInteger SMS_STATUS = new AtomicInteger(204);
+    private static final HttpServer SMS = smsBoundary();
+
+    private static HttpServer smsBoundary() {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext("/messages", exchange -> {
+                try (exchange) {
+                    var body = new ObjectMapper().readTree(exchange.getRequestBody());
+                    MESSAGES.add(new Sms(exchange.getRequestHeaders().getFirst("Idempotency-Key"), body));
+                    exchange.sendResponseHeaders(SMS_STATUS.get(), -1);
+                }
+            });
+            server.start();
+            return server;
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
+
+    @AfterAll
+    static void stopBoundary() {
+        SMS.stop(0);
+    }
+
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
+        registry.add("app.notification.sms.enabled", () -> true);
+        registry.add("app.notification.sms.demo-staff-contacts[80001]", () -> "0900000301");
+        registry.add("app.notification.sms.endpoint", () -> "http://127.0.0.1:" + SMS.getAddress().getPort() + "/messages");
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", () -> "banking_app");
         registry.add("spring.datasource.password", () -> "test_app");
@@ -123,6 +158,10 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     @Autowired MockMvc mvc;
+    @Autowired ObjectMapper json;
+    @Autowired CustomerPiiProtection pii;
+    @Autowired PasswordHasher hasher;
+    @Autowired NotificationOutboxWorker notificationWorker;
     @Autowired DataSource source;
     @Autowired Flyway flyway;
     @Autowired AccountNumberProtection numbers;
@@ -144,6 +183,8 @@ class TransferT2PostgreSqlIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        MESSAGES.clear();
+        SMS_STATUS.set(204);
         PostgreSqlIntegrationTestSupport.assertContainerDataSource(source, POSTGRES);
         observer = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), "banking_migrator", "test_migrator"));
         seams.afterIntent = id -> { };
@@ -157,9 +198,171 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     @Test
+    void loginResendUsesCurrentContactAndOnlyAcknowledgedCodeCanCreateSession() throws Exception {
+        Actor actor = actor();
+        contact(actor, "0900000101", true);
+        String username = key();
+        String password = "Synthetic-OTP-Pass9!";
+        observer.update("UPDATE banking.app_user SET username=?, password_hash=? WHERE user_id=?",
+                username, hasher.hash(password.toCharArray()), actor.user);
+        var login = json.readTree(mvc.perform(authPost("/login", Map.of("username", username, "password", password)))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString());
+        String ref = login.at("/challenge/challengeId").asText();
+        Sms first = sms();
+        assertThat(first.body().path("destination").asText()).isEqualTo("0900000101");
+        assertThat(first.body().path("otp").asText()).matches("[0-9]{6}");
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null))
+                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"));
+        assertThat(MESSAGES).isEmpty();
+
+        assertOtpRejected(ref, "000000", first);
+        contact(actor, "0900000102", true);
+        observer.update("""
+                UPDATE banking.auth_challenge SET created_at=now()-interval '2 minutes',
+                    sent_at=now()-interval '2 minutes' WHERE challenge_ref=?::uuid
+                """, ref);
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null)).andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.challenge.remainingAttempts").value(4));
+        Sms replacement = sms();
+        assertThat(replacement.key()).isNotEqualTo(first.key());
+        assertThat(replacement.body().path("destination").asText()).isEqualTo("0900000102");
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", first.body().path("otp").asText())))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTH_OTP_INVALID"));
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", replacement.body().path("otp").asText())))
+                .andExpect(status().isOk()).andExpect(header().exists("Set-Cookie"));
+        assertThat(count("""
+                SELECT count(*) FROM banking.auth_challenge WHERE challenge_ref=?::uuid
+                  AND resend_count=1 AND attempt_count=3 AND consumed_at IS NOT NULL
+                """, ref)).isEqualTo(1);
+        assertThat(count("""
+                SELECT count(*) FROM banking.audit_log WHERE entity_id=? AND action='AUTH_CHALLENGE_RESENT'
+                """, ref)).isEqualTo(1);
+    }
+
+    @Test
+    void configuredDemoStaffCanCompleteLoginWithoutACustomerRow() throws Exception {
+        String username = key();
+        String password = "Synthetic-OTP-Staff9!";
+        observer.update("""
+                INSERT INTO banking.app_user(user_id, username, password_hash, user_type, status)
+                OVERRIDING SYSTEM VALUE VALUES (80001, ?, ?, 'STAFF', 'ACTIVE')
+                """, username, hasher.hash(password.toCharArray()));
+        observer.update("""
+                INSERT INTO banking.user_role(user_id, role_id)
+                SELECT 80001, role_id FROM banking.role WHERE role_code='ADMIN'
+                """);
+        var login = json.readTree(mvc.perform(authPost("/login", Map.of("username", username, "password", password)))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString());
+        Sms message = sms();
+        assertThat(message.body().path("destination").asText()).isEqualTo("0900000301");
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", login.at("/challenge/challengeId").asText(),
+                        "otp", message.body().path("otp").asText())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.roles[0]").value("ADMIN"))
+                .andExpect(header().exists("Set-Cookie"));
+    }
+
+    @Test
+    void stepUpFailsClosedThenDeliversOutboxUsingContactAtSendTime() throws Exception {
+        Actor sender = actor();
+        Actor receiver = actor();
+        contact(sender, "0900000201", true);
+        Order order = order(sender, receiver, "11000000.00");
+        SMS_STATUS.set(503);
+        mvc.perform(post(sender, order, "int08-otp-rejected")).andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("OTP_DISPATCH_FAILED"));
+        sms();
+        assertThat(count("SELECT count(*) FROM banking.auth_challenge WHERE user_id=? AND status='CANCELLED'",
+                sender.user)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.idempotency_record WHERE idempotency_key=?", order.key)).isZero();
+
+        SMS_STATUS.set(204);
+        var required = json.readTree(mvc.perform(post(sender, order, "int08-otp-ready"))
+                .andExpect(status().isPreconditionRequired()).andReturn().getResponse().getContentAsString());
+        String ref = required.at("/challenge/challengeId").asText();
+        Sms proof = sms();
+        mvc.perform(authPost("/challenges/" + ref + "/resend", null)
+                .header("Authorization", "Bearer " + receiver.token)).andExpect(status().isForbidden());
+        mvc.perform(authPost("/step-up/verify", Map.of("challengeId", ref, "method", "OTP",
+                        "otp", proof.body().path("otp").asText())).header("Authorization", "Bearer " + sender.token))
+                .andExpect(status().isOk());
+        mvc.perform(post(sender, order, "int08-committed")).andExpect(status().isCreated());
+        long transfer = id(order);
+        assertThat(count("""
+                SELECT count(*) FROM banking.notification WHERE transfer_id=? AND status='PENDING' AND channel='SMS'
+                  AND NOT (jsonb_exists(payload_masked, 'destination') OR jsonb_exists(payload_masked, 'otp'))
+                """, transfer)).isEqualTo(1);
+        assertThat(MESSAGES).isEmpty();
+        contact(sender, "0900000202", true);
+        SMS_STATUS.set(503);
+        deliverNoticeFor(transfer);
+        assertThat(observer.queryForObject("SELECT status FROM banking.notification WHERE transfer_id=?",
+                String.class, transfer)).isEqualTo("RETRYING");
+        Sms failed = sms();
+        assertThat(failed.body().path("destination").asText()).isEqualTo("0900000202");
+        assertThat(failed.body().at("/payload/outcome").asText()).isEqualTo("COMPLETED");
+
+        SMS_STATUS.set(204);
+        deliverNoticeFor(transfer);
+        assertThat(sms().key()).isEqualTo(failed.key());
+        assertThat(observer.queryForObject("SELECT status FROM banking.notification WHERE transfer_id=?",
+                String.class, transfer)).isEqualTo("SENT");
+        assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", transfer)).isEqualTo(2);
+        mvc.perform(post(sender, order, "int08-replay")).andExpect(status().isCreated())
+                .andExpect(header().string("Idempotent-Replayed", "true"));
+        assertThat(count("SELECT count(*) FROM banking.notification WHERE transfer_id=?", transfer)).isEqualTo(1);
+
+        Order afterFirst = order(sender, receiver, "2000.00");
+        mvc.perform(post(sender, afterFirst, "int08-revoke-consent")).andExpect(status().isCreated());
+        long revoked = id(afterFirst);
+        contact(sender, "0900000202", false);
+        deliverNoticeFor(revoked);
+        assertThat(MESSAGES).isEmpty();
+        assertThat(count("""
+                SELECT count(*) FROM banking.notification WHERE transfer_id=? AND status='FAILED'
+                  AND failure_code='DESTINATION_UNAVAILABLE'
+                """, revoked)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", revoked)).isEqualTo(2);
+    }
+
+    private void assertOtpRejected(String ref, String candidate, Sms first) throws Exception {
+        String wrong = first.body().path("otp").asText().equals(candidate) ? "111111" : candidate;
+        mvc.perform(authPost("/otp/verify", Map.of("challengeId", ref, "otp", wrong)))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTH_OTP_INVALID"));
+    }
+
+    private void deliverNoticeFor(long transfer) {
+        // Make this fixture the oldest due row so existing T2 fixtures do not affect the claim.
+        observer.update("""
+                UPDATE banking.notification SET next_retry_at='1970-01-01', created_at='1970-01-01'
+                 WHERE transfer_id=?
+                """, transfer);
+        assertThat(notificationWorker.processBatch(1)).isEqualTo(1);
+    }
+
+    private void contact(Actor actor, String phone, boolean consent) {
+        observer.update("UPDATE banking.customer SET phone_enc=?, transfer_sms_allowed=?, updated_at=now() WHERE customer_id=?",
+                pii.encrypt(phone), consent, actor.customer);
+    }
+
+    private MockHttpServletRequestBuilder authPost(String path, Map<String, String> fields) throws Exception {
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/auth" + path);
+        return fields == null ? request : request.contentType("application/json").content(json.writeValueAsString(fields));
+    }
+
+    private Sms sms() throws InterruptedException {
+        var message = MESSAGES.poll(2, TimeUnit.SECONDS);
+        assertThat(message).as("one message delivered to the HTTP boundary").isNotNull();
+        return message;
+    }
+
+    private record Sms(String key, JsonNode body) {
+        @Override public String toString() { return "Sms[redacted]"; }
+    }
+
+    @Test
     void commitsMoneyLedgerBothScopesAuditAndOutboxThenReplaysExactBody() throws Exception {
         flyway.validate();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("24");
         Actor a = actor();
         Actor b = actor();
         addAccountConfig(a, a.account, "2000.00", "2500.00", "2020-01-01T00:00:00Z");
@@ -254,14 +457,13 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"credit", "ledgerDuplicate", "ledgerReadback", "usage", "terminal", "outbox", "audit"})
+    @ValueSource(strings = {"ledgerDuplicate", "ledgerReadback", "usage", "terminal", "outbox", "audit"})
     void rollsBackAllT2WritesAfterInjectedFailure(String phase) throws Exception {
         Actor a = actor();
         Actor b = actor();
         Order order = order(a, b, "2500.00");
         String reject = "RAISE EXCEPTION 'INT06 injected failure' USING ERRCODE='23514';";
         try (var fault = switch (phase) {
-            case "credit" -> trigger("account", "BEFORE UPDATE", "NEW.account_id=" + b.account, reject);
             case "ledgerDuplicate" -> trigger("ledger_entry", "BEFORE INSERT", "NEW.entry_seq=2",
                     "NEW.entry_seq := 1;");
             case "ledgerReadback" -> trigger("ledger_entry", "BEFORE INSERT", "NEW.entry_seq=2",
@@ -441,7 +643,7 @@ class TransferT2PostgreSqlIntegrationTest {
             return invocation.callRealMethod();
         }).when(transactions).commit(any());
         mvc.perform(post(a, order, "connection-lost")).andExpect(status().isServiceUnavailable());
-        assertPending(id(order), "CLAIMED");
+        assertPending(id(order), "MANUAL");
         assertThat(attempts).hasValue(1);
         assertBalance(a.account, "90000000.00");
         assertBalance(b.account, "90000000.00");
@@ -1200,6 +1402,373 @@ class TransferT2PostgreSqlIntegrationTest {
         }
     }
 
+    @Test
+    void tRec01RestartsAfterT1AndProcessesOnlyAfterClaimCommit() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        Order order = order(a, b, "2000.00");
+        long id = ageNextIntent(() -> prepare(a, order));
+        seams.beforeMoney = transfer -> {
+            if (transfer == id) {
+                // This connection cannot see uncommitted rows on the worker's connection.
+                assertThat(count("""
+                        SELECT count(*) FROM banking.transfer WHERE transfer_id = ? AND attempt_state = 'CLAIMED'
+                          AND attempt_epoch = 1 AND attempt_token IS NOT NULL AND recovery_attempt_count = 1
+                          AND attempt_lease_expires_at > clock_timestamp()
+                        """, id)).isEqualTo(1);
+                assertThat(count("SELECT count(*) FROM banking.account_transfer_movement WHERE transfer_id=?", id)).isZero();
+            }
+        };
+        newRecoveryJob().run();
+        assertTerminal(id, true, 1);
+        newRecoveryJob().run();
+        assertTerminal(id, true, 1);
+        assertBalance(a.account, "89998000.00");
+        assertBalance(b.account, "90002000.00");
+        mvc.perform(post(a, order, "int10-replay")).andExpect(status().isCreated())
+                .andExpect(header().string("Idempotent-Replayed", "true"));
+    }
+
+    @Test
+    void tRec02RepairsFromCommittedProvidersAndOriginalReceiptWithoutReposting() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        Order order = order(a, b, "2000.00");
+        var original = committedProvidersWithPendingTransfer(a, order);
+        long id = id(order);
+        mvc.perform(post(a, order, "int10-unreconciled")).andExpect(status().isConflict());
+        stageReceipt(id);
+        try (var fault = trigger("audit_log", "BEFORE INSERT", "NEW.action='TRANSFER_RECONCILED'",
+                "RAISE EXCEPTION 'Injected reconciliation audit failure' USING ERRCODE='23514';")) {
+            newRecoveryJob().run();
+        }
+        assertThat(count("""
+                SELECT count(*) FROM banking.transfer t JOIN banking.idempotency_record i USING(transfer_id)
+                 WHERE transfer_id=? AND t.status='PENDING' AND t.attempt_state='MANUAL'
+                   AND i.status='IN_PROGRESS' AND i.completed_at IS NULL
+                """, id)).isEqualTo(1);
+        // Simulate ops authorizing another attempt in this test after the injected fault was removed.
+        observer.update("UPDATE banking.transfer SET attempt_state='IDLE' WHERE transfer_id=?", id);
+        newRecoveryJob().run();
+        newRecoveryJob().run();
+        assertThat(count("""
+                SELECT count(*) FROM banking.transfer t JOIN banking.idempotency_record i USING(transfer_id)
+                JOIN banking.limit_transfer_reservation r USING(transfer_id)
+                JOIN banking.audit_log l ON l.entity_id=t.reference_no AND l.action='TRANSFER_RECONCILED'
+                WHERE t.transfer_id=? AND t.status='COMPLETED' AND t.attempt_state='DONE'
+                  AND t.completed_at=i.completed_at AND i.status='COMPLETED'
+                  AND i.completed_at=r.terminal_at AND i.response_body=CAST(? AS jsonb)
+                  AND l.actor_type='SYSTEM' AND l.correlation_id=t.correlation_id
+                """, id, original)).isEqualTo(1);
+        assertMoneyPostedExactlyOnce(id, a, b);
+        mvc.perform(post(a, order, "int10-original-replay")).andExpect(status().isCreated())
+                .andExpect(header().string("Idempotent-Replayed", "true"))
+                .andExpect(r -> assertThat(json.readTree(r.getResponse().getContentAsString())).isEqualTo(json.readTree(original)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"partial-ledger", "mismatch-limit", "missing-audit", "unsafe-response", "db-read", "unknown-mode"})
+    void tRec03RequiresAllProofOrKeepsPendingAndAlerts(String defect) throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        Order order = order(a, b, "2000.00");
+        boolean posted = defect.equals("missing-audit") || defect.equals("unsafe-response");
+        long id;
+        if (posted) {
+            committedProvidersWithPendingTransfer(a, order);
+            id = id(order);
+            stageReceipt(id);
+        } else {
+            id = ageNextIntent(() -> prepare(a, order));
+        }
+        var evidenceIncident = meters.counter("transfer.recovery.incident", "reason", "EVIDENCE_UNSAFE");
+        var uncertainIncident = meters.counter("transfer.recovery.incident", "reason", "OUTCOME_UNCERTAIN");
+        double before = evidenceIncident.count() + uncertainIncident.count();
+
+        switch (defect) {
+            case "partial-ledger" -> observer.update("""
+                    INSERT INTO banking.ledger_entry(transfer_id,account_id,entry_seq,entry_type,amount,currency,balance_after,correlation_id)
+                    SELECT transfer_id, source_account_id, 1, 'DEBIT', amount, currency, 89998000, correlation_id
+                     FROM banking.transfer WHERE transfer_id=?
+                    """, id);
+            case "mismatch-limit" -> observer.update("""
+                    UPDATE banking.transfer SET recovery_t1_policy='invalid-policy' WHERE transfer_id=?
+                    """, id);
+            case "missing-audit" -> setCompletionAction(id, "TRANSFER_COMPLETED", "TRANSFER_CREATED");
+            case "unsafe-response" -> observer.update("""
+                    UPDATE banking.idempotency_record SET response_body=jsonb_set(response_body,
+                        '{sourceAccount,accountNumberMasked}', '"0000000000"') WHERE transfer_id=?
+                    """, id);
+            case "unknown-mode" -> observer.update("""
+                    UPDATE banking.transfer SET recovery_t1_policy=NULL,recovery_t1_date=NULL WHERE transfer_id=?
+                    """, id);
+            case "db-read" -> { }
+            default -> throw new AssertionError(defect);
+        }
+        if (defect.equals("db-read")) {
+            try (var blocker = observer.getDataSource().getConnection(); var query = blocker.createStatement()) {
+                blocker.setAutoCommit(false);
+                query.execute("LOCK TABLE banking.ledger_entry IN ACCESS EXCLUSIVE MODE");
+                newRecoveryJob().run();
+                blocker.rollback();
+            }
+        } else {
+            try {
+                newRecoveryJob().run();
+            } finally {
+                if (defect.equals("missing-audit")) setCompletionAction(id, "TRANSFER_CREATED", "TRANSFER_COMPLETED");
+            }
+        }
+        assertThat(count("""
+                SELECT count(*) FROM banking.transfer WHERE transfer_id=? AND status='PENDING'
+                  AND attempt_state='MANUAL' AND attempt_token IS NULL AND recovery_attempt_count=1
+                """, id)).isEqualTo(1);
+        assertThat(evidenceIncident.count() + uncertainIncident.count()).isGreaterThan(before);
+        if (posted) {
+            assertMoneyPostedExactlyOnce(id, a, b);
+        } else {
+            assertBalance(a.account, "90000000.00");
+            assertBalance(b.account, "90000000.00");
+            assertNoUsage(a);
+            assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", id))
+                    .isEqualTo(defect.equals("partial-ledger") ? 1 : 0);
+        }
+        assertThat(count("""
+                SELECT count(*) FROM banking.audit_log a JOIN banking.transfer t ON a.entity_id=t.reference_no
+                WHERE t.transfer_id=? AND a.action='TRANSFER_RECONCILED'
+                """, id)).isZero();
+        mvc.perform(post(a, order, "int10-manual")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void tRec03LogsOnlyAllowlistedIncidentDetails() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        long id = ageNextIntent(() -> prepare(a, order(a, b, "2000.00")));
+        observer.update("UPDATE banking.transfer SET recovery_t1_policy=NULL,recovery_t1_date=NULL WHERE transfer_id=?", id);
+        var logger = (Logger) LoggerFactory.getLogger(
+                "com.simulatedbank.banking.transfer.adapter.out.integration.TransferRecoveryAdapter");
+        var logs = new ListAppender<ILoggingEvent>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            newRecoveryJob().run();
+            var event = logs.list.stream().filter(log -> "TRANSFER_RECOVERY_INCIDENT".equals(log.getMessage()))
+                    .findFirst().orElseThrow();
+            var encoded = json.readTree(new SafeJsonLogEncoder().encode(event));
+            assertThat(encoded.path("event").asText()).isEqualTo("TRANSFER_RECOVERY_INCIDENT");
+            assertThat(encoded.path("transfer_id").asText()).isEqualTo(Long.toString(id));
+            assertThat(encoded.path("reason").asText()).isEqualTo("EVIDENCE_UNSAFE");
+            assertThat(encoded.properties().stream().map(Map.Entry::getKey))
+                    .containsOnly("timestamp", "level", "service", "environment", "logger", "correlation_id",
+                            "request_id", "event", "transfer_id", "reason");
+        } finally {
+            logger.detachAppender(logs);
+            logs.stop();
+        }
+        assertPending(id, "MANUAL");
+    }
+
+    @Test
+    void tRec04SkipsBusyGuardAndRowAndOnlyOneWorkerProcesses() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        long id = ageNextIntent(() -> prepare(a, order(a, b, "2000.00")));
+        try (var conn = observer.getDataSource().getConnection(); var query = conn.createStatement()) {
+            conn.setAutoCommit(false);
+            query.execute("SELECT pg_advisory_xact_lock(hashtextextended('limit:customer:" + a.customer + "',0))");
+            newRecoveryJob().run();
+            conn.rollback();
+            query.execute("SELECT transfer_id FROM banking.transfer WHERE transfer_id=" + id + " FOR UPDATE");
+            newRecoveryJob().run();
+            conn.rollback();
+        }
+        assertThat(count("SELECT recovery_attempt_count FROM banking.transfer WHERE transfer_id=?", id)).isZero();
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        seams.beforeMoney = transfer -> {
+            if (transfer != id) return;
+            entered.countDown();
+            try {
+                assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+            }
+        };
+        var first = newRecoveryJob();
+        var other = newRecoveryJob();
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var active = pool.submit(first::run);
+            try {
+                assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
+                pool.submit(other::run).get(5, TimeUnit.SECONDS);
+                assertThat(count("SELECT recovery_attempt_count FROM banking.transfer WHERE transfer_id=?", id)).isEqualTo(1);
+                assertPendingDuringClaim(id);
+            } finally {
+                release.countDown();
+            }
+            active.get(10, TimeUnit.SECONDS);
+        }
+        assertTerminal(id, true, 1);
+        assertMoneyPostedExactlyOnce(id, a, b);
+    }
+
+    @Test
+    void tRec04RestartQuarantinesAnExpiredClaimAndRejectsTheOldWorker() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        long id = ageNextIntent(() -> prepare(a, order(a, b, "2000.00")));
+        var context = store.read(id).context();
+        var old = handoff.newRecoveryWorker().claimDirect(context).orElseThrow();
+        observer.update("""
+                UPDATE banking.transfer SET attempt_lease_expires_at=clock_timestamp()-interval '1 second'
+                WHERE transfer_id=?
+                """, id);
+        newRecoveryJob().run();
+        assertPending(id, "MANUAL");
+        var tx = new TransactionTemplate(transactions);
+        assertThatThrownBy(() -> tx.execute(s -> handoff.settleInRecoveryTransaction(context, old)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(handoff.newRecoveryWorker().failAfterRollback(context, old)).isEmpty();
+        assertPending(id, "MANUAL");
+        assertBalance(a.account, "90000000.00");
+        assertBalance(b.account, "90000000.00");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void creditAbortUsesTfailAfterFullRollbackAndHonorsAuditFailure(boolean rejectTfailAudit) throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        Order order = order(a, b, "2000.00");
+        try (var creditFault = trigger("account", "BEFORE UPDATE", "NEW.account_id=" + b.account, """
+                IF (SELECT available_balance FROM banking.account WHERE account_id=%d) <> 89998000 THEN
+                    RAISE EXCEPTION 'Expected debit before credit';
+                END IF;
+                RAISE EXCEPTION 'Injected T2 credit failure' USING ERRCODE='23514';
+                """.formatted(a.account));
+             var auditFault = rejectTfailAudit
+                     ? trigger("int10_audit_fault", "audit_log", "BEFORE INSERT", "NEW.action='TRANSFER_FAILED'",
+                             "RAISE EXCEPTION 'Injected Tfail audit failure' USING ERRCODE='23514';")
+                     : (AutoCloseable) () -> { }) {
+            var result = mvc.perform(post(a, order, "int10-tfail"));
+            if (rejectTfailAudit) {
+                result.andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("AUDIT_WRITE_FAILED"));
+            } else {
+                result.andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.failureCode").value("PROCESSING_ERROR"));
+            }
+        }
+        assertBalance(a.account, "90000000.00");
+        assertBalance(b.account, "90000000.00");
+        assertNoUsage(a);
+        if (rejectTfailAudit) {
+            assertPending(id(order), "MANUAL");
+        } else {
+            assertTerminal(id(order), false, 0);
+            mvc.perform(post(a, order, "int10-tfail-replay")).andExpect(status().isUnprocessableEntity())
+                    .andExpect(header().string("Idempotent-Replayed", "true"));
+        }
+    }
+
+    @Test
+    void creditAbortMarkerSurvivesRestartBeforeTfailEvenForFreshIntent() throws Exception {
+        Actor a = actor();
+        Actor b = actor();
+        long id = prepare(a, order(a, b, "2000.00"));
+        class WorkerStopped extends Error { }
+        var stop = new java.util.concurrent.atomic.AtomicBoolean(true);
+        doAnswer(invocation -> {
+            boolean ownCommit = invocation.<TransactionStatus>getArgument(0).isNewTransaction();
+            var result = invocation.callRealMethod();
+            if (ownCommit && stop.get() && count("""
+                    SELECT count(*) FROM banking.transfer WHERE transfer_id=? AND attempt_state='FAILURE_PENDING'
+                    """, id) == 1 && stop.getAndSet(false)) {
+                assertBalance(a.account, "90000000.00");
+                throw new WorkerStopped();
+            }
+            return result;
+        }).when(transactions).commit(any());
+        try (var creditFault = trigger("account", "BEFORE UPDATE", "NEW.account_id=" + b.account,
+                "RAISE EXCEPTION 'Injected credit abort' USING ERRCODE='23514';")) {
+            assertThatThrownBy(() -> handoff.settle(id)).isInstanceOf(WorkerStopped.class);
+        }
+        assertPending(id, "FAILURE_PENDING");
+        assertThat(count("""
+                SELECT count(*) FROM banking.transfer WHERE transfer_id=?
+                  AND created_at > clock_timestamp()-interval '5 minutes'
+                  AND attempt_lease_expires_at > clock_timestamp()
+                """, id)).isEqualTo(1);
+        newRecoveryJob().run();
+        assertTerminal(id, false, 0);
+        assertThat(count("SELECT recovery_attempt_count FROM banking.transfer WHERE transfer_id=?", id)).isZero();
+        assertBalance(a.account, "90000000.00");
+        assertBalance(b.account, "90000000.00");
+    }
+
+    private void setCompletionAction(long transferId, String from, String to) {
+        // Temporarily model a missing C1 in the history, then restore the original hash-chain row.
+        observer.execute("ALTER TABLE banking.audit_log DISABLE TRIGGER USER");
+        try {
+            observer.update("""
+                    UPDATE banking.audit_log a SET action=? FROM banking.transfer t
+                     WHERE t.transfer_id=? AND a.entity_id=t.reference_no AND a.action=?
+                       AND a.after_state->>'status'='COMPLETED'
+                    """, to, transferId, from);
+        } finally {
+            observer.execute("ALTER TABLE banking.audit_log ENABLE TRIGGER USER");
+        }
+    }
+
+    private void assertMoneyPostedExactlyOnce(long id, Actor a, Actor b) {
+        assertBalance(a.account, "89998000.00");
+        assertBalance(b.account, "90002000.00");
+        assertThat(count("SELECT count(*) FROM banking.account_transfer_movement WHERE transfer_id=?", id)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", id)).isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM banking.limit_transfer_usage_effect WHERE transfer_id=?", id)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.notification WHERE transfer_id=?", id)).isEqualTo(1);
+    }
+
+    private void assertPendingDuringClaim(long id) {
+        assertThat(count("""
+                SELECT count(*) FROM banking.transfer WHERE transfer_id=? AND status='PENDING'
+                  AND attempt_state='CLAIMED' AND attempt_token IS NOT NULL
+                """, id)).isEqualTo(1);
+    }
+
+    private void stageReceipt(long id) {
+        observer.update("""
+                UPDATE banking.idempotency_record SET status='IN_PROGRESS', completed_at=NULL,
+                    ttl_terminal_seconds=NULL, ttl_terminal_config_version=NULL WHERE transfer_id=?
+                """, id);
+    }
+
+    private String committedProvidersWithPendingTransfer(Actor a, Order order) throws Exception {
+        try (var fault = trigger("transfer", "BEFORE UPDATE", "NEW.status='COMPLETED'", """
+                NEW.status := 'PENDING';
+                NEW.completed_at := NULL;
+                NEW.attempt_epoch := 0;
+                NEW.attempt_state := 'IDLE';
+                """)) {
+            return ageNextIntent(() -> mvc.perform(post(a, order, "int10-anomalous"))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        }
+    }
+
+    private TransferRecoveryJob newRecoveryJob() {
+        return new TransferRecoveryJob(handoff.newRecoveryWorker(), new TransferPendingMetrics(
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), () -> new TransferPendingMetrics.Snapshot(0, 0)));
+    }
+
+    private <T> T ageNextIntent(java.util.concurrent.Callable<T> create) throws Exception {
+        observer.execute("ALTER TABLE banking.transfer ALTER COLUMN created_at SET DEFAULT (now() - interval '6 minutes')");
+        try {
+            return create.call();
+        } finally {
+            observer.execute("ALTER TABLE banking.transfer ALTER COLUMN created_at SET DEFAULT now()");
+        }
+    }
+
     private long prepare(Actor actor, Order order) throws Exception {
         try {
             seams.afterIntent = id -> { throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE); };
@@ -1213,21 +1782,25 @@ class TransferT2PostgreSqlIntegrationTest {
     }
 
     private AutoCloseable trigger(String table, String timing, String condition, String effect) {
+        return trigger("int06_fault", table, timing, condition, effect);
+    }
+
+    private AutoCloseable trigger(String name, String table, String timing, String condition, String effect) {
         observer.execute("""
-                CREATE FUNCTION banking.int06_fault() RETURNS trigger LANGUAGE plpgsql AS $$
+                CREATE FUNCTION banking.%s() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN
                     IF %s THEN %s END IF;
                     RETURN NEW;
                 END $$;
                 %s
-                """.formatted(condition, effect, timing.endsWith("INITIALLY DEFERRED")
-                    ? "CREATE CONSTRAINT TRIGGER int06_fault AFTER INSERT ON banking." + table
-                        + " DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION banking.int06_fault();"
-                    : "CREATE TRIGGER int06_fault " + timing + " ON banking." + table
-                        + " FOR EACH ROW EXECUTE FUNCTION banking.int06_fault();"));
+                """.formatted(name, condition, effect, timing.endsWith("INITIALLY DEFERRED")
+                    ? "CREATE CONSTRAINT TRIGGER " + name + " AFTER INSERT ON banking." + table
+                        + " DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION banking." + name + "();"
+                    : "CREATE TRIGGER " + name + " " + timing + " ON banking." + table
+                        + " FOR EACH ROW EXECUTE FUNCTION banking." + name + "();"));
         return () -> {
-            observer.execute("DROP TRIGGER int06_fault ON banking." + table);
-            observer.execute("DROP FUNCTION banking.int06_fault()");
+            observer.execute("DROP TRIGGER " + name + " ON banking." + table);
+            observer.execute("DROP FUNCTION banking." + name + "()");
         };
     }
 
@@ -1347,6 +1920,8 @@ class TransferT2PostgreSqlIntegrationTest {
                   AND n.payload_masked->>'outcome'=t.status AND n.payload_masked->>'maskedAccount' LIKE '**** **** %'
                 """, "TRANSFER_" + state, id, state, completed ? 201 : 422, completed ? "SETTLED" : "RELEASED",
                 effects)).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM banking.account_transfer_movement WHERE transfer_id=?", id))
+                .isEqualTo(completed ? 1 : 0);
         assertThat(count("SELECT count(*) FROM banking.ledger_entry WHERE transfer_id=?", id)).isEqualTo(completed ? 2 : 0);
         assertThat(count("SELECT count(*) FROM banking.limit_transfer_usage_effect WHERE transfer_id=?", id)).isEqualTo(effects);
     }
@@ -1362,6 +1937,7 @@ class TransferT2PostgreSqlIntegrationTest {
                       AND x.action IN ('TRANSFER_COMPLETED', 'TRANSFER_FAILED'))
                   AND NOT EXISTS (SELECT 1 FROM banking.notification WHERE transfer_id=t.transfer_id)
                   AND NOT EXISTS (SELECT 1 FROM banking.limit_transfer_usage_effect WHERE transfer_id=t.transfer_id)
+                  AND NOT EXISTS (SELECT 1 FROM banking.account_transfer_movement WHERE transfer_id=t.transfer_id)
                   AND NOT EXISTS (SELECT 1 FROM banking.ledger_entry WHERE transfer_id=t.transfer_id)
                 """, id, attempt)).isEqualTo(1);
     }
@@ -1394,21 +1970,6 @@ class TransferT2PostgreSqlIntegrationTest {
             };
         }
 
-        @Bean TransferNotifications transferNotifications(NotificationOutboxPort outbox) {
-            return new TransferNotifications((facts, outcome) -> List.of(new TransferNotifications.Recipient(
-                    facts.senderCustomerId(), TransferNotifications.Channel.IN_APP, "TRANSFER_RESULT")),
-                    notices -> outbox.enqueueTransferNotificationsInT2(notices.stream().map(notice ->
-                            new TransferNotice(notice.recipient().customerId(), notice.transferId(), notice.reference(),
-                                    NotificationChannel.IN_APP, notice.recipient().templateCode(), Map.of(
-                                    "amount", notice.amount().value(), "currency", notice.amount().currency(),
-                                    "maskedAccount", notice.maskedDestination(), "outcome",
-                                    notice.outcome().failure().isPresent() ? "FAILED" : "COMPLETED"),
-                                    notice.correlationId())).toList()));
-        }
-
-        @Bean OtpGateway unusedOtp() {
-            return (ref, user, channel, otp, expires, correlation) -> { throw new AssertionError("Unexpected OTP"); };
-        }
         @Bean TransferReadPort unusedRead() { return ref -> Optional.empty(); }
         @Bean FraudFlagReadPort unusedFraud() { return id -> List.of(); }
         @Bean AccountOwnershipPort unusedOwnership() { return (account, customer) -> AccountOwnershipPort.Ownership.NOT_FOUND; }

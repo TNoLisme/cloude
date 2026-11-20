@@ -29,6 +29,15 @@ public class LedgerPostingService implements LedgerPosting {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
+    public List<EntryEvidence> findEvidence(long transferId) {
+        return store.findAllByTransferIdOrdered(transferId).stream()
+                .map(e -> new EntryEvidence(e.entryId(), e.transferId(), e.seq(), e.side().name(), e.accountId(),
+                        e.amount(), e.currency(), e.balanceAfter(), e.correlationId()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public PostingRef postDoubleEntry(PostingCommand command) {
         if (command == null) {
             throw new InvalidPostingCommandException("posting command must not be null");

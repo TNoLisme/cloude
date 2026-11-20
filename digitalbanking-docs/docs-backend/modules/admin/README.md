@@ -4,7 +4,7 @@
 >
 > **Phạm vi:** thiết kế, hợp đồng và kế hoạch triển khai module `admin`
 >
-> **Trạng thái:** **PARTIAL** — `BE-ADM-TST-04` **DONE** (OpenAPI ↔ controller/DTO reflection, security chain thật: headers/envelope/CSRF/forged metadata/IDOR; cross-tenant BLOCKED `ADM-OI-06`); `BE-ADM-TST-05` **DONE** (DB outage/trigger rollback, provider `55P03`, crash-window replay, restart replay, retry trong TX mới; C2 chỉ publish sau commit). `BE-ADM-DOM-01` **DONE**; `BE-ADM-API-03` **DONE** (list/detail scope + 404 anti-enumeration); `BE-ADM-API-04` **DONE** (Customer/Account operational lookup trên provider runtime thật, `404 CUSTOMER_NOT_FOUND`, C3); `BE-ADM-SEC-01` **DONE** (endpoint + service authorization, forged-claim protection, CUSTOMER/session fail-closed, Maker–Checker). `BE-ADM-APP-01/02/03/04`, `BE-ADM-API-01/02` **PARTIAL** (ROLE_CHANGE proposal/decision end-to-end; LIMIT_CHANGE proposal/approve fail-closed; audit C2/C3 đầy đủ ở security-log boundary; approve/reject có evidence HTTP). Domain/persistence (read model list/detail), Checker step-up, Admin idempotency (V7), checker decision lock/rollback, REST role 201/403/404/428/CSRF và approval list/detail đã kiểm chứng; LIMIT_CHANGE provider, staff data scope và durable Audit (`AuditModuleApi`) còn BLOCKED Từ 18/11/2026: `BE-ADM-INT-01` và `BE-ADM-OPS-01` **DONE (phần runtime trong repo)** — Limit/Audit provider thật, approval/provider/audit cùng transaction; metrics/log/alert/attempt/recovery + runbook. OPEN: OI-API-05, `ADM-OI-06`, `ADM-OI-11`, retention/export Audit, deploy Prometheus. `BE-ADM-REL-01` **BLOCKED trên owner sign-off** — toàn bộ tiêu chí kỹ thuật P0 PASS (`AC-028` acceptance 4/4, OpenAPI lint, architecture/security review, full build/fresh migration); evidence tại [BE-ADM-REL-01.md](BE-ADM-REL-01.md).
+> **Trạng thái tích hợp (20/11/2026):** **BE-INT-09 Verified**: 30/30 ca nghiệm thu mới; 228 test liên quan có evidence PASS theo từng class, lượt cuối 55/55 PASS. Admin dùng provider Identity/Limit/Audit thật qua `provider.api`; V23 giữ khóa role mà không cấp UPDATE catalogue, payload approval JPA bất biến và quyết định flush trước Audit. Xem [BE-INT-09](../../workofteam/integration%20modules/BE-INT-09.md) và [báo cáo](../../workofteam/integration%20modules/BE-INT-09-verification.md) cho evidence hiện hành. Các mục BLOCKED và owner sign-off theo từng task bên dưới là lịch sử module; thẩm quyền tích hợp theo DEC-INT-003. Phần còn ngoài phạm vi: numeric policy OI-API-05, đa tenant, result lịch sử ADM-OI-11, Audit retention/export và phát hành.
 >
 > **Baseline tham chiếu:** nhánh `datht-backend-rework`
 >
@@ -39,7 +39,7 @@
 - [Failure/recovery tests BE-ADM-TST-05](BE-ADM-TST-05.md)
 - [Task breakdown và checklist](tasks/README.md)
 
-## Kết luận hiện tại
+## Lịch sử triển khai theo mốc task
 
 - `admin` là **orchestrator** của workflow Maker-Checker, sở hữu write-model `banking.approval_request`; `identity` và `limit` vẫn là write-owner của dữ liệu bị thay đổi.
 - **Đã triển khai:** `admin.domain` (`ApprovalRequest`, typed payload, state machine), `admin.application.port.ApprovalRequestStore`, JPA entity/repository/store, Flyway `V6__create_approval_request_table.sql`; test unit + PostgreSQL 16 pass.

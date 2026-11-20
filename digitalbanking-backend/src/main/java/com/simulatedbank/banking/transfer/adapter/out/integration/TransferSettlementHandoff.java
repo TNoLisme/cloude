@@ -1,6 +1,9 @@
 package com.simulatedbank.banking.transfer.adapter.out.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simulatedbank.banking.account.api.AccountBalance;
+import com.simulatedbank.banking.account.api.AccountTransferEvidence;
+import com.simulatedbank.banking.audit.api.TransferAuditEvidence;
 import com.simulatedbank.banking.account.api.AccountQuery;
 import com.simulatedbank.banking.common.error.BankingBusinessException;
 import com.simulatedbank.banking.common.error.ErrorCode;
@@ -15,11 +18,13 @@ import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.application.TransferNotifications;
 import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.ReplayResponse;
 import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.Settlement;
+import com.simulatedbank.banking.transfer.application.TransferRecoveryCandidate;
 import com.simulatedbank.banking.transfer.application.TransferRecoveryPersistence.State;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AuditWriteException;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Context;
+import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.CreditFailure;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Outcome;
 import com.simulatedbank.banking.transfer.application.TransferTelemetry;
 import com.simulatedbank.banking.transfer.application.TransferView;
@@ -28,6 +33,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -46,7 +52,9 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
     private static final int MAX_ATTEMPTS = 2;
     private static final int CLAIM_LEASE_SECONDS = 120;
     private final PlatformTransactionManager transactions;
-    private final ZoneId zone;
+    final ZoneId zone;
+    private final TransferRecoveryCandidate recovery;
+    private final TransferRecoveryAdapter recoveryPorts;
     private final TransferTelemetry telemetry;
     private final TransactionTemplate claimTx;
     private final int timeoutSeconds;
@@ -54,6 +62,7 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
     final TransferSettlementStore store;
     final TransferRecoveryStore claims;
     final AccountBalance accounts;
+    final AccountTransferEvidence movements;
     final AccountQuery accountQuery;
     final LedgerPosting ledger;
     final TransferLimits limits;
@@ -71,12 +80,14 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
             ZoneId zone, TransferTelemetry telemetry, AccountBalance accounts, AccountQuery accountQuery,
             LedgerPosting ledger, TransferLimits limits, TransferLimitAdapter limitAdapter,
             TransferAuditAdapter audit, TransferNotifications notifications, TransferFraudAdapter fraud, ResponseEncoder responses,
-            Supplier<Snapshot> ttl, Runnable flush, TransferSettlementStore store, long lockMs, long statementMs) {
+            Supplier<Snapshot> ttl, Runnable flush, TransferSettlementStore store, long lockMs, long statementMs,
+            AccountTransferEvidence movements, TransferAuditEvidence auditReads, ObjectMapper mapper) {
         this.jdbc = jdbc;
         this.transactions = transactions;
         this.zone = zone;
         this.telemetry = telemetry;
         this.accounts = accounts;
+        this.movements = movements;
         this.accountQuery = accountQuery;
         this.ledger = ledger;
         this.limits = limits;
@@ -99,6 +110,13 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
         claimTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         claimTx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         claimTx.setTimeout(timeoutSeconds);
+        recoveryPorts = new TransferRecoveryAdapter(this, auditReads, mapper);
+        recovery = newRecoveryWorker();
+    }
+
+    public TransferRecoveryCandidate newRecoveryWorker() {
+        return new TransferRecoveryCandidate(transactions, claims, this::settleInRecoveryTransaction,
+                recoveryPorts, zone, UUID.randomUUID().toString(), telemetry);
     }
 
     @Override
@@ -123,6 +141,7 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
                 if (!ports.committed()) throw new IllegalStateException("T2 commit was not confirmed");
                 return new Settlement(outcome, ports.response());
             } catch (AuditWriteException failure) {
+                if (!ports.rolledBack()) recovery.quarantine(details.context(), fence);
                 throw failure;
             } catch (RuntimeException failure) {
                 String sqlState = sqlState(failure);
@@ -131,7 +150,18 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
                     pauseBeforeRetry();
                     continue;
                 }
-                if (ports.preparedForCommit() || !ports.rolledBack()) {
+                if (ports.rolledBack() && CreditFailure.permitsTfail(failure)) {
+                    try {
+                        return recovery.failAfterRollback(details.context(), fence)
+                                .orElseThrow(() -> unavailable(failure));
+                    } catch (AuditWriteException auditFailure) {
+                        throw auditFailure;
+                    } catch (RuntimeException uncertain) {
+                        throw unavailable(uncertain);
+                    }
+                }
+                if (ports.preparedForCommit() || !ports.rolledBack()
+                        || sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("57P0"))) {
                     try {
                         if (ports.hasCommittedResponse()) {
                             return new Settlement(ports.preparedOutcome(), ports.response());
@@ -139,6 +169,7 @@ public final class TransferSettlementHandoff implements TransferCreateAdapters.P
                     } catch (RuntimeException readFailure) {
                         LOG.warn("TRANSFER_T2_COMMIT_READ_ERROR correlationId={}", details.intent().correlationId());
                     }
+                    recovery.quarantine(details.context(), fence);
                     LOG.error("TRANSFER_T2_OUTCOME_UNCERTAIN correlationId={}", details.intent().correlationId());
                     throw unavailable(failure);
                 }

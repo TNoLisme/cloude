@@ -223,6 +223,10 @@ class NotificationTransactionalOutboxIT {
         transactions.executeWithoutResult(status ->
                 jdbc.execute("UPDATE banking.notification SET locked_until = clock_timestamp() - interval '1 second', next_retry_at = clock_timestamp() - interval '1 second' WHERE notification_id = " + notifId)
         );
+        boolean acceptedAfterExpiry = Boolean.TRUE.equals(transactions.execute(status ->
+                repository.markSent(notifId, "token-1", Instant.now())));
+        assertThat(acceptedAfterExpiry).isFalse();
+
         transactions.execute(status -> repository.claimBatch(1, Duration.ofSeconds(30), "token-2"));
 
         // Now Worker 1 attempts to complete using stale token-1

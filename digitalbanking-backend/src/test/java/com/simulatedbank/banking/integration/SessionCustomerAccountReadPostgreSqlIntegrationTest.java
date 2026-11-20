@@ -105,9 +105,9 @@ class SessionCustomerAccountReadPostgreSqlIntegrationTest {
         flyway.validate();
         assertThat(Arrays.stream(flyway.info().applied()).filter(migration -> migration.getVersion() != null))
                 .extracting(migration -> migration.getVersion().getVersion())
-                .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 21)
+                .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 24)
                         .mapToObj(Integer::toString).toList());
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("24");
         assertThat(context.getBeansOfType(SessionAuthenticator.class)).containsOnlyKeys("identitySessionAuthenticator");
 
         user("unmapped-fixture", "CUSTOMER", false, "CUSTOMER");

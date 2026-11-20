@@ -1,0 +1,410 @@
+{
+  "date": "2026-11-20",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "revision": {
+    "branch": "phuong/integration",
+    "baseCommit": "1d32536f0e63916751e32dacbb4b5515ff5d1cf8",
+    "source": "working tree BE-INT-10"
+  },
+  "environment": {
+    "java": "21.0.13.1",
+    "gradle": "8.14.3",
+    "docker": "29.8.0",
+    "postgresql": "16.15",
+    "image": "postgres:16-alpine",
+    "digest": "sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139",
+    "applicationRole": "banking_app",
+    "migrationRole": "banking_migrator",
+    "profile": "test"
+  },
+  "sourceManifest": {
+    "file": "source-manifest.sha256",
+    "entries": 782
+  },
+  "migrationsIdenticalToBase": [
+    {
+      "name": "V1__init_schema.sql",
+      "sha256": "9e8f7acb2c6e9fca17541801bb96ee479937dc4fd582679b02fefb2b1aada484"
+    },
+    {
+      "name": "V2__create_identity_and_rbac_tables.sql",
+      "sha256": "3ba0c141a10c44279e01f689ac2ffcf34dd49956021bafcc8c8b79d0650c8fe2"
+    },
+    {
+      "name": "V3__add_fido_verification_material.sql",
+      "sha256": "f9aea5f7c5e95831be261983ea8d8786bc9cdfef8e879500b78adb099ef481e9"
+    },
+    {
+      "name": "V4__add_role_assignment_version.sql",
+      "sha256": "d714b2ef11c005afa2d3bdd195752316b6c174a8ae43ba0d34f821e09a0afe33"
+    },
+    {
+      "name": "V5__create_customer_table.sql",
+      "sha256": "f902b7eb1df6c4f3def1c4247eeaf5ff598cdedc123bbab996608e0d5c79b81e"
+    },
+    {
+      "name": "V6__create_approval_request_table.sql",
+      "sha256": "04ccec83198af819bb01c51bf4f627378aca1b9a6a2c459fc1a1b8a03089f76b"
+    },
+    {
+      "name": "V7__create_admin_idempotency_record_table.sql",
+      "sha256": "23993a1f2e611236fb8dcac0a046030a1f2dc89a62edae8229954254d626a696"
+    },
+    {
+      "name": "V8__create_account_table.sql",
+      "sha256": "6b397b7c4ba218b534e379dbd54626dcca3e642c761a4241086772b3a0e5885a"
+    },
+    {
+      "name": "V9__create_limit_config_table.sql",
+      "sha256": "78703370eb31547a561decb12a8e9153ceed0e7b67b2226460a4cb67114e8e0d"
+    },
+    {
+      "name": "V10__create_audit_log_table.sql",
+      "sha256": "f641d8e81ef4dc46f578cf26128c81812d59075a6af36e2335acdb15b5fb8879"
+    },
+    {
+      "name": "V11__create_admin_approval_attempt_table.sql",
+      "sha256": "8094b2f3e1de61a72e89732669794f5d07c7e86fcaab555a76fd846dfba3f947"
+    },
+    {
+      "name": "V12__create_limit_usage_and_runtime_grants.sql",
+      "sha256": "2e738c88855e31cb3d10972f0c1046503e83a46ee083fbc629236ba048b55762"
+    },
+    {
+      "name": "V13__create_transfer_and_idempotency.sql",
+      "sha256": "bf9dc807ab74b57b2a2286821ac78d1239c8206a30c1279ae46eb55864cba5a3"
+    },
+    {
+      "name": "V14__create_ledger_entry.sql",
+      "sha256": "d643d1f223072b20db55b5c1f7261a3685dd7dc319df8c882fbca69d951f53fb"
+    },
+    {
+      "name": "V15__create_fraud_tables.sql",
+      "sha256": "acc4073cf2470364d7a1182085a9ebc8d0c7c7dc8d2c04d1f3d6a8a3452c2a52"
+    },
+    {
+      "name": "V16__create_notification_table.sql",
+      "sha256": "2078001f3f10accb7cb23da8a6cd3ca1f575f908c810de247d8c79ae009b529a"
+    },
+    {
+      "name": "V17__bridge_audit_canonical_payload.sql",
+      "sha256": "72ea87fe61ad99b7543f211fbab20519ddbbb231843e940668d1de0ddc83efb3"
+    },
+    {
+      "name": "V18__restrict_approval_update_privileges.sql",
+      "sha256": "6cc88d9863aede2783b89e51f501c548c6f8ac66c7a9cb7e95a49854fc951c75"
+    },
+    {
+      "name": "V19__reject_non_finite_limit_amounts.sql",
+      "sha256": "37027a4f88bb186eb5e3de97573ba5fbacdd2b12945e06d65b6942810fa1e0b3"
+    },
+    {
+      "name": "V20__create_limit_transfer_evidence.sql",
+      "sha256": "94d44d1fb89390705b167c9f5a85624cd687bffd10ee42865c4d52828f73323a"
+    },
+    {
+      "name": "V21__integrate_transfer_fraud.sql",
+      "sha256": "3055b5789fdc8fe733bde6e0c1773f22935cdedd589d901a572c071e0fe57899"
+    },
+    {
+      "name": "V22__fence_otp_resend.sql",
+      "sha256": "d000f7f65c88ed1904d0d6b3de82f055978a31f23029872b0df2a306d079a45b"
+    },
+    {
+      "name": "V23__identity_role_read_lock.sql",
+      "sha256": "e5ef5fbeed6e19e7300543cb2d1bfcba24283feea4505bd9521d4a4081c80dc4"
+    }
+  ],
+  "runs": [
+    {
+      "name": "focused",
+      "stage": "First provider run and candidate fixtures. Two candidate expectations failed before updates to TTL/basis assertions.",
+      "workingDirectory": "digitalbanking-backend",
+      "command": "./gradlew test --offline --tests '*TransferT2PostgreSqlIntegrationTest.tRec*' --tests '*TransferT2PostgreSqlIntegrationTest.creditAbort*' --tests '*TransferRecoveryCandidatePostgresTest' --console=plain",
+      "exitCode": 1,
+      "totals": {
+        "tests": 59,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": {
+        "com.simulatedbank.banking.architecture.AuditBoundaryArchTest": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest": {
+          "tests": 26,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "junit": "junit-focused.xml",
+      "gradleOutput": "gradle-focused.txt"
+    },
+    {
+      "name": "regression",
+      "stage": "First regression. Session fixture expected V1–V22 in its migration history.",
+      "workingDirectory": "digitalbanking-backend",
+      "command": "./gradlew test --offline \\\n  --tests '*TransferT2PostgreSqlIntegrationTest' \\\n  --tests '*TransferT0T1PostgreSqlIntegrationTest' \\\n  --tests '*TransferRecoveryCandidatePostgresTest' \\\n  --tests '*TransferLimitPostgreSqlIntegrationTest' \\\n  --tests '*LedgerPostingPostgresTest' \\\n  --tests '*TransferRecoveryV24PostgreSqlIntegrationTest' \\\n  --tests '*PostgreSqlFreshMigrationIntegrationTest' \\\n  --tests '*AccountV8MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*AccountV8MigrationPostgreSqlIntegrationTest.upgradeFromV7*' \\\n  --tests '*ApprovalRequestV6MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest.upgrade*' \\\n  --tests '*SessionCustomerAccountReadPostgreSqlIntegrationTest.s01AndC01*' \\\n  --tests '*AdminMakerCheckerPostgreSqlIntegrationTest.replayAndMakerSeparation' \\\n  --console=plain",
+      "exitCode": 1,
+      "totals": {
+        "tests": 177,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": {
+        "com.simulatedbank.banking.architecture.AuditBoundaryArchTest": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest": {
+          "tests": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest": {
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.TransferRecoveryV24PostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "junit": "junit-regression.xml",
+      "gradleOutput": "gradle-regression.txt"
+    },
+    {
+      "name": "final",
+      "stage": "Final PostgreSQL/provider and migration run against the source manifest.",
+      "workingDirectory": "digitalbanking-backend",
+      "command": "./gradlew test --offline \\\n  --tests '*TransferT2PostgreSqlIntegrationTest' \\\n  --tests '*TransferT0T1PostgreSqlIntegrationTest' \\\n  --tests '*TransferRecoveryCandidatePostgresTest' \\\n  --tests '*TransferLimitPostgreSqlIntegrationTest' \\\n  --tests '*LedgerPostingPostgresTest' \\\n  --tests '*TransferRecoveryV24PostgreSqlIntegrationTest' \\\n  --tests '*PostgreSqlFreshMigrationIntegrationTest' \\\n  --tests '*AccountV8MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*AccountV8MigrationPostgreSqlIntegrationTest.upgradeFromV7*' \\\n  --tests '*ApprovalRequestV6MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.freshMigration*' \\\n  --tests '*ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest.upgrade*' \\\n  --tests '*SessionCustomerAccountReadPostgreSqlIntegrationTest.s01AndC01*' \\\n  --tests '*AdminMakerCheckerPostgreSqlIntegrationTest.replayAndMakerSeparation' \\\n  --console=plain",
+      "exitCode": 0,
+      "totals": {
+        "tests": 178,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": {
+        "com.simulatedbank.banking.architecture.AuditBoundaryArchTest": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest": {
+          "tests": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest": {
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.migration.TransferRecoveryV24PostgreSqlIntegrationTest": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "junit": "junit-final.xml",
+      "gradleOutput": "gradle-final.txt"
+    },
+    {
+      "name": "log-encoder",
+      "stage": "Final common log encoder regression against the same source manifest.",
+      "workingDirectory": "digitalbanking-backend",
+      "command": "./gradlew test --offline --tests '*SafeJsonLogEncoderTest' --console=plain",
+      "exitCode": 0,
+      "totals": {
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": {
+        "com.simulatedbank.banking.architecture.AuditBoundaryArchTest": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "junit": "junit-log-encoder.xml",
+      "gradleOutput": "gradle-log-encoder.txt"
+    }
+  ]
+}

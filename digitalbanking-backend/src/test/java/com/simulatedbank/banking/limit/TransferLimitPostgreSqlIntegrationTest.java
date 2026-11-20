@@ -533,6 +533,8 @@ class TransferLimitPostgreSqlIntegrationTest {
         assertThatThrownBy(() -> jdbc.update("DELETE FROM banking.limit_transfer_usage_effect"))
                 .isInstanceOf(DataAccessException.class);
         try (var connection = migrator(); var statement = connection.createStatement()) {
+            statement.execute("UPDATE banking.limit_transfer_usage_effect SET usage_id=usage_id+1000 WHERE scope='ACCOUNT'");
+            assertThat(readEvidence(reservation)).isInstanceOf(Mismatch.class);
             statement.execute("DELETE FROM banking.limit_transfer_usage_effect WHERE scope = 'ACCOUNT'");
         }
         assertThat(readEvidence(reservation)).isInstanceOf(Mismatch.class);

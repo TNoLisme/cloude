@@ -24,12 +24,7 @@ class LimitCustomerGuard {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void lock(long customerId) {
-        if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
-            throw new IllegalTransactionStateException("Limit customer guard requires a writable transaction");
-        }
-        if (!"read committed".equals(jdbc.queryForObject("SHOW transaction_isolation", String.class))) {
-            throw new IllegalArgumentException("Limit customer guard requires READ COMMITTED isolation");
-        }
+        requireWritableReadCommitted();
         jdbc.queryForObject("""
                 SELECT set_config('lock_timeout',
                     CASE WHEN current_setting('lock_timeout') IN ('0', '0ms') THEN ?
@@ -37,5 +32,21 @@ class LimitCustomerGuard {
                 """, String.class, defaultLockTimeout);
         jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
                 resultSet -> null, "limit:customer:" + customerId);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean tryLock(long customerId) {
+        requireWritableReadCommitted();
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT pg_try_advisory_xact_lock(hashtextextended(?, 0))",
+                Boolean.class, "limit:customer:" + customerId));
+    }
+
+    private void requireWritableReadCommitted() {
+        if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+            throw new IllegalTransactionStateException("Limit customer guard requires a writable transaction");
+        }
+        if (!"read committed".equals(jdbc.queryForObject("SHOW transaction_isolation", String.class))) {
+            throw new IllegalArgumentException("Limit customer guard requires READ COMMITTED isolation");
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Tệp:** `digital-banking-v1.yaml`
-> **Phiên bản:** 1.0.1
+> **Phiên bản:** 1.0.2
 > **Trạng thái:** Auth đồng bộ `07` + DEC-ID-008/010; không đồng nghĩa mọi operation đã có runtime
 > **Cập nhật:** 16/11/2026
 
@@ -22,7 +22,7 @@ Thư mục này chứa hợp đồng API **máy đọc** của Digital Banking M
 
 Khi hai bên mâu thuẫn, **`07. API contracts` là nguồn ngữ nghĩa**; cập nhật `07` trước, sau đó đồng bộ YAML.
 
-## 3. Nội dung chính (`digital-banking-v1.yaml` v1.0.1)
+## 3. Nội dung chính (`digital-banking-v1.yaml` v1.0.2)
 
 - Chuẩn **OpenAPI 3.1.0**, gồm **30 operations** trên base path `/api/v1`.
 - Khai báo server môi trường `demo` (`https://api.demo.local/api/v1`) và `local` (`http://localhost:8080/api/v1`).
@@ -45,7 +45,7 @@ Một hợp đồng canonical duy nhất ở YAML này; không tạo spec Identi
 | `verifyStepUp` | `POST /auth/step-up/verify` | Session cookie hoặc bearer | Chỉ challenge thuộc user và purpose step-up/sensitive. Schema giữ ba method; runtime chỉ OTP, method khác không tạo success. |
 | `logout` | `POST /auth/logout` | Session cookie hoặc bearer | Không body; 204 không body, xóa cookie; token hết hiệu lực có thể 401. |
 | `getSession` | `GET /auth/session` | Session cookie hoặc bearer | Trả authorities/session và rotate CSRF; không trả opaque session token. |
-| `resendChallenge` | `POST /auth/challenges/{challengeId}/resend` | Public cho login; authenticated owner cho step-up/sensitive | **Không có runtime route**. Giữ advertised 202; BLOCKED DEC-ID-006/MOD-OI-07 đến khi duyệt counter/cooldown/generation/fencing schema + protocol. |
+| `resendChallenge` | `POST /auth/challenges/{challengeId}/resend` | Public cho login; authenticated owner cho step-up/sensitive | **Có runtime route từ BE-INT-08**. Gửi lại theo V22 và trả 202 sau ACK khi có SMS gateway và contact hợp lệ. |
 
 - Cookie-authenticated POST bắt buộc CSRF; bearer-only miễn CSRF. `security: []` cho bốn login/proof route; resend dùng optional auth và `x-security-by-purpose` để thể hiện điều kiện không biểu diễn đủ bằng OpenAPI security thuần.
 - `x-error-codes` ánh xạ status → catalog `07` cho từng operation; lỗi chung dùng `Problem`/`ValidationErrorItem`, correlation header, `WWW-Authenticate` với 401, `Retry-After` với 429. `lockedUntil` chỉ áp dụng khóa tài khoản.

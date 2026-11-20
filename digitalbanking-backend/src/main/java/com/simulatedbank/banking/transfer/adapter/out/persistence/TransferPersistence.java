@@ -8,6 +8,7 @@ import com.simulatedbank.banking.transfer.domain.IdempotencyStatus;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferIdentity;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -30,8 +31,11 @@ public class TransferPersistence {
     @Transactional(readOnly = true)
     public Optional<Stored> findExistingOnPrimary(String key) {
         return DataAccessUtils.optionalResult(jdbc.query("""
-                SELECT t.initiated_by_user_id, t.customer_id, i.request_hash, i.status,
-                       i.response_status, i.response_body::text AS response_body
+                SELECT t.initiated_by_user_id, t.customer_id, i.request_hash,
+                       CASE WHEN t.status = 'PENDING' AND i.status IN ('COMPLETED', 'FAILED')
+                            THEN 'IN_PROGRESS' ELSE i.status END AS status,
+                       CASE WHEN t.status = i.status THEN i.response_status END AS response_status,
+                       CASE WHEN t.status = i.status THEN i.response_body::text END AS response_body
                   FROM banking.idempotency_record i
                   JOIN banking.transfer t ON t.transfer_id = i.transfer_id
                  WHERE i.idempotency_key = ?
@@ -51,6 +55,15 @@ public class TransferPersistence {
     @Transactional(readOnly = true)
     public Instant primaryTime() {
         return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class)).toInstant();
+    }
+
+    public void recordRecoveryBasis(long transferId, String policy, LocalDate date) {
+        if (jdbc.update("""
+                UPDATE banking.transfer SET recovery_t1_policy = ?, recovery_t1_date = ?
+                WHERE transfer_id = ? AND status = 'PENDING' AND recovery_t1_policy IS NULL
+                """, policy, date, transferId) != 1) {
+            throw new IllegalStateException("Transfer recovery basis already set");
+        }
     }
 
     public void attachChallenge(long transferId, long challengeId) {

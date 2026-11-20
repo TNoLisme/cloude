@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Digital Banking API
-  version: 1.0.1
+  version: 1.0.2
   summary: Hợp đồng API MVP cho Digital Banking
   description: >-
     Hợp đồng máy đọc được của Digital Banking MVP. Tài liệu ngữ nghĩa và quy tắc
@@ -486,22 +486,14 @@ paths:
         mặc định 60 giây và TTL 5 phút; xoay OTP và generation, không reset
         số lần nhập sai. 202 chỉ sau ACK và lưu SENT cho generation hiện tại;
         lỗi hoặc kết quả dispatch không rõ trả 503 OTP_DISPATCH_FAILED.
-        API-AUTH-08 advertised contract, NOT an implemented route. DEC-ID-006 blocks
-        runtime until an approved forward schema and generation/fencing protocol
-        provides durable resend count, last resend/cooldown and safe in-flight send
-        invalidation (MOD-OI-07). Do not treat this specification as runtime support.
-        LOGIN_NEW_DEVICE is public with challenge proof and rate limiting;
-        TRANSFER_STEP_UP/SENSITIVE_ACTION requires session ownership and CSRF for
-        cookie POST. Only CREATED/SENT challenges may resend. Rotate OTP, reset TTL,
-        invalidate the old OTP and preserve used verify attempts; max 3 resends and
-        cooldown are configurable. Optional channel is advertised only for multichannel
-        support. The preserved 202 contract depends on those approvals and delivery.
+        Session cookie yêu cầu CSRF. Request không có body. Gửi SMS yêu cầu
+        cấu hình gateway và địa chỉ nhận hợp lệ.
       operationId: resendChallenge
       security:
         - {}
         - sessionCookie: []
         - bearerAuth: []
-      x-runtime-status: blocked-no-route
+      x-runtime-status: sms-gateway-required
       x-security-by-purpose:
         LOGIN_NEW_DEVICE: public-challenge-proof
         TRANSFER_STEP_UP: authenticated-owner
@@ -520,16 +512,6 @@ paths:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/ChallengeIdPath'
-      requestBody:
-        required: false
-        description: Optional only when multichannel support is available
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                channel:
-                  $ref: '#/components/schemas/ChallengeChannel'
       responses:
         '202':
           description: OTP đã gửi lại

@@ -96,9 +96,9 @@ flowchart LR
 
 | Provider | Operation Admin cần | TX/ownership | Readiness/gate |
 |---|---|---|---|
-| `identity` | `SessionAuthenticator`; `StepUpChallengePort.consumeVerified`; `IdentityRoleCommand.getRoleAssignmentVersion`; `applyApprovedRoleChange` | Step-up consume và role apply `JOIN/MANDATORY`; Identity giữ user/role/session | Contract/source đã có một phần; cần Admin integration thật |
-| `limit` | `applyApprovedLimitChange(approvalId, scope, new values, expectedVersion, actor)` | `JOIN`; Limit giữ `limit_config`/version/policy | Provider runtime/contract cần hoàn thiện |
-| `audit` | C2 `recordInTransaction`, C3 deny `recordStandalone` | C2 là cuối transaction; hash-chain writer do Audit sở hữu | Durable `AuditModuleApi`/`audit_log` còn BLOCKED |
+| `identity` | `SessionAuthenticator`; `StepUpChallengePort.consumeVerified`; `IdentityRoleCommand.getRoleAssignmentVersion`; `applyApprovedRoleChange` | Step-up consume và role apply `JOIN/MANDATORY`; Identity giữ user/role/session | Runtime thật; V23 khóa role SELECT-only theo DEC-INT-018. Bằng chứng hiện hành: BE-INT-09 |
+| `limit` | `LimitConfigMutationPort.currentVersion/reservePendingChange/applyApprovedLimitChange/rejectPendingChange` | `JOIN/MANDATORY`; Limit giữ `limit_config`/version/policy, guard chung với Transfer | Runtime thật theo DEC-ADM-015/DEC-INT-011; OI-API-05 còn mở cho giá trị policy triển khai |
+| `audit` | `AuditModuleApi.recordInTransaction`, `recordStandalone` qua `AdminAuditPort` | C2 là pha DB cuối transaction; hash-chain writer do Audit sở hữu | Runtime bền vững; payload approval JPA bất biến, flush quyết định trước Audit (DEC-INT-018). Retention/export là scope riêng |
 | `customer` | exact-ID masked customer view | Read-only; Customer kiểm PII/mask, Admin kiểm use-case scope | API có nhưng staff data-scope còn BLOCKED |
 | `account` | masked account list/view, ownership/scope result | Read-only; Account giữ ownership/status | Runtime chưa có |
 | `fraud` | flag/rule read/review nếu được giao | Fraud giữ rule/flag; không Admin ghi bảng Fraud | Contract/use case chưa đủ cho core approval |

@@ -53,6 +53,15 @@ public class TransferLimitService implements TransferLimits {
 
     @Override
     public Guard lockStepUpGuard(long customerId) {
+        return acquireStepUpGuard(customerId, false).orElseThrow();
+    }
+
+    @Override
+    public Optional<Guard> tryLockStepUpGuard(long customerId) {
+        return acquireStepUpGuard(customerId, true);
+    }
+
+    private Optional<Guard> acquireStepUpGuard(long customerId, boolean skipBusy) {
         requireWritableTransaction();
         if (customerId <= 0) throw new IllegalArgumentException("Invalid Limit customer");
         for (var sync : TransactionSynchronizationManager.getSynchronizations()) {
@@ -60,13 +69,17 @@ public class TransferLimitService implements TransferLimits {
                 if (guard.customerId != customerId) {
                     throw new IllegalStateException("A Transfer transaction may guard only its source customer");
                 }
-                return guard;
+                return Optional.of(guard);
             }
         }
-        limits.lockCustomerScope(customerId);
+        if (skipBusy) {
+            if (!limits.tryLockCustomerScope(customerId)) return Optional.empty();
+        } else {
+            limits.lockCustomerScope(customerId);
+        }
         var guard = new HeldGuard(customerId);
         TransactionSynchronizationManager.registerSynchronization(guard);
-        return guard;
+        return Optional.of(guard);
     }
 
     @Override
@@ -182,8 +195,18 @@ public class TransferLimitService implements TransferLimits {
         if (!matches(stored.reservation(), expected)) return new Mismatch();
         var effects = reservations.findEffects(expected.transfer().transferId());
         if (!validEvidence(stored, effects)) return new Mismatch();
+        if (stored.state() == ReservationState.SETTLED && effects.stream().anyMatch(effect ->
+                !matchesUsageScope(expected.transfer(), stored.terminalDate(), effect))) return new Mismatch();
         return new Recorded(stored.reservation(), stored.state(),
                 Optional.ofNullable(stored.terminalAt()), Optional.ofNullable(stored.terminalDate()), effects);
+    }
+
+    private boolean matchesUsageScope(TransferLink transfer, LocalDate date, ScopeEffect effect) {
+        Long accountId = effect.scope() == Scope.CUSTOMER ? null : transfer.sourceAccountId();
+        return limits.findUsage(transfer.customerId(), accountId, date)
+                .filter(usage -> Objects.equals(usage.usageId(), effect.usageId())
+                        && transfer.currency().equals(usage.currency()))
+                .isPresent();
     }
 
     private boolean validEvidence(StoredReservation stored, List<ScopeEffect> effects) {

@@ -8,6 +8,8 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 import com.simulatedbank.banking.account.api.AccountBalance;
 import com.simulatedbank.banking.account.api.AccountQuery;
 import com.simulatedbank.banking.customer.api.CustomerQuery;
+import com.simulatedbank.banking.customer.api.CustomerDeliveryContact;
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -194,6 +196,9 @@ class ModuleBoundaryArchTest {
     static final ArchRule customerApiMustNotCarryTextualPiiFields =
             fields()
                     .that().areDeclaredInClassesThat().resideInAPackage("..banking.customer.api..")
+                    .and(DescribedPredicate.describe("are outside the internal SMS handoff",
+                            field -> !field.getOwner().isEquivalentTo(CustomerDeliveryContact.Available.class)
+                                    || !field.getName().equals("phone")))
                     .should().notHaveRawType(String.class)
                     .allowEmptyShould(true)
                     .because("BE-CUS-IMP-04: CustomerQuery snapshot carries identifiers/status only, never textual PII");

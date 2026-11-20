@@ -1,6 +1,7 @@
 # BE-ADM-INT-01 — Tích hợp thật Identity + Limit + Audit cho luồng phê duyệt
 
 > **Trạng thái:** **DONE (18/11/2026)** — phần runtime có thể kiểm chứng trong repository.
+> **Tích hợp hiện hành:** xem [BE-INT-09](../../workofteam/integration%20modules/BE-INT-09.md) và [báo cáo](../../workofteam/integration%20modules/BE-INT-09-verification.md). Các kết quả bên dưới là lịch sử module; BE-INT-09 kiểm lại với `banking_app`, provider thật và V23, sửa khóa role SELECT-only và ORM flush sau Audit theo DEC-INT-018.
 > **Phạm vi:** Admin điều phối phê duyệt `ROLE_CHANGE`/`LIMIT_CHANGE`; provider thật Identity, Limit, Audit; transaction,
 > version, idempotency và bằng chứng audit.
 > **Nguồn chuẩn:** `docs-common/design/05. Modules contract.md` §9/§10/§12.1, `docs-common/04. Database design & analysis.md`

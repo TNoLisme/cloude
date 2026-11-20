@@ -132,7 +132,7 @@ class TransferT0T1PostgreSqlIntegrationTest {
     @Test
     void httpAuthorizationOwnershipAndTtlBeforeHandoff() throws Exception {
         flyway.validate();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("21");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("24");
         Actor owner = actor();
         Actor other = actor();
         String key = key();
@@ -243,8 +243,8 @@ class TransferT0T1PostgreSqlIntegrationTest {
                     .andExpect(jsonPath("$.code").value("OTP_DISPATCH_FAILED"))
                     .andExpect(jsonPath("$.challenge").doesNotExist());
             assertNoIntent(owner, order.key());
-            assertThat(count("SELECT count(*) FROM banking.auth_challenge WHERE user_id=? AND status='CREATED'",
-                    owner.userId())).isEqualTo(1);
+            assertThat(count("SELECT count(*) FROM banking.auth_challenge WHERE user_id=? AND status=?",
+                    owner.userId(), failure == Gateway.ACK ? "EXPIRED" : "CANCELLED")).isEqualTo(1);
         }
         assertThat(handoff.calls).hasValue(0);
     }

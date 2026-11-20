@@ -50,7 +50,8 @@ public class JpaRoleChangeStore implements RoleChangeStore {
     @Override
     public Optional<Role> lockRole(String roleCode) {
         return roles.lockByCode(roleCode).map(role -> {
-            entityManager.refresh(role, LockModeType.PESSIMISTIC_READ);
+            // The V23 function already holds FOR SHARE; a caller-owned lock would require catalogue UPDATE.
+            entityManager.refresh(role);
             return role.snapshot();
         });
     }
