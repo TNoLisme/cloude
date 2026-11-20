@@ -19,10 +19,10 @@ public interface AuthAuditPort {
         AUTH_SESSION_LOGOUT,
         // BE-ID-IMP-05 — challenge lifecycle theo design/01 §5.3 catalog (tên khớp catalog):
         AUTH_CHALLENGE_CREATED,
+        AUTH_CHALLENGE_RESENT,
         AUTH_STEP_UP_VERIFIED,
         AUTH_STEP_UP_FAILED,
         AUTH_CHALLENGE_LOCKED
-        // AUTH_CHALLENGE_RESENT (C2) thuộc luồng resend BE-ID-IMP-06 — thêm khi có flow.
     }
 
     enum AuditClass {

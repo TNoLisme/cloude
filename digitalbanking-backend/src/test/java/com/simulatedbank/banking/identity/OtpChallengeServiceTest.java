@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -235,8 +236,8 @@ class OtpChallengeServiceTest {
         assertThatThrownBy(() -> service.verifyChallenge(verifyCommand(OTP)))
                 .isInstanceOfSatisfying(BankingBusinessException.class, e ->
                         assertThat(e.code()).isEqualTo(ErrorCode.AUTH_CHALLENGE_NOT_FOUND));
-        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt());
-        verify(challenges, never()).markVerified(anyLong(), anyInt());
+        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt(), any());
+        verify(challenges, never()).markVerified(anyLong(), anyInt(), any());
     }
 
     // U08: sai purpose → 409 STEP_UP_CHALLENGE_MISMATCH.
@@ -261,7 +262,7 @@ class OtpChallengeServiceTest {
         assertThatThrownBy(() -> service.verifyChallenge(verifyCommand(OTP)))
                 .isInstanceOfSatisfying(BankingBusinessException.class, e ->
                         assertThat(e.code().name()).isEqualTo(expectedCode));
-        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt());
+        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt(), any());
     }
 
     // U12: CREATED nhưng đã quá TTL → expire transition + 410 AUTH_OTP_EXPIRED.
@@ -282,7 +283,7 @@ class OtpChallengeServiceTest {
     @Test
     void u13_wrongOtpBumpsAttemptAndReturns401() {
         lockedRow("SENT", 2);
-        when(challenges.recordFailedVerifyAttempt(7L, 5))
+        when(challenges.recordFailedVerifyAttempt(eq(7L), eq(5), any()))
                 .thenReturn(Optional.of(new ChallengeRepository.FailedAttemptOutcome(3, "SENT")));
 
         assertThatThrownBy(() -> service.verifyChallenge(verifyCommand("000000")))
@@ -302,7 +303,7 @@ class OtpChallengeServiceTest {
     @Test
     void u14_wrongOtpAtMaxAttemptsLocksChallenge() {
         lockedRow("SENT", 4);
-        when(challenges.recordFailedVerifyAttempt(7L, 5))
+        when(challenges.recordFailedVerifyAttempt(eq(7L), eq(5), any()))
                 .thenReturn(Optional.of(new ChallengeRepository.FailedAttemptOutcome(5, "LOCKED")));
 
         assertThatThrownBy(() -> service.verifyChallenge(verifyCommand("000000")))
@@ -319,7 +320,7 @@ class OtpChallengeServiceTest {
     @Test
     void u15_correctOtpVerifiesWithC2Audit() {
         lockedRow("SENT", 1);
-        when(challenges.markVerified(7L, 1)).thenReturn(true);
+        when(challenges.markVerified(eq(7L), eq(1), any())).thenReturn(true);
 
         StepUpChallengePort.VerifiedChallenge result = service.verifyChallenge(verifyCommand(OTP));
 
@@ -340,7 +341,7 @@ class OtpChallengeServiceTest {
     @Test
     void u16_markVerifiedRaceFallsBackToCurrentState() {
         lockedRow("SENT", 1);
-        when(challenges.markVerified(7L, 1)).thenReturn(false);
+        when(challenges.markVerified(eq(7L), eq(1), any())).thenReturn(false);
         when(challenges.findByRefAndUser(REF, 101L)).thenReturn(
                 Optional.of(snapshot("LOCKED", 5, HASH_64, "idem-key-1", NOW.plusSeconds(200))));
 
@@ -355,7 +356,7 @@ class OtpChallengeServiceTest {
         when(challenges.findByRefAndUser(REF, 101L)).thenReturn(
                 Optional.of(snapshot("SENT", 4, HASH_64, "idem-key-1", NOW.plusSeconds(200))),
                 Optional.of(snapshot("EXPIRED", 5, HASH_64, "idem-key-1", NOW.minusSeconds(5))));
-        when(challenges.recordFailedVerifyAttempt(7L, 5)).thenReturn(Optional.empty());
+        when(challenges.recordFailedVerifyAttempt(eq(7L), eq(5), any())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.verifyChallenge(verifyCommand("000000")))
                 .isInstanceOfSatisfying(BankingBusinessException.class, e ->
@@ -368,7 +369,7 @@ class OtpChallengeServiceTest {
     void authenticatedStepUpVerificationAllowsOnlyStepUpPurposes(String purpose, String method) {
         var row = verificationSnapshot(purpose, method);
         when(challenges.findByRefAndUser(REF, 101L)).thenReturn(Optional.of(row));
-        when(challenges.markVerified(7L, 0)).thenReturn(true);
+        when(challenges.markVerified(eq(7L), eq(0), any())).thenReturn(true);
         var command = new StepUpChallengePort.VerifyCommand(REF, 101L, null,
                 OTP.toCharArray(), "corr-1");
 
@@ -390,8 +391,8 @@ class OtpChallengeServiceTest {
                 .isInstanceOfSatisfying(BankingBusinessException.class, e ->
                         assertThat(e.code()).isEqualTo(ErrorCode.STEP_UP_CHALLENGE_MISMATCH));
 
-        verify(challenges, never()).markVerified(anyLong(), anyInt());
-        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt());
+        verify(challenges, never()).markVerified(anyLong(), anyInt(), any());
+        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt(), any());
         assertThat(command.otp()).containsOnly('\0');
     }
 
@@ -496,8 +497,8 @@ class OtpChallengeServiceTest {
         assertThatThrownBy(() -> service.verifyChallenge(command))
                 .isInstanceOfSatisfying(BankingBusinessException.class, e ->
                         assertThat(e.code()).isEqualTo(ErrorCode.OTP_DISPATCH_FAILED));
-        verify(challenges, never()).markVerified(anyLong(), anyInt());
-        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt());
+        verify(challenges, never()).markVerified(anyLong(), anyInt(), any());
+        verify(challenges, never()).recordFailedVerifyAttempt(anyLong(), anyInt(), any());
         assertThat(command.otp()).containsOnly('\0');
     }
 

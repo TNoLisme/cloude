@@ -25,7 +25,7 @@
 | `adapter/out/RoleChangeUserEntity.java` | Projection app_user; chỉ version assignment và updated_at được ghi. |
 | `adapter/out/RoleChangeUserJpaRepository.java` | PESSIMISTIC_WRITE user query; target lock bảo vệ cả assignment chưa tồn tại. |
 | `adapter/out/RoleChangeRoleEntity.java` | Projection catalog role, không thay định nghĩa. |
-| `adapter/out/RoleChangeRoleJpaRepository.java` | PESSIMISTIC_READ role catalog trong approval transaction. |
+| `adapter/out/RoleChangeRoleJpaRepository.java` | Giữ khóa đọc role catalogue trong approval transaction. BE-INT-09 dùng hàm V23 `lock_role_for_assignment` để `banking_app` không cần UPDATE catalogue; xem DEC-INT-018. |
 | `adapter/out/RoleChangeAssignmentEntity.java` | Composite key user_role, assigned_by/assigned_at. |
 | `adapter/out/RoleChangePrivilegeEntity.java` | Composite key user_privilege, ACTIVE/REVOKED, grant metadata; không xóa lịch sử revoke. |
 | `adapter/out/RoleChangeSessionEntity.java` | Projection phục vụ atomic JPQL revoke theo user/status; không chứa raw token. |

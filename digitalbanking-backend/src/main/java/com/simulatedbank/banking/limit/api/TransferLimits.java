@@ -14,6 +14,9 @@ public interface TransferLimits {
     /** First lock in each gate/T1, T2, Tfail or recovery transaction. */
     Guard lockStepUpGuard(long customerId);
 
+    /** The same guard as T1/T2. Empty means contention; database failures propagate. */
+    Optional<Guard> tryLockStepUpGuard(long customerId);
+
     StepUpDecision evaluateStepUpUnderGuard(Guard guard, long sourceAccountId, BigDecimal amount,
             String currency, StepUpPolicy policy);
 

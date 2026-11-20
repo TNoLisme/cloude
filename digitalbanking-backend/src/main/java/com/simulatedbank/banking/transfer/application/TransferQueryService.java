@@ -29,9 +29,17 @@ public final class TransferQueryService {
     }
 
     public TransferDetailView get(String reference, TransferActor actor) {
+        return read(reference, actor, true);
+    }
+
+    public TransferView getReceipt(String reference, TransferActor actor) {
+        return read(reference, actor, false).transfer();
+    }
+
+    private TransferDetailView read(String reference, TransferActor actor, boolean includeFraud) {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
-        boolean staff = actor.hasAuthority("TRANSACTION_READ")
+        boolean staff = !actor.hasAuthority("ROLE_CUSTOMER") && actor.hasAuthority("TRANSACTION_READ")
                 && (actor.hasAuthority("ROLE_OPERATIONS") || actor.hasAuthority("ROLE_ADMIN")
                     || actor.hasAuthority("ROLE_AUDITOR"));
         boolean customerSelf = actor.customerId() != null && actor.hasAuthority("ROLE_CUSTOMER")
@@ -47,7 +55,7 @@ public final class TransferQueryService {
                 denyAudit.accessDenied(actor, "TRANSFER", reference, "SCOPE_DENIED", "TRANSACTION_READ");
                 throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
             }
-            boolean fraudVisible = actor.hasAuthority("FRAUD_READ") || actor.hasAuthority("FRAUD_REVIEW");
+            boolean fraudVisible = includeFraud && (actor.hasAuthority("FRAUD_READ") || actor.hasAuthority("FRAUD_REVIEW"));
             List<FraudFlagView> flags = fraudVisible ? fraudPort.findByTransfer(view.transferId()) : List.of();
             return new TransferDetailView(view, flags);
         }

@@ -137,6 +137,9 @@ app:
       daily-amount-vnd: 20000000
 
   transfer:
+    enabled: ${APP_TRANSFER_ENABLED:true}
+    recovery:
+      enabled: ${APP_TRANSFER_RECOVERY_ENABLED:false}
     min-amount-vnd: 2000
     max-amount-vnd: 10000000
     pin-otp-threshold-vnd: 5000000
@@ -145,6 +148,13 @@ app:
     t2-lock-timeout-ms: 2000
     t2-statement-timeout-ms: 5000
     fraud-eval-timeout-ms: 1000
+
+  notification:
+    sms:
+      enabled: ${APP_NOTIFICATION_SMS_ENABLED:false}
+      endpoint: ${APP_NOTIFICATION_SMS_ENDPOINT:}
+    worker:
+      enabled: ${APP_NOTIFICATION_WORKER_ENABLED:false}
 
   fraud:
     velocity-count: 3

@@ -18,6 +18,10 @@ public final class NotificationOutboxMetrics {
         if (count > 0) registry.counter("banking.notification.outbox.claimed").increment(count);
     }
 
+    public void recordTerminalFailure() {
+        registry.counter("banking.notification.outbox.terminal.failure").increment();
+    }
+
     public void recordDelivery(String outcome) {
         if (!OUTCOMES.contains(outcome)) throw new IllegalArgumentException("Unsupported notification delivery outcome");
         registry.counter("banking.notification.outbox.delivery", "outcome", outcome).increment();

@@ -1,0 +1,303 @@
+[
+  {
+    "run": 1,
+    "status": "FAIL",
+    "scope": "Initial integration. Exposed broad contact architecture rule, old OTP cancellation expectations and reference/phone misclassification.",
+    "tests": 204,
+    "failed": 33
+  },
+  {
+    "run": 2,
+    "status": "FAIL",
+    "scope": "Corrected runtime and tested SMS. Remaining failures were the expired-challenge expectation and shared-queue fixture.",
+    "tests": 259,
+    "failed": 2
+  },
+  {
+    "run": 3,
+    "status": "FAIL",
+    "scope": "Expanded scoped regression. Two migration/version fixtures still expected V21.",
+    "tests": 304,
+    "failed": 2,
+    "suites": [
+      {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.account.adapter.out.AccountSecurityLogAuditAdapterTest",
+        "failedCases": []
+      },
+      {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+        "failedCases": []
+      },
+      {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+        "failedCases": []
+      },
+      {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.customer.adapter.out.CustomerSecurityLogAuditAdapterTest",
+        "failedCases": []
+      },
+      {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.IdentityOpenApiContractTest",
+        "failedCases": []
+      },
+      {
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.OtpChallengeServiceTest",
+        "failedCases": []
+      },
+      {
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.OtpDeliveryPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.OtpDispatchServiceTest",
+        "failedCases": []
+      },
+      {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.SecurityLogAuditAdapterTest",
+        "failedCases": []
+      },
+      {
+        "tests": 8,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest",
+        "failedCases": [
+          "s01AndC01MfaBindsCustomerAndAllSelfReadsUseThatOwner()"
+        ]
+      },
+      {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest",
+        "failedCases": [],
+        "BE-INT-08": [
+          "configuredDemoStaffCanCompleteLoginWithoutACustomerRow()",
+          "loginResendUsesCurrentContactAndOnlyAcknowledgedCodeCanCreateSession()",
+          "stepUpFailsClosedThenDeliversOutboxUsingContactAtSendTime()"
+        ]
+      },
+      {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest",
+        "failedCases": [
+          "upgradePreservesV17ChecksumsAndRestrictsApprovalUpdates()"
+        ]
+      },
+      {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.FraudV21MigrationPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.notification.application.NotificationConfigurationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.notification.application.NotificationOutboxMetricsTest",
+        "failedCases": []
+      },
+      {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.notification.application.NotificationTransactionalOutboxIT",
+        "failedCases": []
+      },
+      {
+        "tests": 44,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.notification.domain.NotificationPayloadValidatorTest",
+        "failedCases": []
+      },
+      {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.transfer.architecture.TransferBoundaryTest",
+        "failedCases": []
+      }
+    ],
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0,
+    "command": "./gradlew --offline test --tests '*TransferT2PostgreSqlIntegrationTest' --tests '*TransferT0T1PostgreSqlIntegrationTest' --tests '*OtpChallengeServiceTest' --tests '*OtpDispatchServiceTest' --tests '*OtpDeliveryPostgreSqlIntegrationTest' --tests '*IdentityOpenApiContractTest' --tests '*SecurityLogAuditAdapterTest' --tests '*NotificationConfigurationTest' --tests '*NotificationTransactionalOutboxIT' --tests '*NotificationPayloadValidatorTest' --tests '*NotificationOutboxMetricsTest' --tests '*PostgreSqlFreshMigrationIntegrationTest' --tests '*AccountV8MigrationPostgreSqlIntegrationTest' --tests '*ApprovalRequestV6MigrationPostgreSqlIntegrationTest' --tests '*AdminIdempotencyV7MigrationPostgreSqlIntegrationTest' --tests '*ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest' --tests '*FraudV21MigrationPostgreSqlIntegrationTest' --tests '*SessionCustomerAccountReadPostgreSqlIntegrationTest' --tests '*TransferBoundaryTest' --tests '*ModuleBoundaryArchTest' --console=plain"
+  },
+  {
+    "run": 4,
+    "status": "PASS",
+    "scope": "Final targeted PostgreSQL run on V22 with current lease CAS and both fixed migration fixtures.",
+    "suites": [
+      {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.architecture.AuditBoundaryArchTest",
+        "failedCases": []
+      },
+      {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.architecture.ModuleBoundaryArchTest",
+        "failedCases": []
+      },
+      {
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.identity.OtpChallengeServiceTest",
+        "failedCases": []
+      },
+      {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest",
+        "failedCases": [],
+        "BE-INT-08": [
+          "configuredDemoStaffCanCompleteLoginWithoutACustomerRow()",
+          "loginResendUsesCurrentContactAndOnlyAcknowledgedCodeCanCreateSession()",
+          "stepUpFailsClosedThenDeliversOutboxUsingContactAtSendTime()"
+        ]
+      },
+      {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest",
+        "failedCases": []
+      },
+      {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "class": "com.simulatedbank.banking.notification.application.NotificationTransactionalOutboxIT",
+        "failedCases": []
+      }
+    ],
+    "tests": 129,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "command": "./gradlew --offline test --tests '*TransferT2PostgreSqlIntegrationTest' --tests '*NotificationTransactionalOutboxIT' --tests '*PostgreSqlFreshMigrationIntegrationTest' --tests '*ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest' --tests '*SessionCustomerAccountReadPostgreSqlIntegrationTest' --tests '*OtpChallengeServiceTest' --console=plain"
+  }
+]

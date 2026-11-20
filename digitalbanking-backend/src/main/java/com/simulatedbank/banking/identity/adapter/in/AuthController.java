@@ -27,6 +27,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -84,6 +85,23 @@ public class AuthController {
         } finally {
             request.eraseOtp();
         }
+    }
+
+    @PostMapping("/challenges/{challengeId}/resend")
+    public ResponseEntity<ChallengeRequiredResponse> resend(@PathVariable String challengeId,
+            @RequestBody(required = false) com.fasterxml.jackson.databind.JsonNode body, HttpServletRequest servlet) {
+        IdentityRequestValidation.requireUuid(challengeId);
+        if (body != null) {
+            throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR, "Yêu cầu gửi lại OTP không có body.");
+        }
+        Object snapshot = servlet.getAttribute(
+                "com.simulatedbank.banking.common.config.SessionAuthenticationFilter.session");
+        Long actor = snapshot instanceof com.simulatedbank.banking.common.config.SessionAuthenticator.Session session
+                ? Long.valueOf(session.userId()) : null;
+        String correlation = correlationId(servlet);
+        var challenge = challenges.resend(challengeId, actor, correlation);
+        return ResponseEntity.accepted().cacheControl(CacheControl.noStore())
+                .body(ChallengeRequiredResponse.login(challenge, correlation));
     }
 
     @PostMapping("/logout")

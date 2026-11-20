@@ -44,7 +44,7 @@ public class SecurityLogAuditAdapter implements AuthAuditPort {
 
     @Override
     public void recordInTransaction(AuthAuditEvent event, String correlationId) {
-        if (isTransferChallenge(event)) {
+        if (isTransferChallenge(event) || event.action() == AuthAction.AUTH_CHALLENGE_RESENT) {
             auditProvider().recordInTransaction(challengeEvent(event, correlationId));
         }
         emit(event, correlationId, "STANDALONE_TX");
@@ -88,9 +88,18 @@ public class SecurityLogAuditAdapter implements AuthAuditPort {
                         : Map.of("reasonCode", event.reasonCode());
         return new AuditEvent(AuditAction.valueOf(event.action().name()),
                 locked ? AuditActorType.SYSTEM : AuditActorType.USER, locked ? null : event.actorUserId(),
-                locked ? "SYSTEM" : "CUSTOMER", "AUTH_CHALLENGE", challenge.ref(), null, state, null, null,
+                locked ? "SYSTEM" : challengeRole(challenge.purpose()), "AUTH_CHALLENGE", challenge.ref(), null, state,
+                null, null,
                 success ? AuditOutcome.SUCCESS : AuditOutcome.FAILURE, correlationId,
                 RequestContextHolder.current().map(RequestContext::requestId).orElse(null), null, clock.instant());
+    }
+
+    private static String challengeRole(String purpose) {
+        return switch (purpose) {
+            case "LOGIN_NEW_DEVICE" -> "PRE_AUTH";
+            case "TRANSFER_STEP_UP" -> "CUSTOMER";
+            default -> "STAFF";
+        };
     }
 
     private void counter(String name, String... tags) {

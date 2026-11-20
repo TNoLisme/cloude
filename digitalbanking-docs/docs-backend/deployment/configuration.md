@@ -136,6 +136,8 @@ Cấu hình `application.yml` cung cấp giá trị nền dùng chung; `applicat
 | `APP_PII_AES_KEY_BASE64` | Có | — | Khóa AES-256-GCM, Base64 của đúng 32 byte |
 | `APP_HMAC_KEY_BASE64` | Có | — | Khóa HMAC-SHA-256, Base64 của đúng 32 byte |
 | `APP_COOKIE_SECURE` | Không | `false` ở base/local; profile demo đặt property secure=true | Identity đọc cấu hình cookie; actual Set-Cookie cần identity/HTTPS verification |
+| `APP_TRANSFER_ENABLED` | Không | `true` | Ghép Transfer, History và provider thật. Đặt `false` nếu chủ động tắt một dependency của Transfer. |
+| `APP_TRANSFER_RECOVERY_ENABLED` | Không | `false` | Bật lịch recovery Transfer. Cấu hình QA local bật tường minh. |
 | `APP_CORS_ALLOWED_ORIGINS` | Có trên demo | local: `http://localhost:5173`; demo: không fallback | Origin SPA tường minh; thiếu/wildcard fail startup demo |
 
 ### 4.2. Mẫu `.env.example`
@@ -392,7 +394,7 @@ Khi vượt ngưỡng, hệ thống trả về `429 RATE_LIMITED` kèm header `R
 | Phiên bản | File migration tại `classpath:db/migration` | Nội dung chính |
 |---|---|---|
 | `V1` | `V1__init_schema.sql` | Khởi tạo schema `banking`. |
-| `V2` | `V2__create_identity_and_rbac_tables.sql` | Bảng `app_user`, `device`, `session` (`csrf_token_hash`), `auth_challenge` (`resend_count`), `auth_attempt`, `password_history`, `role`, `permission`, `user_role`, `role_permission`, `user_privilege` và **seed danh mục RBAC chuẩn** (`DEC-ID-001`, gồm `CUSTOMER_READ` & `FRAUD_READ` cho `AUDITOR`). |
+| `V2` | `V2__create_identity_and_rbac_tables.sql` | Bảng `app_user`, `device`, `session` (`csrf_token_hash`), `auth_challenge` (`resend_count`), `auth_attempt`, `password_history`, `role`, `permission`, `user_role`, `role_permission`, `user_privilege` và **seed danh mục RBAC chuẩn** (`DEC-ID-001`, V25 bổ sung `FRAUD_READ` cho `AUDITOR`). |
 | `V3` | `V3__add_fido_verification_material.sql` | Bổ sung các cột xác thực FIDO2/WebAuthn trên `device` và `auth_challenge` (`DEC-ID-010`). |
 | `V4` | `V4__add_role_assignment_version.sql` | Bổ sung `app_user.role_assignment_version` (`DEC-ID-011`). |
 | `V5` | `V5__create_audit_log.sql` | Bảng `audit_log` (`canonical_payload`), `audit_chain_checkpoint`, `legal_hold`, `retention_policy`, trigger chặn `UPDATE/DELETE/TRUNCATE` và phân quyền `banking_app` (đánh số lại từ `V2__create_audit_log.sql` khi ghép tích hợp). |
@@ -401,7 +403,7 @@ Khi vượt ngưỡng, hệ thống trả về `429 RATE_LIMITED` kèm header `R
 | `V8` | `V8__create_ledger_entry.sql` | Bảng `ledger_entry`, unique `(transfer_id, entry_seq)`, trigger append-only và phân quyền `banking_app` — chuyển từ `db/ledger-candidate/V2__create_ledger_entry.sql` khi ghép tích hợp. |
 | `V9` | `V9__create_limit_and_approval_tables.sql` | Bảng `limit_config`, `limit_usage`, `limit_reservation` và `approval_request`. |
 | `V10` | `V10__create_fraud_and_notification_tables.sql` | Bảng `fraud_rule_config`, `fraud_flag` và `notification`. |
-| `R` | `db/seed/R__synthetic_demo_seed.sql` | Repeatable migration chỉ dùng cho `local`/`demo` (dữ liệu khách hàng, tài khoản, hạn mức và quy tắc gian lận mẫu). |
+| `V25` | `V25__api_read_projections.sql` | Projection chỉ đọc cho Transaction History, Fraud và quyền `FRAUD_READ` của Auditor. |
 
 Nguồn: `08` §8.1, `04` §3–§8, `DEC-COM-001`, `DEC-ID-001`. Trong giai đoạn phát triển độc lập từng module, SQL của `transfer` và `ledger` được đặt tại `db/transfer-candidate` và `db/ledger-candidate` để kiểm thử độc lập trước khi hợp nhất vào chuỗi `V1`–`V10`.
 
@@ -446,8 +448,8 @@ Nguồn: `design/04` §6.5, `04` §9.2, `06` §8.5. Không hard-code mật khẩ
 
 ### 6.5. Seed dữ liệu RBAC và dữ liệu demo (`DEC-ID-001`)
 
-- **Danh mục RBAC chuẩn (`role`, `permission`, `role_permission`):** được seed cố định ngay trong migration `V2__create_identity_and_rbac_tables.sql` cho mọi môi trường (`4` role: `CUSTOMER`, `OPERATIONS`, `ADMIN`, `AUDITOR` và `15` permission chuẩn theo `04` Appendix A.2, bao gồm `CUSTOMER_READ` và `FRAUD_READ` cho `AUDITOR`).
-- **Dữ liệu mẫu (`R__synthetic_demo_seed.sql`):** gồm hạn mức mặc định, cấu hình quy tắc gian lận, hồ sơ khách hàng/nhân viên và tài khoản synthetic; chỉ chạy trên môi trường `local`/`demo` và tuyệt đối không chứa PII thật (`NFR-032`, `CON-006`).
+- **Danh mục RBAC chuẩn (`role`, `permission`, `role_permission`):** được seed cố định ngay trong migration `V2__create_identity_and_rbac_tables.sql` cho mọi môi trường (`4` role: `CUSTOMER`, `OPERATIONS`, `ADMIN`, `AUDITOR` và `15` permission chuẩn theo `04` Appendix A.2, V25 bổ sung `FRAUD_READ` cho `AUDITOR`).
+- **Dữ liệu mẫu:** chạy theo [QA backend local](qa-backend-local.md), với DB riêng và profile `local` bật tường minh. Demo/Cloud cần provision dữ liệu riêng.
 
 ### 6.6. Backup và phục hồi
 

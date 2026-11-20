@@ -2,6 +2,8 @@ package com.simulatedbank.banking.ledger.api;
 
 import com.simulatedbank.banking.ledger.api.dto.PostingCommand;
 import com.simulatedbank.banking.ledger.api.dto.PostingRef;
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Ledger posting port (TRFC-LE-01, Modules contract §9/§13.4). The caller (Transfer) must invoke
@@ -18,4 +20,10 @@ public interface LedgerPosting {
      * inside the transaction, not the commit or a COMPLETED transfer.
      */
     PostingRef postDoubleEntry(PostingCommand command);
+
+    /** Internal recovery read, on the same primary transaction as the Transfer fence. */
+    List<EntryEvidence> findEvidence(long transferId);
+
+    record EntryEvidence(long entryId, long transferId, int sequence, String side, long accountId,
+                         BigDecimal amount, String currency, BigDecimal balanceAfter, String correlationId) { }
 }

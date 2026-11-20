@@ -98,6 +98,10 @@ public class LimitJpaAdapter implements LimitStore {
     public void lockCustomerScope(long customer) {
         guard.lock(customer);
     }
+    @Override @Transactional(propagation = Propagation.MANDATORY)
+    public boolean tryLockCustomerScope(long customer) {
+        return guard.tryLock(customer);
+    }
     @Override public Instant currentTime() { return configs.clockTimestamp(); }
     @Override public List<LimitConfiguration> findScope(long customer, Long account) {
         return configs.scope(customer, account).stream().map(this::snapshot).toList();

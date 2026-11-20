@@ -4,7 +4,7 @@
 > **Mã tài liệu:** `BE-MOD-NOTIFICATION-00`
 > **Phiên bản:** 1.0
 > **Ngày cập nhật:** 18/11/2026
-> **Trạng thái:** Outbox thật đã được kiểm chứng trong T2 theo BE-INT-06/07. Policy, delivery, `OtpGateway` và `CustomerQuery` tiếp tục ở BE-INT-08.
+> **Trạng thái:** OTP qua adapter SMS, contact Customer và outbox T2/T3 đã được kiểm chứng trong [BE-INT-08](../../workofteam/integration%20modules/BE-INT-08-verification.md).
 > **Owner:** Thịnh
 > **Phối hợp / Reviewer:** Vũ (`transfer`), Đạt (`identity`, `customer`), Phương (`common`), Thắng (`FE`)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/03. SRS.md]] (FR-041..043, NFR-008, AC-025), [[digitalbanking-docs/docs-common/04. Database design & analysis.md]] (§4.7.3), [[digitalbanking-docs/docs-common/06. System architecture.md]] (§6.2, §7.5, §10), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§5.4, §10.4, Phụ lục A.10, A.13, B.6), [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] (§11.3), [[digitalbanking-docs/docs-backend/modules/_overview/09-notification.md]], [[DECISIONS.md]] (`DEC-COM-001`, `DEC-ID-006`, `DEC-TRF-011`)
@@ -31,8 +31,8 @@ Module `com.simulatedbank.banking.notification` quản lý hàng đợi thông b
 
 `NotificationEntity` lưu `payload_masked` khi insert và coi cột này là bất biến trong JPA. Trace BE-INT-07 đã xác minh commit T2 chỉ thực hiện SQL Audit sau khi lấy khóa chuỗi. [Kiểm chứng PostgreSQL](../../workofteam/integration%20modules/BE-INT-07-verification.md)
 
-- **Bảng sở hữu độc quyền (`Write-Owner`):** `banking.notification` (`04` §4.7.3, migration `V10` theo `DEC-COM-001` & `DEC-TRF-011`) với `customer_id`, `transfer_id`, `auth_challenge_id`, `notification_type`, `channel`, `template_code`, `payload_masked JSONB NOT NULL`, `status IN ('PENDING','SENT','FAILED','RETRYING','CANCELLED')`, `UNIQUE (transfer_id, customer_id, notification_type, channel)`.
-- **Tham số vận hành chuẩn (`DEC-TRF-011`):** Chu kỳ quét outbox **2 giây** (`2000 ms`), kích thước lô **50 bản ghi**, thời hạn thuê (`lease`) **30 giây**, thử lại tối đa **5 lần**; giải mã địa chỉ nhận tạm thời ngay trước khi gửi qua `CustomerQuery.resolveNotificationDestination`.
+- **Bảng sở hữu độc quyền (`Write-Owner`):** `banking.notification` (`04` §4.7.3, migration canonical V16/V22 theo DEC-TRF-011 và DEC-INT-017) với `customer_id`, `transfer_id`, `auth_challenge_id`, `notification_type`, `channel`, `template_code`, `payload_masked JSONB NOT NULL`, `status IN ('PENDING','SENT','FAILED','RETRYING','CANCELLED')`, `UNIQUE (transfer_id, customer_id, notification_type, channel)`.
+- **Tham số vận hành chuẩn (`DEC-TRF-011`):** Chu kỳ quét outbox **2 giây** (`2000 ms`), kích thước lô **50 bản ghi**, thời hạn thuê (`lease`) **30 giây**, thử lại tối đa **5 lần**; giải mã địa chỉ nhận tạm thời ngay trước khi gửi qua `CustomerDeliveryContact`.
 
 ---
 

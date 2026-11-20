@@ -40,8 +40,8 @@ class PackagedApplicationReadinessIntegrationTest {
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("digital_banking").withUsername("postgres").withPassword("synthetic-admin-only")
             .withEnv("BANKING_APP_PASSWORD", APP_PASSWORD).withEnv("BANKING_MIGRATION_PASSWORD", MIGRATION_PASSWORD)
-            .withCopyFileToContainer(MountableFile.forHostPath(Path.of("docker/postgres/init/01-create-roles.sh")),
-                    "/docker-entrypoint-initdb.d/01-create-roles.sh");
+            .withCopyFileToContainer(MountableFile.forHostPath(Path.of("docker/postgres/init/01-create-roles.sql")),
+                    "/docker-entrypoint-initdb.d/01-create-roles.sql");
 
     @BeforeAll
     static void packagedArtifactExists() {

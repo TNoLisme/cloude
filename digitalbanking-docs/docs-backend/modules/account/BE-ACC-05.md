@@ -1,5 +1,7 @@
 # BE-ACC-05 — GET Account APIs + security/C3
 
+> **Cập nhật DEC-INT-020:** OpenAPI v1.1.0 dùng `AccountOwner {customerId,status}`. Các ghi chú về `owner.fullName` bên dưới ghi lại giới hạn của hợp đồng trước v1.1.0.
+
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** BE-ACC-05
 > **Phiên bản:** v1.0

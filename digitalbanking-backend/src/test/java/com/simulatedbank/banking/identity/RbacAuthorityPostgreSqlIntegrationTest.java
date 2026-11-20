@@ -106,7 +106,7 @@ class RbacAuthorityPostgreSqlIntegrationTest {
     void staffCannotAcquireCustomerRoleOrSelfServicePermissions() {
         long user = user("STAFF", "CUSTOMER", "AUDITOR");
         assertThat(authorities.loadAuthorities(user)).containsExactlyInAnyOrder(
-                "ROLE_AUDITOR", "AUDIT_READ", "AUDIT_EXPORT", "TRANSACTION_READ", "ACCOUNT_READ");
+                "ROLE_AUDITOR", "AUDIT_READ", "AUDIT_EXPORT", "TRANSACTION_READ", "ACCOUNT_READ", "FRAUD_READ");
         assertThat(authorities.loadAuthorities(user("STAFF", "CUSTOMER"))).isEmpty();
     }
 

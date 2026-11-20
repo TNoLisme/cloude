@@ -127,7 +127,12 @@ public class NotificationOutboxWorker {
                             retryPolicy.exhaustedFailureCode()
                     )
             ));
-            metrics.recordDelivery("failed");
+            if (updated) {
+                metrics.recordDelivery("failed");
+                metrics.recordTerminalFailure();
+            } else {
+                metrics.recordDelivery("stale");
+            }
             return false;
         }
 
@@ -160,11 +165,17 @@ public class NotificationOutboxWorker {
 
             String safeCode = retryPolicy.toSafeFailureCode(ex);
             int newRetryCount = item.retryCount();
-            NotificationStatus nextStatus = retryPolicy.determineNextStatus(newRetryCount);
-            if (nextStatus == NotificationStatus.FAILED) {
+            NotificationStatus nextStatus = ex instanceof NotificationDeliveryPort.PermanentFailure
+                    ? NotificationStatus.FAILED : retryPolicy.determineNextStatus(newRetryCount);
+            if (ex instanceof NotificationDeliveryPort.PermanentFailure permanent) {
+                safeCode = permanent.getMessage();
+            } else if (nextStatus == NotificationStatus.FAILED) {
                 safeCode = retryPolicy.exhaustedFailureCode();
             }
-            Instant nextRetryAt = retryPolicy.calculateNextRetry(clock.instant(), newRetryCount);
+            Instant nextRetryAt = nextStatus == NotificationStatus.RETRYING
+                    ? retryPolicy.calculateNextRetry(clock.instant(), newRetryCount)
+                            .plusMillis(java.util.concurrent.ThreadLocalRandom.current().nextLong(1000))
+                    : null;
 
             final String finalFailureCode = safeCode;
             boolean updated = Boolean.TRUE.equals(requiresNewTemplate.execute(status ->
@@ -176,6 +187,13 @@ public class NotificationOutboxWorker {
                 metrics.recordDelivery("stale");
             } else {
                 metrics.recordDelivery("failed");
+                if (nextStatus == NotificationStatus.FAILED) {
+                    if (!(ex instanceof NotificationDeliveryPort.PermanentFailure)) {
+                        metrics.recordTerminalFailure();
+                    }
+                    log.warn("Notification delivery terminal failure notificationId={} failureCode={}",
+                            item.notificationId(), finalFailureCode);
+                }
             }
             return false;
         }

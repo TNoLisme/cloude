@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" tests="3" failures="0" errors="0" skipped="0" timestamp="2026-11-20T07:00:41.097Z" time="3.912">
+    <testcase name="applicationMustNotDependOnOutboundAdapters" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="3.527" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.019" />
+    <testcase name="externalModulesMustNotImportAuditInternals" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.364" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" tests="18" failures="0" errors="0" skipped="0" timestamp="2026-11-20T07:00:45.011Z" time="0.743">
+    <testcase name="commonMustNotDependOnBusinessModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.053" />
+    <testcase name="commonMustNotOwnPersistenceOrTransactionBoundaries" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.005" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="inboundAdapterMustNotAccessOutboundAdapterDirectly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.01" />
+    <testcase name="modulesMustBeFreeOfCycles" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.416" />
+    <testcase name="customerApiMustNotExposeEntitiesOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.003" />
+    <testcase name="customerInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.083" />
+    <testcase name="customerMustNotReachCrossModuleInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.008" />
+    <testcase name="customerQueryIsImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="accountApiMustDependOnJdkOrCommonOnly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.003" />
+    <testcase name="accountInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.063" />
+    <testcase name="accountPortsAreImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="accountMustNotReachSiblingOrOrchestratorInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.013" />
+    <testcase name="customerApiMustNotCarryTextualPiiFields" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="adminInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.054" />
+    <testcase name="adminInboundAdapterMustNotDependOnPersistenceModel" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001" />
+    <testcase name="adminDomainMustNotDependOnPersistenceOrAdapters" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001" />
+    <testcase name="adminPublicApiMustNotExposePersistenceOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" tests="7" failures="0" errors="0" skipped="0" timestamp="2026-11-20T07:00:45.983Z" time="0.137">
+    <testcase name="workflowEventKeepsOnlyBoundedKeys()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.118" />
+    <testcase name="nonCatalogActionAndEntityAreDropped()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.003" />
+    <testcase name="writeFailureFactKeepsOnlyBoundedFailureFields()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.003" />
+    <testcase name="adminAuditFactIsSerializedWithAllowlistedFieldsOnly()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.005" />
+    <testcase name="workflowUnboundedOrSecretLookingValuesAreDropped()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.002" />
+    <testcase name="workflowLoggerWithAnotherMessageStaysGeneric()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.002" />
+    <testcase name="nonAuditLoggerNeverEmitsKeyValuesOrRawMessage()" classname="com.simulatedbank.banking.common.config.SafeJsonLogEncoderTest" time="0.002" />
+  </testsuite>
+</testsuites>

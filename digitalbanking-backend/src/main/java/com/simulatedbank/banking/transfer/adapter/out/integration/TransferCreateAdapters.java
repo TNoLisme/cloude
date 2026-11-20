@@ -193,7 +193,8 @@ public final class TransferCreateAdapters implements TransferPreflightCandidate.
 
         @Override public void reserveForPendingTransfer(Command command, TransferIntentCandidate.Assessment assessment,
                 long transferId) {
-            limitAdapter.reserve(guard, command, pending, limitDecision);
+            var reserved = limitAdapter.reserve(guard, command, pending, limitDecision);
+            transfers.recordRecoveryBasis(transferId, reserved.policyVersion(), reserved.t1Date());
         }
 
         @Override public long consumeVerified(Command command, UUID challengeRef) {

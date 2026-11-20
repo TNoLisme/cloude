@@ -14,6 +14,8 @@ import com.simulatedbank.banking.transfer.application.TransferRecoveryEvidence.R
 import com.simulatedbank.banking.transfer.application.TransferRecoveryEvidence.Snapshot;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.AttemptFence;
 import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.Context;
+import com.simulatedbank.banking.transfer.application.TransferSettlementCandidate.CreditFailure;
+import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.Settlement;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.ConcurrencyFailureException;
@@ -43,7 +46,7 @@ public final class TransferRecoveryCandidate {
 
     private final TransactionTemplate transaction;
     private final TransferRecoveryPersistence store;
-    private final TransferSettlementCandidate settlement;
+    private final BiConsumer<Context, AttemptFence> settlement;
     private final Ports ports;
     private final ZoneId businessZone;
     private final String owner;
@@ -54,11 +57,11 @@ public final class TransferRecoveryCandidate {
     public TransferRecoveryCandidate(PlatformTransactionManager manager, TransferRecoveryPersistence store,
                                      TransferSettlementCandidate settlement, Ports ports, ZoneId businessZone,
                                      String owner) {
-        this(manager, store, settlement, ports, businessZone, owner, TransferTelemetry.DISABLED);
+        this(manager, store, settlement::settleInRecoveryTransaction, ports, businessZone, owner, TransferTelemetry.DISABLED);
     }
 
     public TransferRecoveryCandidate(PlatformTransactionManager manager, TransferRecoveryPersistence store,
-                                     TransferSettlementCandidate settlement, Ports ports, ZoneId businessZone,
+                                     BiConsumer<Context, AttemptFence> settlement, Ports ports, ZoneId businessZone,
                                      String owner, TransferTelemetry telemetry) {
         this.telemetry = Objects.requireNonNull(telemetry);
         transaction = new TransactionTemplate(Objects.requireNonNull(manager));
@@ -77,8 +80,14 @@ public final class TransferRecoveryCandidate {
 
     public synchronized void recoverBatch() {
         requireJobContext();
-        if (cursor == null) cutoff = store.now().minus(MIN_AGE);
-        List<Context> candidates = store.discover(cutoff, cursor, BATCH);
+        List<Context> candidates;
+        try {
+            if (cursor == null) cutoff = store.now().minus(MIN_AGE);
+            candidates = store.discover(cutoff, cursor, BATCH);
+        } catch (RuntimeException failure) {
+            telemetry.recoveryIncident(Incident.SCAN_UNAVAILABLE);
+            throw failure;
+        }
         for (Context context : candidates) {
             if (!RequestContext.isValidCorrelationId(context.correlationId())) {
                 alert(context, Incident.CONTEXT_INVALID);
@@ -132,6 +141,14 @@ public final class TransferRecoveryCandidate {
         } catch (UnsafeEvidence failure) {
             handleFailedProcessing(context, fence, Incident.EVIDENCE_UNSAFE, false);
         } catch (RuntimeException failure) {
+            if (completion.status == TransactionSynchronization.STATUS_ROLLED_BACK && CreditFailure.permitsTfail(failure)) {
+                try {
+                    failAfterRollback(context, fence);
+                } catch (RuntimeException alreadyAlerted) {
+                    // Tfail has already applied the fail-closed handling.
+                }
+                return;
+            }
             boolean retry = completion.retryableBodyFailure
                     && completion.status == TransactionSynchronization.STATUS_ROLLED_BACK;
             handleFailedProcessing(context, fence, Incident.OUTCOME_UNCERTAIN, retry);
@@ -143,9 +160,14 @@ public final class TransferRecoveryCandidate {
         if (row == null) return null;
 
         Instant now = store.now();
-        if (row.intent().createdAt().isAfter(now.minus(MIN_AGE))) return null;
-        if (row.state() == State.CLAIMED && row.leaseUntil().isAfter(now)) return null;
-        if (row.state() == State.MANUAL) return null;
+        if (row.state() == State.FAILURE_PENDING) {
+            if (row.leaseUntil().isAfter(now) && withinWindow(row, now)) {
+                return new AttemptFence(row.epoch(), row.token());
+            }
+        } else if (row.state() == State.MANUAL || row.intent().createdAt().isAfter(now.minus(MIN_AGE))
+                || (row.state() == State.CLAIMED && row.leaseUntil().isAfter(now))) {
+            return null;
+        }
         if (row.state() != State.IDLE || (row.epoch() > 0 && row.count() == 0)) {
             store.clear(row, State.MANUAL, null);
             afterCommit(() -> telemetry.recovery(RecoveryResult.MANUAL));
@@ -168,31 +190,29 @@ public final class TransferRecoveryCandidate {
 
     private void process(Context context, AttemptFence fence, ProcessingCompletion completion) {
         ports.requireSystemRecovery();
-        ports.lockCustomerGuard(context.customerId());
-        Locked row = store.lock(context)
-                .filter(candidate -> candidate.matches(context) && candidate.pending() && candidate.matches(fence))
-                .orElseThrow(FenceUnavailable::new);
-        Instant now = store.now();
-        if (!row.leaseUntil().isAfter(now) || !row.first().plus(RETRY_WINDOW).isAfter(now)) {
-            throw new FenceUnavailable();
+        Locked row = lockForProcessing(context, fence);
+        if (row.state() == State.FAILURE_PENDING) {
+            finishFailure(row, fence);
+            return;
         }
 
         Intent intent = row.intent();
         Basis basis = ports.findTransferBasis(intent).orElseThrow(UnsafeEvidence::new);
-        Snapshot evidence = Snapshot.read(ports, intent.id());
-        if (evidence.allowsResume(intent, basis)) {
+        Snapshot evidence = Snapshot.read(ports, intent, basis);
+        if (evidence.allowsResume(intent, basis) && ports.hasNoResponse(intent)) {
             try {
-                settlement.settleInRecoveryTransaction(context, fence);
+                settlement.accept(context, fence);
                 afterCommit(() -> telemetry.recovery(RecoveryResult.RESUMED));
             } catch (RuntimeException failure) {
-                completion.retryableBodyFailure = failure instanceof ConcurrencyFailureException
-                        || (failure instanceof TransferSettlementCandidate.AuditWriteException
-                            && failure.getCause() instanceof ConcurrencyFailureException);
+                Throwable cause = failure instanceof CreditFailure || failure instanceof TransferSettlementCandidate.AuditWriteException
+                        ? failure.getCause() : failure;
+                completion.retryableBodyFailure = cause instanceof ConcurrencyFailureException;
                 throw failure;
             }
             return;
         }
 
+        Instant now = store.now();
         Repair repair = evidence.repair(intent, basis, now, businessZone).orElseThrow(UnsafeEvidence::new);
         Replay replay = ports.findSafeReplay(intent).filter(value -> repair.acceptsReplay(intent, value))
                 .orElseThrow(UnsafeEvidence::new);
@@ -203,6 +223,55 @@ public final class TransferRecoveryCandidate {
         ports.flushBusinessWrites();
         telemetry.requiredAudit(AuditClass.C1, () -> ports.recordReconciled(intent, now));
         afterCommit(() -> telemetry.recovery(RecoveryResult.RECONCILED));
+    }
+
+    /** Caller observed a classified post-debit credit failure and a confirmed rollback of the entire T2. */
+    public Optional<Settlement> failAfterRollback(Context context, AttemptFence fence) {
+        requireNoOuterTransaction();
+        try {
+            transaction.executeWithoutResult(status -> {
+                Locked row = lockForProcessing(context, fence);
+                if (row.state() == State.CLAIMED) store.markFailurePending(row);
+            });
+            return Optional.ofNullable(transaction.execute(status -> {
+                Locked row = lockForProcessing(context, fence);
+                return row.state() == State.FAILURE_PENDING ? finishFailure(row, fence) : null;
+            }));
+        } catch (FenceUnavailable lostFence) {
+            quarantine(context, fence);
+            return Optional.empty();
+        } catch (RuntimeException failure) {
+            quarantine(context, fence);
+            throw failure;
+        }
+    }
+
+    public void quarantine(Context context, AttemptFence fence) {
+        handleFailedProcessing(context, fence, Incident.OUTCOME_UNCERTAIN, false);
+    }
+
+    private Locked lockForProcessing(Context context, AttemptFence fence) {
+        ports.lockCustomerGuard(context.customerId());
+        Locked row = store.lock(context)
+                .filter(candidate -> candidate.matches(context) && candidate.pending() && candidate.matches(fence))
+                .orElseThrow(FenceUnavailable::new);
+        Instant now = store.now();
+        if (!row.leaseUntil().isAfter(now) || !withinWindow(row, now)) throw new FenceUnavailable();
+        return row;
+    }
+
+    private static boolean withinWindow(Locked row, Instant now) {
+        return row.first() == null || row.first().plus(RETRY_WINDOW).isAfter(now);
+    }
+
+    private Settlement finishFailure(Locked row, AttemptFence fence) {
+        Intent intent = row.intent();
+        Basis basis = ports.findTransferBasis(intent).orElseThrow(UnsafeEvidence::new);
+        Snapshot evidence = Snapshot.read(ports, intent, basis);
+        if (!evidence.allowsResume(intent, basis) || !ports.hasNoResponse(intent)) throw new UnsafeEvidence();
+        Settlement result = Objects.requireNonNull(ports.finalizeFailure(intent, fence, basis, store.now()));
+        telemetry.terminalAfterCommit(result.outcome());
+        return result;
     }
 
     private void handleFailedProcessing(Context context, AttemptFence fence, Incident incident, boolean retry) {
@@ -219,7 +288,7 @@ public final class TransferRecoveryCandidate {
                 }
                 Locked row = candidate.get();
                 if (!row.matches(context) || !row.pending() || !row.matches(fence)) return;
-                if (retry && !exhausted(row, store.now())) {
+                if (retry && row.state() == State.CLAIMED && !exhausted(row, store.now())) {
                     store.clear(row, State.IDLE, row.next());
                     afterCommit(() -> telemetry.recovery(RecoveryResult.RETRY));
                 } else {
@@ -281,6 +350,8 @@ public final class TransferRecoveryCandidate {
         void lockCustomerGuard(long customerId);
         Optional<Basis> findTransferBasis(Intent intent);
         Optional<Replay> findSafeReplay(Intent intent);
+        boolean hasNoResponse(Intent intent);
+        Settlement finalizeFailure(Intent intent, AttemptFence fence, Basis basis, Instant terminalAt);
         IdempotencyRetention.Snapshot terminalRetention();
         /** Join transaction; settle only a matching pending reservation in the original terminal period. */
         void settleForReconciliation(Intent intent, Limit reservation, Instant terminalAt, LocalDate terminalDate);
@@ -291,7 +362,9 @@ public final class TransferRecoveryCandidate {
         void alert(long transferId, Incident reason);
     }
 
-    public enum Incident { CONTEXT_INVALID, CLAIM_UNCERTAIN, FENCE_UNSAFE, EVIDENCE_UNSAFE, OUTCOME_UNCERTAIN, RETRY_EXHAUSTED }
+    public enum Incident {
+        CONTEXT_INVALID, CLAIM_UNCERTAIN, FENCE_UNSAFE, EVIDENCE_UNSAFE, OUTCOME_UNCERTAIN, RETRY_EXHAUSTED, SCAN_UNAVAILABLE
+    }
 
     private static final class UnsafeEvidence extends IllegalStateException { }
     private static final class FenceUnavailable extends IllegalStateException { }

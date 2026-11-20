@@ -55,7 +55,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/transfers")
 public class TransferController {
-    private static final String REFERENCE = "TXN[0-9]{8}[A-Z0-9]{8,20}";
+    static final String REFERENCE = "TXN[0-9]{8}[A-Z0-9]{8,20}";
 
     private final TransferCreateService createService;
     private final TransferQueryService queryService;
@@ -150,7 +150,7 @@ public class TransferController {
         }
     }
 
-    private TransferActor actor(Principal principal) {
+    static TransferActor actor(Principal principal) {
         Authentication authentication = (Authentication) principal;
         SessionAuthenticator.Session session = (SessionAuthenticator.Session) authentication.getPrincipal();
         RequestContext context = RequestContextHolder.current()

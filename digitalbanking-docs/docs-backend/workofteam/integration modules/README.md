@@ -1,7 +1,7 @@
 # Kế hoạch tích hợp Backend — một người chịu trách nhiệm
 
 > **Mã:** BE-INT-PLAN-01  
-> **Ngày cập nhật:** 19/11/2026<br>
+> **Ngày cập nhật:** 20/11/2026<br>
 > **Người thực hiện và chốt duy nhất:** người điều hành/merge owner  
 > **Quyền thực hiện:** được sửa source, public contract, adapter, test, migration chưa phát hành và tài liệu của mọi module liên quan. Không cần phân công, review hoặc sign-off của cá nhân khác (DEC-INT-003).
 
@@ -50,7 +50,7 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 | `BE-INT-08` | Nối OTP/outbox, Customer destination theo purpose lúc gửi.                                                                                                                                                                                                                                                           | Dispatch fail-closed, outbox atomic, lease/retry/dedupe/privacy.                                                                                                      |
 | `BE-INT-09` | Nối Admin maker/checker với Identity/Limit/Audit.                                                                                                                                                                                                                                                                    | Same-key replay, hai checker, stale version, provider/audit rollback.                                                                                                 |
 | `BE-INT-10` | Nối recovery evidence per-transfer và durable claim/fence.                                                                                                                                                                                                                                                           | Absence/partial/mismatch/DB error/crash, không re-post khi proof thiếu.                                                                                               |
-| `BE-INT-11` | Ghép Frontend với API thật và OpenAPI.                                                                                                                                                                                                                                                                               | Journey login/account/transfer/admin, status/Problem/CSRF/replay.                                                                                                     |
+| `BE-INT-11` | Backend QA đã có baseline OpenAPI v1.1.0 và smoke HTTP theo [hướng dẫn QA](../../deployment/qa-backend-local.md). Ghép Frontend với API thật và OpenAPI là bước tiếp theo.                                                                                                                                                                                                                                                                               | Journey login/account/transfer/admin, status/Problem/CSRF/replay.                                                                                                     |
 | `BE-INT-12` | Full regression, D1–D5, security và release decision.                                                                                                                                                                                                                                                                | Test Plan §10 report, raw artifact, revision, known issues, quyết định của người điều hành.                                                                           |
 
 ## 5. Quy tắc thực thi và báo cáo
@@ -67,3 +67,5 @@ Các mốc `T1`–`T5` là **thứ tự công việc tương đối**, không ph
 | 18/11/2026 | Viết lại kế hoạch theo chỉ đạo người điều hành: một người có toàn quyền sửa và chốt mọi module integration; bỏ phân công/sign-off theo cá nhân, giữ gate kỹ thuật theo evidence. |
 | 18/11/2026 | DEC-INT-007: chỉ chạy test liên quan trên local; full suite cần yêu cầu rõ của người điều hành, không tự suy từ mục “full regression”. |
 | 19/11/2026 | BE-INT-04 xác minh provider Limit và migration V20 theo DEC-INT-011. |
+| 20/11/2026 | BE-INT-09 Verified theo DEC-INT-018: provider thật, V23 khóa role tối thiểu, pha Audit cuối và 228 test liên quan có evidence PASS theo từng class. |
+| 20/11/2026 | BE-INT-10 Verified theo DEC-INT-019. Recovery và Tfail với provider thật, claim/fence và migration V24. |

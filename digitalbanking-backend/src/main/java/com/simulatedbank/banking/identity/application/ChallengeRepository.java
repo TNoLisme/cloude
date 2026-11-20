@@ -11,8 +11,8 @@ import java.util.Optional;
  *
  * <p>Semantics transaction: method KHÔNG mở/commit transaction riêng — chúng tham gia
  * transaction hiện hành (REQUIRED) hoặc transaction caller (JOIN/T1 cho consume). Ranh giới
- * OWN/JOIN do `OtpChallengeService` kiểm soát. Verify dùng conditional UPDATE thay
- * SELECT…FOR UPDATE (lý do xem `OtpChallengeService`/DEC-ID-005).</p>
+ * OWN/JOIN do `OtpChallengeService` kiểm soát. Verify tính hash ngoài lock, rồi khóa dòng
+ * và cập nhật có điều kiện theo generation và thời điểm hiện tại.</p>
  */
 public interface ChallengeRepository {
 
@@ -30,6 +30,10 @@ public interface ChallengeRepository {
             String method, String channel, String status, int attemptCount, int maxAttempts,
             Instant expiresAt, Instant createdAt, Instant verifiedAt, Instant consumedAt,
             String requestHash, String idempotencyKey, String otpHash, Long deviceId) {
+        @Override
+        public String toString() {
+            return "ChallengeSnapshot[redacted]";
+        }
     }
 
     /** Kết quả bump attempt sai: attempt mới + status sau UPDATE (LOCKED khi đạt ngưỡng). */
@@ -44,6 +48,15 @@ public interface ChallengeRepository {
     record ConsumePredicate(String challengeRef, long userId, String purpose, String requestHash,
             String idempotencyKey) {
     }
+
+    record LockedResend(ChallengeSnapshot challenge, int resendCount, Instant lastDispatchAt, Instant now) {
+    }
+
+    Optional<LockedResend> lockForResend(String challengeRef);
+
+    ChallengeSnapshot rotateOtp(long challengeId, String otpHash, Instant now, Instant expiresAt);
+
+    void cancelUnacknowledged(long challengeId, String expectedOtpHash);
 
     /** INSERT … RETURNING; vi phạm partial unique active step-up → caller xử lý reissue. */
     ChallengeSnapshot insert(NewChallenge command);
@@ -73,14 +86,14 @@ public interface ChallengeRepository {
      * Chỉ áp dụng cho status issued-active và chưa hết hạn; 0 dòng → empty (race fail-closed).
      * CHECK `attempt_count <= max_attempts` không bao giờ bị vượt.
      */
-    Optional<FailedAttemptOutcome> recordFailedVerifyAttempt(long challengeId, int maxAttempts);
+    Optional<FailedAttemptOutcome> recordFailedVerifyAttempt(long challengeId, int maxAttempts, String expectedOtpHash);
 
     /**
      * `SENT → VERIFIED + verified_at`, MỘT statement điều kiện (status, attempt chưa đổi,
      * attempt+1 ≤ max, chưa hết hạn). Đúng OTP cũng tăng attempt_count (design/02 §5.1 bước 6).
      * False → race, caller đọc lại và map fail-closed.
      */
-    boolean markVerified(long challengeId, int expectedAttemptCount);
+    boolean markVerified(long challengeId, int expectedAttemptCount, String expectedOtpHash);
 
     /** Accepted delivery only: hash-fenced CREATED → SENT; no transition after expiry. */
     boolean markSent(long challengeId, String expectedOtpHash);

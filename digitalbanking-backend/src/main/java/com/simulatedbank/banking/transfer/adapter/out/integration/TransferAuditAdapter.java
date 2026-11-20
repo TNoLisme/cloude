@@ -53,6 +53,15 @@ public final class TransferAuditAdapter implements AuditEventPort {
                 RequestContextHolder.current().map(RequestContext::requestId).orElse(null), null, terminalAt));
     }
 
+    void recordReconciled(Details details, Instant repairedAt) {
+        var intent = details.intent();
+        audit.recordInTransaction(new com.simulatedbank.banking.audit.api.AuditEvent(
+                AuditAction.TRANSFER_RECONCILED, AuditActorType.SYSTEM, null, "SYSTEM", "TRANSFER", details.reference(),
+                Map.of("status", "PENDING"), Map.of("status", "COMPLETED"), intent.amount(), intent.currency(),
+                AuditOutcome.SUCCESS, intent.correlationId(),
+                RequestContextHolder.current().map(RequestContext::requestId).orElse(null), null, repairedAt));
+    }
+
     void recordTerminal(Details details, Outcome outcome, Instant terminalAt) {
         var failure = outcome.failure();
         boolean failed = failure.isPresent();

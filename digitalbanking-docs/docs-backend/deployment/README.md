@@ -88,6 +88,8 @@ Tài liệu này là **hướng dẫn triển khai và vận hành** Backend Spr
 5. Xác nhận `banking_app`/`banking_migrator` tách biệt và quyền runtime đúng least-privilege (`configuration.md` §6.3).
 6. Không commit `.env`, secret hoặc khóa vào Git/image.
 
+Dùng [stack QA backend local](qa-backend-local.md) khi cần tài khoản thử nghiệm và mailbox SMS để kiểm hợp đồng frontend.
+
 ### 3.2. Build và kiểm thử
 
 ```bash

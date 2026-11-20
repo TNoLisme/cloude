@@ -94,7 +94,7 @@ public class JdbcChallengeRepository implements ChallengeRepository {
                SET attempt_count = attempt_count + 1,
                    status = CASE WHEN attempt_count + 1 >= ? THEN 'LOCKED' ELSE status END
              WHERE challenge_id = ?
-               AND status = 'SENT'
+               AND status = 'SENT' AND otp_hash = ?
                AND consumed_at IS NULL AND expires_at > clock_timestamp()
             RETURNING attempt_count, status
             """;
@@ -105,7 +105,7 @@ public class JdbcChallengeRepository implements ChallengeRepository {
                    status = 'VERIFIED',
                    verified_at = clock_timestamp()
              WHERE challenge_id = ?
-               AND status = 'SENT'
+               AND status = 'SENT' AND otp_hash = ?
                AND attempt_count = ?
                AND attempt_count + 1 <= max_attempts
                AND consumed_at IS NULL AND expires_at > clock_timestamp()
@@ -218,18 +218,20 @@ public class JdbcChallengeRepository implements ChallengeRepository {
 
     @Override
     @Transactional
-    public Optional<FailedAttemptOutcome> recordFailedVerifyAttempt(long challengeId, int maxAttempts) {
+    public Optional<FailedAttemptOutcome> recordFailedVerifyAttempt(long challengeId, int maxAttempts, String expectedOtpHash) {
+        lockChallenge(challengeId);
         List<FailedAttemptOutcome> rows = jdbc.query(BUMP_FAILED_ATTEMPT,
                 (rs, rowNum) -> new FailedAttemptOutcome(rs.getInt("attempt_count"), rs.getString("status")),
-                maxAttempts, challengeId);
+                maxAttempts, challengeId, expectedOtpHash);
         return rows.stream().findFirst();
     }
 
     @Override
     @Transactional
-    public boolean markVerified(long challengeId, int expectedAttemptCount) {
+    public boolean markVerified(long challengeId, int expectedAttemptCount, String expectedOtpHash) {
+        lockChallenge(challengeId);
         return !jdbc.query(MARK_VERIFIED,
-                (rs, rowNum) -> rs.getLong("challenge_id"), challengeId, expectedAttemptCount).isEmpty();
+                (rs, rowNum) -> rs.getLong("challenge_id"), challengeId, expectedOtpHash, expectedAttemptCount).isEmpty();
     }
 
     @Override
@@ -255,14 +257,61 @@ public class JdbcChallengeRepository implements ChallengeRepository {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<LockedResend> lockForResend(String challengeRef) {
+        UUID ref = parseRef(challengeRef);
+        if (ref == null) {
+            return Optional.empty();
+        }
+        var row = DataAccessUtils.optionalResult(jdbc.query("""
+                SELECT %s, resend_count, GREATEST(created_at, last_resend_at, sent_at) AS last_dispatch
+                  FROM banking.auth_challenge WHERE challenge_ref = ? FOR UPDATE
+                """.formatted(SNAPSHOT_COLUMNS),
+                (rs, index) -> new LockedResend(SNAPSHOT_MAPPER.mapRow(rs, index), rs.getInt("resend_count"),
+                        toInstant(rs.getTimestamp("last_dispatch")), null), ref));
+        return row.map(locked -> new LockedResend(locked.challenge(), locked.resendCount(), locked.lastDispatchAt(),
+                toInstant(jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class))));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ChallengeSnapshot rotateOtp(long challengeId, String otpHash, Instant now, Instant expiresAt) {
+        return requireOne(jdbc.query("""
+                UPDATE banking.auth_challenge
+                   SET otp_hash = ?, status = 'CREATED', sent_at = NULL, expires_at = ?,
+                       resend_count = resend_count + 1, last_resend_at = ?
+                 WHERE challenge_id = ?
+                RETURNING %s
+                """.formatted(SNAPSHOT_COLUMNS), SNAPSHOT_MAPPER, otpHash, Timestamp.from(expiresAt),
+                Timestamp.from(now), challengeId));
+    }
+
+    @Override
+    @Transactional
+    public void cancelUnacknowledged(long challengeId, String expectedOtpHash) {
+        jdbc.update("""
+                UPDATE banking.auth_challenge
+                   SET status = CASE WHEN expires_at <= clock_timestamp() THEN 'EXPIRED' ELSE 'CANCELLED' END
+                 WHERE challenge_id = ? AND otp_hash = ? AND status IN ('CREATED', 'SENT')
+                   AND consumed_at IS NULL
+                """, challengeId, expectedOtpHash);
+    }
+
+    @Override
     @Transactional
     public boolean markSent(long challengeId, String expectedOtpHash) {
+        lockChallenge(challengeId);
         return !jdbc.query("""
                 UPDATE banking.auth_challenge SET status = 'SENT', sent_at = clock_timestamp()
                  WHERE challenge_id = ? AND otp_hash = ? AND status = 'CREATED'
                    AND consumed_at IS NULL AND expires_at > clock_timestamp()
                 RETURNING challenge_id
                 """, (rs, rowNum) -> rs.getLong("challenge_id"), challengeId, expectedOtpHash).isEmpty();
+    }
+
+    private void lockChallenge(long challengeId) {
+        jdbc.queryForList("SELECT challenge_id FROM banking.auth_challenge WHERE challenge_id = ? FOR UPDATE",
+                Long.class, challengeId);
     }
 
     @Override

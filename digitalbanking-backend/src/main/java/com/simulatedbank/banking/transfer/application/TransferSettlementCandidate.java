@@ -2,6 +2,7 @@ package com.simulatedbank.banking.transfer.application;
 
 import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.common.context.RequestContextHolder;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -159,6 +161,26 @@ public final class TransferSettlementCandidate {
         }
         status.releaseSavepoint(savepoint);
         return result;
+    }
+
+    /** Credit threw after a successful debit. Only a confirmed full rollback can authorize Tfail. */
+    public static final class CreditFailure extends IllegalStateException {
+        public CreditFailure(Throwable cause) {
+            super("Credit failed after debit", cause);
+        }
+
+        public static boolean permitsTfail(Throwable failure) {
+            if (!(failure instanceof CreditFailure)) return false;
+            for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+                if (cause instanceof SQLException sql && sql.getSQLState() != null) {
+                    String state = sql.getSQLState();
+                    return !state.startsWith("08") && !state.startsWith("57") && !state.startsWith("40")
+                            && !"55P03".equals(state);
+                }
+            }
+            // JDBC proved savepoint rollback, but the whole T2 was already rollback-only.
+            return failure.getCause() instanceof UnexpectedRollbackException;
+        }
     }
 
     /** A required C1 or C2 write failed in T2. The transaction must roll back. */

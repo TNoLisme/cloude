@@ -22,6 +22,7 @@ public interface LimitStore {
     LimitUsage lockUsage(long customerId, Long accountId, LocalDate date);
     void incrementUsage(LimitUsage usage, BigDecimal amount, BigDecimal dailyLimit);
     void lockCustomerScope(long customerId);
+    boolean tryLockCustomerScope(long customerId);
     Instant currentTime();
     List<LimitConfiguration> findScope(long customerId, Long accountId);
     Optional<LimitConfiguration> findProposal(long approvalId, boolean forUpdate);

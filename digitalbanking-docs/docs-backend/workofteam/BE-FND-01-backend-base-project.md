@@ -77,7 +77,7 @@ Tạo project foundation dùng chung để module owners bắt đầu triển kh
 - `digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/FlywayMigrationTest.java`
 - `digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFlywayMigrationIntegrationTest.java`
 - `digitalbanking-backend/Dockerfile`, `compose.yaml`, `.dockerignore`, `.gitignore`, `.env.example`, `README.md`
-- `digitalbanking-backend/docker/postgres/init/01-create-roles.sh`
+- `digitalbanking-backend/docker/postgres/init/01-create-roles.sql`
 - `digitalbanking-docs/docs-backend/README.md`
 - `digitalbanking-docs/docs-backend/workofteam/README.md`
 - `digitalbanking-docs/docs-backend/workofteam/BE-FND-01-verification-report.md`
