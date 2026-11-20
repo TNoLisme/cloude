@@ -159,3 +159,7 @@ Trong dev mock đã bật, mở `/staff/approvals?approvalPreview=v2` để xem 
 ## FE-06-01-MOCK — preview staff đọc customer theo ID
 
 Trong dev mock đã bật, mở `/staff/customers/2001?staffPreview=v2`. ID 2001 là fixture tổng hợp; ID khác cho kịch bản không tìm thấy. Có chọn dữ liệu mẫu, tài khoản rỗng, tải chậm, lỗi dịch vụ và 403. Ô tìm số điện thoại và nút Tra cứu bị khóa vì GAP-03 chưa có contract; preview không gọi search API và không chứng minh quyền/scope BE. [[digitalbanking-docs/docs-frontend/evidence/FE-06-01-MOCK/2026-11-20-797d9bc/run-01.md]].
+
+## FE-06-02-MOCK — preview cờ rủi ro chỉ đọc
+
+Trong dev mock đã bật, mở `/staff/risk?fraudPreview=v2`. Có danh sách flag fixture, filter status/severity, chi tiết từ item và các kịch bản dữ liệu/rỗng/chậm/lỗi/403. Bốn nút review bị khóa; không có request POST hoặc GET detail theo ID. Không dùng fixture để kết luận quyền staff, rule/threshold fraud hay tác động BLOCK. [[digitalbanking-docs/docs-frontend/evidence/FE-06-02-MOCK/2026-11-20-ec8d548/run-01.md]].

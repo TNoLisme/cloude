@@ -86,3 +86,7 @@ GAP-01 với lookup phone/email, tạo khách, seed/block/unblock legacy. GAP-03
 ### FE-06-01-MOCK ngày 20/11/2026
 
 Người phụ trách FE chốt tìm khách hàng theo số điện thoại, nhưng cho phép dựng phần đọc bằng `customerId` fixture trước. Preview staff độc lập chỉ gọi `getAdminCustomer`/`getAdminCustomerAccounts` v2 Draft FE/mock; ô số điện thoại hiển thị chờ contract và nút tra cứu bị khóa. Không dùng lookup phone/email, seed/block/unblock của source cũ làm nghiệp vụ đích. GAP-03/07 và FET-10/API thật còn mở. Câu hỏi BE/BA/Security tại [[digitalbanking-docs/docs-frontend/management/06-gap03-phone-search-handoff.md]]; kết quả lần chạy tại [[digitalbanking-docs/docs-frontend/evidence/FE-06-01-MOCK/2026-11-20-797d9bc/run-01.md]].
+
+### FE-06-02-MOCK ngày 20/11/2026
+
+Người phụ trách FE chốt preview staff fraud độc lập, chỉ đọc danh sách và chi tiết từ item `listFraudFlags`; ALLOW/BLOCK/ESCALATE/CLOSE bị khóa, chưa nối transfer. Không có GET detail theo flagId trong YAML; `matchedValue` object tự do không render. Fixture LARGE_VALUE/HIGH_FREQUENCY là dữ liệu tổng hợp để xem UI, không xác nhận rule/threshold hay tác động BLOCK. GAP-07/11, review mutation, FET-10 và API thật còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-06-02-MOCK/2026-11-20-ec8d548/run-01.md]].

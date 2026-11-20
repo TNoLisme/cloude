@@ -71,6 +71,10 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 
 ### Severity/status filter và trạng thái review theo contract mới
 
+## FE-06-02-MOCK — preview fraud chỉ đọc ngày 20/11/2026
+
+Route demo `/staff/risk?fraudPreview=v2` là preview staff độc lập với dữ liệu tổng hợp. Bố cục gồm heading, thông báo cờ là dấu hiệu cần rà soát, chọn kịch bản mock, lọc status/severity, danh sách flag, phân trang và chi tiết mở từ item hiện có. Chi tiết chỉ render field có schema (`flagId`, `transferReference`, `customerId`, `rule.code/version`, `severity`, `status`, `createdAt`, quyết định/reviewer/time nếu có và `correlationId`); không render `matchedValue` chưa có allowlist. Bốn nút quyết định review disabled. Không gọi GET detail hoặc nối transfer. Giao diện còn là demo chờ thiết kế cuối, quyền/tác động nghiệp vụ còn GAP-07/11. [[digitalbanking-docs/docs-frontend/evidence/FE-06-02-MOCK/2026-11-20-ec8d548/run-01.md]].
+
 ## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
 
 Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
