@@ -5,6 +5,7 @@ import { v2AuthHandlers } from "./v2-auth";
 import { approvalHandlers } from "./approval-handlers";
 import { staffCustomerHandlers } from "./staff-customer-handlers";
 import { fraudHandlers } from "./fraud-handlers";
+import { auditHandlers } from "./audit-handlers";
 import { waitForMockControl } from "./wait-for-control";
 
 export const worker = setupWorker(
@@ -13,6 +14,7 @@ export const worker = setupWorker(
   ...approvalHandlers,
   ...staffCustomerHandlers,
   ...fraudHandlers,
+  ...auditHandlers,
   http.all("*/api/*", () => HttpResponse.error()),
 );
 export async function startMocks() {

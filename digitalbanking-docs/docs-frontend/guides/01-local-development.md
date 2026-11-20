@@ -163,3 +163,7 @@ Trong dev mock đã bật, mở `/staff/customers/2001?staffPreview=v2`. ID 2001
 ## FE-06-02-MOCK — preview cờ rủi ro chỉ đọc
 
 Trong dev mock đã bật, mở `/staff/risk?fraudPreview=v2`. Có danh sách flag fixture, filter status/severity, chi tiết từ item và các kịch bản dữ liệu/rỗng/chậm/lỗi/403. Bốn nút review bị khóa; không có request POST hoặc GET detail theo ID. Không dùng fixture để kết luận quyền staff, rule/threshold fraud hay tác động BLOCK. [[digitalbanking-docs/docs-frontend/evidence/FE-06-02-MOCK/2026-11-20-ec8d548/run-01.md]].
+
+## FE-07-01-MOCK — preview audit chỉ đọc
+
+Trong dev mock đã bật, mở `/staff/audit?auditPreview=v2`; bấm “Xem chi tiết #8001” hoặc mở `/staff/audit/8001?auditPreview=v2`. Có fixture danh sách/chi tiết, bộ lọc actor/action/outcome/from/to, phân trang và kịch bản dữ liệu/rỗng/chậm/lỗi/403. Nút xuất file bị khóa vì GAP-12 và quyền runtime GAP-07; preview độc lập không chứng minh session, audit chain hoặc export BE. Dùng dữ liệu tổng hợp; handler thiếu phải báo lỗi qua MSW. [[digitalbanking-docs/docs-frontend/evidence/FE-07-01-MOCK/2026-11-21-70eb0ea/run-01.md]].

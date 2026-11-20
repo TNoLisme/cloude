@@ -77,3 +77,7 @@ FE-07-01 trong tracker. Source ReadOnlyPages.tsx cũ chỉ là phần tham khả
 ## 12. Vấn đề cần chốt
 
 GAP-07 quyền export khác nhau giữa nguồn, GAP-12 export sync/giới hạn và GAP-10 retention/legal hold. Giá trị 10000 là schema baseline, ngưỡng ngữ nghĩa vẫn được đánh dấu đề xuất tại 07.
+
+### FE-07-01-MOCK ngày 21/11/2026
+
+Preview staff độc lập tại `/staff/audit?auditPreview=v2` dùng dữ liệu tổng hợp và contract v2 Draft FE/mock để gọi `searchAudit`; route `/staff/audit/{auditId}?auditPreview=v2` gọi `getAuditRecord`. Bộ lọc mock gồm actor ID, action, outcome và khoảng thời gian; page 0-based; không gửi `sort` khi whitelist chưa xác nhận. Chi tiết chỉ render metadata có schema, không render `beforeState`/`afterState` object tự do hay `clientInfo`. Kịch bản default/empty/slow/error/forbidden dùng MSW rõ ràng trong dev/test. Nút export bị khóa vì GAP-12 và quyền GAP-07 chưa chốt cho runtime v2. Không nối session staff, không khẳng định audit chain hoặc export BE. Kết quả [[digitalbanking-docs/docs-frontend/evidence/FE-07-01-MOCK/2026-11-21-70eb0ea/run-01.md]].

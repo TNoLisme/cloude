@@ -25,6 +25,10 @@ async function mount() {
     mock && new URLSearchParams(location.search).get("fraudPreview") === "v2"
       ? await import("./mocks/FraudPreview")
       : null;
+  const auditPreview =
+    mock && new URLSearchParams(location.search).get("auditPreview") === "v2"
+      ? await import("./mocks/AuditPreview")
+      : null;
   const authPreview =
     mock && new URLSearchParams(location.search).get("authPreview") === "v2"
       ? await import("./mocks/AuthPreview")
@@ -35,13 +39,15 @@ async function mount() {
     !customerPreview &&
     !approvalPreview &&
     !staffCustomerPreview &&
-    !fraudPreview
+    !fraudPreview &&
+    !auditPreview
       ? (await import("./mocks/PreviewShell")).PreviewShell
       : null;
   if (mock) {
     const { startMocks } = await import("./mocks/browser");
     await startMocks();
     if (fraudPreview) fraudPreview.prepareFraudPreview();
+    else if (auditPreview) auditPreview.prepareAuditPreview();
     else if (staffCustomerPreview)
       staffCustomerPreview.prepareStaffCustomerPreview();
     else if (approvalPreview) approvalPreview.prepareApprovalPreview();
@@ -51,6 +57,8 @@ async function mount() {
   }
   const app = fraudPreview ? (
     <fraudPreview.FraudPreview />
+  ) : auditPreview ? (
+    <auditPreview.AuditPreview />
   ) : staffCustomerPreview ? (
     <staffCustomerPreview.StaffCustomerPreview />
   ) : approvalPreview ? (
