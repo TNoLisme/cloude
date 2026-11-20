@@ -83,6 +83,8 @@ FE-05-01 và FE-05-02 trong tracker. Cơ chế approval là public interface dù
 
 FE-05-01-MOCK ngày 19/11/2026 chỉ hiện `getLimits` cho CUSTOMER với fixture tổng hợp. Đây là demo đọc self, chưa chứng minh ownership BE hoặc FET-09 đầy đủ; maker/checker và mutation vẫn chờ GAP-07/08. [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-b9ba604/run-01.md]].
 
+FE-05-02-MOCK mở phần list/detail chỉ đọc ngày 19/11/2026. User chốt preview staff độc lập, chỉ metadata có schema, ẩn `payload/result` và khóa duyệt/từ chối. Client/UI/MSW theo phạm vi này đã qua gate mock và browser list/detail ngày 20/11, đang chờ review UI; không coi quyền staff là đã chốt. [[digitalbanking-docs/docs-frontend/evidence/FE-05-02-MOCK/2026-11-19-65bd72f/run-01.md]].
+
 ## 12. Vấn đề cần chốt
 
 GAP-07 về quyền/checker, GAP-08 về binding khi create và retry approval, GAP-11 về phạm vi milestone. Policy max/default đang đề xuất ở 07 được chốt bởi BA/BE.

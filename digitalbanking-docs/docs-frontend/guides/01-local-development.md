@@ -151,3 +151,7 @@ Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùn
 ## FE-04-01-MOCK — demo customer ngày 19/11/2026
 
 Theo yêu cầu người phụ trách FE ngày 18/11 và tiếp tục ngày 19/11, đã dựng demo CUSTOMER đọc danh sách `/transactions` và chi tiết `/transactions/{reference}` theo v2 FE/mock: status/account/direction/from-to/min-max/page20, masked counterparty, Money string, loading/empty/error và 403/404. `sort` dùng mặc định server theo chốt trong chat ngày 18/11: “Dùng thứ tự mặc định, chờ BE (đề xuất)”; whitelist sort của endpoint vẫn cần BE xác nhận trước bộ chọn. Không triển khai staff scope, transfer mutation/recovery hoặc kết luận quyền BE từ fixture. UI demo còn sửa sau, không ghi duyệt UI. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].
+
+## FE-05-02-MOCK — preview approval chỉ đọc
+
+Trong dev mock đã bật, mở `/staff/approvals?approvalPreview=v2` để xem danh sách và `/staff/approvals/8001?approvalPreview=v2` để xem chi tiết fixture. Đây là preview staff độc lập, không chứng minh session/quyền BE. Thanh kịch bản cho dữ liệu mẫu/rỗng/chậm/lỗi; UI không render `payload/result` và nút duyệt/từ chối bị khóa theo chốt người phụ trách FE ngày 19/11/2026. [[digitalbanking-docs/docs-frontend/evidence/FE-05-02-MOCK/2026-11-19-65bd72f/run-01.md]].

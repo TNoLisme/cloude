@@ -1,9 +1,14 @@
 import { setupWorker } from "msw/browser";
 import { handlers } from "./handlers";
 import { v2AuthHandlers } from "./v2-auth";
+import { approvalHandlers } from "./approval-handlers";
 import { waitForMockControl } from "./wait-for-control";
 
-export const worker = setupWorker(...handlers, ...v2AuthHandlers);
+export const worker = setupWorker(
+  ...handlers,
+  ...v2AuthHandlers,
+  ...approvalHandlers,
+);
 export async function startMocks() {
   if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCKS !== "true") {
     throw new Error(
