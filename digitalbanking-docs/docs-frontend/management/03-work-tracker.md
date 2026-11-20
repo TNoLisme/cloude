@@ -44,8 +44,8 @@ Mỗi dòng ghi owner theo vai trò. Khi nhận việc bổ sung tên người, 
 | FE-03-02 | Same-key retry, pending/timeout/reload và receipt | FE + QA | FE-03-01, GAP-09 | Chưa bắt đầu | Cần browser + backend invariant evidence |
 | FE-04-01 | History filter/page/detail theo reference | FE | FE-02-01, FE-FND-02 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-04-transaction-history.md]] |
 | FE-04-01-MOCK | CUSTOMER history list/filter/page/detail v2 mock | FE | Contract v2 FE/mock, customer session preview; sort whitelist BE mở | Demo mock sẵn xem — UI chưa chốt | [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]] |
-| FE-05-01 | Hạn mức customer và form limit maker | FE + BE | FE-FND-02, FE-01-01, GAP-07 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-05-limits-and-approvals.md]] |
-| FE-05-01-MOCK | CUSTOMER xem hạn mức qua getLimits v2 mock | FE | Contract v2 FE/mock; maker/checker GAP-07/08 ngoài phạm vi | Đang làm — code/mock đạt, browser chưa kiểm được | [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-b9ba604/run-01.md]] |
+| FE-05-01 | Hạn mức customer và form limit maker | FE + BE | FE-FND-02, FE-01-01, GAP-07 | Đang làm — mock xem hạn mức chờ review, maker/integration còn mở | [[digitalbanking-docs/docs-frontend/features/FE-05-limits-and-approvals.md]] |
+| FE-05-01-MOCK | CUSTOMER xem hạn mức qua getLimits v2 mock | FE | Contract v2 FE/mock; maker/checker GAP-07/08 ngoài phạm vi | Chờ review UI/mock — browser default đã xem | [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-65bd72f/run-02.md]]; API thật chưa nghiệm thu |
 | FE-05-02 | Approval list/detail và approve/reject dùng chung | FE + BE | FE-05-01, GAP-08 | Chưa bắt đầu | FE-08 tái dùng cơ chế này |
 | FE-06-01 | Staff đọc customer/account và liên kết history | FE + BE | FE-FND-02, GAP-03 | Chưa bắt đầu | Theo ID trước, search cần hợp đồng |
 | FE-06-02 | Fraud list, review và trạng thái cuối | FE + BE | FE-06-01, GAP-11 | Chưa bắt đầu | [[digitalbanking-docs/docs-frontend/features/FE-06-operations-and-fraud.md]] |
