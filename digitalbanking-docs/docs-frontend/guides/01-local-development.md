@@ -167,3 +167,7 @@ Trong dev mock đã bật, mở `/staff/risk?fraudPreview=v2`. Có danh sách fl
 ## FE-07-01-MOCK — preview audit chỉ đọc
 
 Trong dev mock đã bật, mở `/staff/audit?auditPreview=v2`; bấm “Xem chi tiết #8001” hoặc mở `/staff/audit/8001?auditPreview=v2`. Có fixture danh sách/chi tiết, bộ lọc actor/action/outcome/from/to, phân trang và kịch bản dữ liệu/rỗng/chậm/lỗi/403. Nút xuất file bị khóa vì GAP-12 và quyền runtime GAP-07; preview độc lập không chứng minh session, audit chain hoặc export BE. Dùng dữ liệu tổng hợp; handler thiếu phải báo lỗi qua MSW. [[digitalbanking-docs/docs-frontend/evidence/FE-07-01-MOCK/2026-11-21-70eb0ea/run-01.md]].
+
+## FE-03-01-MOCK — preview form/review chuyển tiền
+
+Trong dev mock đã bật, mở `/customer/transfers/new?transferPreview=v2`. Chọn tài khoản nguồn từ fixture, nhập số tài khoản nhận 6–20 chữ số và số tiền dạng `150000.00`, rồi bấm “Xem lại thông tin”. Cảnh báo người nhận chưa xác minh luôn hiển thị và nút Gửi lệnh bị khóa; không có request POST. Có kịch bản tài khoản rỗng/tải chậm/lỗi để xem UI. Đây là form demo, không tạo transfer hoặc xác nhận số dư/hạn mức. [[digitalbanking-docs/docs-frontend/evidence/FE-03-01-MOCK/2026-11-21-fb0db95/run-01.md]].
