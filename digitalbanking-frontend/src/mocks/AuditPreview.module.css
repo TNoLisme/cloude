@@ -1,0 +1,19 @@
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+
+.filters > div {
+  min-width: 0;
+}
+
+.filters label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.filters :global(.ant-input),
+.filters :global(.ant-select) {
+  width: 100%;
+}

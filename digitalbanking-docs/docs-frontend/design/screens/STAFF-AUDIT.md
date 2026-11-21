@@ -74,6 +74,10 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 
 Mở `/staff/audit?auditPreview=v2` để xem danh sách audit mock, bộ lọc actor/action/outcome/from/to, trạng thái rỗng/chậm/lỗi/403 và phân trang. Nút “Xem chi tiết” tới `/staff/audit/{auditId}?auditPreview=v2` gọi GET chi tiết, hiển thị ID/thời gian/actor/action/entity/outcome/correlation/request ID theo allowlist. Không render beforeState/afterState object tự do. Nút xuất file disabled, có nhãn chờ GAP-12. Layout này là demo, chưa chốt thiết kế cuối; preview độc lập với phiên staff. [[digitalbanking-docs/docs-frontend/evidence/FE-07-01-MOCK/2026-11-21-70eb0ea/run-01.md]].
 
+### Kiểm browser và sửa bộ lọc ngày 22/11/2026
+
+Ở viewport Chrome rộng 812 px, các ô lọc cũ chồng nhãn và input. Preview dùng lưới tự xuống hàng, mỗi control chiếm bề rộng cột; không đổi dữ liệu hay hành vi. Browser đã xem danh sách hai bản ghi fixture và chi tiết #8001 chỉ có metadata theo allowlist; export vẫn disabled. Kết quả và giới hạn tại [[digitalbanking-docs/docs-frontend/evidence/FE-07-01-MOCK/2026-11-22-07ccdaf/result.md]].
+
 ## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
 
 Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].

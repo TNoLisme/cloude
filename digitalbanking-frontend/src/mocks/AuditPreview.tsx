@@ -20,6 +20,7 @@ import {
 } from "../features/audit/v2/audit-api";
 import { prepareAuditFixture, selectAuditScenario } from "./audit-handlers";
 import styles from "../layouts/AppLayout.module.css";
+import auditStyles from "./AuditPreview.module.css";
 
 type Scenario = "default" | "empty" | "slow" | "error" | "forbidden";
 const outcomeLabels: Record<string, string> = {
@@ -113,13 +114,12 @@ function Content({ client }: { client: ApiClient }) {
             sub="Bản xem mock chỉ đọc; quyền phiên staff và xuất tệp chưa tích hợp."
           />
           <Panel title="Bộ lọc">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div className={auditStyles.filters}>
               <div>
                 <label htmlFor="audit-scenario">Kịch bản mock</label>
                 <Select
                   id="audit-scenario"
                   aria-label="Kịch bản audit"
-                  style={{ display: "block", width: 180 }}
                   value={scenario}
                   onChange={(value: Scenario) => {
                     selectAuditScenario(value);
@@ -140,7 +140,6 @@ function Content({ client }: { client: ApiClient }) {
                   id="audit-actor"
                   value={actor}
                   onChange={(event) => setActor(event.target.value)}
-                  style={{ width: 170 }}
                 />
               </div>
               <div>
@@ -150,7 +149,6 @@ function Content({ client }: { client: ApiClient }) {
                   value={action}
                   onChange={(event) => setAction(event.target.value)}
                   maxLength={64}
-                  style={{ width: 210 }}
                 />
               </div>
               <div>
@@ -158,7 +156,6 @@ function Content({ client }: { client: ApiClient }) {
                 <Select
                   id="audit-outcome"
                   aria-label="Kết quả"
-                  style={{ display: "block", width: 180 }}
                   value={outcome}
                   onChange={setOutcome}
                   options={[
