@@ -86,6 +86,8 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 
 Preview độc lập ở `/customer/transfers/new?transferPreview=v2` có Steps Nhập thông tin → Kiểm tra → Kết quả chờ contract. Form lấy tài khoản nguồn ACTIVE/VND từ GET accounts fixture; có kịch bản dữ liệu/rỗng/chậm/lỗi. Input accountNumber 6–20 chữ số, Money string đúng hai số lẻ/dương và lời nhắn tối đa255. Review trình bày nguồn masked, số tài khoản nhận chưa xác minh, số tiền, VND và lời nhắn. Không có thẻ recipient “Đã xác minh”, PIN, OTP hoặc receipt; nút Gửi lệnh disabled với lý do GAP-02/08/09. Không áp các ngưỡng legacy 8–34 hay 2.000–10.000.000. Layout demo chưa duyệt UI cuối. [[digitalbanking-docs/docs-frontend/evidence/FE-03-01-MOCK/2026-11-21-fb0db95/run-01.md]].
 
+Browser 22/11/2026 đã xem form, review và kịch bản tài khoản rỗng; nút gửi vẫn disabled. Kết quả chi tiết tại [[digitalbanking-docs/docs-frontend/evidence/FE-03-01-MOCK/2026-11-22-07ccdaf/result.md]]. Chưa duyệt UI hoặc tích hợp BE.
+
 ## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
 
 Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
