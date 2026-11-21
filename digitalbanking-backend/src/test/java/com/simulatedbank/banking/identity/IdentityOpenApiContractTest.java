@@ -99,7 +99,7 @@ class IdentityOpenApiContractTest {
         assertThat(passcode).containsEntry("x-runtime-status", "blocked-positive");
         Map<String, Object> resend = (Map<String, Object>) ((Map<String, Object>)
                 paths.get("/auth/challenges/{challengeId}/resend")).get("post");
-        assertThat(resend).containsEntry("x-runtime-status", "blocked-no-route");
+        assertThat(resend).containsEntry("x-runtime-status", "sms-gateway-required").doesNotContainKey("requestBody");
         Map<String, Object> login = (Map<String, Object>) ((Map<String, Object>)
                 paths.get("/auth/login")).get("post");
         String loginDescription = String.valueOf(login.get("description"));

@@ -1,6 +1,7 @@
 package com.simulatedbank.banking.identity.api;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Hợp đồng cross-module cho challenge step-up/OTP (BE-ID-IMP-05).
@@ -15,8 +16,8 @@ import java.time.Instant;
  * <p>Semantics transaction (design/05 §3.2):</p>
  * <ul>
  *   <li>{@link #requestChallenge} — <b>OWN/T0</b>: transaction ngắn riêng; KHÔNG tạo
- *       transfer/idempotency_record/ledger; dispatch OTP ra gateway là <b> sau commit</b>
- *       và thuộc BE-ID-IMP-06 (delivery), không nằm ở port này.</li>
+ *       transfer/idempotency_record/ledger. Identity dispatch sau commit qua OTP gateway
+ *       và chỉ trả challenge sau khi ACK/SENT đã được xác nhận.</li>
  *   <li>{@link #verifyChallenge} — <b>OWN/T0</b>: lock row challenge, kiểm user/purpose/
  *       expiry/attempt, cập nhật atomic; KHÔNG giữ lock chờ user nhập OTP.</li>
  *   <li>{@link #consumeVerified} — <b>JOIN/T1</b>: phải được gọi trong transaction nghiệp vụ
@@ -51,6 +52,7 @@ public interface StepUpChallengePort {
      */
     record ChallengeRequest(ChallengePurpose purpose, long userId, String requestHash,
             String bindingKey, String correlationId) {
+        @Override public String toString() { return "ChallengeRequest[redacted]"; }
     }
 
     /**
@@ -71,6 +73,7 @@ public interface StepUpChallengePort {
      */
     record VerifyCommand(String challengeRef, long userId, ChallengePurpose expectedPurpose,
             char[] otp, String correlationId) {
+        @Override public String toString() { return "VerifyCommand[redacted]"; }
     }
 
     record VerifiedChallenge(String challengeRef, ChallengePurpose purpose, Instant verifiedAt,
@@ -86,6 +89,7 @@ public interface StepUpChallengePort {
      */
     record ConsumeCommand(String challengeRef, long userId, ChallengePurpose purpose,
             String requestHash, String bindingKey) {
+        @Override public String toString() { return "ConsumeCommand[redacted]"; }
     }
 
     record ConsumedChallenge(long challengeId, String challengeRef, ChallengePurpose purpose,
@@ -94,6 +98,20 @@ public interface StepUpChallengePort {
 
     /** OWN/T0 — tạo challenge theo policy (TTL, max attempts từ `app.security.otp`). */
     ChallengeView requestChallenge(ChallengeRequest request);
+
+    /** Read a verified, unconsumed Transfer proof from primary. Revalidate it when consuming. */
+    Optional<VerifiedChallenge> findVerifiedBindingIfPresent(TransferBinding binding);
+
+    /** Trusted Transfer actor and exact request binding. */
+    record TransferBinding(long userId, long customerId, String requestHash, String bindingKey) {
+        @Override public String toString() { return "TransferBinding[redacted]"; }
+    }
+
+    /** Issue for a server-resolved user/customer binding. */
+    ChallengeView requestTransferChallenge(TransferBinding binding, String correlationId);
+
+    /** JOIN/T1 and revalidate the customer binding and the locked challenge. */
+    ConsumedChallenge consumeTransferChallenge(TransferBinding binding, String challengeRef);
 
     /** OWN/T0 — verify credential; rejection ném `BankingBusinessException` theo catalog `07`. */
     VerifiedChallenge verifyChallenge(VerifyCommand command);

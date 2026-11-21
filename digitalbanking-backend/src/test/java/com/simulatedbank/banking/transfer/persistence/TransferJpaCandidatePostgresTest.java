@@ -51,7 +51,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** Isolated JPA validation and JPA/JDBC transaction proof with synthetic provider keys. */
+/** Isolated JPA validation and JPA/JDBC transaction proof; Account remains a synthetic provider stand-in. */
 @Testcontainers
 class TransferJpaCandidatePostgresTest {
     @TempDir

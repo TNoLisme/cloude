@@ -8,16 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.simulatedbank.banking.common.config.AppProperties;
-import com.simulatedbank.banking.common.config.RequestContextConfig;
-import com.simulatedbank.banking.common.config.RequestRateLimiter;
-import com.simulatedbank.banking.common.config.SecurityFilterChainConfig;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
-import com.simulatedbank.banking.common.config.TimeConfig;
-import com.simulatedbank.banking.common.error.GlobalExceptionHandler;
-import com.simulatedbank.banking.common.error.ProblemWriter;
 import com.simulatedbank.banking.common.crypto.HmacService;
-import com.simulatedbank.banking.transfer.application.TransferStaffScope;
 import com.simulatedbank.banking.transfer.application.AccountOwnershipPort;
 import com.simulatedbank.banking.transfer.application.AccountOwnershipPort.Ownership;
 import com.simulatedbank.banking.transfer.application.AuditEvent;
@@ -40,6 +32,7 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Step
 import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.application.TransferOrchestrator;
 import com.simulatedbank.banking.transfer.application.TransferReadPort;
+import com.simulatedbank.banking.transfer.application.TransferStaffScope;
 import com.simulatedbank.banking.transfer.application.TransferView;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferStatus;
@@ -56,26 +49,32 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestComponent;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@SpringBootTest(classes = TransferControllerHttpTest.HttpTestApplication.class)
+@SpringBootTest(properties = {
+        "app.identity.enabled=false",
+        "app.customer.enabled=false",
+        "app.account.enabled=false",
+        "app.admin.enabled=false",
+        "app.audit.enabled=false",
+        "app.limit.enabled=false",
+        "app.fraud.enabled=false",
+        "app.notification.enabled=false",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
+                + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
+                + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import({TransferHttpConfiguration.class, TransferControllerHttpTest.Fakes.class})
 class TransferControllerHttpTest {
     private static final Instant NOW = Instant.parse("2026-11-16T10:15:30Z");
     private static final String REF = "TXN20261116A1B2C3D4";
@@ -303,6 +302,13 @@ class TransferControllerHttpTest {
                 .andExpect(jsonPath("$.fraudFlags[0].ruleVersion").value(3));
     }
 
+    @Test
+    void staffOutsideServerSideScopeIsDeniedWithAudit() throws Exception {
+        problem(mvc.perform(get("/api/v1/transfers/" + REF)
+                .header("Authorization", "Bearer staff-out-of-scope")).andReturn(), 403, "AUTH_FORBIDDEN");
+        assertThat(fakes.events).anySatisfy(event -> assertThat(event.action()).isEqualTo("SECURITY_ACCESS_DENIED"));
+    }
+
     private void problem(MvcResult result, int status, String code) throws Exception {
         assertThat(result.getResponse().getStatus()).isEqualTo(status);
         assertThat(result.getResponse().getContentType()).startsWith("application/problem+json");
@@ -327,15 +333,6 @@ class TransferControllerHttpTest {
                 "currency", "VND", "correlationId", "corr-original", "createdAt", "2026-11-16T10:15:30Z");
     }
 
-    @Configuration(proxyBeanMethods = false)
-    @TestComponent
-    @EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class,
-            FlywayAutoConfiguration.class})
-    @EnableConfigurationProperties(AppProperties.class)
-    @Import({TransferHttpConfiguration.class, Fakes.class, SecurityFilterChainConfig.class, RequestContextConfig.class,
-            RequestRateLimiter.class, ProblemWriter.class, GlobalExceptionHandler.class, TimeConfig.class})
-    static class HttpTestApplication { }
-
     @TestConfiguration
     static class Fakes {
         final AtomicReference<TransferCreateOutcome> outcome = new AtomicReference<>();
@@ -350,6 +347,7 @@ class TransferControllerHttpTest {
                 case "customer-c" -> session("3", "13", "csrf-c", "ROLE_CUSTOMER", "TRANSFER_CREATE", "TRANSACTION_READ_SELF");
                 case "staff-read" -> session("4", null, "csrf-d", "ROLE_OPERATIONS", "TRANSACTION_READ");
                 case "staff-fraud" -> session("5", null, "csrf-e", "ROLE_ADMIN", "TRANSACTION_READ", "FRAUD_READ");
+                case "staff-out-of-scope" -> session("6", null, "csrf-f", "ROLE_OPERATIONS", "TRANSACTION_READ");
                 default -> null;
             });
         }
@@ -360,12 +358,12 @@ class TransferControllerHttpTest {
             return command -> { orchestratorCalls.incrementAndGet(); return outcome.get(); };
         }
         @Bean TransferReadPort readPort() { return reference -> stored.get(); }
+        @Bean TransferStaffScope staffScope() {
+            return (userId, transferId) -> (userId == 4 || userId == 5) && transferId == 9001;
+        }
         @Bean AccountOwnershipPort ownershipPort() {
             return (customerId, accountId) -> (customerId == 11L && accountId == 3001L)
                     || (customerId == 12L && accountId == 3002L) ? Ownership.OWNED : Ownership.FORBIDDEN;
-        }
-        @Bean TransferStaffScope transferStaffScope() {
-            return (staffUserId, transferId) -> staffUserId == 4 || staffUserId == 5;
         }
         @Bean FraudFlagReadPort fraudPort() {
             return transferId -> List.of(new FraudFlagView(7L, "VELOCITY", 3, "HIGH", "OPEN"));

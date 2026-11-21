@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class CorrelationAndRequestIdFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-Correlation-ID";
+    public static final String REQUEST_ID_HEADER = "X-Request-ID";
     public static final String CONTEXT_ATTRIBUTE = RequestContext.class.getName();
     private static final String HANDLED_ATTRIBUTE = CorrelationAndRequestIdFilter.class.getName() + ".handled";
     private final ProblemWriter writer;
@@ -57,6 +58,8 @@ public class CorrelationAndRequestIdFilter extends OncePerRequestFilter {
         }
         request.setAttribute("correlationId", context.correlationId());
         response.setHeader(HEADER, context.correlationId());
+        // Server-generated per request (client X-Request-ID is never trusted); exposed for tracing.
+        response.setHeader(REQUEST_ID_HEADER, context.requestId());
         var completion = HttpRequestLog.start(request, response, context);
         try (var scope = RequestContextHolder.bind(context)) {
             try {

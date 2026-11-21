@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:39.600Z" time="0.161">
+    <testcase name="requestSchemasMatchTheControllerDtosAndDomainEnums()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.035" />
+    <testcase name="documentedAdminOperationsMatchTheImplementedControllersExactly()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.086" />
+    <testcase name="documentEnvelopeAndPathParametersMatchEveryAdminOperation()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.013" />
+    <testcase name="documentedStatusSetsMatchTheApprovedContract()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.01" />
+    <testcase name="everyDocumentedReferenceResolvesToACompleteComponent()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.003" />
+    <testcase name="adminOperationsRequireAuthenticationAndTheDocumentedWriteHeaders()" classname="com.simulatedbank.banking.admin.adapter.in.AdminOpenApiContractTest" time="0.012" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:35.052Z" time="3.666">
+    <testcase name="applicationMustNotDependOnOutboundAdapters" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="3.264" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.028" />
+    <testcase name="externalModulesMustNotImportAuditInternals" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.371" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:38.719Z" time="0.641">
+    <testcase name="commonMustNotDependOnBusinessModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.046" />
+    <testcase name="commonMustNotOwnPersistenceOrTransactionBoundaries" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.005" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.012" />
+    <testcase name="inboundAdapterMustNotAccessOutboundAdapterDirectly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.008" />
+    <testcase name="modulesMustBeFreeOfCycles" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.333" />
+    <testcase name="customerApiMustNotExposeEntitiesOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="customerInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.074" />
+    <testcase name="customerMustNotReachCrossModuleInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.008" />
+    <testcase name="customerQueryIsImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.005" />
+    <testcase name="accountApiMustDependOnJdkOrCommonOnly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.004" />
+    <testcase name="accountInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.063" />
+    <testcase name="accountPortsAreImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="accountMustNotReachSiblingOrOrchestratorInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.011" />
+    <testcase name="customerApiMustNotCarryTextualPiiFields" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="adminInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.049" />
+    <testcase name="adminInboundAdapterMustNotDependOnPersistenceModel" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="adminDomainMustNotDependOnPersistenceOrAdapters" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="adminPublicApiMustNotExposePersistenceOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:44.303Z" time="0.926">
+    <testcase name="freshMigrationAppliesV8OnceAndValidationSucceeds()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.108" />
+    <testcase name="primaryForeignUniqueAndCheckConstraintsMatchApprovedDesign()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.023" />
+    <testcase name="duplicateAccountNumberBlindIndexIsRejected()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.02" />
+    <testcase name="customerDeleteAndKeyUpdateAreRestrictedByAccountForeignKey()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.016" />
+    <testcase name="canonicalIndexesExistWithoutDuplicatesOrPartialPredicates()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.018" />
+    <testcase name="upgradeFromV7PreservesCustomerDataAndAddsAccountTable()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.659" />
+    <testcase name="validAccountUsesApprovedDefaultsAndSupportsClosedLifecycle()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.021" />
+    <testcase name="missingRequiredColumnsAndInvalidDomainValuesAreRejected()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.018" />
+    <testcase name="invalidCustomerReferenceIsRejected()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.012" />
+    <testcase name="columnsTypesLengthsNullabilityDefaultsAndIdentityMatchCanonicalSchema()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.026" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:48.160Z" time="0.245">
+    <testcase name="unsafeStatesAreRejectedByConstraints()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.022" />
+    <testcase name="uniqueScopeIsActorOperationResourceAndKey()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.021" />
+    <testcase name="foreignKeysRestrictReferencedActorDeleteAndApprovalDelete()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.023" />
+    <testcase name="primaryKeyForeignKeysAndCanonicalChecksMatch()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.022" />
+    <testcase name="canonicalIndexesExistInOrderWithoutPartialPredicates()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.017" />
+    <testcase name="canonicalInsertAppliesDefaultsAndRequiresExpiry()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.018" />
+    <testcase name="columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.024" />
+    <testcase name="freshMigrationAppliesV7OnceAndRecordsSuccessfulHistory()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.095" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-19T19:03:51.374Z" time="0.216">
+    <testcase name="canonicalTerminalStatesAndTimestampInvariantsAreAccepted()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.018" />
+    <testcase name="foreignKeysRestrictReferencedUserDeleteAndKeyUpdate()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.023" />
+    <testcase name="freshMigrationAppliesV6OnceAndRecordsSuccessfulHistory()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.049" />
+    <testcase name="primaryKeyForeignKeysAndCanonicalChecksMatch()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.022" />
+    <testcase name="canonicalIndexesExistInOrderWithoutPartialPredicates()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.02" />
+    <testcase name="canonicalLengthBoundsAndCheckConstraintsAreEnforced()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.015" />
+    <testcase name="validInsertUsesCanonicalDefaultsAndTimestamptzSemantics()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.015" />
+    <testcase name="missingRequiredColumnsAndInvalidEnumerationsAreRejected()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.015" />
+    <testcase name="columnsTypesLengthsNullabilityAndDefaultsMatchCanonicalSchema()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.023" />
+    <testcase name="invalidForeignKeysAndMakerCheckerRelationshipsAreRejected()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.015" />
+  </testsuite>
+</testsuites>

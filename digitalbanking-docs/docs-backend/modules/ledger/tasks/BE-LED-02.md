@@ -23,7 +23,7 @@ Task bao gồm SQL migration, phân quyền cho đối tượng Ledger, kiểm t
 
 **Snapshot working tree ngày 17/11/2026:** production location `src/main/resources/db/migration` có V1, hai file V2 khác tên (`create_audit_log`, `create_identity_and_rbac_tables`), V3 và V4. Chưa có migration production Account/Transfer/Ledger hoặc Java provider Account/Ledger. `db/transfer-candidate/V2__transfer.sql` nằm ngoài location Flyway mặc định; version đó chỉ phục vụ candidate, không phải prerequisite production đã được nghiệm thu. Cần rà lại source và `flyway_schema_history` của môi trường đích trước implementation; không dùng snapshot này để chọn số version mới.
 
-`docker/postgres/init/01-create-roles.sh` đã tách `banking_app`/`banking_migrator`, nhưng default privileges hiện cấp `SELECT, INSERT, UPDATE, DELETE` trên bảng tương lai cho app. V1 chỉ tạo schema. Vì vậy, việc có hai credential chưa chứng minh Ledger append-only: migration Ledger cần xử lý quyền hiệu lực trên bảng vừa tạo và kiểm lại sau toàn bộ migration/bootstrap.
+`docker/postgres/init/01-create-roles.sql` đã tách `banking_app`/`banking_migrator`, nhưng default privileges hiện cấp `SELECT, INSERT, UPDATE, DELETE` trên bảng tương lai cho app. V1 chỉ tạo schema. Vì vậy, việc có hai credential chưa chứng minh Ledger append-only: migration Ledger cần xử lý quyền hiệu lực trên bảng vừa tạo và kiểm lại sau toàn bộ migration/bootstrap.
 
 ## 3. Dependency và cách làm khi chưa có provider
 

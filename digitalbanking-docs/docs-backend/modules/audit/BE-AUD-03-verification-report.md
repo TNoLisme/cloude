@@ -1,31 +1,26 @@
-# BE-AUD-03 — Verification report
+# BE-AUD-03 — Báo cáo Kiểm chứng Lưu trữ & Giữ Pháp lý (`Retention & Legal Hold`)
 
-> **Trạng thái:** Planned — chưa chạy  
-> **Task spec:** [BE-AUD-03-retention-legal-hold.md](BE-AUD-03-retention-legal-hold.md)
+> **Dự án:** Digital Banking MVP · **Owner:** Thịnh
+> **Mã tài liệu:** `BE-MOD-AUDIT-03-REPORT`
+> **Phiên bản:** 1.0
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Đã lên kế hoạch (`Planned` — cổng an toàn chặn purge đang bật; chờ triển khai ở giai đoạn sau tích hợp core)
+> **Đặc tả công việc:** [BE-AUD-03-retention-legal-hold.md](BE-AUD-03-retention-legal-hold.md)
 
-## Verification matrix
+---
 
-| Check | Lệnh / thủ tục | Expected | Actual | Status |
-|---|---|---|---|---|
-| Policy/approval review | Review với Đạt, Vũ, Phương | Retention/scope/privilege/API decisions explicit | Chưa review | Planned |
-| Hold scope unit | Synthetic CUSTOMER/ACCOUNT/TRANSFER/AUDIT_LOG/DATA_SCOPE fixtures | Active/overlap hold resolved đúng | Chưa chạy | Planned |
-| Purge runtime gate | Inspect scheduler/config/DB target | Purge disabled với shared/demo/prod; disposable target only | Chưa có code/deploy review | Planned |
-| Archive/checkpoint failure | Testcontainers + inject failure | Không delete khi archive/checkpoint thiếu/corrupt | Chưa chạy | Planned |
-| Hold/purge concurrency | Hai transaction PostgreSQL với lock protocol đã duyệt | Hold active luôn ngăn purge; không race | Chưa chạy | Planned |
-| Audit/hold atomicity | Testcontainers + audit failure | Purge rollback; active hold không xóa row | Chưa chạy | Planned |
-| Retained chain | Contiguous-prefix purge trong Testcontainers | Hash chain verify từ checkpoint; không xóa giữa chain | Chưa chạy | Planned |
-| Restart/recovery | Crash sau archive/checkpoint/mid-batch/before-after purge | Restart idempotent; không mất dữ liệu hoặc xóa lặp | Chưa chạy | Planned |
-| Checkpoint corruption | Tamper bytes/hash/range/count/checksum | Verifier dừng; không purge; giữ evidence và alert | Chưa chạy | Planned |
-| Independent review | Review schema/lock/archive restore/runbook | Reviewer độc lập sign-off trước shared environment | Chưa review | Planned |
+## 1. Ma trận Kiểm chứng Dự kiến (`Verification Matrix`)
 
-## Purge gate
+| Hạng mục kiểm tra | Thủ tục kiểm thử | Kết quả mong đợi | Trạng thái |
+|---|---|---|---|
+| Phân giải phạm vi `legal_hold` | Unit test với dữ liệu giả lập cho `CUSTOMER`, `ACCOUNT`, `TRANSFER`, `AUDIT_LOG` | Phát hiện chính xác mọi bản ghi nằm trong phạm vi đang có `legal_hold = ACTIVE` | **Planned** |
+| Cổng an toàn chặn `RETENTION_PURGED` mặc định | `AuditEventValidatorTest` (đã có trong `BE-AUD-01`) | Hành động `RETENTION_PURGED` bị từ chối fail-closed khi quy trình purge chưa được kích hoạt | **Verified (Fail-closed Guard)** |
+| Lỗi tạo bản lưu trữ / checkpoint | Testcontainers PostgreSQL + tiêm lỗi | Không xóa bất kỳ dòng nào nếu tệp lưu trữ hoặc `audit_chain_checkpoint` bị thiếu/hỏng | **Planned** |
+| Đua đồng thời giữa đặt `legal_hold` và tiến trình `purge` | Hai giao dịch PostgreSQL độc lập + barrier | Lệnh `legal_hold` đang `ACTIVE` luôn chặn hoàn toàn thao tác xóa | **Planned** |
+| Kiểm định chuỗi băm sau khi cắt tiền tố (`Checkpoint Continuity`) | Testcontainers PostgreSQL | `AuditChainVerifier` xác minh thành công phần chuỗi còn lại bắt đầu từ `through_record_hash` của checkpoint | **Planned** |
 
-Không chạy purge trên shared/demo/production trong MVP task. Chỉ Testcontainers disposable được phép. Purge disabled nếu policy/hold/archive/checkpoint invalid hoặc resolver lỗi. Không claim production-ready hoặc legal compliance từ component test.
+---
 
-## Evidence
+## 2. Ghi chú Vận hành
 
-Revision/môi trường/log: chưa có. Không chạy purge hoặc DB operation khi soạn docs.
-
-## Open items
-
-Retention values, scope resolution, admin approval API, privileged DB execution, archive/checkpoint signature và recovery. Giữ Planned/Blocked cho đến khi có evidence và reviewer decision.
+Trong phạm vi MVP hiện tại, bảng `banking.audit_log` giữ nguyên toàn bộ lịch sử (không chạy job xóa vật lý) và được bảo vệ bởi quyền `SELECT, INSERT` của `banking_app` cùng trigger chặn `UPDATE/DELETE/TRUNCATE` (`DEC-COM-002`).

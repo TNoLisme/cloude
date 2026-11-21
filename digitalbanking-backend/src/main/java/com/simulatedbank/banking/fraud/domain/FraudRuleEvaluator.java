@@ -1,7 +1,13 @@
 package com.simulatedbank.banking.fraud.domain;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.IntUnaryOperator;
 import java.util.stream.Collectors;
 
 /**
@@ -37,61 +43,52 @@ public class FraudRuleEvaluator {
                         Collectors.maxBy(Comparator.comparingInt(FraudRuleConfig::version))
                 ));
 
-        List<FraudRuleMatch> matches = new ArrayList<>();
+        var matches = activeRulesByCode.values().stream().flatMap(Optional::stream)
+                .filter(config -> config.ruleType() != RuleType.UNUSUAL_PATTERN)
+                .map(config -> match(snapshot, config, comparator, seconds -> snapshot.windowTransactionCount(), false))
+                .flatMap(Optional::stream).filter(match -> matchedValueValidator.isSafe(match.matchedValue())).toList();
+        return new FraudEvaluationResult(snapshot.transferId(), !matches.isEmpty(), matches, evaluationTime);
+    }
 
-        for (Optional<FraudRuleConfig> optConfig : activeRulesByCode.values()) {
-            if (optConfig.isEmpty()) {
-                continue;
-            }
-            FraudRuleConfig config = optConfig.get();
+    /** The JDBC provider supplies the count for this exact version's window. */
+    public Optional<FraudRuleMatch> evaluateRule(FraudTransferSnapshot snapshot, FraudRuleConfig config,
+                                                 IntUnaryOperator countInWindow) {
+        if (config.ruleType() == RuleType.UNUSUAL_PATTERN
+                && (config.thresholdAmount() == null || config.thresholdAmount().signum() <= 0
+                || config.thresholdCount() == null || config.thresholdCount() <= 0
+                || config.windowSeconds() == null || config.windowSeconds() <= 0)) {
+            throw new IllegalStateException("Invalid enabled unusual-pattern rule");
+        }
+        var result = match(snapshot, config, FrequencyComparator.GREATER_THAN, countInWindow, true);
+        result.ifPresent(value -> matchedValueValidator.validate(value.matchedValue()));
+        return result;
+    }
 
-            if (config.ruleType() == RuleType.LARGE_VALUE) {
-                if (snapshot.amount().compareTo(config.thresholdAmount()) >= 0) {
-                    Map<String, Object> matchedValue = Map.of(
-                            "amount", snapshot.amount(),
-                            "thresholdAmount", config.thresholdAmount(),
-                            "currency", snapshot.currency()
-                    );
-                    if (matchedValueValidator.isSafe(matchedValue)) {
-                        matches.add(new FraudRuleMatch(
-                                config.ruleCode(),
-                                config.version(),
-                                config.ruleType(),
-                                config.severity(),
-                                matchedValue
-                        ));
-                    }
-                }
-            } else if (config.ruleType() == RuleType.HIGH_FREQUENCY) {
-                // Replay exclusion
-                if (!snapshot.isReplay()) {
-                    if (comparator.matches(snapshot.windowTransactionCount(), config.thresholdCount())) {
-                        Map<String, Object> matchedValue = Map.of(
-                                "count", snapshot.windowTransactionCount(),
-                                "thresholdCount", config.thresholdCount(),
-                                "windowSeconds", config.windowSeconds(),
-                                "comparator", comparator.name()
-                        );
-                        if (matchedValueValidator.isSafe(matchedValue)) {
-                            matches.add(new FraudRuleMatch(
-                                    config.ruleCode(),
-                                    config.version(),
-                                    config.ruleType(),
-                                    config.severity(),
-                                    matchedValue
-                            ));
-                        }
-                    }
-                }
-            }
-            // UNUSUAL_PATTERN remains proposed/disabled in MVP baseline
+    private Optional<FraudRuleMatch> match(FraudTransferSnapshot snapshot, FraudRuleConfig config,
+                                          FrequencyComparator comparator, IntUnaryOperator countInWindow,
+                                          boolean includeWindowBounds) {
+        Map<String, Object> evidence = new HashMap<>();
+        if (config.ruleType() != RuleType.HIGH_FREQUENCY) {
+            if (snapshot.amount().compareTo(config.thresholdAmount()) < 0) return Optional.empty();
+            evidence.put("amount", snapshot.amount());
+            evidence.put("thresholdAmount", config.thresholdAmount());
+            evidence.put("currency", snapshot.currency());
         }
 
-        return new FraudEvaluationResult(
-                snapshot.transferId(),
-                !matches.isEmpty(),
-                matches,
-                evaluationTime
-        );
+        if (config.ruleType() != RuleType.LARGE_VALUE) {
+            if (snapshot.isReplay()) return Optional.empty();
+            int count = countInWindow.applyAsInt(config.windowSeconds());
+            if (!comparator.matches(count, config.thresholdCount())) return Optional.empty();
+            evidence.put("count", count);
+            evidence.put("thresholdCount", config.thresholdCount());
+            evidence.put("windowSeconds", config.windowSeconds());
+            evidence.put("comparator", comparator.name());
+            if (includeWindowBounds) {
+                evidence.put("windowStartExclusive", snapshot.occurredAt().minusSeconds(config.windowSeconds()).toString());
+                evidence.put("windowEndInclusive", snapshot.occurredAt().toString());
+            }
+        }
+        return Optional.of(new FraudRuleMatch(config.ruleCode(), config.version(),
+                config.ruleType(), config.severity(), evidence));
     }
 }

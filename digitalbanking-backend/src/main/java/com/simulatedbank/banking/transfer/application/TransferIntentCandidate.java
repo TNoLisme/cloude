@@ -8,22 +8,15 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Candidate T1 only. No production bean is registered. The surrounding use case
- * must authenticate, authorize, perform the initial lookup and preflight, and
- * dispatch any challenge outside this transaction. Provider APIs and adapters
- * remain unimplemented; all ports below must join the same primary transaction.
- * The command is constructed only after authentication, authorization, request
- * validation, normalization and hashing of the same payload. The challenge is a
- * UUID {@code challengeRef} snapshot (TRFC-ID-05), never a derived BIGINT: T1 inserts
- * the transfer with a NULL challenge FK, then consumeVerified (TRFC-ID-04) revalidates
- * actor, customer, purpose, hash, key, status and expiry under lock and returns the
- * BIGINT challengeId, which is attached to the transfer before flush/audit/commit.
+ * Owns T1 and returns only after commit. The challenge UUID is a lookup snapshot;
+ * Identity revalidates it under lock and provides the BIGINT foreign key.
  */
 public final class TransferIntentCandidate {
     private final Ports ports;
@@ -49,10 +42,14 @@ public final class TransferIntentCandidate {
         }
         long started = System.nanoTime();
         Result result;
+        var readyToCommit = new AtomicBoolean();
         try {
             result = Objects.requireNonNull(tx.execute(status -> {
                 Result attempted = createUnderGuard(command);
-                if (attempted instanceof Created) telemetry.intentAfterCommit();
+                if (attempted instanceof Created) {
+                    telemetry.intentAfterCommit();
+                    readyToCommit.set(true);
+                }
                 return attempted;
             }));
         } catch (DuplicateKeyRace ex) {
@@ -61,6 +58,9 @@ public final class TransferIntentCandidate {
             return Objects.requireNonNull(tx.execute(status -> existingAfterRollback(command)));
         } catch (RuntimeException failure) {
             telemetry.attempt(TransferTelemetry.Phase.T1, TransferTelemetry.Attempt.ERROR, started);
+            if (readyToCommit.get()) {
+                throw new CommitUncertain(failure);
+            }
             throw failure;
         }
         telemetry.attempt(TransferTelemetry.Phase.T1, TransferTelemetry.Attempt.RETURNED, started);
@@ -75,10 +75,13 @@ public final class TransferIntentCandidate {
             return classifyExisting(command, found);
         }
         Assessment assessment = Objects.requireNonNull(ports.evaluateStepUpUnderGuard(command), "assessment");
-        if (assessment.requiresChallenge() && command.verifiedChallengeRef() == null) {
-            return new ChallengeRequired(assessment.policyVersion());
+        UUID challengeRef = null;
+        if (assessment.requiresChallenge()) {
+            challengeRef = ports.findVerifiedChallenge(command);
+            if (challengeRef == null) {
+                return new ChallengeRequired(assessment.policyVersion());
+            }
         }
-        UUID challengeRef = assessment.requiresChallenge() ? command.verifiedChallengeRef() : null;
         // The challenge FK stays NULL at insert; it is attached only after a successful consume.
         long transferId = ports.insertPendingAndKey(command);
         if (transferId <= 0) {
@@ -123,6 +126,10 @@ public final class TransferIntentCandidate {
         void lockStepUpGuard(long customerId);
         Optional<IdempotencyDecision.Existing> findExistingOnPrimary(String key);
         Assessment evaluateStepUpUnderGuard(Command command);
+        /** Called only after the guard, key recheck and a decision that requires step-up. */
+        default UUID findVerifiedChallenge(Command command) {
+            return command.verifiedChallengeRef();
+        }
         /** Insert transfer (challenge FK NULL) then key in this transaction; map only TransferPersistence's
          * DuplicateIdempotencyKeyException to DuplicateKeyRace, never other unique violations. */
         long insertPendingAndKey(Command command);
@@ -148,8 +155,7 @@ public final class TransferIntentCandidate {
     }
 
     public record Command(TransferIdentity identity, TransferAmount amount, String description,
-                          String correlationId, String idempotencyKey, String requestHash,
-                          long ttlSeconds, String ttlConfigVersion, UUID verifiedChallengeRef) {
+                          String correlationId, String idempotencyKey, String requestHash, UUID verifiedChallengeRef) {
         public Command {
             Objects.requireNonNull(identity, "identity");
             Objects.requireNonNull(amount, "amount");
@@ -157,8 +163,6 @@ public final class TransferIntentCandidate {
                     || !RequestContext.isValidCorrelationId(correlationId)
                     || idempotencyKey == null || !idempotencyKey.matches("[A-Za-z0-9._:~\\-]{1,255}")
                     || requestHash == null || !requestHash.matches("[0-9a-f]{64}")
-                    || ttlSeconds < 86400 || ttlConfigVersion == null || ttlConfigVersion.isBlank()
-                    || ttlConfigVersion.length() > 128
                     || (description != null && description.codePointCount(0, description.length()) > 255)) {
                 throw new IllegalArgumentException("Invalid transfer intent command");
             }
@@ -175,6 +179,11 @@ public final class TransferIntentCandidate {
         }
     }
     public record ChallengeRequired(String policyVersion) implements Result { }
+
+    /** The callback completed its writes, but the transaction did not return a commit decision. */
+    public static final class CommitUncertain extends RuntimeException {
+        public CommitUncertain(RuntimeException cause) { super("Transfer intent commit outcome unknown", cause); }
+    }
 
     /** Only a known idempotency-key unique conflict may be translated to this exception. */
     public static final class DuplicateKeyRace extends RuntimeException {

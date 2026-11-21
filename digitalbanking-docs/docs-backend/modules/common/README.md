@@ -2,9 +2,9 @@
 
 > **Dự án:** Digital Banking MVP
 > **Mã tài liệu:** BE-COM-GUIDE
-> **Phiên bản / ngày:** v1.0 / 12/11/2026
+> **Phiên bản / ngày:** v1.1 / 18/11/2026
 > **Owner:** Phương; reviewer/sign-off: chưa review
-> **Trạng thái:** Nền tảng đã triển khai và kiểm chứng local; tích hợp nghiệp vụ/Cloud còn Blocked
+> **Trạng thái:** Hoàn thành nền tảng (30 Java files / 5 sub-packages); chờ nghiệm thu tích hợp toàn hệ thống / Cloud
 
 `common` cung cấp cấu hình/thời gian, request context, HTTP security, crypto/JCS/masking, lỗi và observability cho các module backend. Thư mục này chứa **tài liệu**; [Java source](../../../../digitalbanking-backend/src/main/java/com/simulatedbank/banking/common) nằm trong backend. Common không sở hữu bảng nghiệp vụ, không mở transaction tiền và không ghi audit thay owner.
 
@@ -12,16 +12,16 @@
 
 | Bạn cần | Đọc tại |
 |---|---|
-| Biết việc đã làm, việc còn thiếu và owner tiếp tục | [Final report — trạng thái module](report/BE-COM-FINAL-REPORT.md) |
+| Biết việc đã làm, việc còn thiếu và owner tiếp tục | [Current state — trạng thái module](CURRENT-STATE.md) |
 | Class/API hiện có, ranh giới, HTTP/SQLSTATE, luồng xử lý, test mapping | [TKCT](TKCT.md) |
 | Nhận task, xem AC/dependency và quy tắc đóng việc | [Task tracker](tasks/README.md) |
-| Bằng chứng runtime theo task/revision/môi trường | Các verification report được liên kết trong tracker/final report |
+| Bằng chứng runtime theo task/revision/môi trường | Các verification report được liên kết trong tracker/CURRENT-STATE |
 | Tích hợp vào Java code | Mục 3 bên dưới → phần TKCT tương ứng → [backend usage](../../../../digitalbanking-backend/README.md) |
 | Biến môi trường/profile/secret references | [Deployment configuration](../../deployment/configuration.md) |
 | Demo, start/restart/rollback và kiểm W7/W8 | [Common readiness/runbook](../../deployment/common-readiness.md), [deployment guide](../../deployment/README.md) |
 | Viết verification mới | [Mẫu report](report/VERIFICATION-TEMPLATE.md); theo yêu cầu owner chỉ report, không tạo evidence/ mới |
 
-Người mới nên đọc README → final report → phần TKCT đúng nhu cầu → task và verification liên quan. Các tham chiếu lịch sử tới “common README §1–§7” nói về bản thiết kế nay nằm ở **TKCT.md**; revision và kết quả lịch sử vẫn theo report gốc.
+Người mới nên đọc README → [CURRENT-STATE.md](CURRENT-STATE.md) → phần TKCT đúng nhu cầu → task và verification liên quan. Các tham chiếu lịch sử tới “common README §1–§7” nói về bản thiết kế nay nằm ở **TKCT.md**; revision và kết quả lịch sử vẫn theo report gốc.
 
 ## 2. Nguồn chuẩn và trạng thái
 

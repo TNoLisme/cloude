@@ -98,14 +98,14 @@ public final class AuditEventValidator {
         }
         Set<String> allowed = switch (entityType) {
             case "TRANSFER" -> Set.of("reference", "status", "failureCode", "sourceAccountId",
-                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType");
+                    "destinationAccountId", "amount", "currency", "createdAt", "completedAt", "transferType", "reasonCode");
             case "ACCOUNT" -> Set.of("accountId", "customerId", "status", "last4", "availableBalance", "ledgerBalance", "reasonCode");
             case "APP_USER" -> Set.of("userId", "roleCodes", "status", "lockedUntil", "reasonCode");
             case "CUSTOMER" -> Set.of("customerId", "status", "reasonCode");
             case "LIMIT_CONFIG" -> Set.of("configId", "scopeType", "scopeId", "perTransactionLimit", "dailyLimit", "effectiveFrom", "effectiveTo", "status");
             case "APPROVAL_REQUEST" -> Set.of("approvalId", "requestType", "targetType", "targetId", "status", "makerId", "checkerId", "decision");
             case "FRAUD_FLAG" -> Set.of("flagId", "transferReference", "ruleCode", "ruleVersion", "severity", "status", "decision", "matchedValue");
-            case "AUTH_CHALLENGE" -> Set.of("challengeId", "purpose", "method", "status", "attemptCount", "expiresAt");
+            case "AUTH_CHALLENGE" -> Set.of("challengeId", "purpose", "method", "status", "attemptCount", "expiresAt", "reasonCode");
             case "SESSION" -> Set.of("sessionId", "userId", "deviceId", "status", "reasonCode");
             case "LEGAL_HOLD" -> Set.of("holdId", "entityType", "entityId", "status", "reasonCode", "placedAt", "releasedAt");
             case "RETENTION_POLICY" -> Set.of("policyId", "dataClass", "retentionDays", "archiveAfterDays", "purgeAfterDays", "enabled");

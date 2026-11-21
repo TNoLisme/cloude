@@ -1,6 +1,6 @@
 # BE-TRF-05 — Evidence bổ sung cho candidate
 
-Ngày 17/11/2026, Codex. Phạm vi là candidate không đăng ký production, không phải nghiệm thu BE-TRF-05.
+Ngày 17/11/2026, Vũ (`transfer`). Phạm vi là candidate không đăng ký production, không phải nghiệm thu BE-TRF-05.
 
 - `Flag.ruleVersion` dùng `int` dương như contract v1; test xác nhận version 1 và từ chối 0/âm. Kiểu Java không nhận chuỗi; kiểm tra adapter provider, overflow và round-trip vẫn cần khi tích hợp.
 - Fraud fail-open chỉ áp dụng `FraudEngineException` sau khi provider opt-in, rollback savepoint thành công, xác minh persistence context usable và transaction không rollback-only. Fail-open yêu cầu telemetry; lỗi telemetry, lỗi savepoint, lỗi invariant hoặc không chứng minh được context làm rollback toàn T2. Mặc định không opt-in và lỗi fraud propagate. Các flag đã rollback không được audit.

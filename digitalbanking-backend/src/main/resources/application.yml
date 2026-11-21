@@ -137,6 +137,9 @@ app:
       daily-amount-vnd: 20000000
 
   transfer:
+    enabled: ${APP_TRANSFER_ENABLED:true}
+    recovery:
+      enabled: ${APP_TRANSFER_RECOVERY_ENABLED:false}
     min-amount-vnd: 2000
     max-amount-vnd: 10000000
     pin-otp-threshold-vnd: 5000000
@@ -145,6 +148,13 @@ app:
     t2-lock-timeout-ms: 2000
     t2-statement-timeout-ms: 5000
     fraud-eval-timeout-ms: 1000
+
+  notification:
+    sms:
+      enabled: ${APP_NOTIFICATION_SMS_ENABLED:false}
+      endpoint: ${APP_NOTIFICATION_SMS_ENDPOINT:}
+    worker:
+      enabled: ${APP_NOTIFICATION_WORKER_ENABLED:false}
 
   fraud:
     velocity-count: 3
@@ -162,3 +172,17 @@ app:
     audit-verify-incremental-cron: "0 */15 * * * *"
     audit-verify-full-cron: "0 0 2 * * *"
     retention-cleanup-cron: "0 0 3 * * *"
+
+  admin:
+    # Canonical IDEMPOTENCY_RECORD retention (04 §9.6, BRL-013/OI-001).
+    idempotency-ttl-hours: ${APP_ADMIN_IDEMPOTENCY_TTL_HOURS:24}
+    idempotency-purge-batch-size: ${APP_ADMIN_IDEMPOTENCY_PURGE_BATCH_SIZE:500}
+    # BE-ADM-OPS-01 observability/retry detection. Detection is read-only; recovery stays a manual
+    # authorized checker decision. Thresholds are bounded configuration only.
+    ops:
+      enabled: ${APP_ADMIN_OPS_ENABLED:true}
+      stuck-after: ${APP_ADMIN_OPS_STUCK_AFTER:PT30M}
+      attempt-window: ${APP_ADMIN_OPS_ATTEMPT_WINDOW:PT1H}
+      max-failed-attempts: ${APP_ADMIN_OPS_MAX_FAILED_ATTEMPTS:5}
+      sweep-delay: ${APP_ADMIN_OPS_SWEEP_DELAY:PT5M}
+      sweep-initial-delay: ${APP_ADMIN_OPS_SWEEP_INITIAL_DELAY:PT1M}

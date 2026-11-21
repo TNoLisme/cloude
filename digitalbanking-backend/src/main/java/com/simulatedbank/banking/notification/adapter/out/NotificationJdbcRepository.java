@@ -12,6 +12,7 @@ import com.simulatedbank.banking.notification.domain.NotificationItem;
 import com.simulatedbank.banking.notification.domain.NotificationStatus;
 import com.simulatedbank.banking.notification.domain.NotificationType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -33,6 +34,7 @@ import java.util.Optional;
  * and fencing token status updates) are retained via JdbcTemplate with explicit technical justification.
  */
 @Repository
+@ConditionalOnProperty(name = "app.notification.enabled", havingValue = "true", matchIfMissing = true)
 public class NotificationJdbcRepository implements NotificationPersistencePort {
 
     private final JdbcTemplate jdbc;
@@ -118,7 +120,7 @@ public class NotificationJdbcRepository implements NotificationPersistencePort {
                     claim_token = NULL,
                     locked_until = NULL,
                     updated_at = clock_timestamp()
-                WHERE notification_id = ? AND claim_token = ?
+                WHERE notification_id = ? AND claim_token = ? AND locked_until > clock_timestamp()
                 """;
 
         int affected = jdbc.update(sql, Timestamp.from(sentAt), notificationId, claimToken);
@@ -140,7 +142,7 @@ public class NotificationJdbcRepository implements NotificationPersistencePort {
                     claim_token = NULL,
                     locked_until = NULL,
                     updated_at = clock_timestamp()
-                WHERE notification_id = ? AND claim_token = ?
+                WHERE notification_id = ? AND claim_token = ? AND locked_until > clock_timestamp()
                 """;
 
         Timestamp nextRetry = nextRetryAt != null ? Timestamp.from(nextRetryAt) : null;

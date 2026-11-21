@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DuplicateKeyException;
@@ -55,15 +56,19 @@ public class OtpChallengeService implements StepUpChallengePort {
     private final Clock clock;
     private final int otpTtlSeconds;
     private final int maxAttempts;
+    private final int resendCooldownSeconds;
+    private final int maxResendCount;
     private final TransactionTemplate ownTransaction;
     private final OtpDispatchService dispatch;
     private final LoginSessionService loginSessions;
     private final AuthMetrics metrics;
 
+    private final SessionCustomerBinding customers;
+
     public OtpChallengeService(ChallengeRepository challenges, AuthAuditPort audit, PasswordHasher hasher,
             OtpCodeGenerator otpGenerator, Clock clock, AppProperties properties,
             PlatformTransactionManager transactionManager, OtpDispatchService dispatch,
-            LoginSessionService loginSessions, AuthMetrics metrics) {
+            LoginSessionService loginSessions, AuthMetrics metrics, SessionCustomerBinding customers) {
         this.challenges = challenges;
         this.audit = audit;
         this.hasher = hasher;
@@ -71,11 +76,14 @@ public class OtpChallengeService implements StepUpChallengePort {
         this.clock = clock;
         this.otpTtlSeconds = properties.security().otp().ttlSeconds();
         this.maxAttempts = properties.security().otp().maxVerifyAttempts();
+        this.resendCooldownSeconds = properties.security().otp().resendCooldownSeconds();
+        this.maxResendCount = properties.security().otp().maxResendCount();
         this.ownTransaction = new TransactionTemplate(transactionManager);
         this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.dispatch = dispatch;
         this.loginSessions = loginSessions;
         this.metrics = metrics;
+        this.customers = customers;
     }
 
     // ------------------------------------------------------------------ issue (OWN/T0)
@@ -85,10 +93,108 @@ public class OtpChallengeService implements StepUpChallengePort {
         return issueChallenge(request, null);
     }
 
+    @Override
+    public ChallengeView requestTransferChallenge(TransferBinding binding, String correlationId) {
+        requireTransferCustomer(binding);
+        return requestChallenge(new ChallengeRequest(ChallengePurpose.TRANSFER_STEP_UP, binding.userId(),
+                binding.requestHash(), binding.bindingKey(), correlationId));
+    }
+
+    @Override
+    public Optional<VerifiedChallenge> findVerifiedBindingIfPresent(TransferBinding binding) {
+        requireTransferCustomer(binding);
+        return challenges.findVerifiedTransferBinding(binding.userId(), binding.bindingKey(), binding.requestHash());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ConsumedChallenge consumeTransferChallenge(TransferBinding binding, String challengeRef) {
+        requireTransferCustomer(binding);
+        return consumeVerified(new ConsumeCommand(challengeRef, binding.userId(), ChallengePurpose.TRANSFER_STEP_UP,
+                binding.requestHash(), binding.bindingKey()));
+    }
+
+    private void requireTransferCustomer(TransferBinding binding) {
+        if (binding == null || binding.userId() <= 0 || binding.customerId() <= 0
+                || binding.requestHash() == null || !REQUEST_HASH.matcher(binding.requestHash()).matches()
+                || binding.bindingKey() == null || !binding.bindingKey().matches("[A-Za-z0-9._:~\\-]{1,255}")
+                || !Long.toString(binding.customerId()).equals(customers.resolve(binding.userId(), "CUSTOMER"))) {
+            throw mismatch();
+        }
+    }
+
     /** Password-authenticated login attempt; device metadata is bound before delivery. */
     public ChallengeView requestLoginChallenge(long userId, Long deviceId, String correlationId) {
         return issueChallenge(new ChallengeRequest(ChallengePurpose.LOGIN_NEW_DEVICE, userId,
                 null, null, correlationId), deviceId);
+    }
+
+    public ChallengeView resend(String challengeRef, Long actorUserId, String correlationId) {
+        var current = challenges.findByRef(challengeRef).orElseThrow(OtpChallengeService::notFound);
+        requireResendScope(current, actorUserId);
+        char[] otp = otpGenerator.generate();
+        try {
+            // A random numeric collision would leave the old OTP valid despite a new verifier.
+            if (current.otpHash() != null && hasher.matches(current.otpHash(), otp)) {
+                java.util.Arrays.fill(otp, '\0');
+                otp = otpGenerator.generate();
+                if (hasher.matches(current.otpHash(), otp)) {
+                    throw unavailable();
+                }
+            }
+            String hash = hasher.hash(otp);
+            var rotated = ownTransaction.execute(status -> {
+                var locked = challenges.lockForResend(challengeRef).orElseThrow(OtpChallengeService::notFound);
+                var challenge = locked.challenge();
+                requireResendScope(challenge, actorUserId);
+                ChallengeState state = ChallengeState.parse(challenge.status()).orElseThrow();
+                if (state == ChallengeState.LOCKED || challenge.attemptCount() >= challenge.maxAttempts()) {
+                    throw locked();
+                }
+                if (state == ChallengeState.EXPIRED || !challenge.expiresAt().isAfter(locked.now())) {
+                    throw otpExpired();
+                }
+                if (!METHOD_OTP.equals(challenge.method()) || challenge.consumedAt() != null
+                        || (state != ChallengeState.CREATED && state != ChallengeState.SENT)) {
+                    throw invalidTransition("Challenge không thể gửi lại.");
+                }
+                var nextAllowed = locked.lastDispatchAt().plusSeconds(resendCooldownSeconds);
+                if (locked.resendCount() >= maxResendCount || nextAllowed.isAfter(locked.now())) {
+                    var retryAt = locked.resendCount() >= maxResendCount ? challenge.expiresAt() : nextAllowed;
+                    long millis = java.time.Duration.between(locked.now(), retryAt).toMillis();
+                    throw new BankingBusinessException(ErrorCode.RATE_LIMITED, ErrorCode.RATE_LIMITED.detail(),
+                            Map.of("retryAfterSeconds", Math.max(1L, (millis + 999L) / 1000L)));
+                }
+                if (!Objects.equals(challenge.otpHash(), current.otpHash())) {
+                    throw invalidTransition("Challenge đã thay đổi.");
+                }
+                var replacement = challenges.rotateOtp(challenge.challengeId(), hash, locked.now(),
+                        locked.now().plusSeconds(otpTtlSeconds));
+                audit.recordInTransaction(AuthAuditPort.AuthAuditEvent
+                        .c2Challenge(AuthAuditPort.AuthAction.AUTH_CHALLENGE_RESENT, replacement.userId(),
+                                replacement.challengeRef(), null, null)
+                        .withChallenge(replacement, "CREATED", replacement.attemptCount()), correlationId);
+                return replacement;
+            });
+            dispatch.deliver(Objects.requireNonNull(rotated), otp, correlationId);
+            return toView(rotated);
+        } catch (JpaSystemException | org.springframework.transaction.CannotCreateTransactionException
+                | org.springframework.dao.DataAccessResourceFailureException resourceFailure) {
+            throw unavailable();
+        } finally {
+            java.util.Arrays.fill(otp, '\0');
+        }
+    }
+
+    private static void requireResendScope(ChallengeRepository.ChallengeSnapshot challenge, Long actorUserId) {
+        if (!ChallengePurpose.LOGIN_NEW_DEVICE.name().equals(challenge.purpose())) {
+            if (actorUserId == null) {
+                throw new BankingBusinessException(ErrorCode.AUTH_SESSION_EXPIRED);
+            }
+            if (actorUserId != challenge.userId()) {
+                throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+            }
+        }
     }
 
     private ChallengeView issueChallenge(ChallengeRequest request, Long deviceId) {
@@ -110,6 +216,9 @@ public class OtpChallengeService implements StepUpChallengePort {
         ChallengeRepository.ChallengeSnapshot snapshot;
         try {
             snapshot = ownTransaction.execute(status -> {
+                if (request.purpose() == ChallengePurpose.TRANSFER_STEP_UP) {
+                    challenges.expireTransferBindingIfDue(request.userId(), request.bindingKey(), request.requestHash());
+                }
                 var created = challenges.insert(new ChallengeRepository.NewChallenge(
                         request.userId(), request.purpose().name(), METHOD_OTP, CHANNEL_DEFAULT,
                         otpHash, request.requestHash(), request.bindingKey(),
@@ -117,7 +226,8 @@ public class OtpChallengeService implements StepUpChallengePort {
                 // Mandatory audit belongs to the INSERT transaction, never after its commit.
                 audit.recordInTransaction(AuthAuditPort.AuthAuditEvent
                         .c2Challenge(AuthAuditPort.AuthAction.AUTH_CHALLENGE_CREATED, request.userId(),
-                                created.challengeRef(), null, null), request.correlationId());
+                                created.challengeRef(), null, null)
+                        .withChallenge(created, "CREATED", 0), request.correlationId());
                 return created;
             });
         } catch (DuplicateKeyException duplicate) {
@@ -243,14 +353,8 @@ public class OtpChallengeService implements StepUpChallengePort {
     }
 
     /**
-     * Verify flow (đã hiệu chỉnh so với mô tả lock-then-verify của design/02 §5.1): pre-check
-     * bằng read thường, mọi mutation là conditional UPDATE nguyên tử (`markVerified`/
-     * `recordFailedVerifyAttempt`/`expireIfDue`). Lý do: (1) rejection (OTP sai/hết hạn) phải
-     * COMMIT attempt counter — ném exception trong cùng TX sẽ rollback bộ đếm và phá invariant
-     * max attempts (đã phát hiện trong test integration); (2) tránh giữ row lock FOR UPDATE
-     * xuyên qua Argon2id ~100ms. Atomicity/race được bảo đảm bởi chính conditional UPDATE
-     * (design/02 §9.1; task §7 pattern "conditional database update"); lock row vẫn implicit
-     * trong từng UPDATE. Chi tiết: DEC-ID-005.
+     * Verify the hash outside the row lock. The repository locks before checking the verifier
+     * generation and the database clock. Failed attempts commit before returning the rejection.
      */
     private VerifiedChallenge verifyWithoutTransaction(VerifyCommand command) {
         var snapshot = challenges.findByRefAndUser(command.challengeRef(), command.userId())
@@ -309,7 +413,7 @@ public class OtpChallengeService implements StepUpChallengePort {
     }
 
     private void registerFailedAttempt(ChallengeRepository.ChallengeSnapshot snapshot, VerifyCommand command) {
-        var bump = challenges.recordFailedVerifyAttempt(snapshot.challengeId(), snapshot.maxAttempts());
+        var bump = challenges.recordFailedVerifyAttempt(snapshot.challengeId(), snapshot.maxAttempts(), snapshot.otpHash());
         if (bump.isEmpty()) {
             // Race: hết hạn/khóa/consume xen kẽ giữa lock và bump → đọc lại, map fail-closed.
             var current = challenges.findByRefAndUser(snapshot.challengeRef(), command.userId())
@@ -331,12 +435,14 @@ public class OtpChallengeService implements StepUpChallengePort {
             // design/01 §5.3: state lock commit trước; AUTH_CHALLENGE_LOCKED là C3 standalone.
             audit.recordStandalone(AuthAuditPort.AuthAuditEvent
                     .c3Challenge(AuthAuditPort.AuthAction.AUTH_CHALLENGE_LOCKED, command.userId(),
-                            snapshot.challengeRef(), "MAX_ATTEMPTS", null), command.correlationId());
+                            snapshot.challengeRef(), "MAX_ATTEMPTS", null)
+                    .withChallenge(snapshot, "LOCKED", bump.get().attemptCount()), command.correlationId());
             throw locked();
         }
         audit.recordStandalone(AuthAuditPort.AuthAuditEvent
                 .c3Challenge(AuthAuditPort.AuthAction.AUTH_STEP_UP_FAILED, command.userId(),
-                        snapshot.challengeRef(), "OTP_MISMATCH", null), command.correlationId());
+                        snapshot.challengeRef(), "OTP_MISMATCH", null)
+                .withChallenge(snapshot, bump.get().status(), bump.get().attemptCount()), command.correlationId());
         throw otpInvalid();
     }
 
@@ -348,7 +454,8 @@ public class OtpChallengeService implements StepUpChallengePort {
             markVerifiedOrReject(snapshot);
             audit.recordInTransaction(AuthAuditPort.AuthAuditEvent
                     .c2Challenge(AuthAuditPort.AuthAction.AUTH_STEP_UP_VERIFIED, snapshot.userId(),
-                            snapshot.challengeRef(), null, null), correlationId);
+                            snapshot.challengeRef(), null, null)
+                    .withChallenge(snapshot, "VERIFIED", snapshot.attemptCount() + 1), correlationId);
             return new VerifiedChallenge(snapshot.challengeRef(),
                     ChallengePurpose.valueOf(snapshot.purpose()), clock.instant(), snapshot.expiresAt());
         });
@@ -359,7 +466,7 @@ public class OtpChallengeService implements StepUpChallengePort {
     }
 
     private void markVerifiedOrReject(ChallengeRepository.ChallengeSnapshot snapshot) {
-        if (challenges.markVerified(snapshot.challengeId(), snapshot.attemptCount())) {
+        if (challenges.markVerified(snapshot.challengeId(), snapshot.attemptCount(), snapshot.otpHash())) {
             return;
         }
         var current = challenges.findByRefAndUser(snapshot.challengeRef(), snapshot.userId())

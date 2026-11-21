@@ -14,6 +14,7 @@ import com.simulatedbank.banking.fraud.adapter.out.persistence.FraudRuleConfigMa
 import com.simulatedbank.banking.fraud.domain.*;
 import com.simulatedbank.banking.fraud.application.port.FraudPersistencePort;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -37,6 +38,7 @@ import java.util.Optional;
  * atomic terminal state verification) are retained in native SQL / JdbcTemplate with explicit technical justification.
  */
 @Repository
+@ConditionalOnProperty(name = "app.fraud.enabled", havingValue = "true", matchIfMissing = true)
 public class FraudJdbcRepository implements FraudPersistencePort {
 
     private final JdbcTemplate jdbc;

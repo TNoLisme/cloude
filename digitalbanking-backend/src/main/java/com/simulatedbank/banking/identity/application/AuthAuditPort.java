@@ -7,8 +7,8 @@ import org.springframework.lang.Nullable;
  * C2 (`recordInTransaction`, cùng TX nghiệp vụ, fail-closed) và C3 (`recordStandalone`, best-effort).
  *
  * <p>Tên action khớp catalog: `AUTH_LOGIN_SUCCESS`, `AUTH_LOGIN_FAILED`, `AUTH_ACCOUNT_LOCKED`,
- * `AUTH_SESSION_LOGOUT`. Hiện chưa có module audit thật (BE-ID-IMP-13): adapter mặc định ghi
- * security log + metric; hợp đồng này giữ nguyên semantics cho integration sau.</p>
+ * `AUTH_SESSION_LOGOUT`. BE-INT-05 ghi Audit bền vững cho challenge Transfer.
+ * Các action Identity còn lại dùng security log và metric theo BE-ID-IMP-13.</p>
  */
 public interface AuthAuditPort {
 
@@ -19,10 +19,10 @@ public interface AuthAuditPort {
         AUTH_SESSION_LOGOUT,
         // BE-ID-IMP-05 — challenge lifecycle theo design/01 §5.3 catalog (tên khớp catalog):
         AUTH_CHALLENGE_CREATED,
+        AUTH_CHALLENGE_RESENT,
         AUTH_STEP_UP_VERIFIED,
         AUTH_STEP_UP_FAILED,
         AUTH_CHALLENGE_LOCKED
-        // AUTH_CHALLENGE_RESENT (C2) thuộc luồng resend BE-ID-IMP-06 — thêm khi có flow.
     }
 
     enum AuditClass {
@@ -35,7 +35,17 @@ public interface AuthAuditPort {
     /** Sự kiện audit auth; mọi field phải an toàn khi log (không password/hash/token). */
     record AuthAuditEvent(AuthAction action, AuditClass auditClass, @Nullable Long actorUserId,
             @Nullable String anonymousRef, @Nullable String entityId, @Nullable String reasonCode,
-            @Nullable String detail) {
+            @Nullable String detail, @Nullable ChallengeStateEvidence challenge) {
+
+        public AuthAuditEvent(AuthAction action, AuditClass auditClass, Long actorUserId, String anonymousRef,
+                String entityId, String reasonCode, String detail) {
+            this(action, auditClass, actorUserId, anonymousRef, entityId, reasonCode, detail, null);
+        }
+
+        public AuthAuditEvent withChallenge(ChallengeRepository.ChallengeSnapshot snapshot, String status, int attempts) {
+            return new AuthAuditEvent(action, auditClass, actorUserId, anonymousRef, entityId, reasonCode, detail,
+                    new ChallengeStateEvidence(snapshot.challengeRef(), snapshot.purpose(), snapshot.method(), status, attempts));
+        }
 
         public static AuthAuditEvent c2(AuthAction action, long actorUserId, @Nullable String reasonCode,
                 @Nullable String detail) {
@@ -69,6 +79,8 @@ public interface AuthAuditPort {
                     "AUTH_CHALLENGE:" + challengeRef, reasonCode, detail);
         }
     }
+
+    record ChallengeStateEvidence(String ref, String purpose, String method, String status, int attempts) { }
 
     /** C2: tham gia TX hiện tại (MANDATORY); lỗi phải lan truyền để rollback nghiệp vụ. */
     void recordInTransaction(AuthAuditEvent event, String correlationId);

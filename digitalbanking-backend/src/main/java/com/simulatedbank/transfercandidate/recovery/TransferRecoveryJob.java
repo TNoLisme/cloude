@@ -36,7 +36,7 @@ public final class TransferRecoveryJob {
         try (var scope = bindJob()) {
             recovery.recoverBatch();
         } catch (RuntimeException failure) {
-            LOG.error("Transfer recovery scan failed");
+            LOG.error("TRANSFER_RECOVERY_SCAN_FAILED");
         }
         try (var scope = bindJob()) {
             recovery.purgeBatch();

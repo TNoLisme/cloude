@@ -28,8 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * NOT_SUPPORTED suspends even an ambient caller transaction before resolving/invoking the
  * gateway. Only the conditional repository acknowledgement opens a short transaction.
  *
- * <p>No retry, secret persistence, lease, or resend is implemented: MOD-OI-07 is open.
- * Gateway adapters must enforce transport deadlines themselves; interrupting an executor
+ * <p>Each generation is dispatched once. Gateway adapters must enforce transport deadlines themselves; interrupting an executor
  * cannot guarantee termination or safe lifetime of its borrowed OTP. The caller must wipe
  * its OTP array in a finally block after this method returns or throws.</p>
  */
@@ -153,6 +152,12 @@ public class OtpDispatchService {
     }
 
     private void reject(ChallengeRepository.ChallengeSnapshot challenge, String correlationId, Result result) {
+        try {
+            challenges.cancelUnacknowledged(challenge.challengeId(), challenge.otpHash());
+        } catch (RuntimeException invalidationFailure) {
+            metrics.counter("auth.otp.invalidation.failed").increment();
+            LOG.error("OTP_INVALIDATION_FAILED challengeRef={} correlationId={}", challenge.challengeRef(), correlationId);
+        }
         record(challenge, correlationId, result);
         throw new BankingBusinessException(ErrorCode.OTP_DISPATCH_FAILED);
     }

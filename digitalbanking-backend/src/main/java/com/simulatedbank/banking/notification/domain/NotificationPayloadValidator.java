@@ -39,6 +39,7 @@ public class NotificationPayloadValidator {
     private static final Pattern UNMASKED_PHONE_PATTERN = Pattern.compile("(\\+?[0-9]{9,15})");
     private static final Pattern UNMASKED_EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}");
     private static final Pattern CONSECUTIVE_DIGITS_PATTERN = Pattern.compile("\\d{8,}");
+    private static final Pattern TRANSFER_REFERENCE = Pattern.compile("TXN[0-9]{8}[A-Z0-9]{8,20}");
     private static final Pattern CURRENCY_PATTERN = Pattern.compile("^[A-Za-z]{3}$");
 
     public void validateTransferNotice(TransferNotice notice) {
@@ -99,6 +100,11 @@ public class NotificationPayloadValidator {
 
             String strVal = value.toString();
             String lowerVal = strVal.toLowerCase(Locale.ROOT);
+
+            // A canonical server-issued reference may contain digit runs and reserved words by chance.
+            if (key.equals("reference") && value instanceof String && TRANSFER_REFERENCE.matcher(strVal).matches()) {
+                continue;
+            }
 
             // 4. Check sensitive keywords in string value
             for (String sensitive : SENSITIVE_KEYWORDS) {

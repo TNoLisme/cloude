@@ -1,0 +1,887 @@
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/LimitChangeHttpRequest.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/LimitChangeHttpRequest.java
+index f595d34..8433fa8 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/LimitChangeHttpRequest.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/LimitChangeHttpRequest.java
+@@ -1,6 +1,14 @@
+ package com.simulatedbank.banking.admin.adapter.in;
+ 
+-/** API-LIM-02 request body (07 §8.5.2); currently fail-closed because the Limit provider is absent. */
+-public record LimitChangeHttpRequest(String customerId, String accountId, String perTransactionLimit,
+-        String dailyLimit, String currency, String effectiveFrom, String reason) {
++import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
++
++/** API-LIM-02 request body (07 §8.5.2); ID and Money are strings on the wire. */
++public record LimitChangeHttpRequest(
++        @JsonDeserialize(using = StrictStringDeserializer.class) String customerId,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String accountId,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String perTransactionLimit,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String dailyLimit,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String currency,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String effectiveFrom,
++        @JsonDeserialize(using = StrictStringDeserializer.class) String reason) {
+ }
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/out/ApprovalRequestEntity.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/out/ApprovalRequestEntity.java
+index cd9d984..50bac27 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/out/ApprovalRequestEntity.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/out/ApprovalRequestEntity.java
+@@ -30,14 +30,14 @@ class ApprovalRequestEntity {
+     private Long approvalId;
+ 
+     @Enumerated(EnumType.STRING)
+-    @Column(name = "request_type", nullable = false, length = 32)
++    @Column(name = "request_type", nullable = false, updatable = false, length = 32)
+     private ApprovalRequestType requestType;
+ 
+     @Enumerated(EnumType.STRING)
+-    @Column(name = "target_type", nullable = false, length = 32)
++    @Column(name = "target_type", nullable = false, updatable = false, length = 32)
+     private ApprovalTargetType targetType;
+ 
+-    @Column(name = "target_id", nullable = false, length = 64)
++    @Column(name = "target_id", nullable = false, updatable = false, length = 64)
+     private String targetId;
+ 
+     @JdbcTypeCode(SqlTypes.JSON)
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/application/ApprovalStepUpService.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/application/ApprovalStepUpService.java
+index e289cdd..8b16d5f 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/application/ApprovalStepUpService.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/application/ApprovalStepUpService.java
+@@ -108,6 +108,9 @@ public class ApprovalStepUpService {
+ 
+     /** Public 428 challenge extension shape (07 §6.3): no OTP, hash or binding material. */
+     public static Map<String, Object> publicChallenge(ChallengeView view) {
++        if (view == null || view.purpose() != ChallengePurpose.SENSITIVE_ACTION) {
++            throw new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE);
++        }
+         Map<String, Object> challenge = new LinkedHashMap<>();
+         challenge.put("challengeId", java.util.UUID.fromString(view.challengeRef()));
+         challenge.put("purpose", view.purpose().name());
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/in/LimitCustomerController.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/in/LimitCustomerController.java
+index 000d27d..0afbcae 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/in/LimitCustomerController.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/in/LimitCustomerController.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.adapter.in;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.limit.application.LimitCustomerService;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.security.core.Authentication;
+@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
+ 
+ @RestController
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequestMapping("/api/v1/limits")
+ @RequiredArgsConstructor
+ public class LimitCustomerController {
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitJpaAdapter.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitJpaAdapter.java
+index 56343a4..d22ed7f 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitJpaAdapter.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitJpaAdapter.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.adapter.out;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.limit.api.LimitConfiguration;
+ import com.simulatedbank.banking.limit.api.LimitUsage;
+ import com.simulatedbank.banking.limit.application.port.LimitStore;
+@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Propagation;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ @Repository
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ public class LimitJpaAdapter implements LimitStore {
+     private final LimitConfigJpaRepository configs;
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitReadAdapter.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitReadAdapter.java
+index 08e6944..11a7f37 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitReadAdapter.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/adapter/out/LimitReadAdapter.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.adapter.out;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.limit.application.port.LimitReadPort;
+ import java.time.Instant;
+ import java.time.LocalDate;
+@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
+ import org.springframework.stereotype.Repository;
+ 
+ @Repository
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ class LimitReadAdapter implements LimitReadPort {
+     private final LimitReadRepository repository;
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangePolicy.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangePolicy.java
+index 41e4f4e..e861366 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangePolicy.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangePolicy.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.common.error.BankingBusinessException;
+ import com.simulatedbank.banking.common.error.ErrorCode;
+ import com.simulatedbank.banking.limit.domain.LimitAmounts;
+@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
+ 
+ /** Explicit change policy; existing transfer defaults are not configuration policy. */
+ @Component
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ public class LimitChangePolicy {
+     private final Environment environment;
+ 
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangeService.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangeService.java
+index 8d9f968..44629f2 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangeService.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitChangeService.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.common.error.BankingBusinessException;
+ import com.simulatedbank.banking.common.error.ErrorCode;
+ import com.simulatedbank.banking.limit.application.port.LimitStore;
+@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.transaction.support.TransactionSynchronizationManager;
+ 
+ @Service
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ @Transactional(propagation = Propagation.MANDATORY, noRollbackFor = BankingBusinessException.class)
+ public class LimitChangeService implements LimitChanges {
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitCustomerService.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitCustomerService.java
+index 54f2767..2e30b85 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitCustomerService.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitCustomerService.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.account.api.AccountQuery;
+ import com.simulatedbank.banking.common.config.SessionAuthenticator;
+ import com.simulatedbank.banking.common.error.BankingBusinessException;
+@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ @Service
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ public class LimitCustomerService {
+     private final LimitReadPort repository;
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitEnforcementService.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitEnforcementService.java
+index 95d0bb2..311fa11 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitEnforcementService.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitEnforcementService.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.common.error.BankingBusinessException;
+ import com.simulatedbank.banking.common.error.ErrorCode;
+ import com.simulatedbank.banking.limit.application.port.LimitStore;
+@@ -24,6 +25,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
+ import org.springframework.transaction.support.TransactionSynchronizationManager;
+ 
+ @Service
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ public class LimitEnforcementService implements LimitEnforcement {
+     private final LimitStore repository;
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitRuleService.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitRuleService.java
+index 983078b..c24a328 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitRuleService.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitRuleService.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.common.error.BankingBusinessException;
+ import com.simulatedbank.banking.common.error.ErrorCode;
+ import com.simulatedbank.banking.limit.application.port.LimitStore;
+@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ @Service
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+ public class LimitRuleService implements LimitRules {
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitSecurityDenialReporter.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitSecurityDenialReporter.java
+index b11373a..4198c36 100644
+--- a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitSecurityDenialReporter.java
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/limit/application/LimitSecurityDenialReporter.java
+@@ -1,5 +1,6 @@
+ package com.simulatedbank.banking.limit.application;
+ 
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+ import com.simulatedbank.banking.audit.api.AccessDeniedAudit;
+ import com.simulatedbank.banking.common.config.SecurityDenialReporter;
+ import com.simulatedbank.banking.common.config.SessionAuthenticator;
+@@ -12,6 +13,7 @@ import org.springframework.security.core.Authentication;
+ import org.springframework.stereotype.Component;
+ 
+ @Component
++@ConditionalOnProperty(name = "app.limit.enabled", havingValue = "true", matchIfMissing = true)
+ @RequiredArgsConstructor
+ public class LimitSecurityDenialReporter implements SecurityDenialReporter {
+     private final ObjectProvider<AccessDeniedAudit> audits;
+diff --git a/digitalbanking-backend/src/main/resources/application-test.yml b/digitalbanking-backend/src/main/resources/application-test.yml
+index 3c91f02..c9caf2e 100644
+--- a/digitalbanking-backend/src/main/resources/application-test.yml
++++ b/digitalbanking-backend/src/main/resources/application-test.yml
+@@ -5,7 +5,7 @@ spring:
+   datasource:
+     hikari:
+       maximum-pool-size: 3
+-      minimum-idle: 1
++      minimum-idle: 0
+   flyway:
+     clean-disabled: false
+ 
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminHttpIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminHttpIT.java
+index f250174..f2eb0b8 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminHttpIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminHttpIT.java
+@@ -71,8 +71,8 @@ class LimitAdminHttpIT {
+         properties.add("spring.flyway.url", postgres::getJdbcUrl);
+         properties.add("spring.flyway.user", () -> "banking_migrator");
+         properties.add("spring.flyway.password", () -> "test_migrator");
+-        properties.add("app.limit.policy.max-per-transaction-vnd", () -> "1000");
+-        properties.add("app.limit.policy.max-daily-vnd", () -> "2000");
++        properties.add("app.limit.policy.max-per-transaction", () -> "1000");
++        properties.add("app.limit.policy.max-daily", () -> "2000");
+     }
+ 
+     private static final String CHANGE = """
+@@ -142,7 +142,8 @@ class LimitAdminHttpIT {
+         mvc.perform(post("/api/v1/admin/limits").cookie(new Cookie("DB_SESSION", "maker"))
+                 .contentType("application/json").content(CHANGE)).andExpect(status().isForbidden());
+         mvc.perform(post("/api/v1/admin/limits").cookie(new Cookie("DB_SESSION", "maker"))
+-                .header("X-CSRF-Token", "csrf").contentType("application/json").content(CHANGE))
++                .header("X-CSRF-Token", "csrf").header("Idempotency-Key", "cookie-proposal")
++                .contentType("application/json").content(CHANGE))
+                 .andExpect(status().isPreconditionRequired());
+         create(CHANGE);
+         send("no-checker", "/api/v1/admin/limits/1/approve", APPROVE, null, 403);
+@@ -155,7 +156,7 @@ class LimitAdminHttpIT {
+             "{\"customerId\":\"9223372036854775808\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\"}",
+             "{\"customerId\":\"11\",\"perTransactionLimit\":\"3.00\",\"dailyLimit\":\"2.00\"}",
+             "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"makerId\":\"99\"}",
+-            "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"reason\":\"otp=123456\"}"})
++            "{\"customerId\":\"11\",\"perTransactionLimit\":\"1.00\",\"dailyLimit\":\"2.00\",\"reason\":\"bad\\u0001note\"}"})
+     void wireValidationRejectsMalformedRequestsBeforeAnyApproval(String invalid) throws Exception {
+         send("maker", "/api/v1/admin/limits", invalid, null, 400);
+         assertThat(count("banking.approval_request")).isZero();
+@@ -164,18 +165,36 @@ class LimitAdminHttpIT {
+ 
+     @Test
+     void missingCustomerAccountAndOwnershipAreDistinctAndDoNotCreateData() throws Exception {
+-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"11\"", "\"99\""), null, 404);
+-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"99\""), null, 404);
+-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"22\""), null, 403);
++        String missingCustomer = CHANGE.replace("\"11\"", "\"99\"");
++        String missingAccount = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"99\"");
++        String wrongOwner = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"22\"");
++        for (String payload : List.of(missingCustomer, missingAccount, wrongOwner)) {
++            UUID challenge = verified("maker", "/api/v1/admin/limits", payload);
++            send("maker", "/api/v1/admin/limits", payload, challenge, payload.equals(wrongOwner) ? 403 : 404);
++            assertThat(jdbc.queryForObject("SELECT status FROM e4_test.challenge WHERE id=?", String.class, challenge))
++                    .isEqualTo("VERIFIED");
++        }
+         assertThat(count("banking.approval_request")).isZero();
++        assertThat(count("banking.limit_config")).isZero();
+     }
+ 
+     @Test
+-    void policyFutureAndUnsafeNotesAreRejectedBeforeMutation() throws Exception {
+-        send("maker", "/api/v1/admin/limits", CHANGE.replace("100.00", "1001.00").replace("200.00", "2000.00"), null, 422);
+-        send("maker", "/api/v1/admin/limits", CHANGE.replace("\"reason\"", "\"effectiveFrom\":\"2099-01-01T00:00:00Z\",\"reason\""), null, 400);
++    void policyAndOversizedNotesAreRejectedBeforeMutation() throws Exception {
++        String outsidePolicy = CHANGE.replace("100.00", "1001.00").replace("200.00", "2000.00");
++        UUID challenge = verified("maker", "/api/v1/admin/limits", outsidePolicy);
++        send("maker", "/api/v1/admin/limits", outsidePolicy, challenge, 422);
+         send("maker", "/api/v1/admin/limits", CHANGE.replace("Điều chỉnh theo yêu cầu", "x".repeat(501)), null, 400);
+         assertThat(count("banking.approval_request")).isZero();
++        assertThat(count("banking.limit_config")).isZero();
++    }
++
++    @Test
++    void futureEffectiveFromIsPreservedByCanonicalProposal() throws Exception {
++        create(CHANGE.replace("\"reason\"", "\"effectiveFrom\":\"2099-01-01T00:00:00Z\",\"reason\""));
++        assertThat(jdbc.queryForObject("SELECT effective_from FROM banking.limit_config", java.sql.Timestamp.class)
++                .toInstant()).isEqualTo(Instant.parse("2099-01-01T00:00:00Z"));
++        assertThat(jdbc.queryForObject("SELECT status FROM banking.limit_config", String.class))
++                .isEqualTo("PENDING_APPROVAL");
+     }
+ 
+     @Test
+@@ -188,7 +207,8 @@ class LimitAdminHttpIT {
+         send("maker", "/api/v1/admin/limits", CHANGE, challenge, 410);
+         UUID fresh = verified("maker", "/api/v1/admin/limits", CHANGE);
+         send("maker", "/api/v1/admin/limits", CHANGE, fresh, 201);
+-        send("maker", "/api/v1/admin/limits", CHANGE, fresh, 409);
++        var replay = send("maker", "/api/v1/admin/limits", CHANGE, fresh, 201);
++        assertThat(replay.getResponse().getHeader("Idempotent-Replayed")).isEqualTo("true");
+         assertThat(count("banking.approval_request")).isEqualTo(1);
+     }
+ 
+@@ -277,7 +297,7 @@ class LimitAdminHttpIT {
+     @Test
+     void checkerBindingRejectsChangedDecisionAndUnknownApprovalIs404() throws Exception {
+         create(CHANGE);
+-        create(CHANGE);
++        create(CHANGE.replace("Điều chỉnh theo yêu cầu", "Đề xuất khác"));
+         UUID challenge = verified("checker", "/api/v1/admin/limits/1/approve", APPROVE);
+         send("checker", "/api/v1/admin/limits/1/approve", REJECT, challenge, 409);
+         send("checker2", "/api/v1/admin/limits/1/approve", APPROVE, challenge, 409);
+@@ -299,14 +319,14 @@ class LimitAdminHttpIT {
+     }
+ 
+     @Test
+-    void newAccountScopeCannotBeEnabledAfterCustomerUsage() throws Exception {
++    void newAccountScopeDoesNotResetCustomerUsage() throws Exception {
+         create(CHANGE); decide("checker", 1, APPROVE); complete("10.00");
+         String accountChange = CHANGE.replace("\"customerId\":\"11\"", "\"customerId\":\"11\",\"accountId\":\"21\"");
+         create(accountChange);
+         UUID challenge = verified("checker", "/api/v1/admin/limits/2/approve", APPROVE);
+-        send("checker", "/api/v1/admin/limits/2/approve", APPROVE, challenge, 409);
++        send("checker", "/api/v1/admin/limits/2/approve", APPROVE, challenge, 200);
+         assertThat(jdbc.queryForObject("SELECT used_amount FROM banking.limit_usage", java.math.BigDecimal.class)).isEqualByComparingTo("10.00");
+-        assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request WHERE approval_id=2", String.class)).isEqualTo("PENDING");
++        assertThat(jdbc.queryForObject("SELECT status FROM banking.approval_request WHERE approval_id=2", String.class)).isEqualTo("APPLIED");
+     }
+ 
+     @ParameterizedTest
+@@ -437,7 +457,7 @@ class LimitAdminHttpIT {
+                 Set<String> permissions = switch (token) {
+                     case "maker", "checker", "checker2" -> Set.of("ROLE_OPERATIONS", "LIMIT_MAKER", "CHECKER");
+                     case "no-checker" -> Set.of("ROLE_OPERATIONS", "LIMIT_MAKER");
+-                    case "auditor" -> Set.of("ROLE_AUDITOR", "LIMIT_MAKER", "CHECKER");
++                    case "auditor" -> Set.of("ROLE_AUDITOR");
+                     case "customer" -> Set.of("ROLE_CUSTOMER");
+                     default -> Set.of();
+                 };
+@@ -463,7 +483,7 @@ class LimitAdminHttpIT {
+                     """, id, request.userId(), "SENSITIVE_ACTION", request.bindingKey(),
+                     request.requestHash(), java.sql.Timestamp.from(expiry)));
+             return new StepUpChallengePort.ChallengeView(id.toString(),
+-                    StepUpChallengePort.ChallengePurpose.SENSITIVE_ACTION, "OTP", "SMS", expiry, 5, 5);
++                    StepUpChallengePort.ChallengePurpose.valueOf(responsePurpose), "OTP", "SMS", expiry, 5, 5);
+         }
+ 
+         @Override
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminMissingProviderIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminMissingProviderIT.java
+index 629d4c9..7a144e0 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminMissingProviderIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/admin/LimitAdminMissingProviderIT.java
+@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+ 
+ import com.simulatedbank.banking.common.config.SessionAuthenticator;
++import com.simulatedbank.banking.common.error.BankingBusinessException;
++import com.simulatedbank.banking.common.error.ErrorCode;
++import com.simulatedbank.banking.limit.api.LimitConfigMutationPort;
+ import java.util.Optional;
+ import java.util.Set;
+ import org.junit.jupiter.api.Test;
+@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Import;
+ import org.springframework.test.context.ActiveProfiles;
+ import org.springframework.test.context.DynamicPropertyRegistry;
+ import org.springframework.test.context.DynamicPropertySource;
++import org.springframework.test.context.bean.override.mockito.MockitoBean;
+ import org.springframework.test.web.servlet.MockMvc;
+ import org.testcontainers.containers.PostgreSQLContainer;
+ import org.testcontainers.junit.jupiter.Container;
+@@ -45,10 +49,15 @@ class LimitAdminMissingProviderIT {
+     }
+ 
+     @Autowired MockMvc mvc;
++    @MockitoBean LimitConfigMutationPort limits;
+ 
+     @Test
+     void authenticatedRequestWithoutRequiredProvidersFailsClosed() throws Exception {
++        // The integrated application now has providers; simulate an unavailable provider, not a missing module.
++        org.mockito.Mockito.when(limits.currentVersion(11, null))
++                .thenThrow(new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE));
+         mvc.perform(post("/api/v1/admin/limits").header("Authorization", "Bearer maker")
++                .header("Idempotency-Key", "unavailable-limit-provider")
+                 .contentType("application/json").content("""
+                     {"customerId":"11","perTransactionLimit":"100.00","dailyLimit":"200.00"}
+                     """))
+@@ -57,7 +66,7 @@ class LimitAdminMissingProviderIT {
+ 
+     @TestConfiguration
+     static class SessionFixture {
+-        @Bean SessionAuthenticator sessionAuthenticator() {
++        @Bean @org.springframework.context.annotation.Primary SessionAuthenticator sessionAuthenticator() {
+             return token -> "maker".equals(token) ? Optional.of(new SessionAuthenticator.Session("1", null,
+                     Set.of("ROLE_OPERATIONS", "LIMIT_MAKER"), "0".repeat(64))) : Optional.empty();
+         }
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitCustomerMissingProviderIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitCustomerMissingProviderIT.java
+index 35a5c4f..deab7a1 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitCustomerMissingProviderIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitCustomerMissingProviderIT.java
+@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+ 
+ import com.simulatedbank.banking.common.config.SessionAuthenticator;
++import com.simulatedbank.banking.account.api.AccountQuery;
++import com.simulatedbank.banking.common.error.BankingBusinessException;
++import com.simulatedbank.banking.common.error.ErrorCode;
+ import java.util.Optional;
+ import java.util.Set;
+ import org.junit.jupiter.api.Test;
+@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Import;
+ import org.springframework.test.context.ActiveProfiles;
+ import org.springframework.test.context.DynamicPropertyRegistry;
+ import org.springframework.test.context.DynamicPropertySource;
++import org.springframework.test.context.bean.override.mockito.MockitoBean;
+ import org.springframework.test.web.servlet.MockMvc;
+ import org.testcontainers.containers.PostgreSQLContainer;
+ import org.testcontainers.junit.jupiter.Container;
+@@ -43,9 +47,12 @@ class LimitCustomerMissingProviderIT {
+     }
+ 
+     @Autowired MockMvc mvc;
++    @MockitoBean AccountQuery accounts;
+ 
+     @Test
+     void selectedAccountWithoutProviderFailsClosed() throws Exception {
++        org.mockito.Mockito.when(accounts.findAccount(21))
++                .thenThrow(new BankingBusinessException(ErrorCode.SERVICE_UNAVAILABLE));
+         mvc.perform(get("/api/v1/limits").param("accountId", "21").header("Authorization", "Bearer customer"))
+                 .andExpect(status().isServiceUnavailable())
+                 .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+@@ -54,7 +61,7 @@ class LimitCustomerMissingProviderIT {
+ 
+     @TestConfiguration
+     static class SessionProvider {
+-        @Bean SessionAuthenticator sessions() {
++        @Bean @org.springframework.context.annotation.Primary SessionAuthenticator sessions() {
+             return token -> Optional.of(new SessionAuthenticator.Session("1", "11",
+                     Set.of("ROLE_CUSTOMER", "LIMIT_READ_SELF"), "0".repeat(64)));
+         }
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitPersistenceIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitPersistenceIT.java
+index 7a8b5da..402a452 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitPersistenceIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitPersistenceIT.java
+@@ -46,7 +46,7 @@ class LimitPersistenceIT {
+     }
+ 
+     @Test
+-    void cleanMigrationCreatesOnlyLimitOwnedTablesWithDefaultsAndStagedReferences() {
++    void integratedMigrationCreatesLimitTablesWithDefaultsAndRealReferences() {
+         jdbc.update(configSql("NULL", "DEFAULT", "DEFAULT", "NULL", "NULL", "100", "1000"));
+         var row = jdbc.queryForMap("SELECT * FROM banking.limit_config");
+         assertThat(row).containsEntry("status", "PENDING_APPROVAL").containsEntry("version", 1)
+@@ -59,10 +59,10 @@ class LimitPersistenceIT {
+         assertThat(jdbc.queryForObject("SELECT used_amount FROM banking.limit_usage", java.math.BigDecimal.class))
+                 .isEqualByComparingTo("0");
+         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema='banking'",
+-                String.class)).contains("approval_request").doesNotContain("customer", "account", "app_user");
++                String.class)).contains("approval_request", "customer", "account", "app_user");
+         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.table_constraints "
+                 + "WHERE table_schema='banking' AND table_name IN ('limit_config','limit_usage') "
+-                + "AND constraint_type='FOREIGN KEY'", Integer.class)).isZero();
++                + "AND constraint_type='FOREIGN KEY'", Integer.class)).isEqualTo(7);
+     }
+ 
+     @Test
+@@ -79,13 +79,36 @@ class LimitPersistenceIT {
+         upgradeJdbc.execute("COMMENT ON SCHEMA banking IS 'preexisting baseline'");
+         var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
+                 .schemas("banking").defaultSchema("banking").load();
+-        assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);
++        assertThat(latest.migrate().migrationsExecuted).isEqualTo(18);
+         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
+         assertThat(upgradeJdbc.queryForObject("SELECT obj_description('banking'::regnamespace, 'pg_namespace')", String.class))
+                 .isEqualTo("preexisting baseline");
+         assertThat(upgradeJdbc.queryForObject("SELECT count(*) FROM banking.limit_config", Integer.class)).isZero();
+     }
+ 
++    @Test
++    void upgradeRejectsExistingNanWithoutChangingHistoryOrGuessingAMonetaryValue() throws Exception {
++        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
++             var statement = connection.createStatement()) {
++            statement.execute("CREATE DATABASE limit_nan_upgrade");
++        }
++        String url = postgres.getJdbcUrl().replace("/test", "/limit_nan_upgrade");
++        Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
++                .schemas("banking").defaultSchema("banking").target("18").load().migrate();
++        try (var connection = DriverManager.getConnection(url, postgres.getUsername(), postgres.getPassword())) {
++            IntegratedLimitReferences.seed(connection, false);
++        }
++        var old = new SqlFixture(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
++        old.update(configSql("NULL", "DEFAULT", "DEFAULT", "NULL", "NULL", "100", "'NaN'"));
++        var latest = Flyway.configure().dataSource(url, postgres.getUsername(), postgres.getPassword())
++                .schemas("banking").defaultSchema("banking").load();
++        assertThatThrownBy(latest::migrate).hasMessageContaining("ck_limit_amounts_finite");
++        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("18");
++        assertThat(old.queryForObject("SELECT count(*) FROM banking.flyway_schema_history WHERE version IS NOT NULL", Integer.class))
++                .isEqualTo(18);
++        assertThat(old.queryForObject("SELECT daily_limit::text FROM banking.limit_config", String.class)).isEqualTo("NaN");
++    }
++
+     @Test
+     void activeUniquenessIsPerCustomerOrPerAccountAndHistoryIsRetained() {
+         jdbc.update(configSql("NULL", "'ACTIVE'", "1", "2", "now()", "100", "1000"));
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitRulesIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitRulesIT.java
+index ce0224a..2f0b221 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitRulesIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/limit/LimitRulesIT.java
+@@ -70,7 +70,7 @@ class LimitRulesIT {
+         try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
+              var statement = connection.createStatement()) {
+             statement.execute("TRUNCATE banking.limit_config,banking.limit_usage RESTART IDENTITY");
+-            IntegratedLimitReferences.seed(connection, false);
++            IntegratedLimitReferences.seed(connection, true);
+         }
+     }
+ 
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AccountV8MigrationPostgreSqlIntegrationTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AccountV8MigrationPostgreSqlIntegrationTest.java
+index ea42ee4..9b43d21 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AccountV8MigrationPostgreSqlIntegrationTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AccountV8MigrationPostgreSqlIntegrationTest.java
+@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
+ @Testcontainers
+ class AccountV8MigrationPostgreSqlIntegrationTest {
+ 
+-    private static final int EXPECTED_MIGRATIONS = 17;
++    private static final int EXPECTED_MIGRATIONS = 19;
+ 
+     private static final String INSERT_ACCOUNT = """
+             INSERT INTO banking.account (customer_id, account_no_enc, account_no_hash, account_no_last4)
+@@ -61,7 +61,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
+     @Test
+     void freshMigrationAppliesV8OnceAndValidationSucceeds() throws Exception {
+         assertThat(migration.migrationsExecuted).isEqualTo(EXPECTED_MIGRATIONS);
+-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("17");
++        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("19");
+         assertThatCode(flyway::validate).doesNotThrowAnyException();
+         try (Connection connection = connection()) {
+             assertThat(queryInt(connection,
+@@ -71,7 +71,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
+             assertThat(queryStrings(connection,
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
+-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17");
++                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19");
+             assertThat(queryStrings(connection,
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL GROUP BY version HAVING count(*) > 1"))
+@@ -445,8 +445,8 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
+ 
+         Flyway upgrade = flywayAt(url).load();
+         MigrateResult toV8 = upgrade.migrate();
+-        assertThat(toV8.migrationsExecuted).isEqualTo(10);
+-        assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("17");
++        assertThat(toV8.migrationsExecuted).isEqualTo(12);
++        assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("19");
+         assertThatCode(upgrade::validate).doesNotThrowAnyException();
+ 
+         try (Connection connection = DriverManager.getConnection(
+@@ -454,7 +454,7 @@ class AccountV8MigrationPostgreSqlIntegrationTest {
+             assertThat(queryStrings(connection,
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
+-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17");
++                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19");
+             assertThat(queryInt(connection,
+                     "SELECT count(*) FROM banking.customer WHERE customer_id = ?", legacyCustomerId))
+                     .isEqualTo(1);
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.java
+index c09bc02..9115b3e 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/AdminIdempotencyV7MigrationPostgreSqlIntegrationTest.java
+@@ -33,7 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
+ @Testcontainers
+ class AdminIdempotencyV7MigrationPostgreSqlIntegrationTest {
+ 
+-    private static final int EXPECTED_MIGRATIONS = 17;
++    private static final int EXPECTED_MIGRATIONS = 19;
+     private static final String HASH = "a".repeat(64);
+     private static final String OTHER_HASH = "b".repeat(64);
+ 
+@@ -67,8 +67,8 @@ class AdminIdempotencyV7MigrationPostgreSqlIntegrationTest {
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
+                     .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
+-                            "12", "13", "14", "15", "16", "17");
+-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("17");
++                            "12", "13", "14", "15", "16", "17", "18", "19");
++            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("19");
+             // Re-running the chain must not execute V7 again and must keep the recorded checksum.
+             assertThat(flyway.migrate().migrationsExecuted).isZero();
+             assertThat(queryInt(connection,
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalRequestV6MigrationPostgreSqlIntegrationTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalRequestV6MigrationPostgreSqlIntegrationTest.java
+index 57ae945..62cb207 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalRequestV6MigrationPostgreSqlIntegrationTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalRequestV6MigrationPostgreSqlIntegrationTest.java
+@@ -35,7 +35,7 @@ class ApprovalRequestV6MigrationPostgreSqlIntegrationTest {
+                 (request_type, target_type, target_id, payload, maker_id, correlation_id)
+             """;
+ 
+-    private static final int EXPECTED_MIGRATIONS = 17;
++    private static final int EXPECTED_MIGRATIONS = 19;
+ 
+     @Container
+     static final PostgreSQLContainer<?> postgres =
+@@ -67,8 +67,8 @@ class ApprovalRequestV6MigrationPostgreSqlIntegrationTest {
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
+                     .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
+-                            "12", "13", "14", "15", "16", "17");
+-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("17");
++                            "12", "13", "14", "15", "16", "17", "18", "19");
++            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("19");
+             assertThat(queryInt(connection,
+                     "SELECT count(*) FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND (NOT success OR checksum IS NULL)"))
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java
+index 894556b..22df4f7 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java
+@@ -40,13 +40,13 @@ class PostgreSqlFreshMigrationIntegrationTest {
+         var flyway = PostgreSqlIntegrationTestSupport.flyway(postgres);
+         var first = flyway.migrate();
+ 
+-        assertThat(first.migrationsExecuted).isEqualTo(17);
++        assertThat(first.migrationsExecuted).isEqualTo(19);
+         try (Connection connection = connection()) {
+             assertThat(queryStrings(connection,
+                     "SELECT version FROM banking.flyway_schema_history "
+                             + "WHERE version IS NOT NULL AND success ORDER BY installed_rank"))
+                     .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
+-                            "12", "13", "14", "15", "16", "17");
++                            "12", "13", "14", "15", "16", "17", "18", "19");
+             assertThat(queryStrings(connection,
+                     "SELECT table_name FROM information_schema.tables "
+                             + "WHERE table_schema = 'banking' AND table_name = 'account'"))
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/adapter/out/persistence/NotificationJpaRepositoryIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/adapter/out/persistence/NotificationJpaRepositoryIT.java
+index 8c306a4..add00c3 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/adapter/out/persistence/NotificationJpaRepositoryIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/adapter/out/persistence/NotificationJpaRepositoryIT.java
+@@ -73,6 +73,18 @@ class NotificationJpaRepositoryIT {
+             populator.execute(migratorDs);
+             try (var connection = migratorDs.getConnection()) {
+                 IntegratedProviderReferences.seed(connection);
++                try (var statement = connection.createStatement()) {
++                    statement.execute("""
++                            INSERT INTO banking.auth_challenge
++                                (challenge_id, challenge_ref, user_id, purpose, method, channel,
++                                 otp_hash, expires_at, correlation_id)
++                            OVERRIDING SYSTEM VALUE VALUES
++                                (7001, '00000000-0000-4000-8000-000000007001', 5001,
++                                 'LOGIN_NEW_DEVICE', 'OTP', 'SMS', repeat('a',64),
++                                 clock_timestamp() + interval '5 minutes', 'notification-fixture')
++                            ON CONFLICT (challenge_id) DO NOTHING
++                            """);
++                }
+             }
+             schemaInitialized = true;
+         }
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/application/NotificationTransactionalOutboxIT.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/application/NotificationTransactionalOutboxIT.java
+index 75cb1db..89ef5f1 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/application/NotificationTransactionalOutboxIT.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/notification/application/NotificationTransactionalOutboxIT.java
+@@ -357,7 +357,7 @@ class NotificationTransactionalOutboxIT {
+         // T2: Money path commits successfully
+         transactions.executeWithoutResult(status -> {
+             jdbc.update("INSERT INTO audit_test.business_probe (id) VALUES (?)", probeId);
+-            TransferNotice notice = createNotice(1001L, probeId, "TXN-ISOLATION-1");
++            TransferNotice notice = createNotice(1001L, 9009L, "TXN-ISOLATION-1");
+             outboxPort.enqueueTransferNotificationsInT2(List.of(notice));
+         });
+ 
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/transfer/adapter/inbound/TransferControllerHttpTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/transfer/adapter/inbound/TransferControllerHttpTest.java
+index da0d4f9..79a49f1 100644
+--- a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/transfer/adapter/inbound/TransferControllerHttpTest.java
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/transfer/adapter/inbound/TransferControllerHttpTest.java
+@@ -32,6 +32,7 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Step
+ import com.simulatedbank.banking.transfer.application.TransferFailureCode;
+ import com.simulatedbank.banking.transfer.application.TransferOrchestrator;
+ import com.simulatedbank.banking.transfer.application.TransferReadPort;
++import com.simulatedbank.banking.transfer.application.TransferStaffScope;
+ import com.simulatedbank.banking.transfer.application.TransferView;
+ import com.simulatedbank.banking.transfer.domain.TransferAmount;
+ import com.simulatedbank.banking.transfer.domain.TransferStatus;
+@@ -301,6 +302,13 @@ class TransferControllerHttpTest {
+                 .andExpect(jsonPath("$.fraudFlags[0].ruleVersion").value(3));
+     }
+ 
++    @Test
++    void staffOutsideServerSideScopeIsDeniedWithAudit() throws Exception {
++        problem(mvc.perform(get("/api/v1/transfers/" + REF)
++                .header("Authorization", "Bearer staff-out-of-scope")).andReturn(), 403, "AUTH_FORBIDDEN");
++        assertThat(fakes.events).anySatisfy(event -> assertThat(event.action()).isEqualTo("SECURITY_ACCESS_DENIED"));
++    }
++
+     private void problem(MvcResult result, int status, String code) throws Exception {
+         assertThat(result.getResponse().getStatus()).isEqualTo(status);
+         assertThat(result.getResponse().getContentType()).startsWith("application/problem+json");
+@@ -339,6 +347,7 @@ class TransferControllerHttpTest {
+                 case "customer-c" -> session("3", "13", "csrf-c", "ROLE_CUSTOMER", "TRANSFER_CREATE", "TRANSACTION_READ_SELF");
+                 case "staff-read" -> session("4", null, "csrf-d", "ROLE_OPERATIONS", "TRANSACTION_READ");
+                 case "staff-fraud" -> session("5", null, "csrf-e", "ROLE_ADMIN", "TRANSACTION_READ", "FRAUD_READ");
++                case "staff-out-of-scope" -> session("6", null, "csrf-f", "ROLE_OPERATIONS", "TRANSACTION_READ");
+                 default -> null;
+             });
+         }
+@@ -349,6 +358,9 @@ class TransferControllerHttpTest {
+             return command -> { orchestratorCalls.incrementAndGet(); return outcome.get(); };
+         }
+         @Bean TransferReadPort readPort() { return reference -> stored.get(); }
++        @Bean TransferStaffScope staffScope() {
++            return (userId, transferId) -> (userId == 4 || userId == 5) && transferId == 9001;
++        }
+         @Bean AccountOwnershipPort ownershipPort() {
+             return (customerId, accountId) -> (customerId == 11L && accountId == 3001L)
+                     || (customerId == 12L && accountId == 3002L) ? Ownership.OWNED : Ownership.FORBIDDEN;
+@@ -360,4 +372,4 @@ class TransferControllerHttpTest {
+             return event -> { events.add(event); return Optional.of(1L); };
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/StrictStringDeserializer.java b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/StrictStringDeserializer.java
+new file mode 100644
+index 0000000..499ac33
+--- /dev/null
++++ b/digitalbanking-backend/src/main/java/com/simulatedbank/banking/admin/adapter/in/StrictStringDeserializer.java
+@@ -0,0 +1,18 @@
++package com.simulatedbank.banking.admin.adapter.in;
++
++import com.fasterxml.jackson.core.JsonParser;
++import com.fasterxml.jackson.core.JsonToken;
++import com.fasterxml.jackson.databind.DeserializationContext;
++import com.fasterxml.jackson.databind.JsonDeserializer;
++import java.io.IOException;
++
++/** Admin contract strings must not be coerced from JSON numbers or booleans. */
++public final class StrictStringDeserializer extends JsonDeserializer<String> {
++    @Override
++    public String deserialize(JsonParser parser, DeserializationContext context) throws IOException {
++        if (!parser.hasToken(JsonToken.VALUE_STRING)) {
++            return context.reportInputMismatch(String.class, "value must be a string");
++        }
++        return parser.getText();
++    }
++}
+diff --git a/digitalbanking-backend/src/main/resources/db/migration/V18__restrict_approval_update_privileges.sql b/digitalbanking-backend/src/main/resources/db/migration/V18__restrict_approval_update_privileges.sql
+new file mode 100644
+index 0000000..fb2d534
+--- /dev/null
++++ b/digitalbanking-backend/src/main/resources/db/migration/V18__restrict_approval_update_privileges.sql
+@@ -0,0 +1,11 @@
++-- BE-INT-02 / DEC-INT-005: approval identity and maker facts are immutable to the runtime role.
++-- V12 granted table-wide UPDATE; revoke it before granting only workflow columns.
++DO $$
++BEGIN
++    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'banking_app') THEN
++        REVOKE UPDATE ON banking.approval_request FROM banking_app;
++        GRANT UPDATE (payload, status, checker_id, decision_note, decided_at, applied_at)
++            ON banking.approval_request TO banking_app;
++    END IF;
++END;
++$$;
+diff --git a/digitalbanking-backend/src/main/resources/db/migration/V19__reject_non_finite_limit_amounts.sql b/digitalbanking-backend/src/main/resources/db/migration/V19__reject_non_finite_limit_amounts.sql
+new file mode 100644
+index 0000000..8ac0176
+--- /dev/null
++++ b/digitalbanking-backend/src/main/resources/db/migration/V19__reject_non_finite_limit_amounts.sql
+@@ -0,0 +1,6 @@
++-- BE-INT-02 / DEC-INT-006: PostgreSQL NUMERIC NaN sorts above ordinary numbers,
++-- so positive/range checks alone do not guarantee a valid monetary limit.
++ALTER TABLE banking.limit_config
++    ADD CONSTRAINT ck_limit_amounts_finite CHECK (
++        per_transaction_limit <> 'NaN'::numeric AND daily_limit <> 'NaN'::numeric
++    );
+diff --git a/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest.java b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest.java
+new file mode 100644
+index 0000000..0f8db6a
+--- /dev/null
++++ b/digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest.java
+@@ -0,0 +1,80 @@
++package com.simulatedbank.banking.migration;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.sql.DriverManager;
++import java.util.ArrayList;
++import java.util.List;
++import org.flywaydb.core.Flyway;
++import org.junit.jupiter.api.Test;
++import org.testcontainers.containers.PostgreSQLContainer;
++import org.testcontainers.junit.jupiter.Container;
++import org.testcontainers.junit.jupiter.Testcontainers;
++
++/** BE-INT-02: forward upgrade removes broad runtime UPDATE without rewriting applied history. */
++@Testcontainers
++class ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest {
++    @Container
++    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
++            .withInitScript("limit/init-roles.sql");
++
++    @Test
++    void upgradePreservesV17ChecksumsAndRestrictsApprovalUpdates() throws Exception {
++        Flyway before = migration("17");
++        assertThat(before.migrate().migrationsExecuted).isEqualTo(17);
++        List<String> history = historyThroughV17();
++        assertThat(columnUpdate("maker_id")).isTrue();
++
++        Flyway latest = migration(null);
++        assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);
++        latest.validate();
++        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("19");
++        assertThat(historyThroughV17()).isEqualTo(history);
++        for (String column : List.of("approval_id", "maker_id", "request_type", "target_type", "target_id",
++                "created_at", "correlation_id")) {
++            assertThat(columnUpdate(column)).as("UPDATE %s", column).isFalse();
++        }
++        for (String column : List.of("payload", "status", "checker_id", "decision_note", "decided_at", "applied_at")) {
++            assertThat(columnUpdate(column)).as("UPDATE %s", column).isTrue();
++        }
++        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_app", "test_app");
++             var statement = connection.createStatement();
++             var rows = statement.executeQuery(
++                     "SELECT has_table_privilege(current_user, 'banking.approval_request', 'DELETE')")) {
++            rows.next();
++            assertThat(rows.getBoolean(1)).isFalse();
++        }
++        assertThat(latest.migrate().migrationsExecuted).isZero();
++    }
++
++    private static Flyway migration(String target) {
++        var config = Flyway.configure().dataSource(postgres.getJdbcUrl(), "banking_migrator", "test_migrator")
++                .schemas("banking").defaultSchema("banking").locations("classpath:db/migration")
++                .validateOnMigrate(true);
++        if (target != null) config.target(target);
++        return config.load();
++    }
++
++    private static List<String> historyThroughV17() throws Exception {
++        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
++             var statement = connection.createStatement();
++             var rows = statement.executeQuery("SELECT version || ':' || checksum FROM banking.flyway_schema_history "
++                     + "WHERE version::integer <= 17 ORDER BY installed_rank")) {
++            List<String> history = new ArrayList<>();
++            while (rows.next()) history.add(rows.getString(1));
++            return history;
++        }
++    }
++
++    private static boolean columnUpdate(String column) throws Exception {
++        try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), "banking_app", "test_app");
++             var statement = connection.prepareStatement(
++                     "SELECT has_column_privilege(current_user, 'banking.approval_request', ?, 'UPDATE')")) {
++            statement.setString(1, column);
++            try (var rows = statement.executeQuery()) {
++                rows.next();
++                return rows.getBoolean(1);
++            }
++        }
++    }
++}

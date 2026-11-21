@@ -411,6 +411,6 @@ class OtpDispatchServiceTest {
         assertDispatchFailure(() -> realDispatch.deliver(challenge, "123456".toCharArray(), "corr-dispatch"));
 
         assertThat(realGateway.calls).isEqualTo(1);
-        assertThat(persistedStatus(challenge.challengeId())).isEqualTo("CREATED");
+        assertThat(persistedStatus(challenge.challengeId())).isEqualTo("EXPIRED");
     }
 }

@@ -59,7 +59,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /** Admin/Audit contract fixture only; actual Identity/JPA/security/step-up/PostgreSQL runtime. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "app.admin.enabled=false")
 @ActiveProfiles("test")
 @Testcontainers
 @Import(RoleChangePostgreSqlIntegrationTest.AdminFixture.class)

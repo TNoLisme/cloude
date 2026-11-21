@@ -1,6 +1,6 @@
 # BE-TRF-02 — Ma trận đối chiếu schema Transfer
 
-> **Lưu trữ lịch sử:** nội dung bên dưới phản ánh snapshot trước DEC-TRF-013. Các nhận định rằng `04` chưa chọn nơi lưu TTL/fencing không còn là trạng thái mới nhất; xem [DEC-TRF-013](../../../../../../DECISIONS.md) và `04` §4.4. SQL candidate `digitalbanking-backend/src/main/resources/db/transfer-candidate/V2__transfer.sql` chưa nằm trong Flyway location production; provider, migration order và review vẫn chưa có bằng chứng.
+> **Lưu trữ lịch sử:** nội dung bên dưới phản ánh snapshot trước DEC-TRF-013. Các nhận định rằng `04` chưa chọn nơi lưu TTL/fencing không còn là trạng thái mới nhất; xem [DEC-TRF-013](../../../../../../DECISIONS.md) và `04` §4.4. SQL candidate `digitalbanking-backend/src/main/resources/db/transfer-candidate/V6__transfer.sql` chưa nằm trong Flyway location production; provider, migration order và review vẫn chưa có bằng chứng.
 
 > Snapshot 16/11/2026; **Draft / Blocked**, chưa phải review, migration, bằng chứng thực thi hay nghiệm thu. Transfer (Vũ) là write-owner hai bảng dưới đây; DBA/Architect và các owner liên quan cần review. Ma trận là bản đối chiếu, không tự thay đổi baseline hay xác nhận provider đã tồn tại.
 

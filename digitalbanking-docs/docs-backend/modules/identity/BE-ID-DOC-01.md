@@ -335,7 +335,7 @@ Giao diện module nội bộ Identity sẽ expose: `StepUpChallengePort` (3 ope
 
 ### 7.2. Database review
 
-**Hiện trạng dev2:** `V1__init_schema.sql` = chỉ `CREATE SCHEMA IF NOT EXISTS banking;`. **Không có bảng identity nào; không có index/trigger/role DB nào.** Migration identity là V2 (tên gợi ý `V2__create_identity_and_rbac_tables.sql`, BE-ARCH-00 §8.5). Tài khoản DB: `banking_migrator` (Flyway) vs `banking_app` (DML) đã cấu hình trong `application.yml` + `docker/postgres/init/01-create-roles.sh`, đã verify qua `PostgreSqlFlywayMigrationIntegrationTest` + readiness test.
+**Hiện trạng dev2:** `V1__init_schema.sql` = chỉ `CREATE SCHEMA IF NOT EXISTS banking;`. **Không có bảng identity nào; không có index/trigger/role DB nào.** Migration identity là V2 (tên gợi ý `V2__create_identity_and_rbac_tables.sql`, BE-ARCH-00 §8.5). Tài khoản DB: `banking_migrator` (Flyway) vs `banking_app` (DML) đã cấu hình trong `application.yml` + `docker/postgres/init/01-create-roles.sql`, đã verify qua `PostgreSqlFlywayMigrationIntegrationTest` + readiness test.
 
 **Schema identity theo thiết kế `04` §4.2 (sẽ tạo ở V2):**
 

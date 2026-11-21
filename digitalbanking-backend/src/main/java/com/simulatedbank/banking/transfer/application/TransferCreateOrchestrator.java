@@ -28,13 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/**
- * Candidate implementation of the BE-TRF-04/05 {@link TransferOrchestrator} seam; not component-scanned
- * and registered only once real providers and the reviewed migration are ready (DEC-TRF-016). It opens
- * no transaction of its own: the preflight candidate runs T1/T2 through their real transaction boundaries
- * and dispatches any step-up challenge only after the gate transaction has ended. The boundary
- * (BE-TRF-03) maps the returned {@link TransferCreateOutcome} to HTTP without a contract change.
- */
+/** Coordinates the preflight, T1, post-commit settlement and out-of-transaction challenge dispatch. */
 public final class TransferCreateOrchestrator implements TransferOrchestrator {
     private final TransferPreflightCandidate preflight;
     private final StepUpChallengePort challenges;
@@ -77,9 +71,12 @@ public final class TransferCreateOrchestrator implements TransferOrchestrator {
             case TransferPreflightCandidate.Replay replay -> new Replay(replay.response().httpStatus(), replay.response().safeBody());
             case PreflightDenied denied -> mapDenial(denied.reason());
             case ChallengeRequired required -> requestStepUp(actor, input, required);
-            case Settled settled -> settled.settlement().outcome().failure().isPresent()
-                    ? new Failed(settled.settlement().receipt())
-                    : new Completed(settled.settlement().receipt());
+            case Settled settled -> {
+                var settlement = settled.settlement();
+                if (settlement.committed() != null) yield settlement.committed();
+                yield settlement.outcome().failure().isPresent()
+                        ? new Failed(settlement.receipt()) : new Completed(settlement.receipt());
+            }
         };
     }
 
@@ -88,6 +85,8 @@ public final class TransferCreateOrchestrator implements TransferOrchestrator {
             case ACCOUNT_NOT_FOUND -> new AccountNotFound();
             case ACCOUNT_INACTIVE -> new AccountInactive();
             case SOURCE_NOT_OWNED -> new SourceNotOwned();
+            case CUSTOMER_INACTIVE -> new TransferCreateOutcome.CustomerInactive();
+            case SAME_ACCOUNT -> throw new BankingBusinessException(ErrorCode.VALIDATION_ERROR);
             case INSUFFICIENT_BALANCE -> new InsufficientBalance();
             case LIMIT_EXCEEDED -> new LimitExceeded();
         };

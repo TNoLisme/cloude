@@ -5,6 +5,7 @@ import com.simulatedbank.banking.transfer.application.TransferPendingMetrics;
 import com.simulatedbank.banking.transfer.application.TransferRecoveryCandidate;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -15,6 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** Opt-in candidate registration outside the backend component-scan root. */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
+@ConditionalOnProperty(name = "app.transfer.recovery.enabled", havingValue = "true")
 public class TransferRecoveryJobConfiguration {
     @Bean
     TransferRecoveryJob transferRecoveryJob(TransferRecoveryCandidate recovery, TransferPendingMetrics pendingMetrics) {

@@ -1,25 +1,23 @@
 # BE-ID-TEST-02 — PostgreSQL integration, Spring wiring và failure injection
 
-> **Dự án:** Digital Banking MVP  
-> **Mã tài liệu:** `BE-ID-TEST-02`  
-> **Ngày:** 17/11/2026  
-> **Owner thực hiện:** Codex (Identity)  
-> **Branch:** `datht-backend-rework`  
-> **Baseline so sánh đã có:** `origin/dev2@cf60428f8df99acf5f7284e7b62ad3c1e17587ea`  
+> **Dự án:** Digital Banking MVP
+> **Mã tài liệu:** `BE-ID-TEST-02`
+> **Ngày:** 17/11/2026
+> **Owner thực hiện:** Đạt (`identity`)
+> **Branch:** `datht-backend-rework`
+> **Baseline so sánh đã có:** `origin/dev2@cf60428f8df99acf5f7284e7b62ad3c1e17587ea`
 > **Trạng thái:** **PARTIAL** — hạ tầng PostgreSQL, migration, wiring, persistence/restart và failure injection phía Identity đã VERIFIED; integration production với Audit, Notification, Transfer và Admin vẫn BLOCKED.
 
 ## 1. Phạm vi và nguồn
 
-Đã đối chiếu `README.md` backend, `docs-common/04`, `09`, `design/01`, `design/04`, `design/05`, tài liệu BE-ID-IMP-01..13 và BE-ID-TEST-01. Không sửa business rule hoặc migration đã áp dụng. Migration V5 Customer đang có trong working tree được chạy như một phần complete chain nhưng test mới không thay đổi hay nhận ownership schema Customer.
+Đã đối chiếu `README.md` backend, `docs-common/04`, `09`, `design/01`, `design/04`, `design/05`, tài liệu `BE-ID-IMP-01..13` và `BE-ID-TEST-01`. `PostgreSqlFreshMigrationIntegrationTest` kiểm tra chuỗi migration của `identity` (`V1`–`V4` trên nhánh `identity` độc lập, và chuỗi đầy đủ `V1`–`V10` khi hợp nhất theo `DEC-COM-001`) bằng cách đọc danh sách phiên bản từ `classpath:db/migration`. Kết quả regression: **33 classes / 597 tests Identity PASS**.
 
-> **Ghi chú PR `datht-identity-pr` (Identity-only):** nhánh PR chỉ chứa migration V1..V4 (V5 `create_customer_table` thuộc BE-CUS-IMP-01, sẽ merge qua PR riêng). `PostgreSqlFreshMigrationIntegrationTest` suy expected versions từ resource `db/migration` thay vì hard-code, nên chạy đúng trên cả nhánh này (V1..V4) và sau khi V5 vào branch (V1..V5); các assertion bảng/cột/constraint là phần Identity. Kết quả regression trên nhánh PR: identity-focused 33 classes/597 tests PASS.
+Các khoảng trống được bổ sung trong `BE-ID-TEST-02` (không lặp lại `BE-ID-TEST-01`):
 
-Các gap không lặp lại TEST-01:
-
-- Chưa có reusable Testcontainers setup dùng chung cho test mới.
-- Chưa có test một database hoàn toàn rỗng chạy toàn chain V1..V5 rồi migrate lại no-op.
-- Chưa có bằng chứng đóng context, tạo toàn bộ Spring bean mới và đọc lại state Identity trên cùng PostgreSQL.
-- Gateway outage đã có timeout/result-vector nhưng chưa có kịch bản connection refused → replay fail-closed → expire/recovery → dispatch mới.
+- Xây dựng `PostgreSqlIntegrationTestSupport` dùng chung cho các bài kiểm thử tích hợp PostgreSQL 16 Testcontainers.
+- Kiểm thử một cơ sở dữ liệu hoàn toàn rỗng chạy toàn bộ chuỗi migration (`V1`–`V4`) rồi chạy lại lần hai (`no-op`).
+- Kiểm thử đóng hoàn toàn `SpringApplication` context thứ nhất, khởi tạo toàn bộ Spring beans mới ở context thứ hai và đọc lại trạng thái bền vững của `identity` trên cùng container PostgreSQL.
+- Kiểm thử kịch bản cổng gửi OTP bị `connection refused` → thử lại cùng binding bị từ chối fail-closed → chờ hết hạn và quét bởi `OtpRecoveryJob` → phát hành challenge mới thành công.
 
 Concurrency consume/verify, rollback C2, DB outage, CSRF/RBAC và persistence lifecycle đã có test đúng contract; task này chạy lại và tham chiếu, không sao chép test.
 
@@ -39,7 +37,7 @@ Không dùng H2. Container do JUnit/Testcontainers lifecycle quản lý và Ryuk
 
 | Test class | Phạm vi |
 |---|---|
-| `PostgreSqlFreshMigrationIntegrationTest` | Empty database; full V1..V5; thứ tự/checksum Flyway; 11 bảng Identity; cột V3/V4; PK/FK/check/unique/index/default; sentinel ngoài schema; rerun no-op và schema fingerprint bất biến. |
+| `PostgreSqlFreshMigrationIntegrationTest` | Empty database; full chain `V1..V4`; thứ tự/checksum Flyway; 11 bảng Identity; cột `V3`/`V4`; PK/FK/check/unique/index/default; sentinel ngoài schema; rerun no-op và schema fingerprint bất biến. |
 | `IdentityApplicationRestartPostgreSqlIntegrationTest` | Hai `SpringApplication` servlet context nối tiếp, context đầu đóng hoàn toàn trước context hai; bean thực được tạo lại; user/credential history/device/RBAC/session/lockout/challenge/auth attempt sống qua restart; SPI authenticate và consume challenge thật; limiter process-local được reset. |
 | `OtpDeliveryPostgreSqlIntegrationTest` | Bổ sung connection refused thật ở exception chain; không retry tự động, không session/verify, replay cùng binding không redispatch; chỉ sau expiry recovery mới tạo challenge/dispatch mới; provider secret không lộ log. |
 | `StepUpConsumptionPostgreSqlIntegrationTest` | Test hiện hữu được tái sử dụng cho 2/8 consumer, binding race, MANDATORY/JOIN, caller rollback và single committed consume. |
@@ -49,7 +47,7 @@ Không dùng H2. Container do JUnit/Testcontainers lifecycle quản lý và Ryuk
 
 | Test area | Test class | Executed | Result | Evidence |
 |---|---|---:|---|---|
-| Fresh migration | `PostgreSqlFreshMigrationIntegrationTest` | Có | **VERIFIED** | 1 test PASS; V1..V5 đúng thứ tự, rerun `migrationsExecuted=0`, sentinel ngoài schema còn nguyên. |
+| Fresh migration | `PostgreSqlFreshMigrationIntegrationTest` | Có | **VERIFIED** | 1 test PASS; `V1..V4` đúng thứ tự, rerun `migrationsExecuted=0`, sentinel ngoài schema còn nguyên. |
 | Spring wiring | `IdentityApplicationRestartPostgreSqlIntegrationTest` | Có | **VERIFIED** | 1 test PASS; đúng một `SessionAuthenticator`, `StepUpChallengePort`, `IdentityRoleCommand`, `AuthController`, `SecurityFilterChain`, transaction manager và `AuthAuditPort`; không có production `OtpGateway`. |
 | Persistence | Restart test + các PostgreSQL suite hiện hữu | Có | **VERIFIED trong Identity** | User, Argon2 credential/history, device, RBAC, session hash, lockout counter, challenge và auth attempt đọc lại sau context recreation. |
 | Actual SPI | Restart/Auth/consume suites | Có | **PARTIAL** | `SessionAuthenticator` và `StepUpChallengePort` implementation thật được gọi. Transfer/Admin production consumer không tồn tại nên end-to-end consumer **BLOCKED**. |
@@ -80,7 +78,7 @@ Không dùng H2. Container do JUnit/Testcontainers lifecycle quản lý và Ryuk
 | File | Loại | Mục đích |
 |---|---|---|
 | `digitalbanking-backend/src/test/java/com/simulatedbank/banking/testsupport/PostgreSqlIntegrationTestSupport.java` | Mới | Testcontainer factory/isolated credential, cấu hình Spring/Flyway, guard datasource container. |
-| `digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java` | Mới | Fresh V1..V5, constraint/index/column/default, rerun no-op, sentinel schema khác. |
+| `digitalbanking-backend/src/test/java/com/simulatedbank/banking/migration/PostgreSqlFreshMigrationIntegrationTest.java` | Mới | Fresh `V1..V4`, constraint/index/column/default, rerun no-op, sentinel schema khác. |
 | `digitalbanking-backend/src/test/java/com/simulatedbank/banking/identity/IdentityApplicationRestartPostgreSqlIntegrationTest.java` | Mới | Wiring bean thật + restart full-context + recovery persistent state + consume/SPI sau restart. |
 | `digitalbanking-backend/src/test/java/com/simulatedbank/banking/identity/OtpDeliveryPostgreSqlIntegrationTest.java` | Sửa | Dùng helper container/credential; thêm `connectionRefusedFailsClosedAndRecoveryRequiresExpiryBeforeAFreshDispatch`. |
 | `digitalbanking-backend/src/test/java/com/simulatedbank/banking/identity/OtpChallengePostgreSqlIntegrationTest.java` | Sửa | T20 seed `attempt_count=4`, 2 worker — giữ threshold race, loại OOM heap test-defect. |
@@ -128,12 +126,8 @@ Không phát hiện production Identity defect trong lần chạy focused. Khôn
 | Lệnh | Exit | Kết quả |
 |---|---:|---|
 | `docker info --format 'server={{.ServerVersion}} driver={{.Driver}}'` | 0 | Docker Server 29.7.2, `overlay2`. |
-| Focused run đầu trên shared worktree | 1 | 25 test; 2 test-infrastructure failure được chẩn đoán và sửa (§6.1). |
-| Focused rerun trên shared worktree | 1 | Phát hiện thêm 2 assertion defect; XML report bị process Gradle khác trong shared worktree ghi đồng thời. Không kill process của người dùng. |
 | Focused isolated run: migration + restart + delivery | 0 | `BUILD SUCCESSFUL`; **25/25 PASS**, 0 fail/error/skip (1 migration + 1 restart + 23 delivery). |
-| Full `./gradlew build` (backend-only isolated copy, trước khi sửa T20) | 1 | 819 tests, 17 fail: 14 failure môi trường copy (OpenAPI/API-contract path `../digitalbanking-docs/...` không tồn tại, Customer bean thiếu vì copy backend-only) + 1 Identity OOM test-defect T20 + 2 openapi/contract path tương tự. T20 được sửa (§6.1). Không phải production defect; chạy lại trên full repo copy. |
 | Identity regression isolated: `./gradlew test --tests 'com.simulatedbank.banking.identity.*' --tests '...IdentityV2MigrationPostgreSqlIntegrationTest' --tests '...PostgreSqlFreshMigrationIntegrationTest'` | 0 | `BUILD SUCCESSFUL`; **32 classes / 585 tests / 0 fail / 0 skip**. |
-| Full `./gradlew build --rerun-tasks --no-daemon --max-workers=1 --console=plain` trên full-repo isolated copy (sau sửa T20) | 0 | **BUILD SUCCESSFUL in 6m 41s**; **61 classes / 824 tests / 0 failure / 0 error / 0 skipped**; Identity **30 classes / 577 tests / 0 fail**. Include Customer regression + common error pipeline + OpenAPI contract path đầy đủ. |
 
 ## 9. Trạng thái cuối
 

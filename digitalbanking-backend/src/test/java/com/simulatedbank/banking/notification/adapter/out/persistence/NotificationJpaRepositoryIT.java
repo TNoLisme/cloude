@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.simulatedbank.banking.support.IntegratedProviderReferences;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -61,7 +62,7 @@ class NotificationJpaRepositoryIT {
     private TransactionTemplate transactions;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         if (!schemaInitialized) {
             DriverManagerDataSource migratorDs = new DriverManagerDataSource();
             migratorDs.setUrl(postgres.getJdbcUrl());
@@ -70,6 +71,21 @@ class NotificationJpaRepositoryIT {
             ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
             populator.addScript(new ClassPathResource("notification/notification-schema.sql"));
             populator.execute(migratorDs);
+            try (var connection = migratorDs.getConnection()) {
+                IntegratedProviderReferences.seed(connection);
+                try (var statement = connection.createStatement()) {
+                    statement.execute("""
+                            INSERT INTO banking.auth_challenge
+                                (challenge_id, challenge_ref, user_id, purpose, method, channel,
+                                 otp_hash, expires_at, correlation_id)
+                            OVERRIDING SYSTEM VALUE VALUES
+                                (7001, '00000000-0000-4000-8000-000000007001', 5001,
+                                 'LOGIN_NEW_DEVICE', 'OTP', 'SMS', repeat('a',64),
+                                 clock_timestamp() + interval '5 minutes', 'notification-fixture')
+                            ON CONFLICT (challenge_id) DO NOTHING
+                            """);
+                }
+            }
             schemaInitialized = true;
         }
 

@@ -19,6 +19,13 @@ import org.springframework.web.filter.CorsFilter;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "app.identity.enabled=false",
+        "app.customer.enabled=false",
+        "app.account.enabled=false",
+        "app.admin.enabled=false",
+        "app.audit.enabled=false",
+        "app.limit.enabled=false",
+        "app.fraud.enabled=false",
+        "app.notification.enabled=false",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"

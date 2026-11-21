@@ -17,8 +17,19 @@ public record AppProperties(
         @DefaultValue @Valid Security security,
         @DefaultValue Transfer transfer,
         @DefaultValue Fraud fraud,
-        @DefaultValue Jobs jobs
+        @DefaultValue Jobs jobs,
+        @DefaultValue @Valid Admin admin
 ) {
+
+    /**
+     * Admin-owned operational settings. Idempotency TTL inherits the canonical 24h proposed by
+     * 04 §9.6/07 §3.7 (BRL-013/OI-001); it is not a new business retention period.
+     */
+    public record Admin(
+            @DefaultValue("24") @Positive int idempotencyTtlHours,
+            @DefaultValue("500") @Positive @Max(10_000) int idempotencyPurgeBatchSize
+    ) {
+    }
 
     public record Crypto(
             @DefaultValue("k-v1") String aesKeyId,

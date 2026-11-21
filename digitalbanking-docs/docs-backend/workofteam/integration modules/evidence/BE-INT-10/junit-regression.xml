@@ -1,0 +1,212 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" tests="3" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:53:57.132Z" time="3.745">
+    <testcase name="applicationMustNotDependOnOutboundAdapters" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="3.259" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.027" />
+    <testcase name="externalModulesMustNotImportAuditInternals" classname="com.simulatedbank.banking.architecture.AuditBoundaryArchTest" time="0.457" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" tests="18" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:54:00.878Z" time="0.622">
+    <testcase name="commonMustNotDependOnBusinessModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.069" />
+    <testcase name="commonMustNotOwnPersistenceOrTransactionBoundaries" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="domainMustRemainFrameworkFree" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.008" />
+    <testcase name="inboundAdapterMustNotAccessOutboundAdapterDirectly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.008" />
+    <testcase name="modulesMustBeFreeOfCycles" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.316" />
+    <testcase name="customerApiMustNotExposeEntitiesOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="customerInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.066" />
+    <testcase name="customerMustNotReachCrossModuleInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.009" />
+    <testcase name="customerQueryIsImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.004" />
+    <testcase name="accountApiMustDependOnJdkOrCommonOnly" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001" />
+    <testcase name="accountInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.054" />
+    <testcase name="accountPortsAreImplementedOnlyByItsApplicationLayer" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="accountMustNotReachSiblingOrOrchestratorInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.011" />
+    <testcase name="customerApiMustNotCarryTextualPiiFields" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.006" />
+    <testcase name="adminInternalsMustNotBeConsumedByOtherModules" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.049" />
+    <testcase name="adminInboundAdapterMustNotDependOnPersistenceModel" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="adminDomainMustNotDependOnPersistenceOrAdapters" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.002" />
+    <testcase name="adminPublicApiMustNotExposePersistenceOrInternals" classname="com.simulatedbank.banking.architecture.ModuleBoundaryArchTest" time="0.001" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest" tests="2" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:54:40.909Z" time="3.334">
+    <testcase name="[1] type=roles" classname="com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest" time="2.102" />
+    <testcase name="[2] type=limits" classname="com.simulatedbank.banking.integration.AdminMakerCheckerPostgreSqlIntegrationTest" time="1.231" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest" tests="1" failures="1" errors="0" skipped="0" timestamp="2026-11-20T06:54:48.360Z" time="0.099">
+    <testcase name="s01AndC01MfaBindsCustomerAndAllSelfReadsUseThatOwner()" classname="com.simulatedbank.banking.integration.SessionCustomerAccountReadPostgreSqlIntegrationTest" time="0.099">
+      <failure type="org.opentest4j.AssertionFailedError" />
+    </testcase>
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" tests="17" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:54:52.398Z" time="10.635">
+    <testcase name="concurrentDistinctKeysUseCustomerGuardAcrossAccountsAndRespectProjectedBoundary()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.654" />
+    <testcase name="expiredProofAfterLookupRollsBackUnderTheChallengeLock()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.688" />
+    <testcase name="auditFailuresRollBackIssueVerifyAndConsumedT1()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="1.234" />
+    <testcase name="reissueExpiresOldBindingAndUsesANewUuid()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="1.014" />
+    <testcase name="dispatchDoesNotHoldGuardAndRetryFindsConcurrentIntent()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.758" />
+    <testcase name="replayPrecedesCurrentEligibilityAndReturnsStored201And422AfterTtl()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.313" />
+    <testcase name="reservationSqlFailureRollsBackTransferAndKey()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.293" />
+    <testcase name="challengeAttachFailureRollsBackConsumptionAndAllT1Rows()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.752" />
+    <testcase name="httpAuthorizationOwnershipAndTtlBeforeHandoff()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.383" />
+    <testcase name="invalidTtlStopsIntentAndHigherTtlPersistsItsVersion()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.234" />
+    <testcase name="t0WaitsForDeliveryPersistsAuditAndVerifiedProofIsAttachedOnce()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="1.018" />
+    <testcase name="rejectedTimedOutAndLostSentCasStayQuarantinedAndReturn503()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="1.143" />
+    <testcase name="sameAndDifferentCustomerKeyRacesHandoffOnlyOnceAndConflictIsPrivate()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.566" />
+    <testcase name="duplicateVerifiedProofIsAnInvariantErrorRatherThanAnArbitrarySelection()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.629" />
+    <testcase name="lookupAndMissingLimitConfigurationFailClosed()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.284" />
+    <testcase name="pendingFromPreviousBusinessDateStillCountsUnderTheCustomerGuard()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.394" />
+    <testcase name="preflightRejectionRereadsAKeyThatCommittedDuringAccountResolution()" classname="com.simulatedbank.banking.integration.TransferT0T1PostgreSqlIntegrationTest" time="0.266" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" tests="61" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:55:09.291Z" time="39.77">
+    <testcase name="tRec01RestartsAfterT1AndProcessesOnlyAfterClaimCommit()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.606" />
+    <testcase name="fraudIsMandatoryAndAuditLockIsTheFinalSqlPhase()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.581" />
+    <testcase name="readsExactDurableResponseAfterCommitAcknowledgementFails()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.413" />
+    <testcase name="oppositePairsAndIndependentTransfersSettleTogether()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.806" />
+    <testcase name="fraudRaceSerializesT1AndT2AndKeepsAuditGroupsContiguous()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="1.103" />
+    <testcase name="creditZeroRowsRollsBackMoneySavepointAndCommitsProcessingFailure()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.395" />
+    <testcase name="fraudCountAndT1UseTheSameCustomerGuardAcrossOverlappingTransactions()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.816" />
+    <testcase name="terminalUsesOneClockAcrossCutoverAndRejectsClockRegression()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.552" />
+    <testcase name="commitsMoneyLedgerBothScopesAuditAndOutboxThenReplaysExactBody()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.462" />
+    <testcase name="[1] metricsFail=false" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.423" />
+    <testcase name="[2] metricsFail=true" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.433" />
+    <testcase name="fraudBudgetExpirationRollsBackFlagsWhileT2StillHasTime()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="1.562" />
+    <testcase name="[1] phase=C2" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.442" />
+    <testcase name="[2] phase=C1" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.44" />
+    <testcase name="[3] phase=BLOCK" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.462" />
+    <testcase name="[1] amount=9999999.99" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.329" />
+    <testcase name="[2] amount=10000000.00" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.356" />
+    <testcase name="[3] amount=10000000.01" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.347" />
+    <testcase name="differentSourceAccountsCompeteForSharedCustomerDailyBudget()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.433" />
+    <testcase name="fraudC3DenyAndConflictKeepResponseUnderAuditFailure()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.702" />
+    <testcase name="creditAbortMarkerSurvivesRestartBeforeTfailEvenForFreshIntent()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.416" />
+    <testcase name="fraudOverlapFailsClosedAndLeavesDurableIntentPending()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.306" />
+    <testcase name="[1] funded=10" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="2.373" />
+    <testcase name="[2] funded=20" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="2.397" />
+    <testcase name="[1] defect=partial-ledger" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.335" />
+    <testcase name="[2] defect=mismatch-limit" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.325" />
+    <testcase name="[3] defect=missing-audit" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.449" />
+    <testcase name="[4] defect=unsafe-response" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.396" />
+    <testcase name="[5] defect=db-read" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="2.323" />
+    <testcase name="[6] defect=unknown-mode" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.328" />
+    <testcase name="refusesToClaimBusyTransferRow()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.319" />
+    <testcase name="[1] failure=ACCOUNT_INACTIVE" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.357" />
+    <testcase name="[2] failure=ACCOUNT_NOT_FOUND" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.34" />
+    <testcase name="[3] failure=INSUFFICIENT_BALANCE" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.349" />
+    <testcase name="[4] failure=LIMIT_EXCEEDED" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.359" />
+    <testcase name="retriesWholeTransactionOnlyAfterConfirmedDeadlockRollback()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.434" />
+    <testcase name="configuredDemoStaffCanCompleteLoginWithoutACustomerRow()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.865" />
+    <testcase name="loginResendUsesCurrentContactAndOnlyAcknowledgedCodeCanCreateSession()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="2.085" />
+    <testcase name="stepUpFailsClosedThenDeliversOutboxUsingContactAtSendTime()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="1.165" />
+    <testcase name="fraudRollbackOnlyCannotFailOpen()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.257" />
+    <testcase name="fraudExplicitBlockReleasesReservationAndReplays422()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.417" />
+    <testcase name="tRec04SkipsBusyGuardAndRowAndOnlyOneWorkerProcesses()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.406" />
+    <testcase name="[1] observed=4" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.429" />
+    <testcase name="[2] observed=5" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.439" />
+    <testcase name="[3] observed=6" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.461" />
+    <testcase name="fraudCutoverUsesRuleVersionAndWindowAcrossVietnamMidnight()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.455" />
+    <testcase name="tRec02RepairsFromCommittedProvidersAndOriginalReceiptWithoutReposting()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.506" />
+    <testcase name="staleFenceAndExpiredLeaseAreRejectedAndRecoveryJoinsCaller()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.389" />
+    <testcase name="tRec04RestartQuarantinesAnExpiredClaimAndRejectsTheOldWorker()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.324" />
+    <testcase name="duplicateExecutorAndHttpRetryNeverWriteTwice()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.462" />
+    <testcase name="[1] phase=ledgerDuplicate" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.312" />
+    <testcase name="[2] phase=ledgerReadback" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.298" />
+    <testcase name="[3] phase=usage" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.304" />
+    <testcase name="[4] phase=terminal" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.309" />
+    <testcase name="[5] phase=outbox" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.319" />
+    <testcase name="[6] phase=audit" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.309" />
+    <testcase name="invalidTerminalTtlRollsBackAndSmallerTtlRetainsInitialExpiry()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.386" />
+    <testcase name="connectionLostBeforeCommitLeavesNoOutcomeEvidenceAndDoesNotRetry()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.308" />
+    <testcase name="[1] rejectTfailAudit=false" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.356" />
+    <testcase name="[2] rejectTfailAudit=true" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="0.338" />
+    <testcase name="accountLockTimeoutIsBoundedAndLeavesNonterminalIntent()" classname="com.simulatedbank.banking.integration.TransferT2PostgreSqlIntegrationTest" time="4.338" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" tests="29" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:55:52.026Z" time="1.733">
+    <testcase name="failsWithoutTransactionAndLeavesNoEntry()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.018" />
+    <testcase name="hibernateValidatedRealLedgerMappingOnCandidateSchema()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.001" />
+    <testcase name="consumerFixtureMapsIntentAndAccountFactsThenAuditFailureRollsBack()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.092" />
+    <testcase name="schemaBlockedCorruptionsAreRejectedViaMockedProjectionAndRollBackRealInserts()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.174" />
+    <testcase name="repostOverExistingPairFailsAndPreservesCommittedRows()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.045" />
+    <testcase name="readOnlyCallerTransactionDoesNotCommitEntries()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.027" />
+    <testcase name="currencyAndCorrelationBoundaries()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.204" />
+    <testcase name="invalidIdsRejectBeforeInsertAndLeaveNoEntry()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.025" />
+    <testcase name="wrongTransactionManagerIsNotAValidPostingContext()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.02" />
+    <testcase name="winner commits=true" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.149" />
+    <testcase name="winner commits=false" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.157" />
+    <testcase name="repostOverPartialSeqOneOrSeqTwoFailsWithoutRepair()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.065" />
+    <testcase name="creditForeignKeyViolationPropagatesAndDebitIsNotCommitted()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.047" />
+    <testcase name="readBackAmountMismatchIsDetectedAndRealInsertsRollBack()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.034" />
+    <testcase name="failureAfterSecondInsertRollsBackBoth()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.026" />
+    <testcase name="[1] amount=1.000" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.02" />
+    <testcase name="[2] amount=1.235" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.019" />
+    <testcase name="[3] amount=1E+17" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.02" />
+    <testcase name="flushAndReadBackFailuresPropagateWithoutPostingRef()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.05" />
+    <testcase name="failureAfterFirstInsertRollsBackDebit()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.025" />
+    <testcase name="runtimeCanInsertSelectButNotMutateLedger()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.068" />
+    <testcase name="rejectsBalanceScaleAboveTwo()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.021" />
+    <testcase name="validCommandCommitsFullPairWithGeneratedIdsAndRoundTrip()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.035" />
+    <testcase name="correlationMismatchWithValidCountAndSumRollsBackEvenIfCallerSwallowsAndCommits()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.037" />
+    <testcase name="[1] amount=1" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.047" />
+    <testcase name="[2] amount=1.0" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.049" />
+    <testcase name="[3] amount=1.00" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.052" />
+    <testcase name="amountAndBalanceBoundariesRejectOrCommit()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.159" />
+    <testcase name="callerFailureAfterPostingRollsBackBothEntries()" classname="com.simulatedbank.banking.ledger.persistence.LedgerPostingPostgresTest" time="0.031" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" tests="13" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:55:57.631Z" time="1.829">
+    <testcase name="candidateChallengeAndAuditFailureLeaveNoBusinessRows()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.134" />
+    <testcase name="duplicateKeyAndMismatchedTransferLinkRollBackTogether()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.08" />
+    <testcase name="missingCustomerConfigurationAndGappedAccountHistoryFailClosed()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.078" />
+    <testcase name="checkAtDayBoundaryUsesFixedInstantAndRejectsBackwardClock()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.127" />
+    <testcase name="scheduledReplacementUsesOldConfigUpToCutoverAndPreservesUsage()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.117" />
+    <testcase name="settlesExactlyOnceAcrossAccountsAndReleasesOverLimit()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.11" />
+    <testcase name="firstAccountConfigurationStartsCountingAtActivationAndNeverResetsCustomerUsage()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.102" />
+    <testcase name="lockTimeoutRollsBackTheWaitingTransactionAndGuardIsReusable()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.183" />
+    <testcase name="recoveryDistinguishesAbsentPendingMismatchPartialAndDatabaseFailure()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.117" />
+    <testcase name="rejectsForeignTransactionRefsAndRollsBackSettlementOnDownstreamFailure()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.124" />
+    <testcase name="readUsesRealSessionOwnershipAndDoesNotCreateUsage()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.208" />
+    <testcase name="guardSerializesDifferentAccountsAndIncludesPendingFromYesterday()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.235" />
+    <testcase name="adminApprovalWaitsForT2AndSnapshotRemainsCoherent()" classname="com.simulatedbank.banking.limit.TransferLimitPostgreSqlIntegrationTest" time="0.21" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" tests="2" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:02.263Z" time="0.57">
+    <testcase name="freshMigrationAppliesV8OnceAndValidationSucceeds()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.067" />
+    <testcase name="upgradeFromV7PreservesCustomerDataAndAddsAccountTable()" classname="com.simulatedbank.banking.migration.AccountV8MigrationPostgreSqlIntegrationTest" time="0.503" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" tests="1" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:05.617Z" time="0.067">
+    <testcase name="freshMigrationAppliesV7OnceAndRecordsSuccessfulHistory()" classname="com.simulatedbank.banking.migration.AdminIdempotencyV7MigrationPostgreSqlIntegrationTest" time="0.067" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest" tests="1" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:08.077Z" time="0.578">
+    <testcase name="upgradePreservesV17ChecksumsAndRestrictsApprovalUpdates()" classname="com.simulatedbank.banking.migration.ApprovalPrivilegesV18MigrationPostgreSqlIntegrationTest" time="0.578" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" tests="1" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:11.533Z" time="0.04">
+    <testcase name="freshMigrationAppliesV6OnceAndRecordsSuccessfulHistory()" classname="com.simulatedbank.banking.migration.ApprovalRequestV6MigrationPostgreSqlIntegrationTest" time="0.04" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest" tests="1" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:14.047Z" time="0.447">
+    <testcase name="completeMigrationChainIsOrderedRepeatableAndPreservesUnrelatedSchema()" classname="com.simulatedbank.banking.migration.PostgreSqlFreshMigrationIntegrationTest" time="0.447" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.migration.TransferRecoveryV24PostgreSqlIntegrationTest" tests="1" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:56:17.044Z" time="0.584">
+    <testcase name="upgradesV23WithoutInventingHistoryAndRestrictsRuntimePurge()" classname="com.simulatedbank.banking.migration.TransferRecoveryV24PostgreSqlIntegrationTest" time="0.584" />
+  </testsuite>
+  <testsuite name="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" tests="26" failures="0" errors="0" skipped="0" timestamp="2026-11-20T06:54:04.784Z" time="22.685">
+    <testcase name="[1] gap=MOVEMENT" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="2.885" />
+    <testcase name="[2] gap=DUPLICATE_LEDGER" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.734" />
+    <testcase name="[3] gap=LIMIT_RELEASED" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.662" />
+    <testcase name="[4] gap=AUDIT" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.575" />
+    <testcase name="[5] gap=MODE" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.618" />
+    <testcase name="[6] gap=RESPONSE" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.558" />
+    <testcase name="[7] gap=RESPONSE_MISMATCH" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.551" />
+    <testcase name="[8] gap=READ_ERROR" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.533" />
+    <testcase name="expiredDirectClaimFencesDelayedWorkerAndNeedsManualReview()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.611" />
+    <testcase name="reconcilesMatchedIncidentWithOriginalResponseAndSnapshotWithoutReposting()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.579" />
+    <testcase name="busyCustomerGuardAndTransferRowAreSkippedWithoutCountingAnAttempt()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.577" />
+    <testcase name="[1] fault=BEFORE_COMMIT" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.618" />
+    <testcase name="[2] fault=AFTER_COMMIT" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.515" />
+    <testcase name="recoveryBindsEachRecordAndRestoresOuterContextEvenOnFailure()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.55" />
+    <testcase name="concurrentWorkerSkipsEvenWhenActiveWorkerLeaseExpiresUnderLock()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="3.606" />
+    <testcase name="failureBeforeClaimCommitLeavesNoDurableAttempt()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.483" />
+    <testcase name="cursorAdvancesPastBusyRowsInsteadOfRestartingAtTheOldest()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="3.045" />
+    <testcase name="retryStopsAtFiveAttemptsOrFifteenMinutesAndWritesManualState()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.844" />
+    <testcase name="auditFailureRollsBackTransferResponseAndReservation()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.502" />
+    <testcase name="[1] state=SETTLED" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.486" />
+    <testcase name="[2] state=LEGACY_USAGE" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.485" />
+    <testcase name="purgeSkipsLockedRetryAndPendingRowsAndAllowsKeyReuseOnlyAfterDelete()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.617" />
+    <testcase name="jobRequiresTrustedSystemContext()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.412" />
+    <testcase name="staleEpochOrTokenCannotMatchNewClaimAfterConfirmedRollback()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.648" />
+    <testcase name="pendingSnapshotIncludesManualRowsAndUsesPrimaryClock()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.454" />
+    <testcase name="crashAfterT1ResumesOnlyAfterClaimCommitsAndRestartDoesNotRunAgain()" classname="com.simulatedbank.banking.transfer.persistence.TransferRecoveryCandidatePostgresTest" time="0.507" />
+  </testsuite>
+</testsuites>

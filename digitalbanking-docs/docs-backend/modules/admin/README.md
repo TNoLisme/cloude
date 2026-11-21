@@ -1,8 +1,69 @@
 # admin
 
-## Bổ sung — hướng dẫn task docs của Thịnh
-Owner chính: Đạt; Thịnh đồng phát triển phần fraud/audit. README chỉ điều hướng.
+> **Mã tài liệu:** `BE-MOD-ADMIN-01`
+>
+> **Phạm vi:** thiết kế, hợp đồng và kế hoạch triển khai module `admin`
+>
+> **Trạng thái tích hợp (20/11/2026):** **BE-INT-09 Verified**: 30/30 ca nghiệm thu mới; 228 test liên quan có evidence PASS theo từng class, lượt cuối 55/55 PASS. Admin dùng provider Identity/Limit/Audit thật qua `provider.api`; V23 giữ khóa role mà không cấp UPDATE catalogue, payload approval JPA bất biến và quyết định flush trước Audit. Xem [BE-INT-09](../../workofteam/integration%20modules/BE-INT-09.md) và [báo cáo](../../workofteam/integration%20modules/BE-INT-09-verification.md) cho evidence hiện hành. Các mục BLOCKED và owner sign-off theo từng task bên dưới là lịch sử module; thẩm quyền tích hợp theo DEC-INT-003. Phần còn ngoài phạm vi: numeric policy OI-API-05, đa tenant, result lịch sử ADM-OI-11, Audit retention/export và phát hành.
+>
+> **Baseline tham chiếu:** nhánh `datht-backend-rework`
+>
+> **Owner theo phân công:** Đạt; phối hợp Thịnh (`audit`/`fraud`), Vũ (`limit`), Identity/Customer/Account owners
 
-1. Đọc [tổng quan admin](../_overview/10-admin.md) và [quy trình task của Thịnh](../../workofteam/thinh-backend-workflow.md).
-2. [BE-ADM-01 — đề xuất tích hợp fraud/audit](BE-ADM-01-fraud-audit-integration.md) · [verification report](BE-ADM-01-verification-report.md).
-3. Contract là draft; liên hệ owner admin để review trước khi ghép. Config tham chiếu tại [deployment/configuration.md](../../deployment/configuration.md).
+## Mục lục
+
+- [Thiết kế triển khai](design.md)
+- [Tích hợp Identity/Limit/Audit BE-ADM-INT-01](BE-ADM-INT-01.md)
+- [Observability/runbook BE-ADM-OPS-01](BE-ADM-OPS-01.md)
+- [Release gate BE-ADM-REL-01](BE-ADM-REL-01.md)
+- [Admin operations runbook](runbook.md)
+- [Chốt hợp đồng BE-ADM-CON-01](BE-ADM-CON-01.md)
+- [Step-up binding BE-ADM-CON-02](BE-ADM-CON-02.md)
+- [Idempotency BE-ADM-CON-03](BE-ADM-CON-03.md)
+- [Resolve schema conflicts BE-ADM-CON-04](BE-ADM-CON-04.md)
+- [Migration `approval_request` BE-ADM-DB-01](BE-ADM-DB-01.md)
+- [Entity/repository/projection BE-ADM-DB-02](BE-ADM-DB-02.md)
+- [Idempotency persistence/concurrency BE-ADM-DB-03](BE-ADM-DB-03.md)
+- [Domain/proposal BE-ADM-DOM-01 + APP-01](BE-ADM-DOM-01-APP-01.md)
+- [Checker decision BE-ADM-APP-02](BE-ADM-APP-02.md)
+- [Step-Up/provider BE-ADM-APP-03](BE-ADM-APP-03.md)
+- [Audit C2/C3 BE-ADM-APP-04](BE-ADM-APP-04.md)
+- [REST API-01](BE-ADM-API-01.md)
+- [Approve/Reject API-02](BE-ADM-API-02.md)
+- [List/Detail API-03](BE-ADM-API-03.md)
+- [Operational lookup API-04](BE-ADM-API-04.md)
+- [Authorization/SEC-01](BE-ADM-SEC-01.md)
+- [PostgreSQL constraint/transaction tests BE-ADM-TST-02](BE-ADM-TST-02.md)
+- [Concurrency/idempotency tests BE-ADM-TST-03](BE-ADM-TST-03.md)
+- [Security/API contract tests BE-ADM-TST-04](BE-ADM-TST-04.md)
+- [Failure/recovery tests BE-ADM-TST-05](BE-ADM-TST-05.md)
+- [Task breakdown và checklist](tasks/README.md)
+
+## Lịch sử triển khai theo mốc task
+
+- `admin` là **orchestrator** của workflow Maker-Checker, sở hữu write-model `banking.approval_request`; `identity` và `limit` vẫn là write-owner của dữ liệu bị thay đổi.
+- **Đã triển khai:** `admin.domain` (`ApprovalRequest`, typed payload, state machine), `admin.application.port.ApprovalRequestStore`, JPA entity/repository/store, Flyway `V6__create_approval_request_table.sql`; test unit + PostgreSQL 16 pass.
+- **Đã xác minh (DB-01):** `V6` canonical — 13 cột, PK identity, 2 FK RESTRICT, 8 CHECK, 5 index; fresh PostgreSQL 16 chạy `V1`–`V7`, metadata và positive/negative DML PASS. Không có partial index canonical; `ADM-OI-03` là extension chưa duyệt, cần migration mới. Chi tiết: [BE-ADM-DB-01.md](BE-ADM-DB-01.md).
+- **Đã triển khai (DB-02, persistence):** `ApprovalRequestReader` + `ApprovalQueryService` read-only, `ApprovalSummaryProjection`/`ApprovalDetailProjection`/`ApprovalPage`; list query không đọc JSONB `payload`, detail mask bỏ `expectedVersion`; filter `requestType/status/makerId/checkerId/from/to`, page 0/20/100, sort whitelist `createdAt` (default `desc`) và tie-breaker `approvalId`; `FOR UPDATE` chờ trong transaction `MANDATORY`, lock timeout `55P03` không bị nuốt. REST list/detail + data scope vẫn BLOCKED ở `BE-ADM-API-03`/`ADM-OI-06`; `ApprovalDetail.result` chưa persist. Chi tiết: [BE-ADM-DB-02.md](BE-ADM-DB-02.md).
+- **Đã kiểm chứng (DB-03):** `V7` metadata thật trên PostgreSQL 16 fresh database — 13 cột/type/length/nullability/identity/default, PK, 2 FK `RESTRICT`, 10 CHECK, unique `uq_admin_idempotency_scope (actor_id, operation, scope_key, idempotency_key)`, 3 index phụ non-partial; positive/negative DML (23505/23514/23503/22001) PASS. Concurrency/rollback: winner rollback → loser đang block nhận ownership; failure tại response-persistence rollback cả approval + claim rồi retry cùng key; `RECEIVED` hết hạn không bị purge và vẫn `409 IDEMPOTENCY_IN_PROGRESS`. Cross-tenant vẫn BLOCKED vì schema v1 không có tenant. Chi tiết: [BE-ADM-DB-03.md](BE-ADM-DB-03.md).
+- **Đã triển khai (CON-02):** `ApprovalStepUpBinding` (SHA-256 canonical v1 + `bindingKey=approvalId`), `ApprovalStepUpService` (428 bind + consume JOIN), `ApprovalDecisionService` (entry point transition duy nhất: lock, Maker–Checker, consume, provider role, audit C2), `AdminAuthorization`; 31 test mới (7 unit binding, 7 unit gate, 17 PostgreSQL/Identity) PASS.
+- **Đã triển khai (CON-03):** `admin_idempotency_record` V7 unique `(actor_id, operation, scope_key, idempotency_key)`; `AdminIdempotencyService` insert-first (`ON CONFLICT DO NOTHING`), replay/conflict/in-progress, TTL 24h + purge terminal-only; `AdminRequestHasher` JCS SHA-256; Maker step-up bind idempotency key + proposal hash; `RoleAdminController`/`LimitAdminController`; 40 test mới. ROLE_CHANGE proposal/decision end-to-end; LIMIT_CHANGE proposal/approve fail-closed 503.
+- **Đã triển khai (DOM-01/APP-01):** transition matrix tập trung `ApprovalStatus.canTransitionTo/requireTransitionTo` (PENDING→APPLIED/REJECTED/CANCELLED, `APPROVED` schema-reserved, terminal protection); domain invariants/money/role conditional validation; `ApprovalProposalService.proposeRole` xác thực actor/permission, Maker step-up, idempotency, tạo `PENDING` + C2 audit trong một transaction. 28 test mới PASS (Admin 17 class/147 test, migration 8/51, ArchUnit 1/18). `LIMIT_CHANGE` proposal vẫn BLOCKED (`ADM-OI-05`), validate rồi 503, không tạo state. Chi tiết: [BE-ADM-DOM-01-APP-01.md](BE-ADM-DOM-01-APP-01.md).
+- **Đã triển khai (APP-02/APP-03, 18/11/2026):** `ApprovalDecisionService` lock `FOR UPDATE`, re-check `PENDING`/type/Maker–Checker, consume challenge `SENSITIVE_ACTION` trong transaction, gọi `IdentityRoleCommand.applyApprovedRoleChange` (JOIN), persist `APPLIED`/`REJECTED` + idempotency + C2 audit; hai checker race chỉ một winner, provider chỉ chạy một lần; C2 failure rollback provider + challenge. `LIMIT_CHANGE` approve fail-closed 503 (`ADM-OI-05`), reject chạy. Chi tiết: [BE-ADM-APP-02.md](BE-ADM-APP-02.md), [BE-ADM-APP-03.md](BE-ADM-APP-03.md).
+- **Đã triển khai (APP-04/API-01, 18/11/2026):** audit boundary `AdminAuditPort` — C2 là write cuối transaction approve/reject, fail → rollback toàn bộ, replay không ghi lần hai; C3 `SECURITY_ACCESS_DENIED` chỉ một fact cho một denial, 401 và 428 không audit, entity `APPROVAL_REQUEST` cho `/admin/{limits,roles,approvals}[/{id}][/approve]`; adapter phát structured security log qua `SafeJsonLogEncoder` allowlist + metric `admin.audit.events`/`admin.audit.failures`. REST `POST /api/v1/admin/roles` có evidence HTTP thật (201/`Location`/`no-store`/replay/428/403/404/CSRF/correlation); `POST /admin/limits` vẫn fail-closed 503. Chi tiết: [BE-ADM-APP-04.md](BE-ADM-APP-04.md), [BE-ADM-API-01.md](BE-ADM-API-01.md). Durable `AuditModuleApi` (`ADM-OI-07`) vẫn BLOCKED.
+- **Đã chốt trong CON-01:** `04` §4.5.3 là DDL canonical; `PENDING → APPLIED/REJECTED/CANCELLED`; `APPROVED` chỉ schema-reserved; target mapping limit/role; `ROLE_CHANGE.expectedVersion` do server capture từ Identity.
+- **Đã triển khai (API-02/API-03, 18/11/2026):** `ApprovalAdminController` mở `GET /api/v1/admin/approvals` và `/{approvalId}` (filter, page, sort whitelist, `PageResponse`, no-store) với scope server-side trong SQL (`ApprovalVisibility`: maker thấy request của mình; checker thấy loại mình được duyệt; count cùng scope); detail ngoài scope = unknown = `404 APPROVAL_NOT_FOUND`; payload mask; read-only không audit/mutate. Decision API được harden: service re-check `CHECKER` + quyền loại approval trước lock/provider. Báo cáo: [BE-ADM-API-02.md](BE-ADM-API-02.md), [BE-ADM-API-03.md](BE-ADM-API-03.md). `DEC-ADM-009/010`; còn OPEN `ADM-OI-05/06/11`.
+- **Đã triển khai (API-04/SEC-01, 18/11/2026):** operational lookup dùng provider runtime thật — `GET /api/v1/admin/customers/{customerId}` (Customer, masked `CustomerProfile`, `403`+C3, `404 CUSTOMER_NOT_FOUND`) và `GET /api/v1/admin/customers/{customerId}/accounts` (Account, `AccountsResponse` masked, `404 CUSTOMER_NOT_FOUND` qua `customer.api.CustomerQuery.findByCustomerId` additive, đóng `ACC-DR-10`). Authorization hai tầng (chain + service), actor chỉ từ session tin cậy, forged header/body không bypass, CUSTOMER/disabled/expired/revoked session fail-closed, Maker không tự propose/approve, checker phải có permission theo loại approval. Test: `AdminAuthorizationTest` 8, `AdminSecurityMatrixPostgreSqlIntegrationTest` 8; broad Admin+Customer+Account+migration 58 classes / 499 tests PASS. Báo cáo: [BE-ADM-API-04.md](BE-ADM-API-04.md), [BE-ADM-SEC-01.md](BE-ADM-SEC-01.md); `DEC-ADM-011/012`. OPEN: `ADM-OI-06` (staff data scope/tenant), `ADM-OI-07` (durable audit), `ADM-OI-05` (Limit provider).
+- **Đã triển khai (SEC-02/TST-01, 18/11/2026):** bổ sung `Expires: 0` và `X-Request-ID` (server-generated) vào response pipeline; Admin payload/`decisionNote`/`result` scrub assignment secret bằng `LogRedaction`; provider stale `ROLE_CONFLICT` có đúng một C3. Regression chứng minh OTP/token/password/PII không vào response/log/audit/metric, `Cache-Control`/`Pragma`/`Expires`/`X-Request-ID` có trên success + error, correlation/request ID sanitize; test matrix domain/DTO/service/auth/API-Problem/component. Báo cáo: [BE-ADM-SEC-02.md](BE-ADM-SEC-02.md), [BE-ADM-TST-01.md](BE-ADM-TST-01.md). **OPEN:** `ADM-OI-05/06/07/11`.
+- **Đã kiểm chứng (TST-04/TST-05, 18/11/2026):** `AdminOpenApiContractTest` 5 + `AdminHttpContractPostgreSqlIntegrationTest` 5 (session/security chain thật, CSRF cookie-vs-bearer, exact status/envelope/header/correlation, forged metadata, IDOR actor-scope, tenant BLOCKED evidence); `AdminFailureRecoveryPostgreSqlIntegrationTest` 9 + `AdminIdempotencyRestartPostgreSqlIntegrationTest` 1 (JDBC `08006`, trigger `58000` INSERT/UPDATE rollback + retry, provider row lock `55P03` → 503, C2 seam rollback, crash-window replay, application restart replay, retry trong transaction mới bằng `xid`). **Production fix:** C2 fact chỉ publish `afterCommit`. Regression rộng **65 classes / 559 tests PASS**; full backend **120 classes / 1345 tests PASS**. Báo cáo: [BE-ADM-TST-04.md](BE-ADM-TST-04.md), [BE-ADM-TST-05.md](BE-ADM-TST-05.md). **BLOCKED:** `ADM-OI-05` (422/Limit provider), `ADM-OI-06` (tenant), `ADM-OI-07` (durable audit).
+- **Đã kiểm chứng (TST-02/TST-03, 18/11/2026):** PostgreSQL 16 Testcontainers + Flyway `V1`–`V8`; `AdminPersistencePostgreSqlIntegrationTest` 6 test (duplicate PENDING canonical, unique idempotency scope, FK rollback, CHECK không mutate row, C2 audit rollback + retry) và `AdminConcurrencyPostgreSqlIntegrationTest` 4 test (same key/khác hash, hai PENDING cùng target, hai PENDING apply race, một challenge một consumer), mỗi worker dùng connection/transaction độc lập + `CyclicBarrier` timeout hữu hạn. Targeted evidence **8 classes / 71 tests PASS**; concurrency chạy lặp 3 lần PASS. Báo cáo: [BE-ADM-TST-02.md](BE-ADM-TST-02.md), [BE-ADM-TST-03.md](BE-ADM-TST-03.md). **OPEN:** `ADM-OI-03` (partial unique PENDING), `ADM-OI-05/06/07`.
+- **Đã triển khai (INT-01/OPS-01, 18/11/2026):** Limit provider thật (`limit.api.LimitConfigMutationPort`, `V9 limit_config`, partial unique ACTIVE, `UNIQUE (approval_id)`) và durable Audit (`audit.api.AuditModuleApi`, `V10 audit_log` append-only + hash chain SHA-256/JCS) thay fail-closed 503 và security-log tạm thời. Admin proposal/approve/reject LIMIT chạy trong cùng transaction với `expectedVersion`; `DurableAdminAuditAdapter` ghi C2 fail-closed/C3 best-effort, log/metric chỉ là mirror sau commit. Observability: 10 meter bounded, workflow log allowlist, `admin_approval_attempt` (V11) + job quét stuck/exhausted read-only, 7 alert rule Prometheus và runbook đầy đủ. Evidence: 47 classes / 356 tests PASS; báo cáo [BE-ADM-INT-01.md](BE-ADM-INT-01.md), [BE-ADM-OPS-01.md](BE-ADM-OPS-01.md), [runbook.md](runbook.md). OPEN: OI-API-05, `ADM-OI-06`, `ADM-OI-11`, Audit retention/export, deploy Prometheus.
+- `identity.api.StepUpChallengePort` và `IdentityRoleCommand` đã có runtime; Admin gọi chúng trong transaction quyết định.
+- Common đã có security route gates và error catalog approval; đây là boundary plumbing, không phải admin runtime hoàn chỉnh.
+- Customer đã có exact-ID masked lookup `GET /api/v1/admin/customers/{customerId}` nhưng data-scope staff và durable Audit còn mở. Account, Limit và Audit runtime tương ứng chưa đủ để đóng integration admin.
+
+## Phạm vi tài liệu
+
+`design.md` giữ thiết kế/khảo sát ban đầu. `BE-ADM-CON-01.md` chốt scope, actor/scope matrix, payload schema, state machine, DB, transaction/failure, dependency và test evidence. `BE-ADM-CON-02.md` chốt canonical request hash, binding key, 428 flow, decision gate, failure/concurrency và ma trận 16 kịch bản. `BE-ADM-CON-03.md` chốt idempotency scope/hash/TTL/replay/conflict/in-progress, Maker step-up và evidence 40 test mới. `BE-ADM-CON-04.md` rà soát và giải quyết xung đột schema (BIGINT/UUID, APPROVED/APPLIED, expiration, challenge columns, migration compatibility), cập nhật `_overview/10-admin.md` và `design/04. security.md` cho khớp canonical `04` §4.5.3/§4.5.4. `BE-ADM-DB-01/02/03.md` là evidence persistence: schema `approval_request`, read model list/detail, và idempotency record/unique race/replay/retention. `BE-ADM-APP-04.md` chốt audit C2/C3 (transaction semantics, catalog, structured-log allowlist, C3 403/metric) và `BE-ADM-API-01.md` chốt DTO/controller/status/security/OpenAPI của `POST /admin/limits` và `/admin/roles` (Limit proposal vẫn fail-closed do `ADM-OI-05`). `tasks/README.md` là checklist triển khai theo dependency.
+
+Các quyết định chưa được phân xử trong `docs-common` được giữ là **BLOCKED/OPEN**, không được biến thành hành vi production bằng cách suy diễn trong tài liệu module. Khi provider chưa có, chỉ dùng fixture/fake ở test theo `Modules contract §13.1`; không đưa fake thành production bean.

@@ -2,6 +2,7 @@ package com.simulatedbank.banking.transfer.application;
 
 import com.simulatedbank.banking.common.context.RequestContext;
 import com.simulatedbank.banking.common.context.RequestContextHolder;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -13,15 +14,13 @@ import java.util.UUID;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Isolated T2 candidate, not a registered runtime component. Each port must use
- * the same primary transaction and respect the documented module contracts.
- * A port failure aborts T2; in particular this candidate does not implement
- * credit savepoint recovery, Tfail, retries or reconciliation. Fraud fail-open is
- * available only when the provider explicitly proves savepoint recovery is safe.
+ * T2 executor. Every port joins the primary transaction. The money adapter owns recovery from
+ * a confirmed credit rejection under a savepoint. Handoff owns claim, retry and commit evidence.
  */
 public final class TransferSettlementCandidate {
     private final Ports ports;
@@ -36,12 +35,18 @@ public final class TransferSettlementCandidate {
 
     public TransferSettlementCandidate(PlatformTransactionManager manager, Ports ports, ZoneId businessZone,
                                        TransferTelemetry telemetry) {
+        this(manager, ports, businessZone, telemetry, TransactionDefinition.TIMEOUT_DEFAULT);
+    }
+
+    public TransferSettlementCandidate(PlatformTransactionManager manager, Ports ports, ZoneId businessZone,
+                                       TransferTelemetry telemetry, int timeoutSeconds) {
         this.telemetry = Objects.requireNonNull(telemetry);
         this.ports = Objects.requireNonNull(ports, "ports");
         this.businessZone = Objects.requireNonNull(businessZone, "business zone");
         tx = new TransactionTemplate(Objects.requireNonNull(manager, "transaction manager"));
         tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        tx.setTimeout(timeoutSeconds);
         recoveryTx = new TransactionTemplate(manager);
         recoveryTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_MANDATORY);
     }
@@ -76,10 +81,12 @@ public final class TransferSettlementCandidate {
     public Outcome settleInRecoveryTransaction(Context context, AttemptFence attempt) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(attempt, "attempt fence");
-        return Objects.requireNonNull(recoveryTx.execute(status -> {
-            telemetry.joinedSettlementAttempt(System.nanoTime());
-            return execute(context, attempt, status);
-        }));
+        try (var scope = bindIntent(context)) {
+            return Objects.requireNonNull(recoveryTx.execute(status -> {
+                telemetry.joinedSettlementAttempt(System.nanoTime());
+                return execute(context, attempt, status);
+            }));
+        }
     }
 
     private static RequestContextHolder.Scope bindIntent(Context context) {
@@ -98,21 +105,16 @@ public final class TransferSettlementCandidate {
         Instant terminalAt = Objects.requireNonNull(ports.primaryClockTimestamp(), "primary time");
         if (terminalAt.isBefore(context.createdAt())) throw new IllegalStateException("Primary clock moved backwards");
         LocalDate businessDate = terminalAt.atZone(businessZone).toLocalDate();
-        ports.lockUsageCustomerThenAccount(context, businessDate);
+        ports.lockUsageCustomerThenAccount(context, terminalAt, businessDate);
         Optional<Failure> failure = Objects.requireNonNull(ports.validateLockedState(context, businessDate), "validation");
         FraudResult fraud = new FraudResult(false, List.of());
         if (failure.isEmpty()) {
             fraud = evaluateFraud(context, terminalAt, status);
             if (fraud.blocked()) failure = Optional.of(Failure.FRAUD_BLOCKED);
         }
-        if (failure.isEmpty() && !ports.debitConditional(context)) {
-            // This result may only be returned if no money was debited.
-            failure = Optional.of(Failure.INSUFFICIENT_BALANCE);
-        }
         if (failure.isEmpty()) {
-            // Any credit or ledger exception aborts T2, including the debit.
-            ports.credit(context);
-            ports.postAndVerifyBalancedLedger(context);
+            failure = ports.moveMoney(context, status);
+            if (failure.isEmpty()) ports.postAndVerifyBalancedLedger(context);
         }
         Outcome outcome = failure.map(Outcome::failed).orElseGet(Outcome::completed);
         if (failure.isPresent()) {
@@ -134,6 +136,7 @@ public final class TransferSettlementCandidate {
         } catch (RuntimeException auditFailure) {
             throw new AuditWriteException(auditFailure);
         }
+        ports.readyToCommit();
         telemetry.terminalAfterCommit(outcome);
         return outcome;
     }
@@ -160,6 +163,26 @@ public final class TransferSettlementCandidate {
         return result;
     }
 
+    /** Credit threw after a successful debit. Only a confirmed full rollback can authorize Tfail. */
+    public static final class CreditFailure extends IllegalStateException {
+        public CreditFailure(Throwable cause) {
+            super("Credit failed after debit", cause);
+        }
+
+        public static boolean permitsTfail(Throwable failure) {
+            if (!(failure instanceof CreditFailure)) return false;
+            for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+                if (cause instanceof SQLException sql && sql.getSQLState() != null) {
+                    String state = sql.getSQLState();
+                    return !state.startsWith("08") && !state.startsWith("57") && !state.startsWith("40")
+                            && !"55P03".equals(state);
+                }
+            }
+            // JDBC proved savepoint rollback, but the whole T2 was already rollback-only.
+            return failure.getCause() instanceof UnexpectedRollbackException;
+        }
+    }
+
     /** A required C1 or C2 write failed in T2. The transaction must roll back. */
     public static final class AuditWriteException extends IllegalStateException {
         public AuditWriteException(Throwable cause) {
@@ -181,7 +204,8 @@ public final class TransferSettlementCandidate {
         AttemptFence lockPendingAndReadFence(Context context);
         void lockAccountsAscending(Context context);
         Instant primaryClockTimestamp();
-        void lockUsageCustomerThenAccount(Context context, LocalDate businessDate);
+        /** Use the exact terminal instant for both configuration selection and settlement. */
+        void lockUsageCustomerThenAccount(Context context, Instant terminalAt, LocalDate businessDate);
         /** Re-check source ownership, account state/currency, balance and limit under lock. */
         Optional<Failure> validateLockedState(Context context, LocalDate businessDate);
         FraudResult evaluateFraud(Context context, Instant terminalAt);
@@ -191,9 +215,19 @@ public final class TransferSettlementCandidate {
         default boolean fraudContextUsableAfterRollback() { return false; }
         /** Emit safe fail-open telemetry; failures propagate and roll back T2. */
         default void recordFraudFailOpen() { throw new IllegalStateException("Fraud telemetry unavailable"); }
+        default Optional<Failure> moveMoney(Context context, TransactionStatus status) {
+            if (!debitConditional(context)) return Optional.of(Failure.INSUFFICIENT_BALANCE);
+            credit(context);
+            return Optional.empty();
+        }
+        default void readyToCommit() { }
         /** Return false only when debit did not occur and insufficient balance was confirmed. */
-        boolean debitConditional(Context context);
-        void credit(Context context);
+        default boolean debitConditional(Context context) {
+            throw new UnsupportedOperationException("Money adapter required");
+        }
+        default void credit(Context context) {
+            throw new UnsupportedOperationException("Money adapter required");
+        }
         /** Post exactly two entries, verify account/amount/linkage and balance before returning. */
         void postAndVerifyBalancedLedger(Context context);
         /** Settle a single matching pending reservation and increment usage exactly once. */
@@ -243,7 +277,7 @@ public final class TransferSettlementCandidate {
         }
         @Override public String toString() { return "AttemptFence[redacted]"; }
     }
-    public enum Failure { INSUFFICIENT_BALANCE, LIMIT_EXCEEDED, ACCOUNT_INACTIVE, ACCOUNT_NOT_FOUND, FRAUD_BLOCKED }
+    public enum Failure { INSUFFICIENT_BALANCE, LIMIT_EXCEEDED, ACCOUNT_INACTIVE, ACCOUNT_NOT_FOUND, FRAUD_BLOCKED, PROCESSING_ERROR }
     public record Outcome(Optional<Failure> failure) {
         public Outcome { Objects.requireNonNull(failure, "failure"); }
         public static Outcome completed() { return new Outcome(Optional.empty()); }

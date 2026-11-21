@@ -1,0 +1,364 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :clean
+
+> Task :compileJava
+Note: /home/phuong/workspace/cloude/digitalbanking-backend/src/main/java/com/simulatedbank/banking/audit/application/AuditDetailProjection.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+> Task :bootJar
+> Task :jar
+> Task :assemble
+
+> Task :compileTestJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processTestResources
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+LimitCustomerMissingProviderIT > selectedAccountWithoutProviderFailsClosed() FAILED
+    java.lang.AssertionError at LimitCustomerMissingProviderIT.java:50
+
+LimitPersistenceIT > upgradeFromV1PreservesExistingSchemaAndInstallsLimitMigrations() FAILED
+    org.opentest4j.AssertionFailedError at LimitPersistenceIT.java:82
+
+LimitPersistenceIT > invalidConfigurationIsRejectedByPostgres(String) > [21] assignment=daily_limit='NaN' FAILED
+    java.lang.AssertionError at LimitPersistenceIT.java:160
+
+LimitPersistenceIT > cleanMigrationCreatesOnlyLimitOwnedTablesWithDefaultsAndStagedReferences() FAILED
+    java.lang.AssertionError at LimitPersistenceIT.java:62
+
+LimitRulesIT > allSnapshotFieldsAndBothUsageScopesRoundTripWithDatabaseIdentitiesAndDefaults() FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:98
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:98
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:98
+
+LimitRulesIT > proposalWithDatabaseGeneratedTimestampsRemainsAtomicOnApprovalConflict() FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:221
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:221
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:221
+
+LimitRulesIT > openEndedActiveConfigHasNoArtificialExpiry() FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:172
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:172
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:172
+
+LimitRulesIT > allFourScopeCombinationsAndCheckOperationsAreSideEffectFree(int) > [2] scopes=1 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:181
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:181
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:181
+
+LimitRulesIT > allFourScopeCombinationsAndCheckOperationsAreSideEffectFree(int) > [3] scopes=2 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:182
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:182
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:182
+
+LimitRulesIT > allFourScopeCombinationsAndCheckOperationsAreSideEffectFree(int) > [4] scopes=3 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:181
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:181
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:181
+
+LimitRulesIT > selectsOnlyActiveAndNeverFallsBackToHistoricalOrUnrelatedScopes() FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:151
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:151
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:151
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [1] nanosFromStart=-1, expectedMatches=0 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [2] nanosFromStart=0, expectedMatches=1 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [3] nanosFromStart=1, expectedMatches=1 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [4] nanosFromStart=3599999999999, expectedMatches=1 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [5] nanosFromStart=3600000000000, expectedMatches=0 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > nanosecondAsOfHonorsDatabaseBoundaries(long, int) > [6] nanosFromStart=3600000000001, expectedMatches=0 FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:86
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:86
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:86
+
+LimitRulesIT > configurationVersionsCoexistAndWritingHistoryNeverResetsUsage() FAILED
+    org.springframework.dao.DataIntegrityViolationException at LimitRulesIT.java:137
+        Caused by: org.hibernate.exception.ConstraintViolationException at LimitRulesIT.java:137
+            Caused by: org.postgresql.util.PSQLException at LimitRulesIT.java:137
+
+NotificationJpaRepositoryIT > JPA Entity correctly persists and maps JSONB, enums, timestamps, and lease fields on PostgreSQL FAILED
+    org.springframework.dao.DataIntegrityViolationException at NotificationJpaRepositoryIT.java:115
+        Caused by: org.hibernate.exception.ConstraintViolationException at NotificationJpaRepositoryIT.java:115
+            Caused by: org.postgresql.util.PSQLException at NotificationJpaRepositoryIT.java:115
+
+NotificationTransactionalOutboxIT > 10. No transfer or ledger mutation on T3 failure FAILED
+    org.springframework.dao.DataIntegrityViolationException at NotificationTransactionalOutboxIT.java:361
+        Caused by: org.hibernate.exception.ConstraintViolationException at NotificationTransactionalOutboxIT.java:361
+            Caused by: org.postgresql.util.PSQLException at NotificationTransactionalOutboxIT.java:361
+
+TransferApiContractTest > getDetailBodyMatchesTransferDetailSchemaIncludingFraudFlags() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+TransferApiContractTest > transferResponseRequiredFieldsMatchContract() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferApiContractTest > postFailedBodyCarriesContractOutcomeExtensions() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferApiContractTest > validationProblemMatchesProblemSchemaAndCatalog() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferApiContractTest > postCompletedBodyMatchesTransferResponseSchema() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > stepUpIs428WithChallengeAndCreatesNothing() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2314
+
+TransferControllerHttpTest > malformedJsonIs400MalformedAndOversizeIs413() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > postT1FailedIs422WithReferenceStatusAndFailureCode() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > createCompletedReturns201LocationAndContractSchema() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > cookieSessionRequiresCsrfWhileBearerIsExempt() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > missingIdempotencyKeyIs400WithHeaderFieldAndCreatesNothing() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > staffCannotCreateAndAnonymousIs401() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > staffFraudFlagsAreGatedByPermission() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > terminalReplayKeepsOriginalBodyAndStatusWithReplayedHeaderAndCurrentCorrelation() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > getNonParticipantIs403WithAudit() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > conflictIs409WithSecurityAuditAndInProgressIs409WithRetryAfter() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > getParticipantReturnsMaskedDetailWithoutFraudFlagsAndNoStore() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > getInvalidReferenceIs400AndAbsentIs404() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > invalidAmountIs400WithRelativeFieldPath() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > postT1AccountInactiveMapsToTransferFailedWithFailureCode() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > sourceNotOwnedIs403WithOwnershipAudit() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > wrongMediaTypeIs415() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+TransferControllerHttpTest > preT1AccountErrorsCarryNoReferenceOrTransferStatus() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:145
+
+{"timestamp":"2026-11-18T15:15:00.918Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:00.918Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:02.183Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:02.185Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:02.186Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:03.760Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.PoolBase","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.postgresql.util.PSQLException"}
+{"timestamp":"2026-11-18T15:15:03.809Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:03.811Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:03.811Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:04.313Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:04.313Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:04.313Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:04.313Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:05.308Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.309Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.310Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.312Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.312Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.312Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.314Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.315Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.316Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.317Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.317Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.319Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.320Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.320Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.321Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.321Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.323Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.323Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.323Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.325Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.326Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.327Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.327Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.827Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.830Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.831Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.832Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:05.832Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:06.843Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.PoolBase","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.postgresql.util.PSQLException"}
+{"timestamp":"2026-11-18T15:15:08.350Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.352Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.353Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.355Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.355Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.947Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.947Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.947Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:08.947Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.simulatedbank.banking.admin.WORKFLOW","correlation_id":null,"request_id":null,"event":"ADMIN_APPROVAL_WORKFLOW","stage":"RECOVERY_SWEEP","outcome":"ERROR"}
+{"timestamp":"2026-11-18T15:15:08.947Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"com.simulatedbank.banking.admin.RECOVERY","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:09.842Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:09.843Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:09.843Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:09.843Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:09.923Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.PoolBase","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.postgresql.util.PSQLException"}
+{"timestamp":"2026-11-18T15:15:10.902Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.PoolBase","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.postgresql.util.PSQLException"}
+{"timestamp":"2026-11-18T15:15:11.355Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.HikariPool","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.355Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.358Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.359Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.360Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.360Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.360Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.363Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:11.363Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.642Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.642Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.642Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.642Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:12.923Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.923Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.923Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:12.923Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:13.093Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.094Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.095Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.903Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.903Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.903Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:13.903Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:14.826Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.PoolBase","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.postgresql.util.PSQLException"}
+{"timestamp":"2026-11-18T15:15:16.095Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.HikariPool","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.095Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.097Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.098Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.098Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.099Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.100Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.101Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.101Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.101Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.103Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.104Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.106Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.106Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.106Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.108Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.109Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.110Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.111Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.111Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.113Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:16.114Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:17.826Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:17.826Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:17.826Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.hibernate.engine.jdbc.spi.SqlExceptionHelper","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:17.827Z","level":"ERROR","service":"digital-banking-backend","environment":"test","logger":"org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG","exception_type":"org.springframework.dao.DataAccessResourceFailureException"}
+{"timestamp":"2026-11-18T15:15:19.114Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.HikariPool","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.114Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.115Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.116Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.boot.web.embedded.tomcat.GracefulShutdown","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.117Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.118Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.118Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.120Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.121Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.121Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.122Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.123Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.123Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.124Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.124Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.235Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.237Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.237Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.237Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.239Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.239Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.239Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.241Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.241Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.942Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.944Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.944Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.944Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.945Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.945Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.946Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.947Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.947Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.947Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.948Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.949Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.949Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.951Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:19.951Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:20.433Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:20.435Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:20.435Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:23.436Z","level":"WARN","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.pool.HikariPool","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+{"timestamp":"2026-11-18T15:15:23.437Z","level":"INFO","service":"digital-banking-backend","environment":"test","logger":"com.zaxxer.hikari.HikariDataSource","correlation_id":null,"request_id":null,"event":"APPLICATION_LOG"}
+
+> Task :test
+
+2283 tests completed, 43 failed
+
+> Task :test FAILED
+
+[Incubating] Problems report is available at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 14m 22s
+9 actionable tasks: 9 executed

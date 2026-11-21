@@ -200,6 +200,16 @@ class TransferCreateOrchestratorTest {
     }
 
     @Test
+    void commitUnknownRereadsPrimaryWithoutTakingOverSettlement() {
+        ports.reads.add(Optional.empty());
+        ports.reads.add(Optional.of(stored(actor.userId(), actor.customerId(), hash, IdempotencyStatus.RECEIVED)));
+        ports.intentFailure = new TransferIntentCandidate.CommitUncertain(new IllegalStateException("commit uncertain"));
+        assertThat(orchestrator.create(new TransferCreateCommand(actor, input)))
+                .isInstanceOf(TransferCreateOutcome.InProgress.class);
+        assertThat(ports.calls).containsExactly("lookup", "preflight", "T1", "lookup");
+    }
+
+    @Test
     void refusesOuterTransaction() {
         TransactionSynchronizationManager.setActualTransactionActive(true);
         try {
@@ -266,7 +276,7 @@ class TransferCreateOrchestratorTest {
             TransferIdentity identity = new TransferIdentity("R", request.customerId(), request.actorId(),
                     request.payload().sourceAccountId(), destinationId, null);
             return new Accepted(new TransferIntentCandidate.Command(identity, request.payload().amount(),
-                    request.payload().description(), "corr", request.idempotencyKey(), hash, 86400, "v1", null));
+                    request.payload().description(), "corr", request.idempotencyKey(), hash, null));
         }
         @Override public TransferIntentCandidate.Result createIntent(TransferIntentCandidate.Command command) {
             calls.add("T1");

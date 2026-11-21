@@ -59,7 +59,9 @@ public class NotificationEntity {
     private String templateCode;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "payload_masked", nullable = false, columnDefinition = "jsonb")
+    // The validated outbox payload is immutable. Hibernate must not dirty-check its JSON
+    // snapshot as an update when a caller commits after taking the Audit chain lock.
+    @Column(name = "payload_masked", nullable = false, updatable = false, columnDefinition = "jsonb")
     private Map<String, Object> payloadMasked;
 
     @Enumerated(EnumType.STRING)

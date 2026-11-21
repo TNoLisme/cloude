@@ -2,10 +2,11 @@
 
 > **Dự án:** Digital Banking MVP (Single-Bank, Core Simulated)
 > **Mã tài liệu:** `BE-DEP-01`
-> **Phiên bản:** v1.2
-> **Ngày cập nhật:** 12/11/2026
-> **Trạng thái:** Draft — Hướng dẫn triển khai & vận hành; cấu hình chi tiết tại [[digitalbanking-docs/docs-backend/deployment/configuration.md]]
-> **Tài liệu cấu hình:** [[digitalbanking-docs/docs-backend/deployment/configuration.md]] (`BE-DEP-02`)
+> **Phiên bản:** 1.3
+> **Ngày cập nhật:** 18/11/2026
+> **Trạng thái:** Hoàn thành — Hướng dẫn triển khai & vận hành; cấu hình chi tiết tại [[digitalbanking-docs/docs-backend/deployment/configuration.md]]
+> **Owner:** Phương (`common`), phối hợp các Module Owners
+> **Tài liệu cấu hình:** [[digitalbanking-docs/docs-backend/deployment/configuration.md]] (`BE-DEP-02`), [[digitalbanking-docs/docs-backend/deployment/common-readiness.md]] (`BE-COM-OPS-08`)
 > **Nguồn tham chiếu:** [[digitalbanking-docs/docs-common/05. Technical stack.md]], [[digitalbanking-docs/docs-common/06. System architecture.md]] (§9, §11, §12), [[digitalbanking-docs/docs-common/07. API contracts.md]] (§3, §8.9), [[digitalbanking-docs/docs-common/08. Deployment infrastructure.md]], [[digitalbanking-docs/docs-common/09. Test plan.md]] (§7–§8, §10), [[digitalbanking-docs/docs-common/10 Master timelines.md]] (W7–W8), [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] (§7–§8), [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] (§10, §12), [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] (§10, §13), [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] (§4–§6), [[digitalbanking-docs/docs-common/design/04. security.md]] (§4–§9)
 
 ---
@@ -87,6 +88,8 @@ Tài liệu này là **hướng dẫn triển khai và vận hành** Backend Spr
 5. Xác nhận `banking_app`/`banking_migrator` tách biệt và quyền runtime đúng least-privilege (`configuration.md` §6.3).
 6. Không commit `.env`, secret hoặc khóa vào Git/image.
 
+Dùng [stack QA backend local](qa-backend-local.md) khi cần tài khoản thử nghiệm và mailbox SMS để kiểm hợp đồng frontend.
+
 ### 3.2. Build và kiểm thử
 
 ```bash
@@ -122,7 +125,7 @@ Kỳ vọng:
 
 ### 3.4. Triển khai `demo`/Cloud (W7)
 
-**Gate hiện tại: NO-GO** — [task 07](../modules/common/report/BE-COM-IMP-07-verification.md) còn thiếu consumer thật; owner/URL Cloud chưa được cấp. [Common readiness/runbook](common-readiness.md) và [verification 08](../modules/common/report/BE-COM-IMP-08-verification.md) tách W6 local với W7/W8 chưa chạy. Các bước dưới đây là quy trình sau khi đủ gate, không phải trạng thái đã deploy.
+**Điều kiện trước khi phát hành (`Release Gate`):** Chỉ triển khai lên môi trường `demo`/Cloud sau khi hoàn tất ghép tích hợp các module nghiệp vụ (`BE-COM-IMP-07`), chuỗi migration `V1`–`V10` (`DEC-COM-001`) chạy sạch và được cấp phát đầy đủ hạ tầng/secret store. Danh mục kiểm tra sẵn sàng cấp ứng dụng và quy trình khởi động/rollback gói JAR xem tại [common-readiness.md](common-readiness.md) và [báo cáo kiểm chứng BE-COM-IMP-08](../modules/common/report/BE-COM-IMP-08-verification.md).
 
 
 1. Provision PostgreSQL 16, private network, Nginx/TLS, secret store và backup storage.

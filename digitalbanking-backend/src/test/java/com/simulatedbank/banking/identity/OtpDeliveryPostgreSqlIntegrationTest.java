@@ -17,6 +17,7 @@ import com.simulatedbank.banking.identity.adapter.out.Argon2PasswordHasher;
 import com.simulatedbank.banking.identity.adapter.out.JdbcChallengeRepository;
 import com.simulatedbank.banking.identity.adapter.out.SecurityLogAuditAdapter;
 import com.simulatedbank.banking.identity.api.StepUpChallengePort;
+import com.simulatedbank.banking.identity.application.SessionCustomerBinding;
 import com.simulatedbank.banking.identity.application.AuthAuditPort;
 import com.simulatedbank.banking.identity.application.OtpChallengeService;
 import com.simulatedbank.banking.identity.application.OtpCodeGenerator;
@@ -241,7 +242,8 @@ class OtpDeliveryPostgreSqlIntegrationTest {
                 org.mockito.Mockito.mock(
                         com.simulatedbank.banking.identity.application.LoginSessionService.class),
                 new com.simulatedbank.banking.identity.application.AuthMetrics(
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry()),
+                org.mockito.Mockito.mock(SessionCustomerBinding.class));
 
         assertBusiness(() -> unconfiguredService.requestChallenge(request("unconfigured")),
                 ErrorCode.OTP_DISPATCH_FAILED);
@@ -249,7 +251,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
         assertThat(challengeCount()).isEqualTo(1);
         Map<String, Object> persisted = jdbc.queryForMap(
                 "SELECT * FROM banking.auth_challenge WHERE user_id = ?", userId);
-        assertThat(persisted.get("status")).isEqualTo("CREATED");
+        assertThat(persisted.get("status")).isEqualTo("CANCELLED");
         assertThat(persisted.get("sent_at")).isNull();
         assertThat(gateway.calls).isEmpty();
         assertThat(generator.generated.getFirst()).containsOnly('\0');
@@ -277,7 +279,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
 
     @ParameterizedTest(name = "{0} fails closed without retry")
     @MethodSource("failedResults")
-    void gatewayFailureKeepsCreatedAndCorrectOtpCannotVerify(String scenario, OtpGateway.Result result) {
+    void gatewayFailureCancelsGenerationAndCorrectOtpCannotVerify(String scenario, OtpGateway.Result result) {
         gateway.behavior = ignored -> result;
         assertBusiness(() -> issue(scenario), ErrorCode.OTP_DISPATCH_FAILED);
         assertUndeliveredCannotVerify();
@@ -296,7 +298,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
     }
 
     @Test
-    void connectionRefusedFailsClosedAndRecoveryRequiresExpiryBeforeAFreshDispatch() {
+    void connectionRefusedCancelsTheGenerationBeforeAFreshDispatch() {
         String providerSecret = "provider-password recipient@example.invalid";
         gateway.behavior = ignored -> {
             throw new CompletionException(new ConnectException(providerSecret));
@@ -308,16 +310,10 @@ class OtpDeliveryPostgreSqlIntegrationTest {
         assertThat(logs.text()).doesNotContain(providerSecret, "recipient@example.invalid");
 
         gateway.behavior = ignored -> ACCEPTED;
-        assertBusiness(() -> issue("connection-refused"), ErrorCode.OTP_DISPATCH_FAILED);
-        assertThat(gateway.calls).hasSize(1);
-        assertThat(challengeCount()).isEqualTo(1);
-
-        expire(failedRef);
-        assertThat(recovery.recoverExpired()).isPositive();
         var recovered = issue("connection-refused");
 
         assertThat(recovered.challengeRef()).isNotEqualTo(failedRef);
-        assertThat(row(failedRef).get("status")).isEqualTo("EXPIRED");
+        assertThat(row(failedRef).get("status")).isEqualTo("CANCELLED");
         assertThat(row(recovered.challengeRef()).get("status")).isEqualTo("SENT");
         assertThat(gateway.calls).hasSize(2);
         assertThat(challengeCount()).isEqualTo(2);
@@ -386,14 +382,16 @@ class OtpDeliveryPostgreSqlIntegrationTest {
     }
 
     @Test
-    void acceptedProviderWithFailedLocalAcknowledgementStaysCreatedAndCannotBeRedispatchedByReplay() {
+    void acknowledgementAndInvalidationUnavailableKeepCreatedAndFailClosed() {
         doThrow(new DataAccessResourceFailureException("private database acknowledgement failure"))
                 .when(repository).markSent(anyLong(), anyString());
+        doThrow(new DataAccessResourceFailureException("private invalidation failure"))
+                .when(repository).cancelUnacknowledged(anyLong(), anyString());
         assertThatThrownBy(() -> issue("ack-failure"))
                 .isInstanceOfSatisfying(BankingBusinessException.class, failure ->
                         assertThat(failure.code()).isIn(
                                 ErrorCode.OTP_DISPATCH_FAILED, ErrorCode.SERVICE_UNAVAILABLE));
-        assertUndeliveredCannotVerify();
+        assertUndeliveredCannotVerify("CREATED", ErrorCode.OTP_DISPATCH_FAILED);
         String ref = gateway.calls.getFirst().challengeRef();
         String hash = (String) row(ref).get("otp_hash");
         assertBusiness(() -> issue("ack-failure"), ErrorCode.OTP_DISPATCH_FAILED);
@@ -429,7 +427,7 @@ class OtpDeliveryPostgreSqlIntegrationTest {
                 expire(ref);
                 release.countDown();
                 assertThat(result.get(10, TimeUnit.SECONDS)).isEqualTo(ErrorCode.OTP_DISPATCH_FAILED);
-                assertThat(row(ref).get("status")).isEqualTo("CREATED");
+                assertThat(row(ref).get("status")).isEqualTo("EXPIRED");
                 assertThat(row(ref).get("sent_at")).isNull();
                 assertBusiness(() -> verify(ref, gateway.calls.getFirst().otp()), ErrorCode.AUTH_OTP_EXPIRED);
                 assertThat(row(ref).get("status")).isEqualTo("EXPIRED");
@@ -491,6 +489,9 @@ class OtpDeliveryPostgreSqlIntegrationTest {
                     + "WHERE challenge_ref = ?::uuid", cancelled.challengeRef());
         });
         var future = issue("recovery-future");
+        // A lost database connection immediately after dispatch leaves CREATED for the sweep.
+        doThrow(new DataAccessResourceFailureException("test invalidation unavailable"))
+                .when(repository).cancelUnacknowledged(anyLong(), anyString());
         gateway.behavior = ignored -> new OtpGateway.Result(
                 OtpGateway.Outcome.RETRYABLE, OtpGateway.Failure.UNAVAILABLE);
         assertBusiness(() -> issue("recovery-created"), ErrorCode.OTP_DISPATCH_FAILED);
@@ -520,6 +521,9 @@ class OtpDeliveryPostgreSqlIntegrationTest {
 
     @Test
     void concurrentExpiryWorkersRecoverCommittedRowsWithoutRedelivery() throws Exception {
+        // A lost database connection immediately after dispatch leaves CREATED for the sweep.
+        doThrow(new DataAccessResourceFailureException("test invalidation unavailable"))
+                .when(repository).cancelUnacknowledged(anyLong(), anyString());
         gateway.behavior = ignored -> new OtpGateway.Result(
                 OtpGateway.Outcome.RETRYABLE, OtpGateway.Failure.UNAVAILABLE);
         for (int i = 0; i < 3; i++) {
@@ -550,13 +554,17 @@ class OtpDeliveryPostgreSqlIntegrationTest {
     }
 
     private void assertUndeliveredCannotVerify() {
+        assertUndeliveredCannotVerify("CANCELLED", ErrorCode.INVALID_STATE_TRANSITION);
+    }
+
+    private void assertUndeliveredCannotVerify(String status, ErrorCode rejection) {
         assertThat(gateway.calls).hasSize(1);
         Delivery delivery = gateway.calls.getFirst();
         assertThat(delivery.transactionActive()).isFalse();
         assertThat(delivery.visibleRow().get("status")).isEqualTo("CREATED");
-        assertThat(row(delivery.challengeRef()).get("status")).isEqualTo("CREATED");
+        assertThat(row(delivery.challengeRef()).get("status")).isEqualTo(status);
         assertThat(row(delivery.challengeRef()).get("sent_at")).isNull();
-        assertBusiness(() -> verify(delivery.challengeRef(), delivery.otp()), ErrorCode.OTP_DISPATCH_FAILED);
+        assertBusiness(() -> verify(delivery.challengeRef(), delivery.otp()), rejection);
         assertThat(row(delivery.challengeRef()).get("verified_at")).isNull();
         assertThat(((Number) row(delivery.challengeRef()).get("attempt_count")).intValue()).isZero();
         assertThat(gateway.calls).hasSize(1);

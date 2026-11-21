@@ -1,6 +1,6 @@
 # BE-TRF-02 — Đề xuất vị trí lưu TTL và recovery/fence
 
-> **Lưu trữ lịch sử:** đề xuất dưới đây được viết trước khi người điều hành ủy quyền quyết định thiết kế. [DEC-TRF-013](../../../../../../DECISIONS.md) đã chọn vị trí/cột và cập nhật `04` §4.4; SQL candidate nằm ở `digitalbanking-backend/src/main/resources/db/transfer-candidate/V2__transfer.sql` ngoài Flyway location production. Những đoạn bên dưới nói phương án chưa được chọn phản ánh thời điểm lập đề xuất. DBA/provider/Ops review và evidence integration vẫn còn thiếu.
+> **Lưu trữ lịch sử:** đề xuất dưới đây được viết trước khi người điều hành ủy quyền quyết định thiết kế. [DEC-TRF-013](../../../../../../DECISIONS.md) đã chọn vị trí/cột và cập nhật `04` §4.4; SQL candidate nằm ở `digitalbanking-backend/src/main/resources/db/transfer-candidate/V6__transfer.sql` ngoài Flyway location production. Những đoạn bên dưới nói phương án chưa được chọn phản ánh thời điểm lập đề xuất. DBA/provider/Ops review và evidence integration vẫn còn thiếu.
 
 > **Đề xuất chưa duyệt, không phải schema, migration hay sign-off hiện có.** Mục đích là cung cấp phương án cụ thể để Transfer, DBA/Architect, Ops và các owner liên quan review. Các tên/kiểu/check/thuật toán dưới đây là lựa chọn đề xuất, không có nghĩa đã được quyết định hay chứng minh an toàn. Không triển khai migration, bật worker hoặc đóng task dựa riêng vào tài liệu này.
 

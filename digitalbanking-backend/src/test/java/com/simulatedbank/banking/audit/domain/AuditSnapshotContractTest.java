@@ -106,7 +106,7 @@ class AuditSnapshotContractTest {
     @Test
     void createdFraudFlagDoesNotRequireFutureReviewDecision() {
         var event = new AuditEvent("FRAUD_FLAG_CREATED", "SYSTEM", null, "SYSTEM", "FRAUD_FLAG", "42",
-                null, Map.of("ruleCode", "HIGH_AMOUNT", "severity", "HIGH", "status", "OPEN",
+                null, Map.of("ruleVersion", 1, "ruleCode", "HIGH_AMOUNT", "severity", "HIGH", "status", "OPEN",
                         "transferReference", "TXN20261103FRAUD"), null, null,
                 "corr-1", "req-1", "SUCCESS", null);
         assertThatCode(() -> AuditEventValidator.validate(event)).doesNotThrowAnyException();
@@ -165,6 +165,7 @@ class AuditSnapshotContractTest {
             var state = new HashMap<String, Object>();
             state.put("transferReference", "TXN20261103FRAUD");
             state.put("ruleCode", "HIGH_FREQUENCY");
+            state.put("ruleVersion", 1);
             state.put("severity", "HIGH");
             state.put("status", "OPEN");
             state.put("matchedValue", matched);
@@ -194,7 +195,7 @@ class AuditSnapshotContractTest {
         for (var invalid : List.of(Map.<String, Object>of("transferReference", "user@example.com"),
                 Map.<String, Object>of("matchedValue", Map.of("window", "0901234567")))) {
             var after = new HashMap<String, Object>(Map.of("transferReference", "TXN20261103FRAUD",
-                    "ruleCode", "HIGH_FREQUENCY", "severity", "HIGH", "status", "OPEN"));
+                    "ruleCode", "HIGH_FREQUENCY", "ruleVersion", 1, "severity", "HIGH", "status", "OPEN"));
             after.putAll(invalid);
             var event = new AuditEvent("FRAUD_FLAG_CREATED", "SYSTEM", null, "SYSTEM", "FRAUD_FLAG", "42",
                     null, after, null, null, "corr-1", "req-1", "SUCCESS", null);
@@ -205,7 +206,7 @@ class AuditSnapshotContractTest {
     @Test
     void acceptsTypedFraudWindowAndMoneyWithoutMistakingMoneyForPii() {
         var event = new AuditEvent("FRAUD_FLAG_CREATED", "SYSTEM", null, "SYSTEM", "FRAUD_FLAG", "42",
-                null, Map.of("transferReference", "TXN20261103FRAUD", "ruleCode", "HIGH_FREQUENCY",
+                null, Map.of("transferReference", "TXN20261103FRAUD", "ruleCode", "HIGH_FREQUENCY", "ruleVersion", 1,
                         "severity", "HIGH", "status", "OPEN", "matchedValue",
                         Map.of("window", "PT10M", "count", 6, "amount", new BigDecimal("123456789012.00"))),
                 null, null, "corr-1", "req-1", "SUCCESS", null);

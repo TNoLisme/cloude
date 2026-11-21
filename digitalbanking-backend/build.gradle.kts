@@ -83,11 +83,14 @@ tasks.withType<Test> {
     // Readiness tests launch the exact packaged application, not the test classpath.
     dependsOn(tasks.named("bootJar"))
     systemProperty("readiness.jar", layout.buildDirectory.file("libs/${project.name}-${project.version}.jar").get().asFile.absolutePath)
-    useJUnitPlatform()
     System.getenv("DOCKER_HOST")?.let { systemProperty("docker.host", it) }
     val dockerApiVersion = System.getenv("DOCKER_API_VERSION") ?: "1.44"
     systemProperty("api.version", dockerApiVersion)
     environment("DOCKER_API_VERSION", dockerApiVersion)
+    // Default 512 MB worker heap overflows when a test drives several concurrent
+    // Argon2id verifications (m=65536 -> 64 MiB each; OtpChallengePostgreSqlIntegrationTest
+    // t20 OOMs once the merged suite pushes 950 tests through one worker).
+    maxHeapSize = "3g"
     // BE-ID-TEST-03: kịch bản performance có tag `performance` — chạy qua task `perfTest`,
     // không nằm trong `test`/`build` mặc định để giữ CI time ổn định.
     if (name == "perfTest") {

@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.simulatedbank.banking.common.config.SessionAuthenticator;
 import com.simulatedbank.banking.identity.application.AuthorityReader;
 import com.simulatedbank.banking.identity.application.SessionRepository;
+import com.simulatedbank.banking.identity.application.SessionCustomerBinding;
 import com.simulatedbank.banking.identity.application.UserAccountRepository;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -25,13 +26,16 @@ public class IdentitySessionAuthenticator implements SessionAuthenticator {
     private final SessionRepository sessions;
     private final UserAccountRepository users;
     private final AuthorityReader authorities;
+    private final SessionCustomerBinding customerBinding;
     private final long idleTimeoutSeconds;
 
     public IdentitySessionAuthenticator(SessionRepository sessions, UserAccountRepository users,
-            AuthorityReader authorities, com.simulatedbank.banking.common.config.AppProperties properties) {
+            AuthorityReader authorities, SessionCustomerBinding customerBinding,
+            com.simulatedbank.banking.common.config.AppProperties properties) {
         this.sessions = sessions;
         this.users = users;
         this.authorities = authorities;
+        this.customerBinding = customerBinding;
         this.idleTimeoutSeconds = java.time.Duration
                 .ofMinutes(properties.security().session().idleTimeoutMinutes()).toSeconds();
     }
@@ -46,7 +50,7 @@ public class IdentitySessionAuthenticator implements SessionAuthenticator {
         try {
             return doAuthenticate(opaqueToken);
         } catch (org.springframework.dao.DataAccessException
-                | org.springframework.transaction.CannotCreateTransactionException storageFailure) {
+                | org.springframework.transaction.TransactionException storageFailure) {
             LOG.warn("Session rejected: storage failure");
             throw new com.simulatedbank.banking.common.error.BankingBusinessException(
                     com.simulatedbank.banking.common.error.ErrorCode.SERVICE_UNAVAILABLE);
@@ -66,7 +70,8 @@ public class IdentitySessionAuthenticator implements SessionAuthenticator {
             LOG.warn("Session rejected: owner not active");
             return Optional.empty();
         }
-        return Optional.of(new Session(Long.toString(userId), null, authorities.loadAuthorities(userId),
+        String customerId = customerBinding.resolve(userId, user.get().userType());
+        return Optional.of(new Session(Long.toString(userId), customerId, authorities.loadAuthorities(userId),
                 active.get().csrfTokenHash()));
     }
 }

@@ -1,5 +1,9 @@
 # Module identity — Backend documentation
 
+BE-INT-05 thêm lookup challenge VERIFIED theo binding phía server và nối Audit C2/C3 cho vòng đời OTP Transfer. Issue chỉ trả challenge sau khi gateway ACK và trạng thái SENT đã lưu. [BE-INT-05](../../workofteam/integration%20modules/BE-INT-05.md)
+
+[BE-INT-03](../../workofteam/integration%20modules/BE-INT-03.md) đã nối `CustomerQuery` vào principal và AuthResponse sau MFA hoặc refresh. User CUSTOMER có mapping trả Customer ID, kể cả INACTIVE. Staff và CUSTOMER thiếu mapping trả null. Provider lỗi thì xác thực trả 503.
+
 > Baseline: `dev2@56210cc80ad742ddad9139dc1a08fe9ff524465a` · Trạng thái: IMP-01/IMP-02/IMP-03/IMP-04/IMP-05 đã triển khai; IMP-06 PARTIAL (MOD-OI-07 còn OPEN); IMP-07 BLOCKED ở integration Transfer/Limit; IMP-08 PARTIAL (MFA mọi password login theo DEC-ID-008, persistent trust hoãn); IMP-09 PARTIAL (Passcode fail-closed và password-history component theo DEC-ID-009); IMP-10 PARTIAL (WebAuthn/Yubico và password+OTP fallback đã có code; enrollment/Audit/Notification thật còn thiếu); IMP-11 PARTIAL (JPA RBAC, versioned role command và revoke sessions; production approval/Audit còn BLOCKED); IMP-12 PARTIAL (REST DTO/validation/error mapping + OpenAPI cho API-AUTH-01..07; API-AUTH-02 positive và API-AUTH-08 BLOCKED theo DEC-ID-009/006) trên branch `datht-backend-rework`; IMP-13 PARTIAL (audit port/metrics/username quota/redaction; durable audit persistence BLOCKED theo DEC-ID-013); TEST-01 BLOCKED integration, TEST-02 PARTIAL, TEST-03 PARTIAL (QA/security/perf phía Identity VERIFIED, FE/QA sign-off PENDING_EXTERNAL_SIGNOFF — DEC-ID-TEST-03); còn lại DRAFT/planning.
 
 - [BE-ID-DOC-01 — Thiết kế chi tiết và kế hoạch triển khai](BE-ID-DOC-01.md)

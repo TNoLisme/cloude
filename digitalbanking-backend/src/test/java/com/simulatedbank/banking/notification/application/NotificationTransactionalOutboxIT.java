@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.simulatedbank.banking.support.IntegratedProviderReferences;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -66,7 +67,7 @@ class NotificationTransactionalOutboxIT {
     private NotificationOutboxMetrics metrics;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         if (!schemaInitialized) {
             DriverManagerDataSource migratorDs = new DriverManagerDataSource();
             migratorDs.setUrl(postgres.getJdbcUrl());
@@ -75,6 +76,9 @@ class NotificationTransactionalOutboxIT {
             ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
             populator.addScript(new ClassPathResource("notification/notification-schema.sql"));
             populator.execute(migratorDs);
+            try (var connection = migratorDs.getConnection()) {
+                IntegratedProviderReferences.seed(connection);
+            }
             schemaInitialized = true;
         }
 
@@ -219,6 +223,10 @@ class NotificationTransactionalOutboxIT {
         transactions.executeWithoutResult(status ->
                 jdbc.execute("UPDATE banking.notification SET locked_until = clock_timestamp() - interval '1 second', next_retry_at = clock_timestamp() - interval '1 second' WHERE notification_id = " + notifId)
         );
+        boolean acceptedAfterExpiry = Boolean.TRUE.equals(transactions.execute(status ->
+                repository.markSent(notifId, "token-1", Instant.now())));
+        assertThat(acceptedAfterExpiry).isFalse();
+
         transactions.execute(status -> repository.claimBatch(1, Duration.ofSeconds(30), "token-2"));
 
         // Now Worker 1 attempts to complete using stale token-1
@@ -353,7 +361,7 @@ class NotificationTransactionalOutboxIT {
         // T2: Money path commits successfully
         transactions.executeWithoutResult(status -> {
             jdbc.update("INSERT INTO audit_test.business_probe (id) VALUES (?)", probeId);
-            TransferNotice notice = createNotice(1001L, probeId, "TXN-ISOLATION-1");
+            TransferNotice notice = createNotice(1001L, 9009L, "TXN-ISOLATION-1");
             outboxPort.enqueueTransferNotificationsInT2(List.of(notice));
         });
 

@@ -317,7 +317,7 @@ class TransferSettlementCandidatePostgresTest {
         @Override public Instant primaryClockTimestamp() {
             return jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class).toInstant();
         }
-        @Override public void lockUsageCustomerThenAccount(Context context, LocalDate date) {
+        @Override public void lockUsageCustomerThenAccount(Context context, Instant terminalAt, LocalDate date) {
             jdbc.queryForObject("SELECT customer_id FROM transfer_t2_fixture.usage WHERE customer_id=? FOR UPDATE", Long.class, context.customerId());
         }
         @Override public Optional<Failure> validateLockedState(Context context, LocalDate date) { return Optional.empty(); }

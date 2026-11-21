@@ -25,7 +25,7 @@ final class AuthHttpSupport {
                         .httpOnly(true).secure(cookie.secure()).sameSite(cookie.sameSite()).path(cookie.path())
                         .maxAge(Duration.ofSeconds(cookie.maxAgeSeconds())).build().toString())
                 .body(new AuthResponse(new AuthResponse.UserSummary(Long.toString(result.userId()), result.userType(),
-                        result.username(), result.roles(), List.copyOf(result.privileges()), null),
+                        result.username(), result.roles(), List.copyOf(result.privileges()), result.customerId()),
                         new AuthResponse.SessionInfo(result.idleExpiresAt(), result.absoluteExpiresAt(),
                                 result.rawCsrfToken(), deviceTrusted), correlationId));
     }

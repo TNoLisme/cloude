@@ -43,7 +43,8 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityFilterChainConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AppProperties properties,
-            ObjectProvider<SessionAuthenticator> authenticators, RequestRateLimiter limiter, ProblemWriter writer)
+            ObjectProvider<SessionAuthenticator> authenticators, ObjectProvider<SecurityDenialReporter> denialReporters,
+            RequestRateLimiter limiter, ProblemWriter writer)
             throws Exception {
         var csrfTokens = new SessionCsrfTokens();
         http.cors(Customizer.withDefaults())
@@ -61,8 +62,18 @@ public class SecurityFilterChainConfig {
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> problem(writer, request, response,
                                 ErrorCode.AUTH_SESSION_EXPIRED))
-                        .accessDeniedHandler((request, response, exception) -> problem(writer, request, response,
-                                ErrorCode.AUTH_FORBIDDEN)))
+                         .accessDeniedHandler((request, response, exception) -> {
+                            String path = request.getRequestURI().substring(request.getContextPath().length());
+                            denialReporters.orderedStream().forEach(reporter -> {
+                                try {
+                                    reporter.report(org.springframework.security.core.context.SecurityContextHolder
+                                            .getContext().getAuthentication(), path, "MISSING_PERMISSION");
+                                } catch (RuntimeException ignored) {
+                                    // Denial must remain effective even if reporting fails.
+                                }
+                            });
+                            problem(writer, request, response, ErrorCode.AUTH_FORBIDDEN);
+                        }))
                 .headers(headers -> headers
                         .cacheControl(Customizer.withDefaults())
                         .contentTypeOptions(Customizer.withDefaults())
@@ -85,7 +96,9 @@ public class SecurityFilterChainConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/transfers/*", "/api/v1/transactions", "/api/v1/transactions/*")
                                 .hasAnyAuthority("TRANSACTION_READ_SELF", "TRANSACTION_READ")
                         .requestMatchers(HttpMethod.GET, "/api/v1/limits").hasAuthority("LIMIT_READ_SELF")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/audit/export").hasAuthority("AUDIT_EXPORT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/audit/export")
+                                .access(AuthorizationManagers.allOf(AuthorityAuthorizationManager.hasRole("AUDITOR"),
+                                        AuthorityAuthorizationManager.hasAuthority("AUDIT_EXPORT")))
                         .requestMatchers(HttpMethod.GET, "/api/v1/audit", "/api/v1/audit/*").hasAuthority("AUDIT_READ")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/customers/*/accounts").hasAuthority("ACCOUNT_READ")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/customers/*").hasAuthority("CUSTOMER_READ")
@@ -100,7 +113,9 @@ public class SecurityFilterChainConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/approvals", "/api/v1/admin/approvals/*")
                                 .hasAnyRole("OPERATIONS", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/fraud-flags").hasAnyAuthority("FRAUD_REVIEW", "FRAUD_READ")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/fraud-flags/*/review").hasAuthority("FRAUD_REVIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/fraud-flags/*/review")
+                                .access(AuthorizationManagers.allOf(AuthorityAuthorizationManager.hasRole("OPERATIONS"),
+                                        AuthorityAuthorizationManager.hasAuthority("FRAUD_REVIEW")))
                         .requestMatchers(HttpMethod.GET, "/api/v1/health").hasAnyRole("ADMIN", "AUDITOR")
                         .anyRequest().authenticated());
         http.addFilterBefore(new SessionAuthenticationFilter(authenticators, writer), CsrfFilter.class)

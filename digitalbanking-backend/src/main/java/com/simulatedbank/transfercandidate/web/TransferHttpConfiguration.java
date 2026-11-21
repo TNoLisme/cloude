@@ -15,11 +15,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 
-/**
- * Explicit registration of the Transfer HTTP boundary. Not component-scanned and not active in
- * production until BE-TRF-04/05 wire the orchestrator and real provider adapters; tests import it
- * with test-only fakes. No fake bean is registered here for production use.
- */
+/** Explicit Transfer HTTP registration. The application scan does not activate this configuration. */
 public class TransferHttpConfiguration {
 
     @Bean

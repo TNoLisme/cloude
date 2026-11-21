@@ -8,7 +8,7 @@ import java.time.Instant;
  * <p>The caller invokes this port only after challenge commit, outside any transaction.
  * {@code recipientUserId} is a non-PII routing handle, not a client-supplied destination:
  * the adapter must resolve the recipient's trusted contact and enforce channel policy.
- * {@code challengeRef} is the provider deduplication key. ACCEPTED means the provider
+ * The reference and expiry identify a dispatch generation. ACCEPTED means the provider
  * accepted delivery, not that the recipient received/read the message.</p>
  *
  * <p>The OTP array is borrowed only until this synchronous call returns. Adapters must
@@ -20,8 +20,7 @@ import java.time.Instant;
  * still-running secret-bearing task; no executor timeout or automatic retry is supplied.
  * An uncertain send must remain ambiguous, never be retried automatically.</p>
  *
- * <p>No production fallback implementation is provided. Durable secret handoff,
- * crash recovery, resend/invalidation and leases remain blocked on MOD-OI-07.</p>
+ * <p>Identity owns resend and generation fencing. This port does not persist delivery secrets.</p>
  */
 public interface OtpGateway {
 

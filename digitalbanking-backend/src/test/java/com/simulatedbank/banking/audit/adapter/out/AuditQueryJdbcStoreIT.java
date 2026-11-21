@@ -41,6 +41,20 @@ class AuditQueryJdbcStoreIT {
     @Autowired com.simulatedbank.banking.audit.application.AuditQueryService queryService;
     @Autowired AuditQueryPort queryPort;
 
+    @org.junit.jupiter.api.BeforeEach
+    void seedActor() throws Exception {
+        try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator");
+             var statement = connection.createStatement()) {
+            statement.execute("INSERT INTO banking.app_user(user_id,username,password_hash,user_type) "
+                    + "OVERRIDING SYSTEM VALUE VALUES "
+                    + "(7,'audit-test-actor-7','test-only','CUSTOMER'),"
+                    + "(100,'audit-test-actor-100','test-only','CUSTOMER'),"
+                    + "(200,'audit-test-actor-200','test-only','CUSTOMER'),"
+                    + "(201,'audit-test-actor-201','test-only','CUSTOMER') "
+                    + "ON CONFLICT (user_id) DO NOTHING");
+        }
+    }
+
     @Test
     void auditQueryServiceAndPortAreBoundInSpringContext() {
         assertThat(queryService).isNotNull();
@@ -87,13 +101,13 @@ class AuditQueryJdbcStoreIT {
         var id = tx.execute(s -> recorder.recordInTransaction(event("TXN20261103VERIFY"), Instant.parse("2026-11-03T14:00:00Z"))).auditId();
         assertThat(verifier.verify().status()).isEqualTo(com.simulatedbank.banking.audit.verification.AuditChainVerifier.Status.PASS);
         try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator"); var statement = connection.createStatement()) {
-            statement.execute("ALTER TABLE banking.audit_log DISABLE TRIGGER audit_no_update_delete");
+            statement.execute("ALTER TABLE banking.audit_log DISABLE TRIGGER trg_audit_log_no_update_delete");
             try {
                 statement.executeUpdate("UPDATE banking.audit_log SET amount = 99 WHERE audit_id = " + id);
                 assertThat(verifier.verify().status()).isEqualTo(com.simulatedbank.banking.audit.verification.AuditChainVerifier.Status.MISMATCH);
             } finally {
                 statement.executeUpdate("UPDATE banking.audit_log SET amount = 12 WHERE audit_id = " + id);
-                statement.execute("ALTER TABLE banking.audit_log ENABLE TRIGGER audit_no_update_delete");
+                statement.execute("ALTER TABLE banking.audit_log ENABLE TRIGGER trg_audit_log_no_update_delete");
             }
         }
     }
@@ -180,7 +194,7 @@ class AuditQueryJdbcStoreIT {
         var idC = tx.execute(s -> recorder.recordInTransaction(event("TXN20261107DELC"), Instant.parse("2026-11-07T10:02:00Z"))).auditId();
 
         try (var connection = java.sql.DriverManager.getConnection(postgres.getJdbcUrl(), "banking_migrator", "test_migrator"); var statement = connection.createStatement()) {
-            statement.execute("ALTER TABLE banking.audit_log DISABLE TRIGGER audit_no_update_delete");
+            statement.execute("ALTER TABLE banking.audit_log DISABLE TRIGGER trg_audit_log_no_update_delete");
             try {
                 // Delete middle row idB
                 statement.executeUpdate("DELETE FROM banking.audit_log WHERE audit_id = " + idB);
@@ -189,7 +203,7 @@ class AuditQueryJdbcStoreIT {
             } finally {
                 // Clean up idC so remaining chain is restored
                 statement.executeUpdate("DELETE FROM banking.audit_log WHERE audit_id = " + idC);
-                statement.execute("ALTER TABLE banking.audit_log ENABLE TRIGGER audit_no_update_delete");
+                statement.execute("ALTER TABLE banking.audit_log ENABLE TRIGGER trg_audit_log_no_update_delete");
             }
         }
         // Restored chain must pass again

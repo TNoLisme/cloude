@@ -84,8 +84,8 @@ class LedgerPostingPostgresTest {
             .withEnv("BANKING_APP_PASSWORD", APP_PASSWORD)
             .withEnv("BANKING_MIGRATION_PASSWORD", MIGRATOR_PASSWORD)
             .withCopyFileToContainer(MountableFile.forHostPath(
-                    Path.of("docker/postgres/init/01-create-roles.sh"), 0755),
-                    "/docker-entrypoint-initdb.d/01-create-roles.sh");
+                    Path.of("docker/postgres/init/01-create-roles.sql"), 0755),
+                    "/docker-entrypoint-initdb.d/01-create-roles.sql");
 
     private static AnnotationConfigApplicationContext context;
     private static DataSource appDataSource;

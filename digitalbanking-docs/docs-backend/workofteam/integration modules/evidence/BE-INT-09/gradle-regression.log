@@ -1,0 +1,27 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build
+> Task :compileJava
+> Task :processResources UP-TO-DATE
+> Task :classes
+> Task :resolveMainClassName UP-TO-DATE
+> Task :bootJar UP-TO-DATE
+> Task :compileTestJava UP-TO-DATE
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses UP-TO-DATE
+> Task :test
+AdminOpenApiContractTest > documentEnvelopeAndPathParametersMatchEveryAdminOperation() FAILED
+AdminOpenApiContractTest > everyDocumentedReferenceResolvesToACompleteComponent() FAILED
+AdminOpenApiContractTest > adminOperationsRequireAuthenticationAndTheDocumentedWriteHeaders() FAILED
+AccountV8MigrationPostgreSqlIntegrationTest > freshMigrationAppliesV8OnceAndValidationSucceeds() FAILED
+AccountV8MigrationPostgreSqlIntegrationTest > upgradeFromV7PreservesCustomerDataAndAddsAccountTable() FAILED
+AdminIdempotencyV7MigrationPostgreSqlIntegrationTest > freshMigrationAppliesV7OnceAndRecordsSuccessfulHistory() FAILED
+ApprovalRequestV6MigrationPostgreSqlIntegrationTest > freshMigrationAppliesV6OnceAndRecordsSuccessfulHistory() FAILED
+> Task :test
+228 tests completed, 7 failed
+> Task :test FAILED
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///home/phuong/workspace/cloude/digitalbanking-backend/build/reports/tests/test/index.html
+BUILD FAILED in 3m 1s
+7 actionable tasks: 2 executed, 5 up-to-date

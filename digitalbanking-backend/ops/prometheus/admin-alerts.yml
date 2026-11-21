@@ -1,0 +1,100 @@
+# BE-ADM-OPS-01: Prometheus alert rules for the Admin approval workflow.
+# Metric families come from AdminApprovalMetrics (Micrometer -> Prometheus: dots become underscores and
+# counters get a _total suffix) plus the existing Admin audit failure/security-log metric.
+# Severity follows docs-common/design/04. security.md §9 (security incident levels) and the
+# observability conventions in docs-backend/00. architecture & conventions.md:
+# audit persistence failure, repeated provider/version failures and a broken recovery sweep are critical;
+# retry exhaustion and stuck approvals are warning-level operator actions.
+groups:
+  - name: admin-approval-workflow
+    rules:
+      - alert: AdminProviderIntegrationFailure
+        expr: |
+          sum by (provider, operation) (rate(admin_provider_executions_total{outcome="FAILURE"}[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: critical
+          component: admin
+          owner: identity-limit
+        annotations:
+          summary: "Admin approval provider calls are failing"
+          description: "{{ $labels.provider }} / {{ $labels.operation }} has failed more than 0.2 times per second over 5m. Check the provider contract, timeouts and database locks; do not retry with a different Idempotency-Key."
+          runbook: "docs-backend/modules/admin/runbook.md#provider-integration-failure"
+
+      - alert: AdminApprovalRepeatedFailures
+        expr: |
+          sum by (request_type) (increase(admin_approval_retry_attempts_total[15m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: admin
+          owner: admin
+        annotations:
+          summary: "Repeated failed Admin checker attempts"
+          description: "{{ $labels.request_type }} accumulated more than 5 failed attempts in 15m. Inspect the attempt outcomes and correlation IDs before advising a retry."
+          runbook: "docs-backend/modules/admin/runbook.md#repeated-attempts"
+
+      - alert: AdminApprovalVersionConflictSpike
+        expr: |
+          sum by (provider) (increase(admin_approval_version_conflicts_total[15m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: admin
+          owner: admin
+        annotations:
+          summary: "Admin approval version conflicts are recurring"
+          description: "{{ $labels.provider }} rejected more than 2 approvals in 15m because the expected version was stale. Re-check the current provider version; never bypass the conflict."
+          runbook: "docs-backend/modules/admin/runbook.md#version-conflict"
+
+      - alert: AdminApprovalRetryExhausted
+        expr: |
+          sum by (request_type) (increase(admin_approval_retry_exhausted_total[30m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: admin
+          owner: admin
+        annotations:
+          summary: "Admin approvals reached the retry-exhaustion threshold"
+          description: "{{ $labels.request_type }} has at least one PENDING approval with the configured maximum of failed attempts inside the attempt window. Manual review is required."
+          runbook: "docs-backend/modules/admin/runbook.md#retry-exhaustion"
+
+      - alert: AdminApprovalStuck
+        expr: |
+          max by (request_type) (admin_approval_stuck) > 0
+        for: 30m
+        labels:
+          severity: warning
+          component: admin
+          owner: admin
+        annotations:
+          summary: "Admin approvals are stuck in PENDING"
+          description: "{{ $labels.request_type }} still has PENDING approvals older than the configured stuck-after threshold. Recovery is a manual authorized checker decision; this sweep never applies changes."
+          runbook: "docs-backend/modules/admin/runbook.md#stuck-approval"
+
+      - alert: AdminAuditPersistenceFailure
+        expr: |
+          sum by (action, class) (increase(admin_audit_failures_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: admin
+          owner: security-audit
+        annotations:
+          summary: "Admin audit persistence is failing"
+          description: "A C2/C3 audit write for {{ $labels.action }} ({{ $labels.class }}) failed. C2 failures roll back the approval; never bypass audit to report success."
+          runbook: "docs-backend/modules/admin/runbook.md#audit-persistence-failure"
+
+      - alert: AdminApprovalRecoverySweepFailure
+        expr: |
+          sum by (request_type) (increase(admin_approval_recovery_total{outcome="ERROR"}[15m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: admin
+          owner: admin
+        annotations:
+          summary: "Admin approval recovery sweep is failing"
+          description: "The read-only stuck/exhausted sweep failed for {{ $labels.request_type }}. Stuck-approval alerting is blind until the sweep succeeds; check the database/health and logs."
+          runbook: "docs-backend/modules/admin/runbook.md#recovery-sweep-failure"

@@ -95,4 +95,4 @@ Regression Transfer candidate (chạy riêng, không bị ảnh hưởng bởi e
 - [ ] Review DTO/error/transaction/snapshots của Transfer/Ledger/DB/QA và Security/Audit theo phạm vi.
 - [ ] Kích hoạt provider production (đăng ký bean) chỉ sau khi chain + wiring được review; hiện service/adapter đăng ký tường minh trong test.
 
-Xem [đặc tả BE-LED-03](../BE-LED-03.md), [DEC-LED-005](../../../../../DECISIONS.md) và [Modules contract §9](../../../../docs-common/design/05.%20Modules%20contract.md).
+Xem [đặc tả BE-LED-03](../BE-LED-03.md), [DEC-LED-005](../../../../../../DECISIONS.md) và [Modules contract §9](../../../../../docs-common/design/05.%20Modules%20contract.md).

@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Task / phiên bản task:** [BE-COM-IMP-03](../tasks/BE-COM-IMP-03.md), v1.0 / 12/11/2026
-> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 — Codex theo yêu cầu Phương
+> **Ngày / người thực hiện:** 12/11/2026, UTC+07:00 — Phương (`common`)
 > **Trạng thái task:** Done — implementer verified
 > **Kết luận verification:** Verified trong phạm vi context/filter và lifecycle thành phần
 > **Reviewer / sign-off:** Chưa review

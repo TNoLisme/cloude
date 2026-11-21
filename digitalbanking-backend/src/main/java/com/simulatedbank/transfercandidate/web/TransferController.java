@@ -24,6 +24,7 @@ import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.Sour
 import com.simulatedbank.banking.transfer.application.TransferCreateOutcome.StepUpRequired;
 import com.simulatedbank.banking.transfer.application.TransferCreateService;
 import com.simulatedbank.banking.transfer.application.TransferDetailView;
+import com.simulatedbank.banking.transfer.application.TransferFailureCode;
 import com.simulatedbank.banking.transfer.application.TransferQueryService;
 import com.simulatedbank.banking.transfer.application.TransferView;
 import java.net.URI;
@@ -54,7 +55,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/transfers")
 public class TransferController {
-    private static final String REFERENCE = "TXN[0-9]{8}[A-Z0-9]{8,20}";
+    static final String REFERENCE = "TXN[0-9]{8}[A-Z0-9]{8,20}";
 
     private final TransferCreateService createService;
     private final TransferQueryService queryService;
@@ -98,7 +99,17 @@ public class TransferController {
             case AccountInactive ignored -> throw new BankingBusinessException(ErrorCode.ACCOUNT_INACTIVE);
             case InsufficientBalance ignored -> throw new BankingBusinessException(ErrorCode.INSUFFICIENT_BALANCE);
             case LimitExceeded ignored -> throw new BankingBusinessException(ErrorCode.LIMIT_EXCEEDED);
+            case TransferCreateOutcome.CustomerInactive ignored -> throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
             case SourceNotOwned ignored -> throw new BankingBusinessException(ErrorCode.AUTH_FORBIDDEN);
+            case TransferCreateOutcome.Committed committed -> {
+                var response = committed.response();
+                var builder = ResponseEntity.status(response.httpStatus())
+                        .contentType(response.httpStatus() == 201 ? MediaType.APPLICATION_JSON : MediaType.APPLICATION_PROBLEM_JSON);
+                if (response.httpStatus() == 201) {
+                    builder.location(URI.create("/api/v1/transfers/" + committed.reference()));
+                }
+                yield builder.body(response.safeBody());
+            }
             case Replay replay -> ResponseEntity.status(replay.httpStatus())
                     .header("Idempotent-Replayed", "true")
                     .contentType(replay.httpStatus() == 201 ? MediaType.APPLICATION_JSON : MediaType.APPLICATION_PROBLEM_JSON)
@@ -107,14 +118,22 @@ public class TransferController {
     }
 
     private static BankingBusinessException failed(TransferView view) {
-        ErrorCode code = switch (view.failureCode()) {
+        ErrorCode code = failureError(view.failureCode());
+        return new BankingBusinessException(code, code.detail(), failureExtensions(view.reference(), view.failureCode()));
+    }
+
+    static ErrorCode failureError(TransferFailureCode failure) {
+        return switch (failure) {
             case INSUFFICIENT_BALANCE -> ErrorCode.INSUFFICIENT_BALANCE;
             case LIMIT_EXCEEDED -> ErrorCode.LIMIT_EXCEEDED;
             case FRAUD_BLOCKED -> ErrorCode.FRAUD_BLOCKED;
             default -> ErrorCode.TRANSFER_FAILED;
         };
-        return new BankingBusinessException(code, code.detail(), Map.of(
-                "reference", view.reference(), "transferStatus", "FAILED", "failureCode", view.failureCode().name()));
+    }
+
+    static Map<String, Object> failureExtensions(String reference,
+            TransferFailureCode failure) {
+        return Map.of("reference", reference, "transferStatus", "FAILED", "failureCode", failure.name());
     }
 
     private TransferCreateInput.Validated parse(byte[] body, List<String> keys) throws MethodArgumentNotValidException {
@@ -131,7 +150,7 @@ public class TransferController {
         }
     }
 
-    private TransferActor actor(Principal principal) {
+    static TransferActor actor(Principal principal) {
         Authentication authentication = (Authentication) principal;
         SessionAuthenticator.Session session = (SessionAuthenticator.Session) authentication.getPrincipal();
         RequestContext context = RequestContextHolder.current()
@@ -148,7 +167,7 @@ public class TransferController {
         return new MethodArgumentNotValidException(null, binding);
     }
 
-    private static TransferResponse response(TransferView view) {
+    static TransferResponse response(TransferView view) {
         return new TransferResponse(view.reference(), view.status().name(), view.amount().value().toPlainString(),
                 view.amount().currency(), view.description(), accountRef(view.source()), accountRef(view.destination()),
                 view.failureCode() == null ? null : view.failureCode().name(), view.failureMessage(),

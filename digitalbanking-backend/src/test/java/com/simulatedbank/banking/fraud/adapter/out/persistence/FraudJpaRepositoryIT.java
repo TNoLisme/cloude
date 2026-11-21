@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.simulatedbank.banking.support.IntegratedProviderReferences;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -71,7 +72,7 @@ class FraudJpaRepositoryIT {
     private TransactionTemplate transactions;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         if (!schemaInitialized) {
             DriverManagerDataSource migratorDs = new DriverManagerDataSource();
             migratorDs.setUrl(postgres.getJdbcUrl());
@@ -80,6 +81,9 @@ class FraudJpaRepositoryIT {
             ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
             populator.addScript(new ClassPathResource("fraud/fraud-schema.sql"));
             populator.execute(migratorDs);
+            try (var connection = migratorDs.getConnection()) {
+                IntegratedProviderReferences.seed(connection);
+            }
             schemaInitialized = true;
         }
 
@@ -319,13 +323,13 @@ class FraudJpaRepositoryIT {
         FraudRuleConfigEntity b1 = FraudRuleConfigEntity.builder()
                 .ruleCode("RULE_B").version(1).ruleName("B1").ruleType(RuleType.LARGE_VALUE)
                 .thresholdAmount(new BigDecimal("1000000.00"))
-                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(null)
+                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(now.plusSeconds(1))
                 .createdBy(1L).createdAt(now).updatedAt(now).build();
 
         FraudRuleConfigEntity a1 = FraudRuleConfigEntity.builder()
                 .ruleCode("RULE_A").version(1).ruleName("A1").ruleType(RuleType.LARGE_VALUE)
                 .thresholdAmount(new BigDecimal("1000000.00"))
-                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(null)
+                .severity(Severity.LOW).enabled(true).effectiveFrom(now.minusSeconds(100)).effectiveTo(now.plusSeconds(1))
                 .createdBy(1L).createdAt(now).updatedAt(now).build();
 
         FraudRuleConfigEntity b2 = FraudRuleConfigEntity.builder()

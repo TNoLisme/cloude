@@ -4,8 +4,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * `AuthResponse` (07 §7.2.3). `customerId` hiện `null`: module customer chưa triển khai
- * `CustomerQuery.findByUserId` (design/05 §6; ghi nhận BLOCKED trong BE-ID-IMP-02).
+ * AuthResponse (07 §7.2.3). Customer identity is resolved server-side (DEC-INT-008).
  * `csrfToken` is returned on authenticated responses, never diagnostic output.
  */
 public record AuthResponse(UserSummary user, SessionInfo session, String correlationId) {

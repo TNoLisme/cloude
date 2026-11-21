@@ -1,29 +1,78 @@
 package com.simulatedbank.banking.transfer.adapter.out.persistence;
 
+import com.simulatedbank.banking.transfer.application.IdempotencyRetention;
+import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.ReplayResponse;
+import com.simulatedbank.banking.transfer.application.TransferPreflightCandidate.Stored;
+import com.simulatedbank.banking.transfer.domain.IdempotencyDecision;
+import com.simulatedbank.banking.transfer.domain.IdempotencyStatus;
 import com.simulatedbank.banking.transfer.domain.TransferAmount;
 import com.simulatedbank.banking.transfer.domain.TransferIdentity;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Transfer-owned SQL primitives. Callers supply the transaction and acquire the
- * customer guard and transfer/fence locks required by the module contract.
- * These operations alone are not a money-transfer orchestration.
- * This candidate is not component-scanned; register it explicitly only after the
- * reviewed Transfer migration and its provider prerequisites have been applied.
- */
+/** Primary reads and JDBC writes for Transfer-owned T1 rows on schema V13/V20. */
 @Transactional(propagation = Propagation.MANDATORY)
 public class TransferPersistence {
     private final JdbcTemplate jdbc;
 
     public TransferPersistence(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Stored> findExistingOnPrimary(String key) {
+        return DataAccessUtils.optionalResult(jdbc.query("""
+                SELECT t.initiated_by_user_id, t.customer_id, i.request_hash,
+                       CASE WHEN t.status = 'PENDING' AND i.status IN ('COMPLETED', 'FAILED')
+                            THEN 'IN_PROGRESS' ELSE i.status END AS status,
+                       CASE WHEN t.status = i.status THEN i.response_status END AS response_status,
+                       CASE WHEN t.status = i.status THEN i.response_body::text END AS response_body
+                  FROM banking.idempotency_record i
+                  JOIN banking.transfer t ON t.transfer_id = i.transfer_id
+                 WHERE i.idempotency_key = ?
+                """, (rs, row) -> {
+            var identity = new IdempotencyDecision.Existing(rs.getLong("initiated_by_user_id"),
+                    rs.getLong("customer_id"), rs.getString("request_hash"),
+                    IdempotencyStatus.valueOf(rs.getString("status")));
+            Integer status = rs.getObject("response_status", Integer.class);
+            String body = rs.getString("response_body");
+            if ((status == null) != (body == null)) {
+                throw new IllegalStateException("Idempotency response is incomplete");
+            }
+            return new Stored(identity, status == null ? Optional.empty() : Optional.of(new ReplayResponse(status, body)));
+        }, key));
+    }
+
+    @Transactional(readOnly = true)
+    public Instant primaryTime() {
+        return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class)).toInstant();
+    }
+
+    public void recordRecoveryBasis(long transferId, String policy, LocalDate date) {
+        if (jdbc.update("""
+                UPDATE banking.transfer SET recovery_t1_policy = ?, recovery_t1_date = ?
+                WHERE transfer_id = ? AND status = 'PENDING' AND recovery_t1_policy IS NULL
+                """, policy, date, transferId) != 1) {
+            throw new IllegalStateException("Transfer recovery basis already set");
+        }
+    }
+
+    public void attachChallenge(long transferId, long challengeId) {
+        if (jdbc.update("""
+                UPDATE banking.transfer SET step_up_challenge_id = ?
+                 WHERE transfer_id = ? AND step_up_challenge_id IS NULL AND status = 'PENDING'
+                """, challengeId, transferId) != 1) {
+            throw new IllegalStateException("Could not attach consumed challenge");
+        }
     }
 
     /**
@@ -47,7 +96,8 @@ public class TransferPersistence {
                 input.amount().currency(), input.description(), input.correlationId(), input.identity().stepUpChallengeId());
         Objects.requireNonNull(transfer, "insert returned no transfer");
 
-        Instant expiry = transfer.createdAt().plusSeconds(input.ttlSeconds());
+        Instant expiry = IdempotencyRetention.initialExpiry(transfer.createdAt(),
+                new IdempotencyRetention.Snapshot(input.ttlSeconds(), input.ttlConfigVersion()));
         List<Long> inserted = jdbc.query("""
                 INSERT INTO banking.idempotency_record
                     (idempotency_key, request_hash, transfer_id, created_at, expires_at,

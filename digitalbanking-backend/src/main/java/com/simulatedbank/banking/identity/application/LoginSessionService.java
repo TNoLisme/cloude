@@ -30,6 +30,7 @@ public class LoginSessionService {
     private final DeviceRepository devices;
     private final SessionRepository sessions;
     private final AuthorityReader authorities;
+    private final SessionCustomerBinding customerBinding;
     private final AuthAuditPort audit;
     private final ChallengeRepository challenges;
     private final Clock clock;
@@ -39,11 +40,12 @@ public class LoginSessionService {
 
     public LoginSessionService(UserAccountRepository users, DeviceRepository devices, SessionRepository sessions,
             AuthorityReader authorities, AuthAuditPort audit, ChallengeRepository challenges, Clock clock,
-            AppProperties properties, AuthMetrics metrics) {
+            AppProperties properties, AuthMetrics metrics, SessionCustomerBinding customerBinding) {
         this.users = users;
         this.devices = devices;
         this.sessions = sessions;
         this.authorities = authorities;
+        this.customerBinding = customerBinding;
         this.audit = audit;
         this.challenges = challenges;
         this.clock = clock;
@@ -83,6 +85,7 @@ public class LoginSessionService {
         }
         var user = users.findById(userId)
                 .orElseThrow(() -> rejection(ErrorCode.AUTH_INVALID_CREDENTIALS));
+        String customerId = customerBinding.resolve(userId, user.userType());
         if (deviceId != null) {
             var device = devices.lockOwned(deviceId, userId)
                     .orElseThrow(() -> rejection(ErrorCode.AUTH_DEVICE_NOT_TRUSTED));
@@ -113,7 +116,7 @@ public class LoginSessionService {
                 .map(a -> a.substring("ROLE_".length())).sorted().toList();
         Set<String> privileges = auths.stream().filter(a -> !a.startsWith("ROLE_"))
                 .collect(Collectors.toUnmodifiableSet());
-        LoginResult result = new LoginResult(userId, user.username(), user.userType(), roles, privileges,
+        LoginResult result = new LoginResult(userId, user.username(), user.userType(), roles, privileges, customerId,
                 sessionToken, csrfToken, idle, absolute);
 
         audit.recordInTransaction(AuthAuditPort.AuthAuditEvent.c2Challenge(
