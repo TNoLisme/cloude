@@ -171,3 +171,7 @@ Trong dev mock đã bật, mở `/staff/audit?auditPreview=v2`; bấm “Xem chi
 ## FE-03-01-MOCK — preview form/review chuyển tiền
 
 Trong dev mock đã bật, mở `/customer/transfers/new?transferPreview=v2`. Chọn tài khoản nguồn từ fixture, nhập số tài khoản nhận 6–20 chữ số và số tiền dạng `150000.00`, rồi bấm “Xem lại thông tin”. Cảnh báo người nhận chưa xác minh luôn hiển thị và nút Gửi lệnh bị khóa; không có request POST. Có kịch bản tài khoản rỗng/tải chậm/lỗi để xem UI. Đây là form demo, không tạo transfer hoặc xác nhận số dư/hạn mức. [[digitalbanking-docs/docs-frontend/evidence/FE-03-01-MOCK/2026-11-21-fb0db95/run-01.md]].
+
+## FE-08-01-MOCK — preview quản trị role/privilege
+
+Trong dev mock đã bật, mở `/admin/roles?rolePreview=v2`. Chọn một trong bốn thao tác role/privilege, đổi role hoặc xem đặc quyền CHECKER, nhập lý do và bấm “Kiểm tra yêu cầu”. `4002` là user ID tổng hợp cố định; nút “Tạo yêu cầu” bị khóa. Panel dưới dùng GET `listApprovals` lọc `ROLE_CHANGE` từ MSW, có chọn kịch bản dữ liệu mẫu/rỗng/chậm/lỗi và liên kết sang preview approval chỉ đọc. Không có POST role/approval hoặc fallback BE. Preview độc lập, không chứng minh quyền phiên hay step-up. [[digitalbanking-docs/docs-frontend/evidence/FE-08-01-MOCK/2026-11-21-cd07f27/run-01.md]].

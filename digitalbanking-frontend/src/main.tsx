@@ -17,6 +17,10 @@ async function mount() {
     mock && new URLSearchParams(location.search).get("approvalPreview") === "v2"
       ? await import("./mocks/ApprovalPreview")
       : null;
+  const rolePreview =
+    mock && new URLSearchParams(location.search).get("rolePreview") === "v2"
+      ? await import("./mocks/RolePreview")
+      : null;
   const staffCustomerPreview =
     mock && new URLSearchParams(location.search).get("staffPreview") === "v2"
       ? await import("./mocks/StaffCustomerPreview")
@@ -42,6 +46,7 @@ async function mount() {
     !authPreview &&
     !customerPreview &&
     !approvalPreview &&
+    !rolePreview &&
     !staffCustomerPreview &&
     !fraudPreview &&
     !auditPreview &&
@@ -51,7 +56,8 @@ async function mount() {
   if (mock) {
     const { startMocks } = await import("./mocks/browser");
     await startMocks();
-    if (fraudPreview) fraudPreview.prepareFraudPreview();
+    if (rolePreview) rolePreview.prepareRolePreview();
+    else if (fraudPreview) fraudPreview.prepareFraudPreview();
     else if (auditPreview) auditPreview.prepareAuditPreview();
     else if (transferPreview) transferPreview.prepareTransferPreview();
     else if (staffCustomerPreview)
@@ -61,7 +67,9 @@ async function mount() {
     else if (authPreview) authPreview.prepareV2AuthPreview();
     else (await import("./mocks/handlers")).selectPreviewSession();
   }
-  const app = fraudPreview ? (
+  const app = rolePreview ? (
+    <rolePreview.RolePreview />
+  ) : fraudPreview ? (
     <fraudPreview.FraudPreview />
   ) : auditPreview ? (
     <auditPreview.AuditPreview />

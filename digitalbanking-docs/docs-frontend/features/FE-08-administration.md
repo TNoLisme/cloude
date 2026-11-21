@@ -82,3 +82,9 @@ FE-08-01 trong tracker, phụ thuộc FE-05-02. FE-08-01 bổ sung form role/pri
 ## 12. Vấn đề cần chốt
 
 GAP-03 tìm target user, GAP-07 matrix và session capability, GAP-08 binding/retry admin. Định nghĩa role/permission và quản trị user đầy đủ thuộc OI-API-10/18 cần BA/BE chốt trước mở rộng.
+
+## 13. FE-08-01-MOCK — bản xem ngày 21/11/2026
+
+Preview độc lập `/admin/roles?rolePreview=v2` trình bày bốn operation của `RoleChangeRequest`, chỉ chọn `RoleCode` khi assign/revoke role và chỉ hiện `CHECKER` khi grant/revoke privilege. `targetUserId=4002` là fixture tổng hợp, không phải kết quả tìm user hoặc xác nhận user đủ điều kiện. Lý do tối đa 500 ký tự; bước review không gửi dữ liệu. Danh sách yêu cầu `ROLE_CHANGE` chỉ đọc từ `listApprovals` v2 mock và liên kết tới preview FE-05-02; không render payload/result tự do.
+
+Không có handler POST `createRoleChange`, `approveRoleChange` hay step-up cho task con này. Nút tạo yêu cầu khóa cho đến khi GAP-03/07/08 và version runtime được chốt, rồi kiểm chứng FET-12/13 trên BE thật. Bản xem chưa phải UI cuối và không thay tiêu chí của FE-08-01.
