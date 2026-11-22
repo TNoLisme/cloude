@@ -1,5 +1,7 @@
 # ADR-002 — Đồng bộ session contract theo Security
 
+> Cập nhật phạm vi ngày 22/11/2026: người phụ trách FE chốt **v1 backend `dev2` làm đích tích hợp/merge**, trong chat “chốt sẽ merge theo bàn giao v1 của be”. Quyết định v2 bên dưới vẫn là lịch sử contract/mock đã duyệt phía FE, không còn là version dự kiến nối ở đợt này. BE/Security chưa xác nhận xử lý khác biệt cookie/challenge giữa Security common và runtime v1; GAP-05 vẫn mở. Kế hoạch tại [[digitalbanking-docs/docs-frontend/management/09-v1-fe-be-merge-plan.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Ngày / task | 14/11/2026 / FE-FND-02-AUTH-CONTRACT |

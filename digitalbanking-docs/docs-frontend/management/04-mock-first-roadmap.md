@@ -1,5 +1,7 @@
 # Lộ trình FE: duyệt UI với mock rồi tích hợp từng phần
 
+> Quyết định mới ngày 22/11/2026: người phụ trách FE chọn backend `dev2` **API v1.1.0** làm đích tích hợp/merge. Các đoạn về v2 dưới đây giữ lịch sử FE/mock; kế hoạch thực hiện v1 và các gate tại [[digitalbanking-docs/docs-frontend/management/09-v1-fe-be-merge-plan.md]]. Quyết định version không thay điều kiện duyệt UI, API/browser thật hay merge từng phần ở mục 3.
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã / ngày | FE-ROADMAP / 13/11/2026 |

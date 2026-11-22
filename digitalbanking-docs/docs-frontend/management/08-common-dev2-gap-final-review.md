@@ -1,5 +1,7 @@
 # Phiếu rà GAP theo common và backend `dev2` — bản trình chốt
 
+> Cập nhật 22/11/2026 sau bản rà: người phụ trách FE đã chọn backend **v1** làm đích tích hợp. Các dòng dưới đây giữ snapshot câu hỏi trước quyết định; GAP-05 còn phần BE/Security xác nhận cookie/CSRF và kiểm runtime/browser v1. Xem [[digitalbanking-docs/docs-frontend/management/09-v1-fe-be-merge-plan.md]].
+
 | Mục | Giá trị |
 |---|---|
 | Ngày / nguồn yêu cầu | 22/11/2026; người phụ trách FE yêu cầu ưu tiên common và backend `dev2`, sửa GAP để chốt cuối trước khi nộp (chat cùng ngày) |
