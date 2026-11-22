@@ -31,6 +31,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Lộ trình mock trước, duyệt UI và tích hợp BE từng phần | [[digitalbanking-docs/docs-frontend/management/04-mock-first-roadmap.md]] |
 | Đối chiếu quyết định replay/TTL/ownership, phiếu chốt FE–BE và lộ trình theo contract | [[digitalbanking-docs/docs-frontend/management/05-fe-be-contract-handoff.md]] |
 | Rà soát GAP-01..12 trên main/dev2 ngày 21/11/2026 và câu hỏi cần owner chốt | [[digitalbanking-docs/docs-frontend/management/07-main-dev2-gap-review.md]] |
+| Bản trình chốt GAP hiện hành theo common/backend dev2 ngày 22/11/2026 | [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]] |
 | Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
 | Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |

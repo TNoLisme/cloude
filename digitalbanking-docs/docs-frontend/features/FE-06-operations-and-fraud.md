@@ -81,7 +81,7 @@ FE-06-01 và FE-06-02 tại [[digitalbanking-docs/docs-frontend/management/03-wo
 
 ## 12. Vấn đề cần chốt
 
-GAP-01 với lookup phone/email, tạo khách, seed/block/unblock legacy. GAP-03 search ID nguồn. GAP-07 role matrix, GAP-11 Fraud Option B. Ngữ nghĩa quyết định review phải được đối chiếu với 07 và thiết kế fraud trước review UI.
+GAP-01 với tạo khách, seed/block/unblock legacy cần phân loại lại theo common/backend `dev2`; GAP-03 riêng cho phone search và nguồn targetUserId. GAP-07 role matrix, GAP-11 Fraud Option B. Ngữ nghĩa quyết định review phải được đối chiếu với 07 và thiết kế fraud trước review UI. Bản trình chốt GAP hiện hành: [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]].
 
 ### FE-06-01-MOCK ngày 20/11/2026
 

@@ -58,6 +58,8 @@ Người phụ trách FE đã duyệt FE-DOC-03 và UI/mock FE-FND-02-MOCK, cho 
 
 Giữ đăng ký/recovery/PIN/tạo khách tại quầy/nạp số dư/khóa và mở khóa tài khoản trong đợt tích hợp đầu. Chờ BE/BA bổ sung contract trước khi làm phần tương ứng; không tự mô phỏng mutation hoặc hoãn khỏi phạm vi. GAP-01 tiếp tục mở cho phần API/ngữ nghĩa/AC. Xem [[digitalbanking-docs/docs-frontend/evidence/FE-FND-01/2026-11-14-cfde9ad/run-01.md]].
 
+**Đối chiếu ngày 22/11/2026:** đoạn trên là lịch sử mong muốn FE, chưa phải sửa phạm vi common. Common `dev2` có passcode và auth lockout, nhưng không có phần lớn API legacy; top-up còn ngoài phạm vi MVP và seed chỉ là dữ liệu demo. Người phụ trách FE yêu cầu ưu tiên common/backend `dev2` để chốt cuối. Vì vậy trước khi bổ sung contract, BA và người phụ trách FE cần phân loại từng luồng là bổ sung MVP, seed/demo hoặc không triển khai theo common; không tự xem “giữ trong đợt đầu” là phê duyệt mở rộng BRD/SRS. [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]].
+
 ## 8. Baseline session theo Security ngày 14/11/2026
 
 Đã chốt SESSION_TOKEN, Path=/api, LOGIN_MFA cho FE/mock. Theo [[digitalbanking-docs/docs-frontend/decisions/ADR-002-session-security-contract-alignment.md]], phải thống nhất version/route rồi đồng bộ semantics → YAML → DTO/mock trước client phụ thuộc. Người dùng đã chọn giữ v1, tạo v2 riêng theo quy tắc 07; nguồn mới là 07a/YAML v2 (Draft FE/mock), không coi là backend v2 đã có. Runtime BE/Security/DB vẫn mở.

@@ -11,7 +11,7 @@
 
 ## 1. Mục tiêu và phạm vi
 
-Cung cấp password login, challenge thiết bị mới, trusted-device passcode/FIDO, khôi phục phiên và logout cho mọi user class. Challenge primitive dùng lại cho FE-03/05/08 theo purpose. Phạm vi register/recovery/PIN được chốt tại GAP-01.
+Cung cấp password login, challenge thiết bị mới, trusted-device passcode/FIDO, khôi phục phiên và logout cho mọi user class. Challenge primitive dùng lại cho FE-03/05/08 theo purpose. Register/password recovery và PIN legacy chưa có phạm vi/contract common được duyệt; đối chiếu passcode common và câu hỏi GAP-01 tại [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]].
 
 ## 2. Nguồn và phụ thuộc
 

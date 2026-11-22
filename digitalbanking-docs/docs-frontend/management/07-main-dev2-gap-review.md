@@ -1,5 +1,7 @@
 # Rà soát GAP FE trên `main` và `dev2` — 21/11/2026
 
+> Đây là snapshot lịch sử ngày 21/11. Bản trình chốt hiện hành ngày 22/11 ưu tiên common/backend `dev2` và sửa cách hiểu GAP-01 tại [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]]. Không dùng bảng lịch sử này để mặc nhiên yêu cầu thêm API legacy vào MVP.
+
 | Mục | Giá trị |
 |---|---|
 | Yêu cầu | Người phụ trách FE yêu cầu rà lại hai nhánh và ghi câu hỏi còn thiếu để chốt, chat ngày 21/11/2026 |
