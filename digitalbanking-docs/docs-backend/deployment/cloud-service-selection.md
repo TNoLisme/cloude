@@ -3,6 +3,8 @@
 > **Mã:** BE-CLOUD-03  
 > **Ngày:** 22/11/2026  
 > **Trạng thái:** Proposed
+> **Applies to:** Option B — AWS Managed Core
+> **Source decision:** `digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md`
 
 ## 1. Decision template
 
@@ -59,11 +61,6 @@ Mỗi service phải có đủ:
 - If EC2 is moved to a private subnet, configure approved VPC endpoints or NAT path before ECR/SSM/CloudWatch deployment.
 
 
-## 5. Không chọn
+## 6. Cost reference
 
-- Local disk làm backup duy nhất.
-- Public PostgreSQL.
-- Mutable tag `latest`.
-- Service không có restore evidence.
-- Service ngủ trong lúc verification.
-- Secret manager phức tạp nhưng không tăng security/evidence thực tế.
+Service prices, free-tier conditions and zero-cost Option C are documented in [cloud-cost-estimate.md](cloud-cost-estimate.md). Do not confirm a provider or provision resources before recording a region-specific pricing snapshot.

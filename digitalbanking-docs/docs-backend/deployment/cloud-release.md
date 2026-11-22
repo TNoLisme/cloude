@@ -3,6 +3,8 @@
 > **Mã:** BE-CLOUD-12  
 > **Ngày:** 22/11/2026  
 > **Trạng thái:** Proposed
+> **Applies to:** Option B — AWS Managed Core
+> **Source decision:** `digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md`
 
 ## 1. Release gates
 

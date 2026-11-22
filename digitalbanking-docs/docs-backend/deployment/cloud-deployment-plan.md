@@ -3,6 +3,9 @@
 > **Mã:** BE-CLOUD-01  
 > **Ngày:** 22/11/2026  
 > **Trạng thái:** Proposed  
+> **Applies to:** Option B — AWS Managed Core  
+> **Cost reference:** [cloud-cost-estimate.md](cloud-cost-estimate.md)  
+> **Source decision:** `digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md`  
 > **Owner:** Infrastructure Lead và Observability/Ops
 
 ## 1. Mục tiêu

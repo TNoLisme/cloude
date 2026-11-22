@@ -3,6 +3,8 @@
 > **Mã:** BE-CLOUD-15  
 > **Ngày:** 22/11/2026  
 > **Trạng thái:** Proposed
+> **Applies to:** Option B — AWS Managed Core
+> **Source decision:** `digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md`
 
 ## 1. Evidence directory
 
@@ -82,8 +84,8 @@ Artifact lớn có thể ở CI/object storage. Manifest ghi URL, retention và 
 - Backup checksum.
 - Restore result.
 - DVT/D1–D5 status.
-- Cost alert configuration and recipient role.
-- Known limitation và owner.
+- Cost estimate and region-specific pricing snapshot from [cloud-cost-estimate.md](cloud-cost-estimate.md).
+- Option deployed: `A-VPS`, `B-AWS` or `C-Cost-minimized`.
 
 ## 4. Redaction checklist
 
