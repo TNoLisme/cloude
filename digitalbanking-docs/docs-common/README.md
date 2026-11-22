@@ -20,7 +20,7 @@
 
 ## 2. Danh mục tài liệu
 
-### 2.1. Bộ tài liệu đặc tả chính (`01` – `11`)
+### 2.1. Bộ tài liệu đặc tả chính (`01` – `12`)
 
 | # | Tài liệu | Nội dung chính | Vai trò | Trạng thái |
 |---|---|---|---|---|
@@ -35,6 +35,7 @@
 | 09 | [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược kiểm thử, kịch bản `D1–D5`, ma trận truy vết `AC/NFR` | Nguồn chiến lược kiểm thử | Hoàn thành — v1.0 |
 | 10 | [[digitalbanking-docs/docs-common/10 Master timelines.md]] | Lộ trình 8 tuần, milestone, WBS, RACI và cổng chất lượng | Nguồn kế hoạch tổng thể | Hoàn thành — v1.0 |
 | 11 | [[digitalbanking-docs/docs-common/11. Resource & Staffing Plan.md]] | Cơ cấu nhân sự, phân công owner 11 module Backend, Frontend và hạ tầng | Nguồn phân công nhân sự | Hoàn thành — v1.0 |
+| 12 | [[digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md]] | Hạ tầng Cloud, biến môi trường, quy trình deploy W7, smoke test, runbook restart/rollback và bàn giao W8 | Nguồn vận hành Cloud (W7–W8) | Bản nháp — v0.1 (chờ Cloud Owner chốt hạ tầng) |
 | — | [[digitalbanking-docs/docs-common/Requirement Common.md]] | Đề bài tóm tắt các yêu cầu trọng yếu ban đầu | Tham khảo gốc | Tham khảo |
 
 ### 2.2. Bộ tài liệu thiết kế chuyên sâu (`design/01` – `05`)
@@ -76,6 +77,7 @@
 | `09. Test plan` | `02`, `03`, `07`, `design/01–05` | Nghiệm thu `D1–D5`, `10` |
 | `10 Master timelines` | `01`, `02`, `03`, `09` | `11`, điều phối thực thi |
 | `11. Resource & Staffing Plan` | `06`, `08`, `09`, `10` | Phân công nhân sự và ghép tích hợp |
+| `12. Cloud Deployment & Runbook` | `05`, `06`, `08`, `10`, source `digitalbanking-backend/` | Thực thi W7 (deploy) và W8.4 (vận hành Cloud) |
 
 ## 4. Liên kết nhanh
 
@@ -88,4 +90,5 @@
 | Hợp đồng REST API | [[digitalbanking-docs/docs-common/07. API contracts.md]] |
 | Kiến trúc hệ thống | [[digitalbanking-docs/docs-common/06. System architecture.md]] |
 | Thiết kế chuyên sâu & Hợp đồng 11 module | [[digitalbanking-docs/docs-common/design/README.md]] |
+| Triển khai Cloud & runbook vận hành (W7–W8) | [[digitalbanking-docs/docs-common/12. Cloud Deployment & Runbook.md]] |
 | README gốc của kho tài liệu | [[digitalbanking-docs/README.md]] |
