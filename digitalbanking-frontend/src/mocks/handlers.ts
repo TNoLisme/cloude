@@ -1,15 +1,6 @@
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { account, accounts, authFixture, profile } from "./fixtures";
 import type { components } from "../shared/api/generated/openapi";
-import { z } from "zod";
-
-const loginSchema = z.strictObject({
-  username: z.string().min(1).max(64),
-  password: z.string().min(1).max(128),
-  deviceRef: z.uuid().optional(),
-  deviceName: z.string().min(1).max(100).optional(),
-  deviceFingerprint: z.string().min(1).max(512).optional(),
-});
 
 // Only operations already specified in digital-banking-v1.yaml.
 // This fixture session does not implement or prove backend cookie/security policy.
@@ -36,16 +27,8 @@ const problem = (status: number, code: components["schemas"]["ErrorCode"]) =>
     { status, headers: { "Content-Type": "application/problem+json" } },
   );
 export const handlers = [
-  http.post("*/api/v1/auth/login", async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    if (!loginSchema.safeParse(body).success) {
-      return problem(400, "VALIDATION_ERROR");
-    }
-    // A documented HTTP 200 scenario, not password verification.
-    await delay(150);
-    signedIn = true;
-    return HttpResponse.json(authFixture());
-  }),
+  // v1 runtime requires MFA after password login. Do not simulate the old
+  // immediate 200 session while the v1 challenge flow remains unimplemented.
   http.get("*/api/v1/auth/session", () =>
     signedIn
       ? HttpResponse.json(authFixture())

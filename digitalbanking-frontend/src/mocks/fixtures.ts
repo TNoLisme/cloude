@@ -21,7 +21,7 @@ export const account: Schema<"AccountDetail"> = {
   availableBalance: "25000000.00",
   ledgerBalance: "25000000.00",
   asOf: fixtureTime,
-  owner: { customerId: "2001", fullName: profile.fullName, status: "ACTIVE" },
+  owner: { customerId: "2001", status: "ACTIVE" },
   createdAt: fixtureTime,
   updatedAt: fixtureTime,
 };

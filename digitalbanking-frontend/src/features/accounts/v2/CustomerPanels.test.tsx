@@ -3,6 +3,7 @@ import "../../../test/setup-dom";
 import { afterEach, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { account, profile } from "../../../mocks/fixtures";
+import { v2Account } from "../../../mocks/v2-account-fixture";
 import {
   CustomerAccountCard,
   CustomerAccountDetailPanel,
@@ -32,15 +33,15 @@ it("shows masked account and preserves full decimal precision", () => {
   expect(screen.queryByText("Đang hoạt động")).toBeNull();
 });
 it("shows account detail using only the masked number and server owner", () => {
-  render(<CustomerAccountDetailPanel account={account} />);
-  expect(screen.getByText(account.owner.fullName)).toBeTruthy();
+  render(<CustomerAccountDetailPanel account={v2Account} />);
+  expect(screen.getByText(v2Account.owner.fullName)).toBeTruthy();
   expect(screen.getByText(account.accountNumberMasked)).toBeTruthy();
   expect(screen.getByText("25.000.000,00 ₫")).toBeTruthy();
 });
 it("shows a safe fallback for an unknown account status", () => {
   render(
     <CustomerAccountDetailPanel
-      account={{ ...account, status: "constructor" as typeof account.status }}
+      account={{ ...v2Account, status: "constructor" as typeof account.status }}
     />,
   );
   expect(screen.getByText("Trạng thái chưa hỗ trợ")).toBeTruthy();

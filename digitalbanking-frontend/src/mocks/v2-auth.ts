@@ -2,6 +2,7 @@ import { delay, http, HttpResponse } from "msw";
 import { z } from "zod";
 import type { components } from "../shared/api/generated/v2/openapi";
 import { account, accounts, authFixture, profile } from "./fixtures";
+import { v2Account } from "./v2-account-fixture";
 import { historyDetail, historyItems } from "./history-fixtures";
 import { limitsFixture } from "./limits-fixtures";
 import { isApiId } from "../shared/lib/id";
@@ -356,7 +357,7 @@ export const v2AuthHandlers = [
     const id = String(params.accountId);
     if (!isApiId(id)) return problem(400, "VALIDATION_ERROR");
     if (id === account.accountId)
-      return HttpResponse.json(account, { headers: correlationHeaders });
+      return HttpResponse.json(v2Account, { headers: correlationHeaders });
     // 3002 is a synthetic existing account belonging to a different customer.
     return id === "3002"
       ? problem(403, "AUTH_FORBIDDEN")

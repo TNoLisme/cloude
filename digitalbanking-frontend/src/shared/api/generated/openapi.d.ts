@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Đăng nhập bằng password
-         * @description Xác thực username/password. Thiết bị tin cậy trả session; thiết bị mới trả 202 kèm challenge OTP. Không trả password/token trong body.
+         * @description API-AUTH-01. DEC-ID-008 requires MFA for every valid password login: return 202 without a session, even for trusted device metadata. deviceRef and fingerprint are identification metadata, never proof or an OTP bypass. The advertised 200 branch remains inactive pending an approved device-proof protocol. Dispatch failure returns 503 OTP_DISPATCH_FAILED, never a session.
          */
         post: operations["login"];
         delete?: never;
@@ -33,7 +33,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Đăng nhập bằng passcode trên thiết bị tin cậy */
+        /**
+         * Đăng nhập bằng passcode trên thiết bị tin cậy
+         * @description API-AUTH-02 preserves its advertised 200 AuthResponse contract. Positive login is BLOCKED under DEC-ID-009 preserve_contracts: metadata and a trusted row do not prove device possession. Current valid requests fail closed with 403 AUTH_DEVICE_NOT_TRUSTED before credential verification or session creation. An approved enrollment/device-proof/expiry protocol is required; use password plus OTP instead. No new device-proof endpoint is implied.
+         */
         post: operations["loginPasscode"];
         delete?: never;
         options?: never;
@@ -52,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Đăng nhập FIDO/WebAuthn (begin/finish)
-         * @description Begin: gửi username + deviceRef để nhận 202 challenge/WebAuthn options. Finish: gửi challengeId + fido assertion để nhận session.
+         * @description API-AUTH-03. Begin requires username and deviceRef with neither challengeId nor fido; finish requires both challengeId and a nested assertion. Requires an active trusted credential provisioned outside this API. DEC-ID-010 requires user verification, exact RP ID and configured origin, signature, single-use nonce and counter verification (0 to 0 is valid; otherwise counter increases). Verification is opt-in; enrollment and production Audit remain dependencies. On cancellation/unavailability/failure start a fresh password + OTP login; never convert this challenge to OTP or carry FIDO assurance to fallback.
          */
         post: operations["loginFido"];
         delete?: never;
@@ -70,7 +73,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Xác thực OTP thiết bị mới */
+        /**
+         * Xác thực OTP thiết bị mới
+         * @description API-AUTH-04. Public proof is challengeId plus OTP, not the reference alone. Only a dispatched SENT OTP for LOGIN_NEW_DEVICE may activate a session (DEC-ID-006). User/device come from the stored challenge, never request data. Success verifies and consumes the challenge and creates a session atomically. DEC-ID-008 forbids automatic persistent trust; deviceTrusted remains false.
+         */
         post: operations["verifyOtp"];
         delete?: never;
         options?: never;
@@ -87,7 +93,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Xác thực step-up cho transfer hoặc hành động nhạy cảm */
+        /**
+         * Xác thực step-up cho transfer hoặc hành động nhạy cảm
+         * @description API-AUTH-05. Requires an active session and ownership of a TRANSFER_STEP_UP or SENSITIVE_ACTION challenge. Select exactly the credential required by method; method must match the stored challenge. Current runtime verifies OTP only; advertised FIDO/PASSCODE proofs cannot produce success and return 409 STEP_UP_CHALLENGE_MISMATCH for an unsupported/mismatched stored method. Verification never creates a login session, transfer or ledger entry. Cookie-authenticated POST requires CSRF; bearer-only authentication is exempt.
+         */
         post: operations["verifyStepUp"];
         delete?: never;
         options?: never;
@@ -104,7 +113,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout và vô hiệu hóa session */
+        /**
+         * Logout và vô hiệu hóa session
+         * @description API-AUTH-06. No request body. Revoke the current active session and clear DB_SESSION (Max-Age=0); 204 has no body. Cookie authentication requires X-CSRF-Token; bearer-only authentication is exempt. An already invalid or logged-out token may return 401 without revealing session details.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -119,7 +131,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lấy session hiện tại */
+        /**
+         * Lấy session hiện tại
+         * @description API-AUTH-07. Requires an active cookie or bearer session. Returns the current authorities and session metadata, rotating the session-bound CSRF token. No opaque session token in JSON. GET does not require CSRF.
+         */
         get: operations["getSession"];
         put?: never;
         post?: never;
@@ -140,7 +155,7 @@ export interface paths {
         put?: never;
         /**
          * Gửi lại OTP cho challenge
-         * @description Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge.
+         * @description Public cho challenge LOGIN_NEW_DEVICE; yêu cầu session cho challenge TRANSFER_STEP_UP/SENSITIVE_ACTION. Tối đa 3 lần resend/challenge, cooldown mặc định 60 giây và TTL 5 phút; xoay OTP và generation, không reset số lần nhập sai. 202 chỉ sau ACK và lưu SENT cho generation hiện tại; lỗi hoặc kết quả dispatch không rõ trả 503 OTP_DISPATCH_FAILED. Session cookie yêu cầu CSRF. Request không có body. Gửi SMS yêu cầu cấu hình gateway và địa chỉ nhận hợp lệ.
          */
         post: operations["resendChallenge"];
         delete?: never;
@@ -173,7 +188,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Danh sách tài khoản của customer */
+        /**
+         * Danh sách tài khoản của customer
+         * @description Danh sách theo ánh xạ Customer của user đã xác thực. Mapping vắng trả 404 CUSTOMER_NOT_FOUND.
+         */
         get: operations["listAccounts"];
         put?: never;
         post?: never;
@@ -190,7 +208,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Chi tiết tài khoản */
+        /**
+         * Chi tiết tài khoản
+         * @description Customer chỉ đọc tài khoản của mình; staff có ACCOUNT_READ đọc trong phạm vi single-bank MVP. 404 trả ACCOUNT_NOT_FOUND cho account vắng hoặc CUSTOMER_NOT_FOUND cho chính chủ chưa có mapping. Owner chỉ gồm customerId và status theo DEC-INT-020.
+         *
+         */
         get: operations["getAccount"];
         put?: never;
         post?: never;
@@ -207,7 +229,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Hồ sơ customer cho Operations/Admin/Auditor */
+        /**
+         * Hồ sơ customer đã mask cho Operations/Admin
+         * @description Yêu cầu vai trò staff và CUSTOMER_READ. Seed AUDITOR không có permission này.
+         */
         get: operations["getAdminCustomer"];
         put?: never;
         post?: never;
@@ -224,7 +249,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Danh sách tài khoản của customer cho staff */
+        /**
+         * Danh sách tài khoản của customer cho staff
+         * @description Staff có ACCOUNT_READ. Customer tồn tại mà không có tài khoản trả 200 với items rỗng. Customer vắng trả 404 CUSTOMER_NOT_FOUND.
+         *
+         */
         get: operations["getAdminCustomerAccounts"];
         put?: never;
         post?: never;
@@ -245,7 +274,7 @@ export interface paths {
         put?: never;
         /**
          * Tạo chuyển tiền nội bộ
-         * @description Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED, 428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency.
+         * @description Yêu cầu Idempotency-Key. Có thể trả 201 COMPLETED, 422 FAILED, 428 STEP_UP_REQUIRED, 500 AUDIT_WRITE_FAILED hoặc 409 idempotency. Cùng actor/key/hash terminal replay nguyên status/body gốc 201 hoặc 422 kèm Idempotent-Replayed; record chưa terminal trả 409 Retry-After, worker recovery nội bộ xử lý. Record terminal hết TTL nhưng chưa purge vẫn replay/conflict; sau purge key có thể tạo yêu cầu mới. Step-up chỉ trả 428 sau gateway ACK và SENT được lưu cho generation hiện tại; lỗi dispatch hoặc quota store không sẵn sàng trả 503. Với key mới, Customer INACTIVE nhận 403 trước khi resolve đích hoặc phát OTP.
          */
         post: operations["createTransfer"];
         delete?: never;
@@ -312,7 +341,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Hạn mức hiện tại và còn lại */
+        /**
+         * Hạn mức hiện tại và còn lại
+         * @description Trả cấu hình có hiệu lực tại asOf. Bản bị thay đang còn trong khoảng hiệu lực được dùng đến mốc bản mới bắt đầu. ACCOUNT lần đầu tính usage từ mốc kích hoạt, còn CUSTOMER tính usage của cả ngày nghiệp vụ.
+         */
         get: operations["getLimits"];
         put?: never;
         post?: never;
@@ -333,7 +365,7 @@ export interface paths {
         put?: never;
         /**
          * Maker tạo yêu cầu thay đổi hạn mức
-         * @description Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+         * @description Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal hash); verify rồi retry với X-Step-Up-Challenge. Cùng key + cùng payload replay 201 gốc với Idempotent-Replayed: true; payload khác trả 409 IDEMPOTENCY_CONFLICT. Chưa tạo approval/idempotency record trước khi verify hoặc khi payload/validation fail. LIMIT_CHANGE tạo limit_config PENDING_APPROVAL trong cùng transaction; 422 LIMIT_OUT_OF_POLICY khi vượt policy cấu hình.
          */
         post: operations["createLimitChange"];
         delete?: never;
@@ -353,7 +385,7 @@ export interface paths {
         put?: never;
         /**
          * Checker duyệt/từ chối yêu cầu hạn mức
-         * @description Path id là approvalId của LIMIT_CHANGE. Yêu cầu privilege CHECKER, maker khác checker và step-up SENSITIVE_ACTION.
+         * @description Path id là approvalId của LIMIT_CHANGE. Idempotency-Key bắt buộc. Yêu cầu privilege CHECKER, quyền LIMIT_MAKER/LIMIT_MANAGE được re-check ở service, maker khác checker và step-up SENSITIVE_ACTION. Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409 IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS. APPROVE áp version mới sau khi kiểm expectedVersion/policy (409 ROLE_CONFLICT khi stale hoặc scope đã có bản chờ hiệu lực, 422 LIMIT_OUT_OF_POLICY). Bản cũ còn hiệu lực đến mốc bản mới bắt đầu nếu chưa hết hạn sớm hơn. result.effectiveFrom là mốc hiệu lực thực tế, lấy thời điểm muộn hơn giữa yêu cầu và thời điểm duyệt trên primary. REJECT đánh dấu cấu hình pending REJECTED và idempotent.
          */
         post: operations["approveLimitChange"];
         delete?: never;
@@ -458,7 +490,7 @@ export interface paths {
         put?: never;
         /**
          * Maker tạo yêu cầu role/privilege
-         * @description Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION; verify rồi retry với X-Step-Up-Challenge. Chưa tạo approval trước khi verify.
+         * @description Idempotency-Key bắt buộc. Lần gọi đầu chưa có step-up trả 428 SENSITIVE_ACTION (challenge bind idempotency key + canonical proposal hash, gồm expectedVersion server-capture); verify rồi retry với X-Step-Up-Challenge. Cùng key + cùng payload replay 201 gốc với Idempotent-Replayed: true; payload khác trả 409 IDEMPOTENCY_CONFLICT. Chưa tạo approval/idempotency record trước khi verify hoặc khi payload fail. expectedVersion không nằm trong request/response public.
          */
         post: operations["createRoleChange"];
         delete?: never;
@@ -478,7 +510,7 @@ export interface paths {
         put?: never;
         /**
          * Checker duyệt/từ chối yêu cầu role/privilege
-         * @description Path id là approvalId của ROLE_CHANGE. Yêu cầu privilege CHECKER, maker khác checker và step-up SENSITIVE_ACTION.
+         * @description Path id là approvalId của ROLE_CHANGE. Idempotency-Key bắt buộc. Yêu cầu privilege CHECKER, quyền ROLE_MANAGE được re-check ở service, maker khác checker và step-up SENSITIVE_ACTION. Cùng key + cùng decision/note replay 200 gốc; payload khác trả 409 IDEMPOTENCY_CONFLICT; record RECEIVED trả 409 IDEMPOTENCY_IN_PROGRESS. Response ApprovalDetail đã mask (không có expectedVersion).
          */
         post: operations["approveRoleChange"];
         delete?: never;
@@ -494,7 +526,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Danh sách approval */
+        /**
+         * Danh sách approval
+         * @description Quyền OPERATIONS/ADMIN. Chỉ trả approval trong scope server-side: actor luôn thấy request do mình tạo; checker thấy thêm mọi request thuộc loại mình được duyệt (ROLE_CHANGE cần ROLE_MANAGE; LIMIT_CHANGE cần LIMIT_MAKER/LIMIT_MANAGE). Scope áp trong cùng predicate SQL với filter, sort và count nên makerId/checkerId không thể mở rộng quyền xem. Filter: requestType/status/makerId/checkerId/from (inclusive)/to (exclusive); phân trang 0-based size 1-100; sort whitelist createdAt (mặc định desc). Page vượt cuối trả items rỗng. Read-only: không đổi trạng thái, không tạo audit nghiệp vụ.
+         */
         get: operations["listApprovals"];
         put?: never;
         post?: never;
@@ -511,7 +546,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Chi tiết approval */
+        /**
+         * Chi tiết approval
+         * @description Quyền OPERATIONS/ADMIN với cùng scope như list. Trả ApprovalSummary + payload đã mask (không có expectedVersion; không lộ secret/full PII/entity). `result` chỉ có khi provider đã trả. Id không tồn tại và id ngoài scope đều trả 404 APPROVAL_NOT_FOUND để chống enumeration. Read-only: không đổi trạng thái, không tạo audit nghiệp vụ.
+         */
         get: operations["getApproval"];
         put?: never;
         post?: never;
@@ -634,10 +672,24 @@ export interface components {
             expiresAt: components["schemas"]["Instant"];
             maxAttempts: number;
             remainingAttempts: number;
-            /** @description WebAuthn request options khi methods có FIDO */
-            fidoRequestOptions?: {
-                [key: string]: unknown;
-            } | null;
+            fidoRequestOptions?: components["schemas"]["FidoRequestOptions"] | null;
+        } & unknown;
+        FidoRequestOptions: {
+            challenge: string;
+            rpId: string;
+            allowCredentials: {
+                /** @constant */
+                type: "public-key";
+                id: string;
+                transports?: string[];
+            }[];
+            /** @description Milliseconds; default 30000, configurable with the challenge TTL */
+            timeout: number;
+            /**
+             * @description Required by DEC-ID-010; preferred is not an accepted policy
+             * @constant
+             */
+            userVerification: "required";
         };
         ChallengeRequiredResponse: {
             /** @constant */
@@ -652,6 +704,7 @@ export interface components {
             displayName: string;
             roles: components["schemas"]["RoleCode"][];
             privileges: components["schemas"]["PrivilegeCode"][];
+            /** @description ID theo CustomerQuery khi user là CUSTOMER và đã có mapping, kể cả INACTIVE. Staff hoặc mapping vắng trả null. */
             customerId?: string | null;
         };
         SessionInfo: {
@@ -668,9 +721,9 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
-            deviceRef?: components["schemas"]["UUID"];
-            deviceName?: string;
-            deviceFingerprint?: string;
+            deviceRef?: components["schemas"]["UUID"] | null;
+            deviceName?: string | null;
+            deviceFingerprint?: string | null;
         };
         PasscodeLoginRequest: {
             username: string;
@@ -681,6 +734,8 @@ export interface components {
         FidoBeginRequest: {
             username: string;
             deviceRef: components["schemas"]["UUID"];
+            challengeId?: null;
+            fido?: null;
         };
         FidoVerifyRequest: {
             username: string;
@@ -693,7 +748,7 @@ export interface components {
             clientDataJSON: string;
             authenticatorData: string;
             signature: string;
-            userHandle?: string;
+            userHandle?: string | null;
         };
         OtpVerifyRequest: {
             challengeId: components["schemas"]["UUID"];
@@ -704,18 +759,24 @@ export interface components {
             /** @constant */
             method: "OTP";
             otp: string;
+            passcode?: string | null;
+            fido?: Record<string, never> | null;
         };
         StepUpPasscodeRequest: {
             challengeId: components["schemas"]["UUID"];
             /** @constant */
             method: "PASSCODE";
             passcode: string;
+            otp?: string | null;
+            fido?: Record<string, never> | null;
         };
         StepUpFidoRequest: {
             challengeId: components["schemas"]["UUID"];
             /** @constant */
             method: "FIDO";
             fido: components["schemas"]["FidoAssertion"];
+            otp?: string | null;
+            passcode?: string | null;
         };
         StepUpVerifyResponse: {
             challengeId: components["schemas"]["UUID"];
@@ -726,9 +787,8 @@ export interface components {
             expiresAt: components["schemas"]["Instant"];
             correlationId: string;
         };
-        CustomerSummary: {
+        AccountOwner: {
             customerId: components["schemas"]["ID"];
-            fullName: string;
             status: components["schemas"]["CustomerStatus"];
         };
         CustomerProfile: {
@@ -757,7 +817,7 @@ export interface components {
             asOf: components["schemas"]["Instant"];
         };
         AccountDetail: components["schemas"]["AccountSummary"] & {
-            owner: components["schemas"]["CustomerSummary"];
+            owner: components["schemas"]["AccountOwner"];
             createdAt: components["schemas"]["Instant"];
             updatedAt: components["schemas"]["Instant"];
         };
@@ -816,6 +876,7 @@ export interface components {
             last: boolean;
         };
         Counterparty: {
+            /** @description Nhãn hiển thị từ bốn số cuối của tài khoản đối ứng. */
             displayName: string;
             accountNumberMasked: string;
         };
@@ -1004,7 +1065,6 @@ export interface components {
             } | null;
             /** @enum {string|null} */
             decision?: "ALLOW" | "BLOCK" | "ESCALATE" | "CLOSE" | null;
-            notes?: string | null;
             reviewedBy?: components["schemas"]["ActorSummary"] | null;
             /** Format: date-time */
             reviewedAt?: string | null;
@@ -1196,7 +1256,7 @@ export interface components {
     parameters: {
         /** @description Trace ID; server sinh mới nếu thiếu */
         CorrelationId: string;
-        /** @description Bắt buộc cho POST /transfers; 1-255 ký tự, không chứa PII */
+        /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
         IdempotencyKey: string;
         /** @description challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm */
         StepUpChallenge: string;
@@ -1285,7 +1345,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session được tạo */
+            /** @description Advertised trusted-device session; inactive under DEC-ID-008 */
             200: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
@@ -1296,7 +1356,7 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponse"];
                 };
             };
-            /** @description Cần OTP cho thiết bị mới */
+            /** @description Password accepted; OTP required for every login, no session cookie */
             202: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
@@ -1333,7 +1393,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session được tạo */
+            /** @description Advertised session contract; positive flow blocked by DEC-ID-009 */
             200: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
@@ -1435,6 +1495,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             410: components["responses"]["Gone"];
@@ -1507,6 +1568,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];
@@ -1535,6 +1597,7 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalServerError"];
             503: components["responses"]["ServiceUnavailable"];
@@ -1630,8 +1693,10 @@ export interface operations {
                     "application/json": components["schemas"]["AccountsResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
             503: components["responses"]["ServiceUnavailable"];
         };
@@ -1702,7 +1767,9 @@ export interface operations {
     };
     getAdminCustomerAccounts: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: components["schemas"]["AccountStatus"];
+            };
             header?: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
@@ -1738,7 +1805,7 @@ export interface operations {
             header: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
-                /** @description Bắt buộc cho POST /transfers; 1-255 ký tự, không chứa PII */
+                /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 /** @description Bắt buộc với cookie session cho request thay đổi dữ liệu */
                 "X-CSRF-Token"?: components["parameters"]["CsrfToken"];
@@ -1752,22 +1819,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Replay kết quả cũ */
-            200: {
-                headers: {
-                    "X-Correlation-ID": components["headers"]["XCorrelationId"];
-                    "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransferResponse"];
-                };
-            };
-            /** @description Transfer COMPLETED */
+            /** @description Transfer COMPLETED; replay giữ 201 và body gốc */
             201: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
                     Location: components["headers"]["Location"];
+                    /** @description Chỉ có giá trị true khi replay terminal response. */
+                    "Idempotent-Replayed"?: "true";
                     [name: string]: unknown;
                 };
                 content: {
@@ -1790,7 +1848,19 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
-            422: components["responses"]["UnprocessableEntity"];
+            410: components["responses"]["Gone"];
+            /** @description Vi phạm business rule; nếu terminal FAILED thì replay giữ nguyên 422 và body gốc, với Idempotent-Replayed true. Lỗi trước T1 không có reference/transferStatus và không phải terminal replay. Account inactive/not-found sau T1 dùng code TRANSFER_FAILED cùng failureCode ACCOUNT_INACTIVE/ACCOUNT_NOT_FOUND; trước T1 dùng 409/404 tương ứng. */
+            422: {
+                headers: {
+                    "X-Correlation-ID": components["headers"]["XCorrelationId"];
+                    /** @description Chỉ có giá trị true khi replay terminal response. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             428: components["responses"]["StepUpRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalServerError"];
@@ -1941,9 +2011,11 @@ export interface operations {
     createLimitChange: {
         parameters: {
             query?: never;
-            header?: {
+            header: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+                /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 /** @description Bắt buộc với cookie session cho request thay đổi dữ liệu */
                 "X-CSRF-Token"?: components["parameters"]["CsrfToken"];
                 /** @description challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm */
@@ -1958,11 +2030,12 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Approval LIMIT_CHANGE đã tạo */
+            /** @description Approval LIMIT_CHANGE đã tạo hoặc replay từ idempotency record */
             201: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
                     Location: components["headers"]["Location"];
+                    "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1973,6 +2046,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
             428: components["responses"]["StepUpRequired"];
             429: components["responses"]["TooManyRequests"];
@@ -1983,9 +2057,11 @@ export interface operations {
     approveLimitChange: {
         parameters: {
             query?: never;
-            header?: {
+            header: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+                /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 /** @description Bắt buộc với cookie session cho request thay đổi dữ liệu */
                 "X-CSRF-Token"?: components["parameters"]["CsrfToken"];
                 /** @description challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm */
@@ -2003,10 +2079,11 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Approval đã được xử lý */
+            /** @description Approval đã được xử lý hoặc replay từ idempotency record */
             200: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
+                    "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2240,9 +2317,11 @@ export interface operations {
     createRoleChange: {
         parameters: {
             query?: never;
-            header?: {
+            header: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+                /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 /** @description Bắt buộc với cookie session cho request thay đổi dữ liệu */
                 "X-CSRF-Token"?: components["parameters"]["CsrfToken"];
                 /** @description challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm */
@@ -2257,11 +2336,12 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Approval ROLE_CHANGE đã tạo */
+            /** @description Approval ROLE_CHANGE đã tạo hoặc replay từ idempotency record */
             201: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
                     Location: components["headers"]["Location"];
+                    "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2282,9 +2362,11 @@ export interface operations {
     approveRoleChange: {
         parameters: {
             query?: never;
-            header?: {
+            header: {
                 /** @description Trace ID; server sinh mới nếu thiếu */
                 "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+                /** @description Bắt buộc cho POST /transfers và Admin proposal/decision writes. 1-255 ký tự, pattern hợp lệ, không chứa PII. Admin scope là actor + operation + resource (empty resource cho proposal, approvalId cho decision); cùng key + cùng canonical hash replay response gốc, khác hash là 409 IDEMPOTENCY_CONFLICT, record RECEIVED là 409 IDEMPOTENCY_IN_PROGRESS. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 /** @description Bắt buộc với cookie session cho request thay đổi dữ liệu */
                 "X-CSRF-Token"?: components["parameters"]["CsrfToken"];
                 /** @description challengeId đã VERIFIED; bắt buộc sau 428 cho hành động nhạy cảm */
@@ -2302,10 +2384,11 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Approval đã được xử lý */
+            /** @description Approval đã được xử lý hoặc replay từ idempotency record */
             200: {
                 headers: {
                     "X-Correlation-ID": components["headers"]["XCorrelationId"];
+                    "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
                     [name: string]: unknown;
                 };
                 content: {

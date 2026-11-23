@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { setupServer } from "msw/node";
-import { handlers, resetMockSession } from "./handlers";
+import { handlers, resetMockSession, selectPreviewSession } from "./handlers";
 import { resetV2MockSession, v2AuthHandlers } from "./v2-auth";
 
 const server = setupServer(...handlers, ...v2AuthHandlers);
@@ -55,7 +55,7 @@ describe("v2 Security baseline mock", () => {
     expect((await fetch(`${base}/auth/session`)).status).toBe(401);
   });
   it("keeps the v1 preview fixture independent from the v2 mock session", async () => {
-    expect((await login("fixture-customer", "v1")).status).toBe(200);
+    selectPreviewSession();
     expect((await fetch("http://localhost/api/v1/auth/session")).status).toBe(
       200,
     );
