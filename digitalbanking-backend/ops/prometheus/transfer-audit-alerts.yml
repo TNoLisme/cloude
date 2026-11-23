@@ -1,0 +1,21 @@
+groups:
+  - name: transfer-security-audit
+    rules:
+      - alert: TransferSecurityAuditFallback
+        expr: sum(increase(transfer_security_deny_fallback_total[15m])) > 0
+        labels:
+          severity: critical
+          component: transfer
+          owner: security-audit
+        annotations:
+          summary: "Transfer security decisions are missing durable audit records"
+          description: "Inspect SECURITY_AUDIT_FALLBACK events by request ID and correlate with the Audit provider failure."
+      - alert: TransferRecoveryIncident
+        expr: sum by (reason) (increase(transfer_recovery_incident_total[15m])) > 0
+        labels:
+          severity: critical
+          component: transfer
+          owner: banking-ops
+        annotations:
+          summary: "A Transfer recovery attempt requires investigation"
+          description: "Find the matching TRANSFER_RECOVERY_INCIDENT or TRANSFER_RECOVERY_SCAN_FAILED event and follow runbook R-CON-01."

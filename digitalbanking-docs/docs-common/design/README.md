@@ -2,7 +2,7 @@
 
 > **Dự án:** Digital Banking MVP
 > **Phạm vi:** Thiết kế kỹ thuật chuyên sâu
-> **Cập nhật:** 03/11/2026
+> **Cập nhật:** 18/11/2026
 
 ## 1. Mục đích
 
@@ -17,15 +17,16 @@ Thư mục này chứa các thiết kế kỹ thuật chuyên sâu, nối yêu c
 | # | Tài liệu | Mã tài liệu | Phạm vi | Trạng thái |
 |---|---|---|---|---|
 | 01 | [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]] | `DESIGN-AUD-01` | Audit trail bất biến, hash chain, correlation ID, retention, legal hold | Hoàn thành — v1.0 |
-| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Draft — chờ review |
-| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Đang viết |
+| 02 | [[digitalbanking-docs/docs-common/design/02. consistency-concurrency.md]] | `DESIGN-CON-02` | Transaction boundary, idempotency, locking, isolation, failure recovery | Hoàn thành — v1.0 |
+| 03 | [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]] | `DESIGN-FRD-03` | Rule gian lận, ngưỡng, flag/auto-block, fail-open | Hoàn thành — v1.0 |
 | 04 | [[digitalbanking-docs/docs-common/design/04. security.md]] | `DESIGN-SEC-04` | Threat model, authn/authz, mã hóa, bảo mật dữ liệu | Hoàn thành — v1.0 |
+| 05 | [[digitalbanking-docs/docs-common/design/05. Modules contract.md]] | `DESIGN-MOD-05` | Hợp đồng nội bộ, ranh giới, tích hợp và kiểm thử 11 module | Hoàn thành — v1.0 |
 
 ## 3. Thứ tự đọc và quan hệ
 
 ### 3.1. Thứ tự đọc
 
-`01. Audit & Traceability → 02. Consistency & Concurrency → 03. Fraud Detection Rules → 04. Security`
+`01. Audit & Traceability → 02. Consistency & Concurrency → 03. Fraud Detection Rules → 04. Security → 05. Modules contract`
 
 Có thể đọc `01` và `02` song song; `03` và `04` nên đọc sau `02` vì đều tham chiếu transaction boundary và money path.
 
@@ -53,6 +54,7 @@ flowchart LR
 - **02 Consistency & Concurrency** là thiết kế lõi của money path; các thiết kế khác tham chiếu transaction T1/T2/T3.
 - **03 Fraud Detection Rules** bổ sung rule và ngưỡng cho bước đánh giá gian lận trong T2.
 - **04 Security** là thiết kế xuyên suốt cho authn/authz, mã hóa, bảo mật dữ liệu và vận hành.
+- **05 Modules contract** là hợp đồng giao tiếp nội bộ chuẩn giữa 11 module backend, quy định rõ provider, consumer, dữ liệu trao đổi, ranh giới transaction và kiểm thử hợp đồng.
 
 ## 4. Cấu trúc chuẩn của một tài liệu thiết kế
 
@@ -82,12 +84,9 @@ Một tài liệu thiết kế nên có các phần sau (có thể gộp nếu p
 - **Không trùng lặp:** không sao chép nguyên khối từ SRS/BRD; chỉ giữ phần đặc thù thiết kế và liên kết tới nguồn.
 - **Thay đổi:** cập nhật Change Log ở cuối tài liệu và bảng trạng thái trong README này.
 
-## 6. Việc đang viết và việc tiếp theo
+## 6. Trạng thái hoàn thiện
 
-- `02. Consistency & Concurrency` — đang **Draft — chờ review**; cần chốt các open issue về rule gian lận, lock timeout và retry.
-- `03. Fraud Detection Rules` — **Đang viết**; cần chốt rule semantics, ngưỡng, cách đếm high-frequency và chính sách auto-block (bản đặc tả thực thi cho backend đã được tổng hợp trước vào `docs-backend/modules/07-fraud-and-notification.md`).
-- `04. Security` — **Hoàn thành — v1.0**; đã hoàn thiện threat model, key management, session security và checklist OWASP (`AC-030`).
-- Khi `03` và `04` hoàn thành, cập nhật liên kết trong `01`, `02` và README gốc.
+- Toàn bộ các tài liệu thiết kế từ `01` đến `05` đã đạt trạng thái **Hoàn thành — v1.0**.
 
 ## 7. Liên kết nhanh
 

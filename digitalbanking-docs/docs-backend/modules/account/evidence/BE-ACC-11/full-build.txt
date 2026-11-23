@@ -1,0 +1,13 @@
+BE-ACC-12 — Full clean build evidence
+Generated: 2026-11-18T02:30:35Z
+Source revision: 07188e9c25ced5db5f934d2b75a771df299c9b0b + working tree, branch datht-backend-rework
+Environment: OpenJDK 21.0.11; Docker 29.7.2; PostgreSQL 16 Testcontainers; Linux 6.19.14+kali-amd64
+Command: ./gradlew clean build --max-workers=1 --console=plain
+Result: BUILD SUCCESSFUL in 8m 20s (EXIT=0)
+
+JUnit aggregate:
+  classes=106 tests=1244 failures=0 errors=0 skipped=0
+  account module: tests=128 failures=0 errors=0 skipped=0
+
+Included tasks: compileJava, compileTestJava, test, jacocoTestReport, bootJar, check, build.
+Log: /home/kali/acc11-full-build.log

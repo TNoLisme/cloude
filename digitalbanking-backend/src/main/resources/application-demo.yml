@@ -1,0 +1,11 @@
+# Demo is explicit: external keys/DB credentials still come from application.yml.
+# Do not combine demo with local/test or deploy the local Compose defaults.
+logging:
+  environment: ${APP_ENVIRONMENT:demo}
+
+app:
+  security:
+    cookie:
+      secure: true
+    # Missing or wildcard origins fail the existing SecurityFilterChainConfig validator.
+    cors-allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}

@@ -1,0 +1,28 @@
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      APP_QA_SEED: "true"
+      APP_QA_PASSWORD: ${APP_QA_PASSWORD:?Set a disposable QA password of at least 16 characters}
+      APP_NOTIFICATION_SMS_ENABLED: "true"
+      APP_NOTIFICATION_SMS_ENDPOINT: http://sms:8080/messages
+      APP_NOTIFICATION_WORKER_ENABLED: "true"
+      APP_TRANSFER_RECOVERY_ENABLED: "true"
+      SPRING_APPLICATION_JSON: >-
+        {"app":{"notification":{"sms":{"demo-staff-contacts":{
+        "9000000000000021":"0900000021","9000000000000022":"0900000022",
+        "9000000000000023":"0900000023","9000000000000024":"0900000024"}}}}}
+    depends_on:
+      sms:
+        condition: service_started
+  sms:
+    image: python:3.12-alpine
+    command: ["python", "/qa/sms.py"]
+    volumes:
+      - ./docker/qa/sms.py:/qa/sms.py:ro
+    environment:
+      QA_SMS_TOKEN: ${QA_SMS_TOKEN:?Set an independent disposable SMS mailbox token}
+    ports:
+      - 127.0.0.1:${QA_SMS_PORT:-18081}:8080
+    networks:
+      - banking-net

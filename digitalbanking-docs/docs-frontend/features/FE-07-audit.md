@@ -17,7 +17,7 @@ Staff được quyền tra cứu/xem audit theo reference, correlation, actor, a
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-034–040/052–053, UC-012, AC-018–024/029. Contract 07 §8.6 và [[digitalbanking-docs/docs-backend/modules/06-audit-and-traceability.md]], [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]].
+FR-034–040/052–053, UC-012, AC-018–024/029. Contract 07 §8.6 và [[06-audit-and-traceability]], [[digitalbanking-docs/docs-common/design/01. audit-traceability.md]].
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-PAGE-01 — Filter và phân trang]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-SEC-03 — Dữ liệu nhạy cảm và browser storage]].
 

@@ -1,0 +1,1513 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.error.ErrorHttpTest" tests="14" skipped="0" failures="14" errors="0" timestamp="2026-11-12T07:13:49.764Z" hostname="phuong-ASUS-TUF" time="1.037">
+  <properties/>
+  <testcase name="mvcAuthenticationAuthorizationAndUnexpectedFailuresAreSafe(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.748">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;401&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;401&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.mvcAuthenticationAuthorizationAndUnexpectedFailuresAreSafe(ErrorHttpTest.java:91)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="frameworkFailuresHaveTheContractFormat(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.012">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;400&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;400&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.frameworkFailuresHaveTheContractFormat(ErrorHttpTest.java:69)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[1] sqlState=55P03, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.025">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[2] sqlState=40P01, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.009">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[3] sqlState=40001, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.01">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[4] sqlState=57014, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.01">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[5] sqlState=08006, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.01">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[6] sqlState=08007, code=SERVICE_UNAVAILABLE, http=503" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.008">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;503&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[7] sqlState=23505, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.009">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[8] sqlState=23514, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.008">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="[9] sqlState=XX000, code=INTERNAL_ERROR, http=500" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.009">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;500&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.databaseSqlStateMappingDoesNotInferBusinessRules(ErrorHttpTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="successIsNotWrapped()" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.008">
+    <failure message="java.lang.AssertionError: Status expected:&lt;200&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Status expected:&lt;200&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:640)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.successIsNotWrapped(ErrorHttpTest.java:63)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="filterAndSecurityEntryPointsUseSharedWriter(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.093">
+    <failure message="java.lang.AssertionError: &#10;Expecting actual:&#10;  &quot;&#10;  .   ____          _            __ _ _&#10; /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \&#10;( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \&#10; \\/  ___)| |_)| | | | | || (_| |  ) ) ) )&#10;  '  |____| .__|_| |_|_| |_\__, | / / / /&#10; =========|_|==============|___/=/_/_/_/&#10;&#10; :: Spring Boot ::                (v3.5.7)&#10;&#10;2026-11-12T14:13:48.629+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Starting ErrorHttpTest using Java 21.0.13.0.3 with PID 63166 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)&#10;2026-11-12T14:13:48.631+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : No active profile set, falling back to 1 default profile: &quot;local&quot;&#10;2026-11-12T14:13:49.301+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : &#10;&#10;Using generated security password: [REDACTED] generated password is for development use only. Your security configuration must be updated before running your application in production.&#10;&#10;2026-11-12T14:13:49.309+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager&#10;2026-11-12T14:13:49.729+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''&#10;2026-11-12T14:13:49.730+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''&#10;2026-11-12T14:13:49.731+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms&#10;2026-11-12T14:13:49.756+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Started ErrorHttpTest in 1.533 seconds (process running for 3.996)&#10;Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3&#10;WARNING: A Java agent has been loaded dynamically (/home/phuong/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.17.8/f09415827a71be7ed621c7bd02550678f28bc81c/byte-buddy-agent-1.17.8.jar)&#10;WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning&#10;WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information&#10;WARNING: Dynamic loading of agents will be disallowed by default in a future release&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/authentication&#10;       Parameters = {}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/authentication&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = POST&#10;      Request URI = /fixture/body&#10;       Parameters = {}&#10;          Headers = [Content-Type:&quot;application/json;charset=UTF-8&quot;, Content-Length:&quot;162&quot;]&#10;             Body = {&quot;secret&quot;:&quot;SYNTHETIC_PASSWORD_123 otp=812345 email=private@example.test account=123456789012 SQL=SELECT_secret schema=private constraint=uq_private provider=raw&quot;}&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/body&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[55P03]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[40P01]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[40001]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[57014]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[08006]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[08007]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[23505]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[23514]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/database&#10;       Parameters = {state=[XX000]}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;&#10;MockHttpServletRequest:&#10;      HTTP Method = GET&#10;      Request URI = /fixture/success&#10;       Parameters = {}&#10;          Headers = []&#10;             Body = null&#10;    Session Attrs = {}&#10;&#10;Handler:&#10;             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler&#10;&#10;Async:&#10;    Async started = false&#10;     Async result = null&#10;&#10;Resolved Exception:&#10;             Type = org.springframework.web.servlet.resource.NoResourceFoundException&#10;&#10;ModelAndView:&#10;        View name = null&#10;             View = null&#10;            Model = null&#10;&#10;FlashMap:&#10;       Attributes = null&#10;&#10;MockHttpServletResponse:&#10;           Status = 404&#10;    Error message = null&#10;          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]&#10;     Content type = application/problem+json&#10;             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/success&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}&#10;    Forwarded URL = null&#10;   Redirected URL = null&#10;          Cookies = []&#10;2026-11-12T14:13:50.701+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=REQUEST_TOO_LARGE status=413 correlationId=harness-trace&#10;2026-11-12T14:13:50.770+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=harness-trace&#10;2026-11-12T14:13:50.781+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=harness-trace&#10;&quot;&#10;not to contain:&#10;  [&quot;SYNTHETIC_PASSWORD_123&quot;,&#10;    &quot;812345&quot;,&#10;    &quot;private@example.test&quot;,&#10;    &quot;123456789012&quot;,&#10;    &quot;SELECT_secret&quot;,&#10;    &quot;uq_private&quot;,&#10;    &quot;schema=private&quot;,&#10;    &quot;provider=raw&quot;]&#10;but found:&#10;  [&quot;SYNTHETIC_PASSWORD_123&quot;,&#10;    &quot;812345&quot;,&#10;    &quot;private@example.test&quot;,&#10;    &quot;123456789012&quot;,&#10;    &quot;SELECT_secret&quot;,&#10;    &quot;uq_private&quot;,&#10;    &quot;schema=private&quot;,&#10;    &quot;provider=raw&quot;]&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 
+Expecting actual:
+  &quot;
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T14:13:48.629+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Starting ErrorHttpTest using Java 21.0.13.0.3 with PID 63166 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T14:13:48.631+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : No active profile set, falling back to 1 default profile: &quot;local&quot;
+2026-11-12T14:13:49.301+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T14:13:49.309+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T14:13:49.729+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-12T14:13:49.730+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-12T14:13:49.731+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-12T14:13:49.756+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Started ErrorHttpTest in 1.533 seconds (process running for 3.996)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (/home/phuong/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.17.8/f09415827a71be7ed621c7bd02550678f28bc81c/byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/authentication
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/authentication&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /fixture/body
+       Parameters = {}
+          Headers = [Content-Type:&quot;application/json;charset=UTF-8&quot;, Content-Length:&quot;162&quot;]
+             Body = {&quot;secret&quot;:&quot;SYNTHETIC_PASSWORD_123 otp=812345 email=private@example.test account=123456789012 SQL=SELECT_secret schema=private constraint=uq_private provider=raw&quot;}
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/body&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[55P03]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[40P01]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[40001]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[57014]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[08006]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[08007]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[23505]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[23514]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[XX000]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/database&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/success
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:&quot;Origin&quot;, &quot;Access-Control-Request-Method&quot;, &quot;Access-Control-Request-Headers&quot;, Content-Type:&quot;application/problem+json&quot;, X-Correlation-ID:&quot;harness-trace&quot;, X-Content-Type-Options:&quot;nosniff&quot;, X-XSS-Protection:&quot;0&quot;, Cache-Control:&quot;no-cache, no-store, max-age=0, must-revalidate&quot;, Pragma:&quot;no-cache&quot;, Expires:&quot;0&quot;, X-Frame-Options:&quot;DENY&quot;]
+     Content type = application/problem+json
+             Body = {&quot;type&quot;:&quot;https://api.demo.local/problems/not-found&quot;,&quot;title&quot;:&quot;Not found&quot;,&quot;status&quot;:404,&quot;detail&quot;:&quot;Không tìm thấy tài nguyên yêu cầu.&quot;,&quot;instance&quot;:&quot;/fixture/success&quot;,&quot;code&quot;:&quot;NOT_FOUND&quot;,&quot;correlationId&quot;:&quot;harness-trace&quot;,&quot;timestamp&quot;:&quot;2026-11-12T07:00:00Z&quot;,&quot;retryable&quot;:false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.701+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=REQUEST_TOO_LARGE status=413 correlationId=harness-trace
+2026-11-12T14:13:50.770+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=harness-trace
+2026-11-12T14:13:50.781+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=harness-trace
+&quot;
+not to contain:
+  [&quot;SYNTHETIC_PASSWORD_123&quot;,
+    &quot;812345&quot;,
+    &quot;private@example.test&quot;,
+    &quot;123456789012&quot;,
+    &quot;SELECT_secret&quot;,
+    &quot;uq_private&quot;,
+    &quot;schema=private&quot;,
+    &quot;provider=raw&quot;]
+but found:
+  [&quot;SYNTHETIC_PASSWORD_123&quot;,
+    &quot;812345&quot;,
+    &quot;private@example.test&quot;,
+    &quot;123456789012&quot;,
+    &quot;SELECT_secret&quot;,
+    &quot;uq_private&quot;,
+    &quot;schema=private&quot;,
+    &quot;provider=raw&quot;]
+
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.assertSafe(ErrorHttpTest.java:155)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.filterAndSecurityEntryPointsUseSharedWriter(ErrorHttpTest.java:105)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="ownerClassificationWinsOverSqlCause(CapturedOutput)" classname="com.simulatedbank.banking.common.error.ErrorHttpTest" time="0.009">
+    <failure message="java.lang.AssertionError: Response status expected:&lt;409&gt; but was:&lt;404&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Response status expected:&lt;409&gt; but was:&lt;404&gt;
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$is$1(StatusResultMatchers.java:65)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.check(ErrorHttpTest.java:140)
+	at com.simulatedbank.banking.common.error.ErrorHttpTest.ownerClassificationWinsOverSqlCause(ErrorHttpTest.java:122)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <system-out><![CDATA[14:13:48.145 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.error.ErrorHttpTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T14:13:48.629+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Starting ErrorHttpTest using Java 21.0.13.0.3 with PID 63166 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T14:13:48.631+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : No active profile set, falling back to 1 default profile: "local"
+2026-11-12T14:13:49.301+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T14:13:49.309+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T14:13:49.729+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-12T14:13:49.730+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-12T14:13:49.731+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-12T14:13:49.756+07:00  INFO 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ErrorHttpTest   : Started ErrorHttpTest in 1.533 seconds (process running for 3.996)
+2026-11-12T14:13:50.475+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/authentication
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/authentication","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.520+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /fixture/body
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"162"]
+             Body = {"secret":"SYNTHETIC_PASSWORD_123 otp=812345 email=private@example.test account=123456789012 SQL=SELECT_secret schema=private constraint=uq_private provider=raw"}
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/body","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.595+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[55P03]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.608+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[40P01]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.618+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[40001]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.631+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[57014]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.641+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[08006]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.652+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[08007]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.662+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[23505]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.673+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[23514]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.683+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/database
+       Parameters = {state=[XX000]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/database","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.692+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/success
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/success","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.701+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=REQUEST_TOO_LARGE status=413 correlationId=harness-trace
+2026-11-12T14:13:50.770+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=harness-trace
+2026-11-12T14:13:50.781+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_FORBIDDEN status=403 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /harness/filter
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 413
+    Error message = null
+          Headers = [Content-Type:"application/problem+json;charset=UTF-8", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json;charset=UTF-8
+             Body = {"type":"https://api.demo.local/problems/request-too-large","title":"Request too large","status":413,"detail":"Không thể thực hiện yêu cầu. Vui lòng kiểm tra mã lỗi và điều kiện thử lại.","instance":"/harness/filter","code":"REQUEST_TOO_LARGE","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /harness/private
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_SAVED_REQUEST=DefaultSavedRequest [http://localhost/harness/private?continue]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 401
+    Error message = null
+          Headers = [Content-Type:"application/problem+json;charset=UTF-8", X-Correlation-ID:"harness-trace", WWW-Authenticate:"Bearer realm="digital-banking"", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json;charset=UTF-8
+             Body = {"type":"https://api.demo.local/problems/auth-session-expired","title":"Auth session expired","status":401,"detail":"Phiên đăng nhập không hợp lệ hoặc đã hết hạn.","instance":"/harness/private","code":"AUTH_SESSION_EXPIRED","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":true}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /harness/admin
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=synthetic, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_CUSTOMER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_CUSTOMER]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = null
+          Headers = [Content-Type:"application/problem+json;charset=UTF-8", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json;charset=UTF-8
+             Body = {"type":"https://api.demo.local/problems/auth-forbidden","title":"Auth forbidden","status":403,"detail":"Bạn không có quyền thực hiện yêu cầu này.","instance":"/harness/admin","code":"AUTH_FORBIDDEN","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2026-11-12T14:13:50.796+07:00  WARN 63166 --- [digital-banking-backend] [    Test worker] c.s.banking.common.error.ProblemWriter   : HTTP failure code=NOT_FOUND status=404 correlationId=harness-trace
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /fixture/owner
+       Parameters = {code=[IDEMPOTENCY_IN_PROGRESS]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/problem+json", X-Correlation-ID:"harness-trace", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/problem+json
+             Body = {"type":"https://api.demo.local/problems/not-found","title":"Not found","status":404,"detail":"Không tìm thấy tài nguyên yêu cầu.","instance":"/fixture/owner","code":"NOT_FOUND","correlationId":"harness-trace","timestamp":"2026-11-12T07:00:00Z","retryable":false}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (/home/phuong/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.17.8/f09415827a71be7ed621c7bd02550678f28bc81c/byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

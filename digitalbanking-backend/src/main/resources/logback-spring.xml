@@ -1,0 +1,11 @@
+<configuration>
+    <springProperty name="service" source="spring.application.name" defaultValue="digital-banking-backend"/>
+    <springProperty name="environment" source="logging.environment" defaultValue="local"/>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="com.simulatedbank.banking.common.config.SafeJsonLogEncoder">
+            <service>${service}</service>
+            <environment>${environment}</environment>
+        </encoder>
+    </appender>
+    <root level="INFO"><appender-ref ref="STDOUT"/></root>
+</configuration>

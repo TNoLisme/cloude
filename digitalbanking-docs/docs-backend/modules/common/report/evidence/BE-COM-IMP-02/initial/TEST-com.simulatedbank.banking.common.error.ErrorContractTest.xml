@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.error.ErrorContractTest" tests="3" skipped="0" failures="2" errors="0" timestamp="2026-11-12T07:13:47.413Z" hostname="phuong-ASUS-TUF" time="0.471">
+  <properties/>
+  <testcase name="validationAndContextualExtensionsAreFlattenedWithoutChangingCore()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.22">
+    <failure message="org.opentest4j.AssertionFailedError: &#10;expected: &quot;2026-11-12T07:00:00Z&quot;&#10; but was: &quot;1.7944668E+9&quot;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: 
+expected: &quot;2026-11-12T07:00:00Z&quot;
+ but was: &quot;1.7944668E+9&quot;
+	at app//com.simulatedbank.banking.common.error.ErrorContractTest.validationAndContextualExtensionsAreFlattenedWithoutChangingCore(ErrorContractTest.java:91)
+	at java.base@21.0.13.0.3/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base@21.0.13.0.3/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base@21.0.13.0.3/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="entireCatalogMatchesSemanticSourceAndOpenApi()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.199">
+    <failure message="org.opentest4j.AssertionFailedError: &#10;expected: &quot;2026-11-12T07:00:00Z&quot;&#10; but was: &quot;1.7944668E+9&quot;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: 
+expected: &quot;2026-11-12T07:00:00Z&quot;
+ but was: &quot;1.7944668E+9&quot;
+	at app//com.simulatedbank.banking.common.error.ErrorContractTest.entireCatalogMatchesSemanticSourceAndOpenApi(ErrorContractTest.java:68)
+	at java.base@21.0.13.0.3/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base@21.0.13.0.3/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base@21.0.13.0.3/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="servletWriterWorksWithoutMvcAndDoesNotRewriteCommittedResponse()" classname="com.simulatedbank.banking.common.error.ErrorContractTest" time="0.05"/>
+  <system-out><![CDATA[14:13:47.876 [Test worker] WARN com.simulatedbank.banking.common.error.ProblemWriter -- HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=61072494-aa96-4316-bf77-f4d4b18cc14d
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

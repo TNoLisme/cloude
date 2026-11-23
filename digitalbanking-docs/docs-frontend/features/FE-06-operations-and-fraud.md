@@ -17,7 +17,7 @@ Staff đọc customer/account và giao dịch trong scope, xem fraud flags và g
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-039–040/044–049, UC-010, AC-023–024/026–027. Contract 07 §8.2/8.7, [[digitalbanking-docs/docs-backend/modules/03-customer-and-account.md]], [[digitalbanking-docs/docs-backend/modules/07-fraud-and-notification.md]] và [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]].
+FR-039–040/044–049, UC-010, AC-023–024/026–027. Contract 07 §8.2/8.7, [[03-customer-and-account]], [[07-fraud-and-notification]] và [[digitalbanking-docs/docs-common/design/03. fraud-detection-rules.md]].
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-PAGE-01 — Filter và phân trang]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-02 — CSRF và quyền]].
 

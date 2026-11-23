@@ -1,0 +1,17 @@
+groups:
+  - name: notification-delivery
+    rules:
+      - alert: OtpGenerationInvalidationFailed
+        expr: sum(increase(auth_otp_invalidation_failed_total[15m])) > 0
+        labels:
+          severity: warning
+          component: identity
+        annotations:
+          summary: "OTP dispatch failed and generation invalidation was not confirmed"
+      - alert: TransferNotificationDeliveryExhausted
+        expr: sum(increase(banking_notification_outbox_terminal_failure_total[15m])) > 0
+        labels:
+          severity: warning
+          component: notification
+        annotations:
+          summary: "Transfer notification delivery exhausted its retry budget"

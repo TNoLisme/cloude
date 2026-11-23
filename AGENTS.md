@@ -10,3 +10,7 @@
 6. Sau mỗi thay đổi cập nhật design/feature/guide liên quan, phiếu evidence và tracker. Ghi đúng lệnh/kết quả thực tế, commit nền và trạng thái working tree; không tạo bằng chứng, screenshot hay phê duyệt giả.
 7. UI/mock đạt và chờ người dùng duyệt là mốc riêng của task con. Task cha chỉ Hoàn thành theo FE-TEST-03; phần integration còn mở cho tới khi API thật và browser critical flow được kiểm chứng, docs/review/checks đạt.
 8. Tích hợp BE theo từng phần FE đã được người dùng duyệt. Trước tích hợp đối chiếu readiness và contract; trước merge ghi kết quả kiểm tra và có xác nhận cho mốc merge cụ thể. Không tự merge/push/đánh dấu nghiệm thu toàn bộ khi chỉ chạy mock.
+## Quy tắc module và backend
+
+- Đọc các tài liệu cần thiết trong digitalbanking-docs lấy đủ context trước khi thực hiện bất kì các task nào, không thực hiện khi mơ hồ. Nếu chưa rõ phải hỏi người điều hành ngay và ghi lại quyết định vào DECISIONS.md.
+- Cách các module giao tiếp với nhau ở trong digitalbanking-docs/docs-common/design/05. Modules contract. Nếu khi có dependency mà chưa có trong tài liệu, hãy nêu phương án thay thế sau đó ghi phương án vào lại 05. Modules contract. Khi thực hiện kiểm thử, nếu module phụ thuộc chưa có thì hãy mock test theo tài liệu giao tiếp.

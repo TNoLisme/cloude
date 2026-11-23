@@ -1,0 +1,156 @@
+{
+  "base_revision": "8109504",
+  "branch": "phuong/integration",
+  "cwd": "digitalbanking-backend",
+  "environment": {
+    "java": "OpenJDK 21.0.13.0.3",
+    "gradle": "8.14.3",
+    "docker": "29.8.0",
+    "postgres_image": "postgres:16-alpine",
+    "max_workers": 1,
+    "performance_tag_excluded": true,
+    "postgres_image_id": "sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139"
+  },
+  "runs": [
+    {
+      "id": "baseline",
+      "command": [
+        "./gradlew",
+        "build",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1"
+      ],
+      "source": "HEAD 8109504 compiled before BE-INT-02 edits",
+      "status": "INTERRUPTED",
+      "exit_code": 143
+    },
+    {
+      "id": "targeted-1",
+      "command": [
+        "./gradlew",
+        "test",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1",
+        "--tests",
+        "com.simulatedbank.banking.admin.LimitAdminHttpIT",
+        "--tests",
+        "com.simulatedbank.banking.admin.LimitAdminMissingProviderIT",
+        "--tests",
+        "com.simulatedbank.banking.migration.*",
+        "--tests",
+        "com.simulatedbank.banking.common.config.HttpSecurity*",
+        "--tests",
+        "com.simulatedbank.banking.common.context.ContextServletTest",
+        "--tests",
+        "com.simulatedbank.banking.common.crypto.CryptoOperationsTest",
+        "--tests",
+        "com.simulatedbank.banking.health.HealthEndpointTest"
+      ],
+      "status": "FAILED",
+      "exit_code": 1,
+      "tests": 116,
+      "failures": 18,
+      "source": "intermediate V18 before immutable ORM/Primary fixture fix"
+    },
+    {
+      "id": "targeted-2",
+      "command": [
+        "./gradlew",
+        "test",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1",
+        "--tests",
+        "com.simulatedbank.banking.admin.LimitAdminHttpIT",
+        "--tests",
+        "com.simulatedbank.banking.admin.LimitAdminMissingProviderIT"
+      ],
+      "source_manifest": "targeted-2-source-manifest.sha256",
+      "status": "PASSED",
+      "exit_code": 0,
+      "tests": 29,
+      "failures": 0
+    },
+    {
+      "id": "full-1",
+      "command": [
+        "./gradlew",
+        "clean",
+        "build",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1"
+      ],
+      "source_manifest": "full-1-source-manifest.sha256",
+      "status": "FAILED",
+      "exit_code": 1,
+      "classes": 202,
+      "tests": 2283,
+      "failures": 43,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "14m22s"
+    },
+    {
+      "id": "targeted-3",
+      "command": [
+        "./gradlew",
+        "test",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1",
+        "--tests",
+        "com.simulatedbank.banking.limit.LimitCustomerMissingProviderIT",
+        "--tests",
+        "com.simulatedbank.banking.limit.LimitPersistenceIT",
+        "--tests",
+        "com.simulatedbank.banking.limit.LimitRulesIT",
+        "--tests",
+        "com.simulatedbank.banking.notification.adapter.out.persistence.NotificationJpaRepositoryIT",
+        "--tests",
+        "com.simulatedbank.banking.notification.application.NotificationTransactionalOutboxIT",
+        "--tests",
+        "com.simulatedbank.banking.transfer.adapter.inbound.Transfer*Test",
+        "--tests",
+        "com.simulatedbank.banking.migration.*"
+      ],
+      "source_manifest": "targeted-3-source-manifest.sha256",
+      "status": "PASSED",
+      "exit_code": 0,
+      "classes": 18,
+      "tests": 166,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "1m27s"
+    },
+    {
+      "id": "full-final",
+      "command": [
+        "./gradlew",
+        "clean",
+        "build",
+        "--offline",
+        "--no-daemon",
+        "--max-workers=1"
+      ],
+      "source_manifest": "source-manifest.sha256",
+      "status": "PASSED",
+      "exit_code": 0,
+      "classes": 202,
+      "tests": 2285,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "13m56s",
+      "artifacts": [
+        "final-build.log",
+        "final-results.tar.gz",
+        "final-summary.json",
+        "packaged-artifact.json"
+      ]
+    }
+  ]
+}

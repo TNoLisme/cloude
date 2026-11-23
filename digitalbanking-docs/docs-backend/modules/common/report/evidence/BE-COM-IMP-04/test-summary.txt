@@ -1,0 +1,17 @@
+TEST-com.simulatedbank.banking.BackendApplicationContextTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.architecture.ModuleBoundaryArchTest.xml: tests=4, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.config.AppPropertiesTest.xml: tests=20, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.context.ContextHttpTest.xml: tests=3, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.context.ContextServletTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.context.RequestContextTest.xml: tests=19, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.crypto.CryptoConfigTest.xml: tests=15, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.crypto.CryptoOperationsTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.crypto.CryptoPrimitivesTest.xml: tests=6, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.crypto.JcsCanonicalizerTest.xml: tests=44, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest.xml: tests=15, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.error.ErrorContractTest.xml: tests=4, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.common.error.ErrorHttpTest.xml: tests=14, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.health.HealthEndpointTest.xml: tests=2, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.migration.FlywayMigrationTest.xml: tests=1, failures=0, errors=0, skipped=0
+TEST-com.simulatedbank.banking.migration.PostgreSqlFlywayMigrationIntegrationTest.xml: tests=1, failures=0, errors=0, skipped=0
+TOTAL: tests=151, failures=0, errors=0, skipped=0

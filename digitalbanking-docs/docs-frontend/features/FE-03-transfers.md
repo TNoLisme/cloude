@@ -17,7 +17,7 @@ Customer chuyển giữa tài khoản cùng chủ hoặc đến tài khoản kh�
 
 Yêu cầu tại [[digitalbanking-docs/docs-common/03. SRS.md]], API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-FR-013–026/034/038/041/043–046, UC-005–008/014–015, AC-006–014/018/022/025–026/033–034. Contract 07 §5/6/8.3 và [[digitalbanking-docs/docs-backend/modules/04-transfer-and-ledger.md]].
+FR-013–026/034/038/041/043–046, UC-005–008/014–015, AC-006–014/018/022/025–026/033–034. Contract 07 §5/6/8.3 và [[04-transfer-and-ledger]].
 
 [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-IDEM-01 — Transfer intent]], [[digitalbanking-docs/docs-frontend/standards/04-auth-and-security.md#FE-AUTH-03 — Challenge và step-up dùng chung]], [[digitalbanking-docs/docs-frontend/standards/03-api-and-data.md#API-DATA-01 — Kiểu dữ liệu và định dạng]].
 

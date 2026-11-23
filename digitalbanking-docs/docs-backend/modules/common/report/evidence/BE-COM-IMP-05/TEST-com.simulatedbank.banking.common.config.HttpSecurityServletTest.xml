@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.config.HttpSecurityServletTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-12T11:12:44.581Z" hostname="phuong-ASUS-TUF" time="0.272">
+  <properties/>
+  <testcase name="realChunkedBodiesRespect65536ByteBoundaryWithoutContentLength()" classname="com.simulatedbank.banking.common.config.HttpSecurityServletTest" time="0.243"/>
+  <testcase name="noIdentityAdapterFailsClosedAndSecurityFiltersAreNotDoubleRegistered()" classname="com.simulatedbank.banking.common.config.HttpSecurityServletTest" time="0.028"/>
+  <system-out><![CDATA[2026-11-12T18:12:43.364+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.simulatedbank.banking.common.config.HttpSecurityServletTest]: HttpSecurityServletTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-12T18:12:43.382+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.simulatedbank.banking.BackendApplication for test class com.simulatedbank.banking.common.config.HttpSecurityServletTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2026-11-12T18:12:43.412+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] c.s.b.c.config.HttpSecurityServletTest   : Starting HttpSecurityServletTest using Java 21.0.13.0.3 with PID 224761 (started by phuong in /home/phuong/workspace/cloude/digitalbanking-backend)
+2026-11-12T18:12:43.412+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] c.s.b.c.config.HttpSecurityServletTest   : The following 1 profile is active: "test"
+2026-11-12T18:12:43.874+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2026-11-12T18:12:43.897+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-11-12T18:12:43.898+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-11-12T18:12:43.979+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-11-12T18:12:43.980+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 566 ms
+2026-11-12T18:12:44.086+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.boot.web.servlet.RegistrationBean    : Filter corsServletRegistration was not registered (disabled)
+2026-11-12T18:12:44.256+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-11-12T18:12:44.275+07:00  WARN 224761 --- [digital-banking-backend] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: [REDACTED]
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-11-12T18:12:44.277+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-11-12T18:12:44.572+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 44257 (http) with context path '/'
+2026-11-12T18:12:44.576+07:00  INFO 224761 --- [digital-banking-backend] [    Test worker] c.s.b.c.config.HttpSecurityServletTest   : Started HttpSecurityServletTest in 1.19 seconds (process running for 9.394)
+2026-11-12T18:12:44.711+07:00  INFO 224761 --- [digital-banking-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-11-12T18:12:44.711+07:00  INFO 224761 --- [digital-banking-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-11-12T18:12:44.712+07:00  INFO 224761 --- [digital-banking-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-11-12T18:12:44.817+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-1-exec-2] c.s.banking.common.error.ProblemWriter   : HTTP failure code=REQUEST_TOO_LARGE status=413 correlationId=chunked:boundary
+2026-11-12T18:12:44.841+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-1-exec-3] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=native:security
+2026-11-12T18:12:44.848+07:00  WARN 224761 --- [digital-banking-backend] [o-auto-1-exec-4] c.s.banking.common.error.ProblemWriter   : HTTP failure code=AUTH_SESSION_EXPIRED status=401 correlationId=native:security
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

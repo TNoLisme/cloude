@@ -1,0 +1,20 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 0
+  flyway:
+    clean-disabled: false
+
+app:
+  transfer:
+    enabled: false
+  crypto:
+    aes-key-base64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    hmac-key-base64: MTEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+
+logging:
+  environment: test

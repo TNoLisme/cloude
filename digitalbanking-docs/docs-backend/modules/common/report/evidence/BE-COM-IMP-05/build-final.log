@@ -1,0 +1,28 @@
+> Task :clean
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+> Task :bootJar
+> Task :jar
+> Task :assemble
+> Task :compileTestJava
+> Task :processTestResources
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+2026-11-12T18:13:11.312+07:00  INFO 224761 --- [digital-banking-backend] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-11-12T18:13:11.314+07:00  INFO 224761 --- [digital-banking-backend] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-11-12T18:13:11.436+07:00  INFO 224761 --- [digital-banking-backend] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-11-12T18:13:11.437+07:00  INFO 224761 --- [digital-banking-backend] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-11-12T18:13:11.445+07:00  INFO 224761 --- [digital-banking-backend] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-11-12T18:13:11.446+07:00  INFO 224761 --- [digital-banking-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Shutdown initiated...
+2026-11-12T18:13:11.448+07:00  INFO 224761 --- [digital-banking-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : BankingHikariPool - Shutdown completed.
+
+> Task :jacocoTestReport
+> Task :check
+> Task :build
+
+BUILD SUCCESSFUL in 41s
+10 actionable tasks: 10 executed

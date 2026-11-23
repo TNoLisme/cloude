@@ -1,119 +1,45 @@
-# Work Documentation
+# Work Documentation (`docs-common/work/`)
 
-> **Dự án:** Digital Banking MVP
-> **Phạm vi:** Kế hoạch, kết quả và bằng chứng công việc theo tuần
-> **Trạng thái thư mục:** Đang viết
-> **Cập nhật:** 03/11/2026
+> **Dự án:** Digital Banking MVP — Single-Bank, Core Simulated
+> **Mã tài liệu:** `DOC-WORK-INDEX`
+> **Phiên bản:** 1.0
+> **Phạm vi:** Kế hoạch, kết quả và bàn giao công việc giai đoạn phân tích & thiết kế chung (Tuần 1 – Tuần 2)
+> **Cập nhật:** 18/11/2026
+> **Trạng thái:** Hoàn thành
 
 ## 1. Mục đích
 
-`work/` dùng để theo dõi **cách dự án được thực thi**: mục tiêu từng tuần, đầu việc, người phụ trách, kết quả bàn giao và bằng chứng kiểm chứng.
-
-Thư mục này **không** thay thế các tài liệu đặc tả:
-
+Thư mục `work/` lưu trữ nhật ký thực thi của giai đoạn xây dựng nền tảng yêu cầu và thiết kế hệ thống chung (Tuần 1 và Tuần 2 theo `10 Master timelines.md`). Các kết quả đặc tả chính thức đã được xuất bản tại:
 - Yêu cầu và hành vi hệ thống: `docs-common/01–03`.
-- Thiết kế kỹ thuật: `docs-common/design/`.
-- Hợp đồng API: `docs-common/07` và `openapi/`.
+- Cơ sở dữ liệu, công nghệ, kiến trúc, API, hạ tầng, kiểm thử: `docs-common/04–11` và `openapi/`.
+- Thiết kế kỹ thuật chuyên sâu và hợp đồng giao tiếp 11 module: `docs-common/design/01–05`.
+- Tài liệu hiện thực từng module Backend: `docs-backend/modules/`.
 
-## 2. Cấu trúc
+## 2. Cấu trúc thư mục
 
 ```text
 work/
-├── README.md          # Hướng dẫn này
+├── README.md          # Chỉ mục và hướng dẫn theo dõi công việc
 ├── week1/
-│   └── README.md      # Tổng hợp tuần 1
-├── week2/
-│   └── README.md      # Tổng hợp tuần 2
-└── weekN/
-    └── README.md      # Bổ sung khi có tuần mới
+│   └── README.md      # Tổng hợp kế hoạch và kết quả bàn giao Tuần 1
+└── week2/
+    └── README.md      # Tổng hợp kế hoạch và kết quả bàn giao Tuần 2
 ```
 
-Mỗi thư mục tuần có thể chứa:
+## 3. Trạng thái tổng hợp
 
-- `README.md` — mục tiêu, kế hoạch, kết quả, vấn đề, bàn giao.
-- `plan.md` — kế hoạch chi tiết (nếu cần).
-- `review.md` — biên bản review/retrospective (nếu cần).
-- `evidence/` — log, ảnh chụp, báo cáo test, liên kết bằng chứng.
-
-## 3. Trạng thái
-
-| Tuần | Nội dung | Trạng thái |
+| Tuần | Phạm vi trọng tâm | Trạng thái |
 |---|---|---|
-| [[digitalbanking-docs/docs-common/work/week1/README.md]] | Kế hoạch và kết quả tuần 1 | Đang viết |
-| [[digitalbanking-docs/docs-common/work/week2/README.md]] | Kế hoạch và kết quả tuần 2 | Đang viết |
+| [[digitalbanking-docs/docs-common/work/week1/README.md]] | Phân tích yêu cầu (`01–03`), thiết kế CSDL (`04`), ngăn xếp công nghệ (`05`) và kiến trúc hệ thống (`06`) | Hoàn thành — v1.0 |
+| [[digitalbanking-docs/docs-common/work/week2/README.md]] | Hợp đồng API (`07`, `OpenAPI`), thiết kế chuyên sâu (`design/01–05`), hạ tầng (`08`), kế hoạch kiểm thử (`09`) và khởi tạo khung dự án | Hoàn thành — v1.0 |
 
-> Các tuần tiếp theo sẽ được thêm khi có kế hoạch thực thi. Tuần chưa có nội dung phải giữ trạng thái **Đang viết**.
-
-## 4. Mẫu README cho một tuần
-
-```markdown
-# Week N
-
-> **Dự án:** Digital Banking MVP
-> **Tuần:** N
-> **Thời gian:** dd/mm/yyyy – dd/mm/yyyy
-> **Owner:** ...
-> **Trạng thái:** Đang viết | Hoàn thành
-
-## 1. Mục tiêu tuần
-
-- ...
-
-## 2. Phạm vi
-
-- Trong phạm vi: ...
-- Ngoài phạm vi: ...
-
-## 3. Kế hoạch và kết quả
-
-| Đầu việc | Owner | Trạng thái | Deliverable | Bằng chứng |
-|---|---|---|---|---|
-| ... | ... | ... | ... | ... |
-
-## 4. Vấn đề và quyết định
-
-| Vấn đề | Ảnh hưởng | Quyết định | Owner |
-|---|---|---|---|
-| ... | ... | ... | ... |
-
-## 5. Bàn giao
-
-- Tài liệu đã cập nhật: ...
-- Thay đổi API/DB: ...
-- Việc cần theo dõi ở tuần sau: ...
-
-## 6. Liên kết
-
-- Yêu cầu: ...
-- Thiết kế: ...
-- Bằng chứng: ...
-```
-
-## 5. Quy tắc cập nhật
-
-1. **Cập nhật theo tuần:** mỗi tuần có một thư mục riêng; không ghi lẫn kế hoạch tuần này vào tuần khác.
-2. **Liên kết thay vì sao chép:** trỏ tới `BR/FR/NFR/AC`, thiết kế và tài liệu kỹ thuật thay vì chép lại nội dung.
-3. **Trạng thái rõ ràng:** dùng `Đang viết`, `Hoàn thành`, hoặc trạng thái đầu việc (`Todo`, `Doing`, `Done`, `Blocked`).
-4. **Bằng chứng cụ thể:** mỗi đầu việc hoàn thành phải có bằng chứng (test report, log, ảnh, commit/PR, biên bản review).
-5. **Không dùng làm đặc tả:** nếu phát sinh nội dung kỹ thuật mới, cập nhật tài liệu chính thức hoặc `design/` rồi liên kết lại.
-6. **Cập nhật README:** khi thêm tuần mới hoặc đổi trạng thái, cập nhật bảng trong README này và README gốc.
-
-## 6. Quan hệ với tài liệu khác
+## 4. Liên kết tham chiếu
 
 | Tài liệu | Vai trò |
 |---|---|
-| [[digitalbanking-docs/docs-common/01. Introduction.md]] | Mục tiêu, phạm vi và stakeholder |
-| [[digitalbanking-docs/docs-common/02. BRD.md]] | Yêu cầu nghiệp vụ và tiêu chí thành công |
-| [[digitalbanking-docs/docs-common/03. SRS.md]] | Hành vi hệ thống và acceptance criteria |
-| [[digitalbanking-docs/docs-common/design/README.md]] | Thiết kế kỹ thuật chuyên sâu |
-| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Chiến lược và bằng chứng kiểm thử (Draft — chờ review) |
-| [[digitalbanking-docs/docs-common/10. Master timelines.md]] | Kế hoạch tổng thể và milestone (đang viết) |
-
-## 7. Liên kết nhanh
-
-| Mục đích | Tài liệu |
-|---|---|
-| Tuần 1 | [[digitalbanking-docs/docs-common/work/week1/README.md]] |
-| Tuần 2 | [[digitalbanking-docs/docs-common/work/week2/README.md]] |
-| README docs-common | [[digitalbanking-docs/docs-common/README.md]] |
-| README gốc | [[digitalbanking-docs/README.md]] |
+| [[digitalbanking-docs/docs-common/01. Introduction.md]] | Tổng quan, mục tiêu, phạm vi và quy ước định danh |
+| [[digitalbanking-docs/docs-common/02. BRD.md]] | Yêu cầu nghiệp vụ và quy tắc kinh doanh |
+| [[digitalbanking-docs/docs-common/03. SRS.md]] | Đặc tả yêu cầu hệ thống và tiêu chí nghiệm thu (`AC`) |
+| [[digitalbanking-docs/docs-common/design/README.md]] | Thiết kế kỹ thuật chuyên sâu (`01–05`) |
+| [[digitalbanking-docs/docs-common/09. Test plan.md]] | Kế hoạch kiểm thử và nghiệm thu `D1–D5` |
+| [[digitalbanking-docs/docs-common/10 Master timelines.md]] | Lộ trình tổng thể 8 tuần và phân công WBS |

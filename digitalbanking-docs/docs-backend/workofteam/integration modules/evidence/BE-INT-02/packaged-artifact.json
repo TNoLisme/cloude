@@ -1,0 +1,26 @@
+{
+  "jar": "digitalbanking-backend/build/libs/digitalbanking-backend-0.1.0-SNAPSHOT.jar",
+  "sha256": "48090b7f1cb2c6a970b25339bc23cb577a0f3386834d86e5ef0b5b95108f01d2",
+  "runtime_migrations": [
+    "BOOT-INF/classes/db/migration/V10__create_audit_log_table.sql",
+    "BOOT-INF/classes/db/migration/V11__create_admin_approval_attempt_table.sql",
+    "BOOT-INF/classes/db/migration/V12__create_limit_usage_and_runtime_grants.sql",
+    "BOOT-INF/classes/db/migration/V13__create_transfer_and_idempotency.sql",
+    "BOOT-INF/classes/db/migration/V14__create_ledger_entry.sql",
+    "BOOT-INF/classes/db/migration/V15__create_fraud_tables.sql",
+    "BOOT-INF/classes/db/migration/V16__create_notification_table.sql",
+    "BOOT-INF/classes/db/migration/V17__bridge_audit_canonical_payload.sql",
+    "BOOT-INF/classes/db/migration/V18__restrict_approval_update_privileges.sql",
+    "BOOT-INF/classes/db/migration/V19__reject_non_finite_limit_amounts.sql",
+    "BOOT-INF/classes/db/migration/V1__init_schema.sql",
+    "BOOT-INF/classes/db/migration/V2__create_identity_and_rbac_tables.sql",
+    "BOOT-INF/classes/db/migration/V3__add_fido_verification_material.sql",
+    "BOOT-INF/classes/db/migration/V4__add_role_assignment_version.sql",
+    "BOOT-INF/classes/db/migration/V5__create_customer_table.sql",
+    "BOOT-INF/classes/db/migration/V6__create_approval_request_table.sql",
+    "BOOT-INF/classes/db/migration/V7__create_admin_idempotency_record_table.sql",
+    "BOOT-INF/classes/db/migration/V8__create_account_table.sql",
+    "BOOT-INF/classes/db/migration/V9__create_limit_config_table.sql"
+  ],
+  "migration_count": 19
+}

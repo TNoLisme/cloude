@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-12T07:49:07.653Z" hostname="phuong-ASUS-TUF" time="0.018">
+  <properties/>
+  <testcase name="sourceFormatsPreserveOnlyPermittedParts()" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.002"/>
+  <testcase name="missingValuesStayAbsent()" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.001"/>
+  <testcase name="[1] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a76420@bab1e09, input=" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.002"/>
+  <testcase name="[2] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a76660@31395406, input=12345" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.001"/>
+  <testcase name="[3] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a768a0@22fef4d4, input=abcd" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[4] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a76ae0@64ff46e1, input=123" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[5] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a76d20@5a7a034d, input=synthetic-phone" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[6] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a76f60@3600fd7f, input=0123&#10;" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.001"/>
+  <testcase name="[7] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a771a0@b5bf09a, input=invalid-email" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.001"/>
+  <testcase name="[8] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a773e0@21ba83e3, input=a@b@example.com" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[9] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a77620@7b522bb4, input=a@example.com&#10;secret" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[10] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a77860@1d0dccff, input=256.0.1.2" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[11] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a77aa0@165f7bfa, input=203.0.113.42&#10;" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.001"/>
+  <testcase name="[12] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a77ce0@62608bd6, input=203.0.113" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <testcase name="[13] mask=com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest$$Lambda/0x0000742f18a75800@249e6d57, input=example.com" classname="com.simulatedbank.banking.common.crypto.PiiMaskingUtilsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
