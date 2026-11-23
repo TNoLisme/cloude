@@ -15,6 +15,7 @@ Tài liệu này ghi mốc thực tế của nhánh tích hợp `codex/fe-be-v1-
 | 23/11/2026 | M0 ghép source và giải bốn conflict | merge `282de76`, parents `5a1f310`/`740ab5f` | Source đã ghép trên nhánh cách ly; FE typecheck/build và BE compile đạt; generated types v1 lệch sau merge, diff-check toàn bộ báo whitespace lịch sử; không API/browser. | [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-SOURCE/2026-11-22-5a1f310/run-01.md]] |
 | 23/11/2026 | M1 lát schema/fixture độc lập | `371ea10`, BE `740ab5f`, v1.1.0 | Generated types v1 đồng bộ, tách fixture v1/v2; 195 tests, typecheck/lint/build/API check đạt. Auth v1 mock 200 cũ bỏ; client/session BE thật chưa nối. | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1/2026-11-23-282de76/run-01.md]] |
 | 23/11/2026 | Push nhánh tích hợp | `origin/codex/fe-be-v1-integration@371ea100ead82ed6422494874912e8d7fa4524aa` | `git push -u origin codex/fe-be-v1-integration` exit 0; `git ls-remote` xác nhận SHA. Không tạo PR hay merge main. | [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-TRACKING/2026-11-23-371ea10/run-01.md]] |
+| 23/11/2026 | M1 adapter GET customer/account độc lập | Nền `9832fa7`, BE `740ab5f`, v1.1.0 | Unit/schema; chưa nối UI/session/API thật, GAP-05 giữ mở. | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-READ/2026-11-23-9832fa7/run-01.md]] |
 
 ## Mẫu dòng cho task tiếp theo
 

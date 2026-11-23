@@ -1,5 +1,7 @@
 # FE-02 — Khách hàng và tài khoản
 
+> 23/11/2026: có adapter GET v1 độc lập cho profile, account list/detail theo YAML v1.1.0, kiểm fixture và owner chỉ `customerId/status`. Adapter chưa nối UI/session hoặc gọi BE thật; GAP-05/ownership API test còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-READ/2026-11-23-9832fa7/run-01.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-02 |

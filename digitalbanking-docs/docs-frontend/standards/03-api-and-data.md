@@ -14,6 +14,8 @@ Nguồn là [[digitalbanking-docs/docs-common/07. API contracts.md]], [[digitalb
 
 Ngày 23/11/2026 generated v1 được sinh từ OpenAPI 1.1.0 của dev2: `AccountDetail.owner` là `AccountOwner` gồm customerId/status, không có fullName; Admin proposal/decision cần Idempotency-Key và transfer terminal replay giữ 201/422. V2 mock là snapshot riêng, không chứng minh BE v2. Điều phối session v1/API thật và mutation vẫn chờ GAP-05/08 cùng kiểm chứng. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1/2026-11-23-282de76/run-01.md]].
 
+Adapter read-only v1 cho `getMyProfile`, `listAccounts`, `getAccount` có schema check và chỉ chấp nhận base `/api/v1`; hiện chưa được gắn session/UI. Nó không chứng minh quyền server hay cookie/CSRF, những phần đó vẫn chờ GAP-05 và API/browser thật. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-READ/2026-11-23-9832fa7/run-01.md]].
+
 ## API-CLIENT-01 — Transport tập trung
 
 shared/api sở hữu base URL, credentials include, header CSRF/correlation, timeout, JSON/Problem Details, xử lý 204 và download stream. Feature gọi function theo operationId. Sinh types từ YAML hiện hành bằng công cụ được chốt tại ADR-001, file generated có quy trình regeneration/check trong CI.
