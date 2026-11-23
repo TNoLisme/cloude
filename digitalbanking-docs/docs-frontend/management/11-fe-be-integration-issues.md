@@ -14,6 +14,8 @@
 | INT-08 / UI review | Các màn mock mới chưa được duyệt thiết kế cuối; user muốn chốt sau khi hoàn thành demo. | M2–M6; người phụ trách FE | Mở: duyệt UI từng phần trước nối theo roadmap; ghi người/ngày/nguồn. |
 | INT-09 / GAP-01/04/10 | Legacy scope, enrollment FIDO/passcode và UI notification/retention chưa đủ contract; top-up ngoài MVP common. | FE auth/ops; BA + BE + Security/Audit | Mở theo [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]]; không tự thêm API/mutation. |
 
+Kiểm unit transport với examples YAML v1 cho 422/428/409 được ghi tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-TRANSPORT/2026-11-23-44c0a77/run-01.md]]; không đóng INT-04 hay GAP-08/09.
+
 ## Mẫu ghi vấn đề mới
 
 Ghi ID, task bị ảnh hưởng, bước tái lập và expected/actual, contract/FE/BE SHA, môi trường và bằng chứng, owner/câu hỏi, trạng thái, cách xử lý và test xác minh. Không ghi secret, token, OTP, raw idempotency key hoặc PII. Giữ lịch sử khi đóng; chỉ đóng sau quyết định đúng owner và kiểm chứng thực tế.

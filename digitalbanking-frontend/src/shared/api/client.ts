@@ -1,4 +1,4 @@
-import type { components } from "./generated/v2/openapi";
+import type { components } from "./generated/openapi";
 
 // Pick declared properties: OpenAPI's additionalProperties index signature
 // would otherwise erase named fields when using Omit<Problem, "code">.
