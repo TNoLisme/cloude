@@ -1,5 +1,7 @@
 # Kế hoạch ghép FE với backend v1 trên `dev2`
 
+> Cập nhật 23/11/2026: M0 source merge `282de76`, phần độc lập M1 `371ea10`, nhánh tích hợp đã push. Nhật ký thực tế và vấn đề còn mở tại [[digitalbanking-docs/docs-frontend/management/10-fe-be-integration-log.md]] và [[digitalbanking-docs/docs-frontend/management/11-fe-be-integration-issues.md]]. Không coi các mốc đó là nghiệm thu tích hợp API thật.
+
 | Mục | Giá trị |
 |---|---|
 | Quyết định FE | Người phụ trách FE chốt trong chat 22/11/2026: dùng bàn giao **v1 của BE** làm đích tích hợp/merge FE–BE. |

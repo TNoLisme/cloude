@@ -33,6 +33,7 @@ Bộ tài liệu mô tả phạm vi FE, thiết kế triển khai, công việc 
 | Rà soát GAP-01..12 trên main/dev2 ngày 21/11/2026 và câu hỏi cần owner chốt | [[digitalbanking-docs/docs-frontend/management/07-main-dev2-gap-review.md]] |
 | Bản trình chốt GAP hiện hành theo common/backend dev2 ngày 22/11/2026 | [[digitalbanking-docs/docs-frontend/management/08-common-dev2-gap-final-review.md]] |
 | Kế hoạch ghép FE với BE v1 theo bàn giao dev2 | [[digitalbanking-docs/docs-frontend/management/09-v1-fe-be-merge-plan.md]] |
+| Nhật ký tích hợp và sổ vấn đề FE–BE v1 | [[digitalbanking-docs/docs-frontend/management/10-fe-be-integration-log.md]], [[digitalbanking-docs/docs-frontend/management/11-fe-be-integration-issues.md]] |
 | Quy trình kiểm tra mỗi lần chạy task | [[digitalbanking-docs/docs-frontend/guides/03-task-execution-lifecycle.md]] |
 | Phiếu chạy task | [[digitalbanking-docs/docs-frontend/templates/task-run-template.md]] |
 | Kiến trúc, route, state | [[digitalbanking-docs/docs-frontend/standards/01-architecture.md]] |
