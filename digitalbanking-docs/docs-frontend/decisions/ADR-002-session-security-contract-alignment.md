@@ -2,6 +2,8 @@
 
 > Cập nhật phạm vi ngày 22/11/2026: người phụ trách FE chốt **v1 backend `dev2` làm đích tích hợp/merge**, trong chat “chốt sẽ merge theo bàn giao v1 của be”. Quyết định v2 bên dưới vẫn là lịch sử contract/mock đã duyệt phía FE, không còn là version dự kiến nối ở đợt này. BE/Security chưa xác nhận xử lý khác biệt cookie/challenge giữa Security common và runtime v1; GAP-05 vẫn mở. Kế hoạch tại [[digitalbanking-docs/docs-frontend/management/09-v1-fe-be-merge-plan.md]].
 
+> Cập nhật 23/11/2026: người phụ trách FE yêu cầu tích hợp `/api/v1` theo OpenAPI BE v1.1.0 với `DB_SESSION; Path=/` và `LOGIN_NEW_DEVICE`. Đây là quyết định thực hiện phía FE, không thay baseline v2 lịch sử, không ghi thay phê duyệt BE/Security. Security common design/04 tại working tree này đã ghi `DB_SESSION; Path=/` nhưng còn gọi OTP login `LOGIN_MFA`; BE/Security cần đồng bộ tên purpose và review runtime/QA trước khi đóng GAP-05. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01-V1-API/2026-11-23-c5469eb/run-01.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Ngày / task | 14/11/2026 / FE-FND-02-AUTH-CONTRACT |

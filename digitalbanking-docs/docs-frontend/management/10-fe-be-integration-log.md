@@ -17,6 +17,7 @@ Tài liệu này ghi mốc thực tế của nhánh tích hợp `codex/fe-be-v1-
 | 23/11/2026 | Push nhánh tích hợp | `origin/codex/fe-be-v1-integration@371ea100ead82ed6422494874912e8d7fa4524aa` | `git push -u origin codex/fe-be-v1-integration` exit 0; `git ls-remote` xác nhận SHA. Không tạo PR hay merge main. | [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-TRACKING/2026-11-23-371ea10/run-01.md]] |
 | 23/11/2026 | M1 adapter GET customer/account độc lập | Nền `9832fa7`, BE `740ab5f`, v1.1.0 | Unit/schema; chưa nối UI/session/API thật, GAP-05 giữ mở. | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-READ/2026-11-23-9832fa7/run-01.md]] |
 | 23/11/2026 | M1 transport Problem/header v1 | Nền `44c0a77`, BE `740ab5f`, v1.1.0 | Kiểm unit với YAML examples và fetch double; không chứng minh BE runtime/retry/binding. | [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-TRANSPORT/2026-11-23-44c0a77/run-01.md]] |
+| 23/11/2026 | M2 FE-01-01 auth v1 | Nền `c5469eb`, BE `740ab5f`, v1.1.0 | FE chọn DB_SESSION/Path=/ và LOGIN_NEW_DEVICE, thêm auth entry v1 không MSW/Bearer; unit/typecheck/lint/build đạt. Docker Engine không chạy, API/browser QA và review Security còn mở. | [[digitalbanking-docs/docs-frontend/evidence/FE-01-01-V1-API/2026-11-23-c5469eb/run-01.md]] |
 
 ## Mẫu dòng cho task tiếp theo
 

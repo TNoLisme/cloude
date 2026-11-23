@@ -3,12 +3,30 @@ import { ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./app/App";
+import { AuthApiApp } from "./features/auth/v1/AuthApiApp";
 import { queryClient } from "./app/query";
 import "./styles.css";
 
 async function mount() {
   const mock =
     import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === "true";
+  // Switching from dev:mock to dev:api on the same origin must not leave an
+  // already controlling MSW worker between this entry and the real backend.
+  if (!mock && import.meta.env.DEV && "serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const stale = registrations.filter((registration) =>
+      registration.active?.scriptURL.endsWith("/mockServiceWorker.js"),
+    );
+    await Promise.all(stale.map((registration) => registration.unregister()));
+    if (
+      navigator.serviceWorker.controller?.scriptURL.endsWith(
+        "/mockServiceWorker.js",
+      )
+    ) {
+      location.reload();
+      return;
+    }
+  }
   const customerPreview =
     mock && new URLSearchParams(location.search).get("customerPreview") === "v2"
       ? await import("./mocks/CustomerPreview")
@@ -88,7 +106,7 @@ async function mount() {
       <App />
     </Preview>
   ) : (
-    <App />
+    <AuthApiApp />
   );
   createRoot(document.getElementById("root")!).render(
     <ConfigProvider

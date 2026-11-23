@@ -23,6 +23,7 @@ export function V2AuthFlow({
   renderAuthenticated,
   renderFrame,
   customerDashboard = false,
+  pathFor = v2PreviewPath,
 }: {
   session: V2Session;
   renderAuthenticated: (
@@ -32,6 +33,7 @@ export function V2AuthFlow({
   ) => ReactNode;
   renderFrame?: (content: ReactNode) => ReactNode;
   customerDashboard?: boolean;
+  pathFor?: (path: string) => string;
 }) {
   const state = useSyncExternalStore(
     session.subscribe,
@@ -110,7 +112,7 @@ export function V2AuthFlow({
         setNotice(
           "Yêu cầu xác minh không còn hiệu lực trên trang này. Vui lòng đăng nhập lại.",
         );
-      void navigate(v2PreviewPath(target), { replace: true });
+      void navigate(pathFor(target), { replace: true });
     }
   }, [
     state.phase,
@@ -119,6 +121,7 @@ export function V2AuthFlow({
     bootError,
     location.pathname,
     navigate,
+    pathFor,
   ]);
   useEffect(() => {
     document.querySelector<HTMLElement>("h1")?.focus();
@@ -175,7 +178,7 @@ export function V2AuthFlow({
               onClick={() => {
                 session.restartLogin();
                 setBootError(null);
-                void navigate(v2PreviewPath("/login"), { replace: true });
+                void navigate(pathFor("/login"), { replace: true });
               }}
             >
               Đến đăng nhập

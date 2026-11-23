@@ -17,7 +17,7 @@ Cung cấp password login, challenge thiết bị mới, trusted-device passcode
 
 API tại [[digitalbanking-docs/docs-common/07. API contracts.md]] và [[digitalbanking-docs/openapi/digital-banking-v1.yaml]].
 
-BE v1.1.0 `dev2` mô tả password login hợp lệ đi qua MFA 202; mock v1 cũ trả session 200 ngay đã được bỏ handler để fail closed. Preview session fixture vẫn là dữ liệu chỉ xem, không chứng minh login. Login v1 thật và cookie/CSRF chờ GAP-05. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1/2026-11-23-282de76/run-01.md]].
+BE v1.1.0 `dev2` mô tả password login hợp lệ đi qua MFA 202; mock v1 cũ trả session 200 ngay đã được bỏ handler để fail closed. Preview session fixture vẫn là dữ liệu chỉ xem, không chứng minh login. Ngày 23/11 người phụ trách FE chốt `/api/v1`, `DB_SESSION; Path=/`, `LOGIN_NEW_DEVICE` và yêu cầu nối auth. FE đã có entry auth v1; API/browser QA và review BE/Security còn mở ở GAP-05. [[digitalbanking-docs/docs-frontend/evidence/FE-01-01-V1-API/2026-11-23-c5469eb/run-01.md]].
 
 FR-001–007, FR-026, FR-040, FR-042–043, UC-001–003/015, AC-001–004/019/024/033 trong [[digitalbanking-docs/docs-common/03. SRS.md]]. Contract 07 §3/6/8.1 và [[digitalbanking-docs/docs-backend/modules/identity/README.md]].
 

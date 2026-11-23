@@ -9,7 +9,14 @@ import {
   type LoginRequest,
   type OtpVerifyRequest,
 } from "./contracts";
+import {
+  v1AuthSchema,
+  v1ChallengeSchema,
+  type V1ChallengeResponse,
+} from "./v1-contracts";
 import type { SessionSync } from "./session-sync";
+
+export type SessionChallenge = ChallengeResponse | V1ChallengeResponse;
 
 type State = {
   phase:
@@ -20,7 +27,7 @@ type State = {
     | "challenge"
     | "error";
   auth: AuthResponse | null;
-  challenge: ChallengeResponse | null;
+  challenge: SessionChallenge | null;
 };
 const blank = (phase: State["phase"]): State => ({
   phase,
@@ -29,17 +36,27 @@ const blank = (phase: State["phase"]): State => ({
 });
 
 /** Memory session primitives; the preview host owns query/router integration. */
-export function createV2Session(config: {
+type SessionConfig = {
   baseUrl: string;
   onSessionCleared: () => void;
   sync?: SessionSync;
   fetch?: typeof fetch;
-}) {
+};
+
+function createSession(config: SessionConfig, version: "v1" | "v2") {
   const url = new URL(config.baseUrl, "http://relative-base.invalid");
-  if (url.pathname.replace(/\/$/, "") !== "/api/v2" || url.search || url.hash)
+  const expectedBase = `/api/${version}`;
+  if (
+    url.pathname.replace(/\/$/, "") !== expectedBase ||
+    url.search ||
+    url.hash
+  )
     throw new TypeError(
-      "Session controller requires the explicit /api/v2 base",
+      `Session controller requires the explicit ${expectedBase} base`,
     );
+  const sessionSchema = version === "v1" ? v1AuthSchema : authSchema;
+  const loginChallengeSchema =
+    version === "v1" ? v1ChallengeSchema : challengeSchema;
   let state: State = blank("idle");
   let generation = 0;
   let disposed = false;
@@ -79,7 +96,7 @@ export function createV2Session(config: {
   function accept(response: ApiResponse<unknown>) {
     if (response.status !== 200)
       throw new ApiError("INVALID_RESPONSE", response);
-    const parsed = authSchema.safeParse(response.data);
+    const parsed = sessionSchema.safeParse(response.data);
     if (!parsed.success) throw new ApiError("INVALID_RESPONSE", response);
     emit({ phase: "authenticated", auth: parsed.data, challenge: null });
     publicAuthCsrf = undefined;
@@ -120,7 +137,7 @@ export function createV2Session(config: {
       });
       assertCurrent(started);
       if (response.status === 202) {
-        const parsed = challengeSchema.safeParse(response.data);
+        const parsed = loginChallengeSchema.safeParse(response.data);
         if (!parsed.success) throw new ApiError("INVALID_RESPONSE", response);
         emit({ phase: "challenge", auth: null, challenge: parsed.data });
         return { kind: "challenge" as const, data: parsed.data };
@@ -168,7 +185,7 @@ export function createV2Session(config: {
       },
     );
     assertCurrent(started);
-    const parsed = challengeSchema.safeParse(response.data);
+    const parsed = loginChallengeSchema.safeParse(response.data);
     if (response.status !== 202 || !parsed.success)
       throw new ApiError("INVALID_RESPONSE", response);
     emit({ phase: "challenge", auth: null, challenge: parsed.data });
@@ -222,4 +239,14 @@ export function createV2Session(config: {
       listeners.clear();
     },
   };
+}
+
+/** BE v1.1.0 session: DB_SESSION/Path=/ is managed by the browser and BE. */
+export function createV1Session(config: SessionConfig) {
+  return createSession(config, "v1");
+}
+
+/** FE/mock v2 remains a separate draft contract and explicit preview. */
+export function createV2Session(config: SessionConfig) {
+  return createSession(config, "v2");
 }

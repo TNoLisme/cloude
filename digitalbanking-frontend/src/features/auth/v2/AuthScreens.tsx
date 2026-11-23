@@ -8,10 +8,12 @@ import {
   loginSchema,
   otpSchema,
   type LoginRequest,
-  type ChallengeResponse,
   type AuthResponse,
 } from "../../../shared/auth/contracts";
-import type { createV2Session } from "../../../shared/auth/session";
+import type {
+  createV2Session,
+  SessionChallenge,
+} from "../../../shared/auth/session";
 
 export type V2Session = ReturnType<typeof createV2Session>;
 export function V2SessionSummary({
@@ -315,7 +317,7 @@ export function V2ChallengeForm({
   response,
 }: {
   session: V2Session;
-  response: ChallengeResponse;
+  response: SessionChallenge;
 }) {
   const challenge = response.challenge;
   const {

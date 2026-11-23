@@ -93,7 +93,13 @@ Mở file của Screen ID tại [[digitalbanking-docs/docs-frontend/design/READM
 
 ## 9. Preview mock được cung cấp ngày 13/11/2026
 
-Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, Ant Design 5.26.7; các dependency được pin trong package/lockfile của digitalbanking-frontend. Chạy `pnpm install --frozen-lockfile`, sau đó `pnpm dev:mock --port 5174`; mở http://127.0.0.1:5174/customer và dùng thanh chọn màn/trạng thái. `pnpm dev` cũng mặc định mock. `pnpm dev:api` là đường legacy riêng, chưa nghiệm thu backend đích.
+Node 22.14.0, pnpm 10.34.9, Vite 7.3.8, Ant Design 5.26.7; các dependency được pin trong package/lockfile của digitalbanking-frontend. Chạy `pnpm install --frozen-lockfile`, sau đó `pnpm dev:mock --port 5174`; mở http://127.0.0.1:5174/customer và dùng thanh chọn màn/trạng thái. `pnpm dev` cũng mặc định mock. Từ FE-01-01-V1-API, `pnpm dev:api` mở entry auth v1, không khởi động MSW/legacy; API/browser QA chưa nghiệm thu.
+
+## FE-01-01-V1-API — chạy auth với BE QA local
+
+BE QA dùng `compose.yaml` và `compose.qa.yaml` theo [[digitalbanking-docs/docs-backend/deployment/qa-backend-local.md]], profile `local`, API mặc định `http://localhost:18080/api/v1`. Cần Docker Engine chạy và cấu hình QA/secret dùng một lần theo tài liệu BE. Từ `digitalbanking-frontend`, dùng Node/pnpm đúng phiên bản project, đặt `API_PROXY_TARGET=http://localhost:18080`, `VITE_API_BASE_URL=/api/v1`, `VITE_ENABLE_MOCKS=false`, rồi chạy `pnpm dev:api`; mở `/login` trên cùng hostname với API/proxy. Không nhập tài khoản thật vào local QA. Trong phiên chat 23/11/2026 Docker Engine chưa kết nối, nên đây là hướng dẫn tái lập, chưa phải kết quả browser đã đạt.
+
+Entry v1 gọi `POST /auth/login` nhận `202 LOGIN_NEW_DEVICE`, verify OTP qua `POST /auth/otp/verify`, bootstrap/reload qua `GET /auth/session` lấy CSRF mới và logout `POST /auth/logout` với `X-CSRF-Token`. Cookie `DB_SESSION` do BE cấp/xóa và browser gửi qua `credentials: include`; FE không đọc cookie hoặc lưu token. Màn sau login hiện là phiên metadata chung; customer dashboard v1 sẽ nối ở FE-02-01-API. Bản mock v2 vẫn xem riêng ở `?authPreview=v2` trong `dev:mock`.
 
 Người dùng đã duyệt fixture chỉ xem và khóa thao tác thiếu contract. MSW đáp ứng auth/account theo YAML mới; adapter UI tách biệt cho source cũ chưa đồng bộ, không bổ sung contract BE. Không cần đăng nhập; persona tổng hợp chỉ phục vụ xem bố cục. Form legacy bị khóa, không nhập thông tin thật. Staff lookup có fixture sau khi nhập 0900000123; các nút ghi bị khóa.
 
