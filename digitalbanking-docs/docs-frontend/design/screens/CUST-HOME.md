@@ -92,3 +92,7 @@ Người phụ trách FE chốt áp dụng trên customer mock hiện tại tron
 ### FE-04-01-MOCK dashboard gần đây ngày 19/11/2026
 
 Vùng Giao dịch gần đây trên CUST-HOME đọc GET `/transactions` page0/size5/status=COMPLETED, hiển thị counterparty masked theo response, Money và thời điểm; có link chi tiết và Xem lịch sử. Loading/empty/error/retry độc lập với tài khoản. Đây là demo mock theo FE-04, không thay quyết định về UI cuối hoặc chứng minh server. [[digitalbanking-docs/docs-frontend/evidence/FE-04-01-MOCK/2026-11-18-b9ba604/run-01.md]].
+
+### FE-02-01-V1-API ngày 24/11/2026
+
+Màn thật `/customer` sau auth v1 dùng cùng bố cục topbar/sidebar ba mục customer và `CustomerAccountCard`; source `src/features/accounts/v1/V1CustomerDashboard.tsx`. Dữ liệu GET `/api/v1/accounts`, query theo userId/customerId, số tài khoản đã mask, số dư khả dụng và asOf từ server; có loading/rỗng/lỗi/refresh thủ công. Account status không hiện trên trang chủ. History/limits và công cụ fixture không xuất hiện trong runtime v1. HTTP QA thật đạt nhưng browser sau OTP bị chặn bởi INT-10 privileges; chưa có screenshot dashboard v1 hay duyệt thiết kế cuối. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].

@@ -32,11 +32,11 @@ const detail = account.extend({
   updatedAt: instant,
 });
 
-// Read-only contract adapter. The caller supplies transport; no UI or session
-// is wired to the backend until GAP-05 is resolved.
+// Read-only v1 contract adapter. The auth host owns session and cache lifetime.
 export function createV1CustomerReadApi(config: {
   baseUrl: string;
   fetch?: typeof fetch;
+  onSessionExpired?: () => void;
 }) {
   const url = new URL(config.baseUrl, "http://relative-base.invalid");
   if (url.pathname.replace(/\/$/, "") !== "/api/v1" || url.search || url.hash)
@@ -60,6 +60,11 @@ export function createV1CustomerReadApi(config: {
       if (!isApiId(accountId)) throw new TypeError("Invalid account ID");
       return read(`/accounts/${accountId}`, detail, signal);
     },
+    invalidate: client.invalidate,
     dispose: client.dispose,
   };
 }
+
+export type V1CustomerProfile = z.infer<typeof profile>;
+export type V1AccountSummary = z.infer<typeof account>;
+export type V1AccountDetail = z.infer<typeof detail>;

@@ -2,6 +2,8 @@
 
 > 23/11/2026: có adapter GET v1 độc lập cho profile, account list/detail theo YAML v1.1.0, kiểm fixture và owner chỉ `customerId/status`. Adapter chưa nối UI/session hoặc gọi BE thật; GAP-05/ownership API test còn mở. [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-V1-READ/2026-11-23-9832fa7/run-01.md]].
 
+> 24/11/2026: FE-02-01-V1-API nối adapter vào dashboard customer sau auth v1. Ba GET self đã đạt HTTP QA với BE `740ab5f`, gồm foreign account 403; browser sau OTP còn bị chặn bởi sai lệch `AuthResponse.user.privileges` INT-10, nên chưa nghiệm thu UI/API end-to-end. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-02 |
@@ -111,3 +113,9 @@ Theo yêu cầu người phụ trách FE trong chat 18/11, trang chủ mock dùn
 ### Iconography customer mock ngày 18/11/2026
 
 Đã áp icon navigation/feature/illustration theo cùng một catalog trên customer mock theo chốt người phụ trách FE. Icon chỉ hỗ trợ nhận diện; nội dung masked/account và trạng thái API giữ nguyên. Kết quả tại [[digitalbanking-docs/docs-frontend/evidence/FE-FND-03-ICONS/2026-11-18-b9ba604/run-01.md]].
+
+## 15. Tích hợp lát đọc v1 ngày 24/11/2026
+
+`AuthApiApp` đưa phiên có `userType=CUSTOMER` và role `CUSTOMER` vào `/customer`. `V1CustomerDashboard` gọi `getMyProfile`, `listAccounts`, `getAccount` qua `createV1CustomerReadApi` với cookie browser, query key chứa version/userId/customerId và hủy request/xóa cache khi phiên đổi. Loading/error/retry, danh sách rỗng, direct detail, 403/404 có trạng thái riêng. Trang chủ không hiện account status theo chốt FE 18/11; detail vẫn hiện status. Response detail v1 chỉ có `owner.customerId/status`, nên UI hiển thị mã khách hàng, không dùng tên chủ của DTO v2. Không nối transfer/history/limits/PIN, staff hay mutation ở lát này.
+
+HTTP QA local trên BE thật đạt ba GET, masking, decimal string, 403 ownership và 404; component test kiểm route/UI. Browser chưa vào dashboard do INT-10: runtime BE cho mã permission vào `user.privileges` trái enum `PrivilegeCode` v1.1.0 (`CHECKER`). Không nới parser v1 khi chưa chốt; FE-02-01 vẫn Đang kiểm chứng, UI cuối/FE-TEST-03 còn mở.

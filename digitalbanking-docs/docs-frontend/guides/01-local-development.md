@@ -1,5 +1,7 @@
 # Chạy local, debug và giao ước build
 
+> Tích hợp v1 24/11/2026: `dev:api` bật auth và ba GET customer thật qua proxy cùng origin; sau OTP customer vào `/customer`, `/customer/profile`, `/customer/accounts/:accountId`. BE QA `740ab5f` hiện trả permission code trong `AuthResponse.user.privileges` trái `PrivilegeCode` OpenAPI v1.1.0, nên browser chặn response sau OTP (INT-10). Không nới parser hoặc coi đây là bản demo đã nghiệm thu. Xem [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
+
 > FE-02-01 ngày18/11: đã có preview customer v2 riêng theo chốt user tại `/customer?customerPreview=v2`; mock fixture được seed cho preview và không chứng minh API thật. Xem chi tiết tại [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].
 
 ## FE-02-01 — Xem customer mock riêng

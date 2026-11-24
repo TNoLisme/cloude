@@ -66,3 +66,7 @@ Khi UI đổi, cập nhật component/selector và nội dung tại file này c�
 ## Bổ sung preview ngày 13/11/2026 — được duyệt UI/mock ngày 14/11/2026
 
 Source tham chiếu đã được khôi phục tại digitalbanking-frontend. Màn này có thể mở qua thanh Preview UI; APP-BOOTSTRAP dùng trạng thái Khôi phục phiên. Khung preview tại src/mocks/PreviewShell.tsx, adapter tại src/mocks/legacy-preview.ts. Đây là fixture chỉ xem được người phụ trách FE cho phép ngày 13/11/2026; thao tác thiếu contract bị khóa, không thay đặc tả nghiệp vụ đích. Các trạng thái sâu của form register/recovery/PIN chưa được mô phỏng. Task FE-FND-02-MOCK được người phụ trách FE duyệt UI/mock trong chat ngày 14/11/2026; nhiệm vụ đồng bộ contract và tích hợp vẫn mở; bằng chứng và giới hạn ở [[digitalbanking-docs/docs-frontend/evidence/FE-FND-02-MOCK/2026-11-13-c1760f1/run-01.md]].
+
+### FE-02-01-V1-API ngày 24/11/2026
+
+Runtime v1 mở `/customer/profile`, gọi GET `/api/v1/customers/me`, tái dùng panel hồ sơ chỉ đọc cho fullName, phoneMasked/emailMasked nullable, status và createdAt. Không hiện PIN/action legacy. Loading/lỗi/retry độc lập với danh sách account. QA HTTP thật đạt response 200 và masking; browser sau OTP chờ INT-10 privileges. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].

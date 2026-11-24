@@ -69,3 +69,33 @@ it("preserves a v1 forbidden response for the caller", async () => {
   });
   api.dispose();
 });
+
+it("notifies the auth host when a customer GET finds an expired session", async () => {
+  const onSessionExpired = vi.fn();
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+    Response.json(
+      {
+        type: "about:blank",
+        title: "Unauthorized",
+        status: 401,
+        detail: "Session expired",
+        instance: "/api/v1/accounts",
+        code: "AUTH_SESSION_EXPIRED",
+        correlationId: "fixture-id",
+        timestamp: "2026-11-24T00:00:00Z",
+        retryable: false,
+      },
+      { status: 401, headers: { "Content-Type": "application/problem+json" } },
+    ),
+  );
+  const api = createV1CustomerReadApi({
+    baseUrl: "/api/v1",
+    fetch: fetcher,
+    onSessionExpired,
+  });
+  await expect(api.accounts()).rejects.toMatchObject({
+    code: "AUTH_SESSION_EXPIRED",
+  });
+  expect(onSessionExpired).toHaveBeenCalledOnce();
+  api.dispose();
+});
