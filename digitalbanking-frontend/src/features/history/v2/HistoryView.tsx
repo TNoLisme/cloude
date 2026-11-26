@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, type ApiClient } from "../../../shared/api/client";
 import { historyApi } from "./history-api";
+import type { createV1HistoryReadApi } from "../v1/history-read-api";
+import type { createV1CustomerReadApi } from "../../accounts/v1/customer-read-api";
 import { customerApi } from "../../accounts/v2/customer-api";
 import { formatMoney } from "../../../shared/lib/money";
 import { isMoney } from "../../../shared/lib/money";
@@ -28,12 +30,16 @@ export function HistoryView({
   mode,
   reference,
   scenario,
+  v1History,
+  v1Customer,
 }: {
   client: ApiClient;
   userId: string;
-  mode: "authPreview" | "customerPreview";
+  mode: "authPreview" | "customerPreview" | "v1";
   reference?: string;
   scenario?: string;
+  v1History?: ReturnType<typeof createV1HistoryReadApi>;
+  v1Customer?: ReturnType<typeof createV1CustomerReadApi>;
 }) {
   const location = useLocation(),
     navigate = useNavigate();
@@ -76,7 +82,9 @@ export function HistoryView({
     nextPage = page,
     overrides?: Record<string, string>,
   ) => {
-    const query = new URLSearchParams({ [mode]: "v2" });
+    const query = new URLSearchParams(
+      mode === "v1" ? undefined : { [mode]: "v2" },
+    );
     if (nextStatus) query.set("status", nextStatus);
     if (nextPage) query.set("page", String(nextPage));
     for (const key of [
@@ -93,8 +101,11 @@ export function HistoryView({
     void navigate(`/customer/history?${query}`);
   };
   const accountList = useQuery({
-    queryKey: [userId, "history-accounts"],
-    queryFn: ({ signal }) => customerApi.accounts(client, signal),
+    queryKey: [mode, userId, "history-accounts"],
+    queryFn: ({ signal }) =>
+      v1Customer
+        ? v1Customer.accounts(signal)
+        : customerApi.accounts(client, signal),
     enabled: !reference,
     retry: false,
   });
@@ -126,6 +137,7 @@ export function HistoryView({
   };
   const list = useQuery({
     queryKey: [
+      mode,
       userId,
       "history",
       status,
@@ -139,26 +151,51 @@ export function HistoryView({
       scenario,
     ],
     queryFn: ({ signal }) =>
-      historyApi.list(
-        client,
-        {
-          page,
-          status: status || undefined,
-          accountId: accountId || undefined,
-          direction: direction || undefined,
-          from: from || undefined,
-          to: to || undefined,
-          minAmount: minAmount || undefined,
-          maxAmount: maxAmount || undefined,
-        },
-        signal,
-      ),
+      v1History
+        ? v1History.list(
+            {
+              page,
+              status: (status || undefined) as
+                | "PENDING"
+                | "COMPLETED"
+                | "FAILED"
+                | undefined,
+              accountId: accountId || undefined,
+              direction: (direction || undefined) as
+                | "DEBIT"
+                | "CREDIT"
+                | "INTERNAL"
+                | undefined,
+              from: from || undefined,
+              to: to || undefined,
+              minAmount: minAmount || undefined,
+              maxAmount: maxAmount || undefined,
+            },
+            signal,
+          )
+        : historyApi.list(
+            client,
+            {
+              page,
+              status: status || undefined,
+              accountId: accountId || undefined,
+              direction: direction || undefined,
+              from: from || undefined,
+              to: to || undefined,
+              minAmount: minAmount || undefined,
+              maxAmount: maxAmount || undefined,
+            },
+            signal,
+          ),
     enabled: !reference,
     retry: false,
   });
   const detail = useQuery({
-    queryKey: [userId, "transaction", reference, scenario],
-    queryFn: ({ signal }) => historyApi.detail(client, reference!, signal),
+    queryKey: [mode, userId, "transaction", reference, scenario],
+    queryFn: ({ signal }) =>
+      v1History
+        ? v1History.detail(reference!, signal)
+        : historyApi.detail(client, reference!, signal),
     enabled: Boolean(reference),
     retry: false,
   });
@@ -177,7 +214,11 @@ export function HistoryView({
     <>
       <Heading
         title={reference ? "Chi tiết giao dịch" : "Lịch sử giao dịch"}
-        sub="Dữ liệu giao dịch mô phỏng của bạn."
+        sub={
+          mode === "v1"
+            ? "Lịch sử giao dịch của bạn."
+            : "Dữ liệu giao dịch mô phỏng của bạn."
+        }
       />
       {reference ? (
         <Button onClick={() => goList(status, page)}>Về lịch sử</Button>

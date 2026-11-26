@@ -1,5 +1,7 @@
 # CUST-HISTORY — Lịch sử giao dịch
 
+> 26/11/2026: người phụ trách FE duyệt bố cục mock hiện tại cho lát tích hợp M3. Bản customer v1 dùng lại `HistoryView`, GET `/api/v1/transactions`, route `/customer/history`, page 0-based và sort mặc định; chi tiết tại `/customer/history/:reference`. Thiết kế cuối vẫn có thể chỉnh. [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-M3/2026-11-26-edd5889/run-01.md]]
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |

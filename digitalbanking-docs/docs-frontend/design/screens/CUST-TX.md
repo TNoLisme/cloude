@@ -1,5 +1,7 @@
 # CUST-TX — Chi tiết giao dịch
 
+> 26/11/2026: UI mock được duyệt cho lát M3, nối customer v1 theo `reference` qua GET `/api/v1/transactions/{reference}`; giữ chi tiết chỉ đọc và masked counterparty. Thiết kế cuối còn có thể chỉnh. [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-M3/2026-11-26-edd5889/run-01.md]]
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |

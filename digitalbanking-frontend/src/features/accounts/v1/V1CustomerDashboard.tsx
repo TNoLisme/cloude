@@ -14,6 +14,10 @@ import type {
   createV1CustomerReadApi,
   V1AccountDetail,
 } from "./customer-read-api";
+import type { createV1HistoryReadApi } from "../../history/v1/history-read-api";
+import type { createV1LimitsReadApi } from "../../limits/v1/limits-read-api";
+import { HistoryView } from "../../history/v2/HistoryView";
+import { LimitsView } from "../../limits/v2/LimitsView";
 import styles from "../../../layouts/AppLayout.module.css";
 import homeStyles from "../../../mocks/CustomerHome.module.css";
 
@@ -83,23 +87,34 @@ function AccountDetail({ account }: { account: V1AccountDetail }) {
 export function V1CustomerDashboard({
   auth,
   reader,
+  history,
+  limits,
   logout,
   ending,
 }: {
   auth: AuthResponse;
   reader: Reader;
+  history: ReturnType<typeof createV1HistoryReadApi>;
+  limits: ReturnType<typeof createV1LimitsReadApi>;
   logout: () => Promise<void>;
   ending: boolean;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
   const detailMatch = useMatch("/customer/accounts/:accountId");
+  const transactionMatch = useMatch("/customer/history/:reference");
   const accountId = detailMatch?.params.accountId ?? "";
-  const view = detailMatch
-    ? "detail"
-    : location.pathname === "/customer/profile"
-      ? "profile"
-      : "accounts";
+  const view = transactionMatch
+    ? "transaction"
+    : location.pathname === "/customer/history"
+      ? "history"
+      : location.pathname === "/customer/limits"
+        ? "limits"
+        : detailMatch
+          ? "detail"
+          : location.pathname === "/customer/profile"
+            ? "profile"
+            : "accounts";
   const scope = ["v1", auth.user.userId, auth.user.customerId, "customer"];
   const profile = useQuery({
     queryKey: [...scope, "profile"],
@@ -168,6 +183,24 @@ export function V1CustomerDashboard({
               className={homeStyles.chevron}
             />
           </button>
+          <button
+            type="button"
+            className={`${homeStyles.navItem} ${view === "history" || view === "transaction" ? homeStyles.active : ""}`}
+            onClick={() => go("/customer/history")}
+            aria-current={
+              view === "history" || view === "transaction" ? "page" : undefined
+            }
+          >
+            <Icon name="history" /> <span>Lịch sử giao dịch</span>
+          </button>
+          <button
+            type="button"
+            className={`${homeStyles.navItem} ${view === "limits" ? homeStyles.active : ""}`}
+            onClick={() => go("/customer/limits")}
+            aria-current={view === "limits" ? "page" : undefined}
+          >
+            <Icon name="limits" /> <span>Hạn mức</span>
+          </button>
         </nav>
       </aside>
       <div className={styles.workspace}>
@@ -192,34 +225,63 @@ export function V1CustomerDashboard({
             <Button onClick={() => go("/customer")}>Trang chủ</Button>
             <Button onClick={() => go("/customer/profile")}>Hồ sơ</Button>
           </div>
-          <Heading
-            title={
-              view === "profile"
-                ? "Hồ sơ"
-                : view === "detail"
-                  ? "Chi tiết tài khoản"
-                  : "Tổng quan"
-            }
-            sub={
-              view === "profile"
-                ? "Thông tin cá nhân chỉ đọc."
-                : "Tài khoản của tôi"
-            }
-          />
+          {(view === "history" || view === "transaction") && (
+            <HistoryView
+              client={reader.client}
+              userId={auth.user.userId}
+              mode="v1"
+              reference={transactionMatch?.params.reference}
+              v1History={history}
+              v1Customer={reader}
+            />
+          )}
+          {view === "limits" && (
+            <LimitsView
+              client={reader.client}
+              userId={auth.user.userId}
+              scenario="api"
+              v1Limits={limits}
+              v1Customer={reader}
+            />
+          )}
+          {view !== "history" &&
+            view !== "transaction" &&
+            view !== "limits" && (
+              <Heading
+                title={
+                  view === "profile"
+                    ? "Hồ sơ"
+                    : view === "detail"
+                      ? "Chi tiết tài khoản"
+                      : "Tổng quan"
+                }
+                sub={
+                  view === "profile"
+                    ? "Thông tin cá nhân chỉ đọc."
+                    : "Tài khoản của tôi"
+                }
+              />
+            )}
           {view === "detail" && (
             <Button onClick={() => go("/customer")}>Quay lại danh sách</Button>
           )}
-          {current.isPending && (
-            <div role="status">
-              <Spin /> Đang tải dữ liệu
-            </div>
-          )}
-          {current.isError && (
-            <ReadProblem
-              error={current.error}
-              retry={() => void current.refetch()}
-            />
-          )}
+          {view !== "history" &&
+            view !== "transaction" &&
+            view !== "limits" &&
+            current.isPending && (
+              <div role="status">
+                <Spin /> Đang tải dữ liệu
+              </div>
+            )}
+          {view !== "history" &&
+            view !== "transaction" &&
+            view !== "limits" &&
+            current.isError && (
+              <ReadProblem
+                error={current.error}
+                retry={() => void current.refetch()}
+              />
+            )}
           {view === "profile" && !profile.isError && profile.data && (
             <CustomerProfilePanel profile={profile.data} />
           )}

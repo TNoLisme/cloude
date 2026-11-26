@@ -12,14 +12,24 @@ import { V2SessionSummary } from "../v2/AuthScreens";
 import { canOpenCustomerDashboard } from "../../../shared/auth/feature-policy";
 import { createV1CustomerReadApi } from "../../accounts/v1/customer-read-api";
 import { V1CustomerDashboard } from "../../accounts/v1/V1CustomerDashboard";
+import { createV1HistoryReadApi } from "../../history/v1/history-read-api";
+import { createV1LimitsReadApi } from "../../limits/v1/limits-read-api";
 
 const v1Path = (path: string) => path;
 
 /** Real v1 auth entry. No MSW, fixture state, bearer or refresh endpoint. */
 export function AuthApiApp() {
-  const [{ controller, reader }] = useState(() => {
+  const [{ controller, reader, history, limits }] = useState(() => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api/v1";
     const reader = createV1CustomerReadApi({
+      baseUrl,
+      onSessionExpired: () => controller.restartLogin(),
+    });
+    const history = createV1HistoryReadApi({
+      baseUrl,
+      onSessionExpired: () => controller.restartLogin(),
+    });
+    const limits = createV1LimitsReadApi({
       baseUrl,
       onSessionExpired: () => controller.restartLogin(),
     });
@@ -28,6 +38,8 @@ export function AuthApiApp() {
       sync: browserSessionSync(),
       onSessionCleared() {
         reader.invalidate();
+        history.invalidate();
+        limits.invalidate();
         void queryClient.cancelQueries();
         queryClient.clear();
         transferFlow.getState().clear();
@@ -35,14 +47,16 @@ export function AuthApiApp() {
         legacySession.getState().clear();
       },
     });
-    return { controller, reader };
+    return { controller, reader, history, limits };
   });
   useEffect(
     () => () => {
       controller.dispose();
       reader.dispose();
+      history.dispose();
+      limits.dispose();
     },
-    [controller, reader],
+    [controller, reader, history, limits],
   );
   return (
     <BrowserRouter>
@@ -56,6 +70,8 @@ export function AuthApiApp() {
             <V1CustomerDashboard
               auth={auth}
               reader={reader}
+              history={history}
+              limits={limits}
               logout={logout}
               ending={ending}
             />

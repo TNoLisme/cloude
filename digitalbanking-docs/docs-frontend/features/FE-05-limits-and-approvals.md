@@ -81,6 +81,8 @@ FET-09 chứng minh customer chỉ xem self, tạo PENDING, checker khác maker,
 
 FE-05-01 và FE-05-02 trong tracker. Cơ chế approval là public interface dùng lại tại FE-08. Evidence mới gắn FET-09 và AC-028.
 
+Ngày 26/11/2026, người phụ trách FE duyệt UI mock hạn mức customer cho lát M3. Shell customer v1 đã nối GET `/api/v1/limits` với `accountId` tùy chọn qua adapter riêng; phần maker/checker/approval không thuộc lát này. Adapter/component, QA HTTP 200/403 và Chrome browser/reload đã đạt; review PR và merge giữ riêng tại [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-M3/2026-11-26-edd5889/run-01.md]].
+
 FE-05-01-MOCK ngày 19/11/2026 chỉ hiện `getLimits` cho CUSTOMER với fixture tổng hợp. Đây là demo đọc self, chưa chứng minh ownership BE hoặc FET-09 đầy đủ; maker/checker và mutation vẫn chờ GAP-07/08. [[digitalbanking-docs/docs-frontend/evidence/FE-05-01-MOCK/2026-11-19-b9ba604/run-01.md]].
 
 FE-05-02-MOCK mở phần list/detail chỉ đọc ngày 19/11/2026. User chốt preview staff độc lập, chỉ metadata có schema, ẩn `payload/result` và khóa duyệt/từ chối. Client/UI/MSW theo phạm vi này đã qua gate mock và browser list/detail ngày 20/11, đang chờ review UI; không coi quyền staff là đã chốt. [[digitalbanking-docs/docs-frontend/evidence/FE-05-02-MOCK/2026-11-19-65bd72f/run-01.md]].

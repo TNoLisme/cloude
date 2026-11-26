@@ -54,6 +54,7 @@ export function createV1CustomerReadApi(config: {
     return parsed.data;
   }
   return {
+    client,
     profile: (signal?: AbortSignal) => read("/customers/me", profile, signal),
     accounts: (signal?: AbortSignal) => read("/accounts", accounts, signal),
     detail: (accountId: string, signal?: AbortSignal) => {

@@ -1,5 +1,7 @@
 # CUST-LIMITS — Hạn mức khách hàng
 
+> 26/11/2026: người phụ trách FE duyệt bố cục mock hiện tại cho lát M3; bản customer v1 dùng lại `LimitsView`, GET `/api/v1/limits` với `accountId` tùy chọn, route `/customer/limits`. Không nối maker/checker. Thiết kế cuối vẫn có thể chỉnh. [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-M3/2026-11-26-edd5889/run-01.md]]
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản / ngày | 1.0 / 09/11/2026 |

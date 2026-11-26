@@ -7,6 +7,8 @@ import { ApiError, type ApiClient } from "../../../shared/api/client";
 import { customerApi } from "../../accounts/v2/customer-api";
 import { formatMoney, isMoney } from "../../../shared/lib/money";
 import { isApiId } from "../../../shared/lib/id";
+import type { createV1LimitsReadApi } from "../v1/limits-read-api";
+import type { createV1CustomerReadApi } from "../../accounts/v1/customer-read-api";
 
 const money = z.string().refine(isMoney);
 const id = z.string().refine(isApiId);
@@ -38,20 +40,28 @@ export function LimitsView({
   client,
   userId,
   scenario,
+  v1Limits,
+  v1Customer,
 }: {
   client: ApiClient;
   userId: string;
   scenario: string;
+  v1Limits?: ReturnType<typeof createV1LimitsReadApi>;
+  v1Customer?: ReturnType<typeof createV1CustomerReadApi>;
 }) {
   const [accountId, setAccountId] = useState("");
   const accounts = useQuery({
-    queryKey: [userId, "limit-accounts"],
-    queryFn: ({ signal }) => customerApi.accounts(client, signal),
+    queryKey: [v1Limits ? "v1" : "v2", userId, "limit-accounts"],
+    queryFn: ({ signal }) =>
+      v1Customer
+        ? v1Customer.accounts(signal)
+        : customerApi.accounts(client, signal),
     retry: false,
   });
   const limits = useQuery({
-    queryKey: [userId, "limits", accountId, scenario],
+    queryKey: [v1Limits ? "v1" : "v2", userId, "limits", accountId, scenario],
     queryFn: async ({ signal }) => {
+      if (v1Limits) return v1Limits.get(accountId || undefined, signal);
       const query = new URLSearchParams();
       if (accountId) query.set("accountId", accountId);
       const response = await client.request("/limits", { query, signal });

@@ -12,6 +12,10 @@ import {
   profile,
 } from "../../../mocks/fixtures";
 import { createV1CustomerReadApi } from "./customer-read-api";
+import { createV1HistoryReadApi } from "../../history/v1/history-read-api";
+import { createV1LimitsReadApi } from "../../limits/v1/limits-read-api";
+import { historyItems } from "../../../mocks/history-fixtures";
+import { limitsFixture } from "../../../mocks/limits-fixtures";
 import { V1CustomerDashboard } from "./V1CustomerDashboard";
 
 afterEach(cleanup);
@@ -21,6 +25,11 @@ function mount(path: string, fetcher: typeof fetch) {
     baseUrl: "/api/v1",
     fetch: fetcher,
   });
+  const history = createV1HistoryReadApi({
+    baseUrl: "/api/v1",
+    fetch: fetcher,
+  });
+  const limits = createV1LimitsReadApi({ baseUrl: "/api/v1", fetch: fetcher });
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -31,6 +40,8 @@ function mount(path: string, fetcher: typeof fetch) {
           <V1CustomerDashboard
             auth={authFixture()}
             reader={reader}
+            history={history}
+            limits={limits}
             logout={async () => undefined}
             ending={false}
           />
@@ -41,9 +52,41 @@ function mount(path: string, fetcher: typeof fetch) {
   return () => {
     page.unmount();
     reader.dispose();
+    history.dispose();
+    limits.dispose();
     queryClient.clear();
   };
 }
+
+it("opens approved M3 history and limits screens through v1 reads", async () => {
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url) => {
+    const path = String(url);
+    if (path.startsWith("/api/v1/transactions?"))
+      return Response.json({
+        items: historyItems,
+        page: {
+          number: 0,
+          size: 20,
+          totalElements: 2,
+          totalPages: 1,
+          first: true,
+          last: true,
+        },
+        asOf: "2026-11-13T03:00:00Z",
+      });
+    if (path === "/api/v1/limits") return Response.json(limitsFixture);
+    if (path === "/api/v1/accounts") return Response.json(accounts);
+    throw new Error(`Unexpected request: ${path}`);
+  });
+  const unmount = mount("/customer/history", fetcher);
+  expect(await screen.findByText("Giao dịch của tôi")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Hạn mức" }));
+  expect(await screen.findByText("Hạn mức hiệu lực")).toBeTruthy();
+  expect(
+    fetcher.mock.calls.some(([url]) => String(url) === "/api/v1/limits"),
+  ).toBe(true);
+  unmount();
+});
 
 it("reads masked v1 accounts, opens detail without inventing owner name, and reads profile", async () => {
   const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url) => {

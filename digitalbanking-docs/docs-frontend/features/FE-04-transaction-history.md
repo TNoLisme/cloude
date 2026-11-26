@@ -76,6 +76,8 @@ FET-08 chứng minh danh sách/chi tiết, empty/filter-empty, page/reset, date 
 
 FE-04-01 tại [[digitalbanking-docs/docs-frontend/management/03-work-tracker.md]]. Công việc tiếp theo gồm page 0-based, filter UTC và detail/route theo reference. Evidence gắn FET-08.
 
+Ngày 26/11/2026, người phụ trách FE duyệt UI mock lịch sử cho lát M3. Shell customer v1 đã nối GET `/api/v1/transactions` và `/{reference}` qua adapter riêng; không gửi `customerId`/`sort`, giữ server default. Adapter/component, QA HTTP filter/page/empty UTC/403/404 và Chrome browser list/detail/reload đã đạt; review PR và merge giữ riêng tại [[digitalbanking-docs/docs-frontend/evidence/FE-REL-V1-M3/2026-11-26-edd5889/run-01.md]].
+
 ## 12. Vấn đề cần chốt
 
 Scope staff/permission theo GAP-07. Trường filter/sort được chốt bởi contract, mọi nhu cầu thêm query cần cập nhật nguồn API. Route là đề xuất FE chờ review.
