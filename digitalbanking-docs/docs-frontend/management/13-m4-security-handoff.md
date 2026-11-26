@@ -14,7 +14,7 @@ Ngày 27/11/2026, người phụ trách FE báo BE và Security cho phép mình 
 
 Quyết định handoff ở trên đủ để FE triển khai theo contract hiện có trong phạm vi được quyền; không cần chờ câu trả lời chính sách khác để ghi baseline FE. Những điểm sau là điều kiện kiểm chứng nguồn/runtime và đồng bộ owner:
 
-1. **Role → permission:** common 07 và BE-INT-03 là baseline đối chiếu; SRS §4.2/Security §5.1 còn khác ở Auditor `CUSTOMER_READ`. M4 không mở customer profile cho Auditor. Không tự sửa tài liệu Security/BA dưới danh nghĩa owner.
+1. **Role → permission:** common 07 và BE-INT-03 là baseline đối chiếu. Security §5.1 đã được đồng bộ trong lần cập nhật này: Auditor thiếu `CUSTOMER_READ`, Operations dùng `FRAUD_REVIEW` để đọc cờ rủi ro. SRS §4.2 và bảng endpoint §8 còn ghi Auditor đọc hồ sơ customer; cần BA owner đồng bộ. M4 không mở customer profile cho Auditor.
 2. **Enforcement:** thử trực tiếp từng API với quyền đủ/thiếu; role trong FE chỉ điều khiển điều hướng, không cấp quyền. Kiểm tra 403, cache và đổi phiên trước khi đưa lát vào merge.
 3. **Approval:** chỉ GET metadata theo OpenAPI, visibility maker/checker do server kiểm, 404 ngoài scope; không render `payload/result`, không approve/reject. Tài liệu BE đang bất nhất trạng thái runtime; chỉ nhập lát sau khi xác minh endpoint.
 4. **Fraud:** chỉ GET read theo 07 §8.7, không POST review trong M4. Xác minh endpoint/response; phần ngoài scope không được ghi hoàn thành FR-044–049 nếu AC yêu cầu mutation.
@@ -25,15 +25,15 @@ Quyết định handoff ở trên đủ để FE triển khai theo contract hi�
 | Role | Customer profile exact-ID | Account exact-ID | Approval metadata | Fraud read | Audit list/detail |
 |---|---:|---:|---:|---:|---:|
 | CUSTOMER | Self APIs theo M2; không vào staff routes | Self APIs theo M2; ownership server-side | Không | Không | Không |
-| OPERATIONS | CUSTOMER_READ | ACCOUNT_READ | Theo APPROVAL_READ/scope; cần xác nhận runtime | FRAUD_REVIEW | AUDIT_READ |
-| ADMIN | CUSTOMER_READ | ACCOUNT_READ | Theo APPROVAL_READ/scope; cần xác nhận runtime | FRAUD_READ | AUDIT_READ |
-| AUDITOR | Không CUSTOMER_READ | ACCOUNT_READ | Không theo current OpenAPI; xác nhận nếu có khác biệt | FRAUD_READ | AUDIT_READ |
+| OPERATIONS | CUSTOMER_READ | ACCOUNT_READ | Role OPERATIONS + visibility server-side | FRAUD_REVIEW | AUDIT_READ |
+| ADMIN | CUSTOMER_READ | ACCOUNT_READ | Role ADMIN + visibility server-side | FRAUD_READ | AUDIT_READ |
+| AUDITOR | Không CUSTOMER_READ | ACCOUNT_READ | Không theo OpenAPI v1 | FRAUD_READ | AUDIT_READ |
 
 Các route và action là phân biệt riêng. FE dùng role chỉ để điều hướng theo baseline handoff; server là nơi quyết định quyền trên từng request. Bảng là phạm vi FE handoff bám common/BE hiện có, không thay thế policy của source owner.
 
 ## Tài liệu nguồn cần owner cập nhật
 
-- BE/BA/Security: `docs-common/03. SRS.md` §4.2, `docs-common/design/04. security.md`, và nếu đổi semantics thì `docs-common/07. API contracts.md` + OpenAPI theo versioning.
+- BA: `docs-common/03. SRS.md` §4.2 và bảng endpoint §8 còn ghi Auditor đọc hồ sơ customer; đồng bộ với common 07 §3.4–3.6 và BE-INT-03. Security §5.1 đã cập nhật theo baseline v1 trong lần này.
 - BE Identity: permission seed/authority map và bằng chứng runtime/session refresh.
 - FE: `management/03-work-tracker.md` GAP-07-A..D, `management/11-fe-be-integration-issues.md`, FE-05/06/07 feature và phiếu M4.
 

@@ -27,6 +27,8 @@ Ngày 27/11/2026, người phụ trách FE báo BE cho phép FE tự chốt hand
 
 Policy handoff đã chốt ở phía FE theo ủy quyền được báo lại. Trước khi merge, implementation cần ghi FE/BE SHA, test HTTP/DB cho role đủ/thiếu quyền và scope 403/404, response v1.1.0, controller chưa ghép và issue còn mở. Lát không có runtime/evidence sẽ không nhập vào M4 merge.
 
+Ngày 27/11/2026, QA HTTP với image BE đã dùng ở M3 xác nhận các GET M4 theo role cơ bản và 404 cho approval/audit ID không tồn tại (phiếu `FE-REL-V1-M4/run-03`). `SecurityFilterChainConfig` và năm controller GET tương ứng đã có trong source. Không phát hiện thiếu endpoint hay matcher cần sửa BE code để bắt đầu nối bốn màn FE; response có dữ liệu, masking và scope sâu vẫn cần kiểm chứng trước merge. Không đổi code BE trong lần đồng bộ handoff này.
+
 Không cần thay contract cho role routing ở FE nếu server đã thực thi authority trên từng request. Nếu runtime khác ma trận/shape hiện tại, BE chỉ rõ nguồn owner cần sửa và đề xuất version/migration; FE không tự đổi OpenAPI hoặc coi docs cũ là runtime proof.
 
 ## Nguồn đã rà
