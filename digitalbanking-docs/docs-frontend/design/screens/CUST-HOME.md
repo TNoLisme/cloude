@@ -96,3 +96,8 @@ Vùng Giao dịch gần đây trên CUST-HOME đọc GET `/transactions` page0/s
 ### FE-02-01-V1-API ngày 24/11/2026
 
 Màn thật `/customer` sau auth v1 dùng cùng bố cục topbar/sidebar ba mục customer và `CustomerAccountCard`; source `src/features/accounts/v1/V1CustomerDashboard.tsx`. Dữ liệu GET `/api/v1/accounts`, query theo userId/customerId, số tài khoản đã mask, số dư khả dụng và asOf từ server; có loading/rỗng/lỗi/refresh thủ công. Account status không hiện trên trang chủ. History/limits và công cụ fixture không xuất hiện trong runtime v1. HTTP QA thật đạt nhưng browser sau OTP bị chặn bởi INT-10 privileges; chưa có screenshot dashboard v1 hay duyệt thiết kế cuối. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
+
+
+### FE-BE-INT-10 & chốt UI M2 ngày 25/11/2026
+
+Sau khi sửa projection `AuthResponse.user.privileges` (`DEC-INT-021`), Playwright browser E2E (`http://localhost:5173`) đã vào được `/customer`, xác nhận hiển thị đúng số dư/masked account, không hiện account status trên trang chủ, và lưu ảnh chụp thực tế tại `screenshots/m2-customer-home.png`; người phụ trách FE đã chốt UI M2 ngày 25/11/2026. [[digitalbanking-docs/docs-frontend/evidence/FE-BE-INT-10/2026-11-24-ce0d36e/run-01.md]].

@@ -4,6 +4,8 @@
 
 > 24/11/2026: FE-02-01-V1-API nối adapter vào dashboard customer sau auth v1. Ba GET self đã đạt HTTP QA với BE `740ab5f`, gồm foreign account 403; browser sau OTP còn bị chặn bởi sai lệch `AuthResponse.user.privileges` INT-10, nên chưa nghiệm thu UI/API end-to-end. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
 
+> 25/11/2026: Sau khi sửa BE projection `INT-10` (`DEC-INT-021`), Playwright browser E2E trên QA local (`http://localhost:5173`) đã đạt OTP → dashboard → chi tiết tài khoản → hồ sơ → reload/CSRF rotation → logout và cô lập đa user/staff; người phụ trách FE đã chốt UI M2 ngày 25/11/2026. Chờ review BE/Security cho `DEC-INT-021`/`GAP-05` trước khi đóng hoàn toàn và merge `main`. [[digitalbanking-docs/docs-frontend/evidence/FE-BE-INT-10/2026-11-24-ce0d36e/run-01.md]].
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Dự án / mã | Digital Banking MVP / FE-02 |

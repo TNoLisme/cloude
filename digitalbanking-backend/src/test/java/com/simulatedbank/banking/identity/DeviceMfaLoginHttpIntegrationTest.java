@@ -754,6 +754,8 @@ class DeviceMfaLoginHttpIntegrationTest {
         assertThat(result.body().path("user").path("userId").asText()).isEqualTo(Long.toString(user.id()));
         assertThat(result.body().path("user").path("userType").asText()).isEqualTo("CUSTOMER");
         assertThat(result.body().path("user").path("roles").get(0).asText()).isEqualTo("CUSTOMER");
+        assertThat(result.body().path("user").path("privileges").isArray()).isTrue();
+        assertThat(result.body().path("user").path("privileges").isEmpty()).isTrue();
         assertThat(result.body().path("user").path("customerId").isNull()).isTrue();
         assertThat(result.body().path("correlationId").asText()).isEqualTo(correlation);
         assertThat(result.body().path("session").path("deviceTrusted").asBoolean()).isFalse();

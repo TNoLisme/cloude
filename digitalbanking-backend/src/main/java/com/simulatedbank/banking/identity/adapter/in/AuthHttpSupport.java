@@ -7,6 +7,7 @@ import com.simulatedbank.banking.identity.application.LoginResult;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -25,9 +26,14 @@ final class AuthHttpSupport {
                         .httpOnly(true).secure(cookie.secure()).sameSite(cookie.sameSite()).path(cookie.path())
                         .maxAge(Duration.ofSeconds(cookie.maxAgeSeconds())).build().toString())
                 .body(new AuthResponse(new AuthResponse.UserSummary(Long.toString(result.userId()), result.userType(),
-                        result.username(), result.roles(), List.copyOf(result.privileges()), result.customerId()),
+                        result.username(), result.roles(), publicV1Privileges(result.privileges()), result.customerId()),
                         new AuthResponse.SessionInfo(result.idleExpiresAt(), result.absoluteExpiresAt(),
                                 result.rawCsrfToken(), deviceTrusted), correlationId));
+    }
+
+    /** UserSummary.privileges is PrivilegeCode=[CHECKER], not the internal permission authority set. */
+    static List<String> publicV1Privileges(Set<String> authorities) {
+        return authorities.contains("CHECKER") ? List.of("CHECKER") : List.of();
     }
 
     static ClientContext fidoClient(HttpServletRequest request) {

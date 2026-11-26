@@ -1,5 +1,7 @@
 # Chạy local, debug và giao ước build
 
+> Tích hợp v1 25/11/2026: `dev:api` bật auth và ba GET customer thật qua proxy cùng origin (`http://localhost:5173`, lưu ý `127.0.0.1:5173` bị CORS 403 do `APP_CORS_ALLOWED_ORIGINS` mặc định là `http://localhost:5173,https://localhost:8443`); sau khi sửa projection `AuthResponse.user.privileges` (`INT-10` / `DEC-INT-021`), luồng browser E2E customer (OTP → `/customer` → `/customer/accounts/:accountId` → `/customer/profile` → reload → logout) đã chạy đạt trên QA local và UI M2 được người phụ trách FE chốt ngày 25/11/2026. Chờ review BE/Security trước khi merge `main`. Xem [[digitalbanking-docs/docs-frontend/evidence/FE-BE-INT-10/2026-11-24-ce0d36e/run-01.md]].
+
 > Tích hợp v1 24/11/2026: `dev:api` bật auth và ba GET customer thật qua proxy cùng origin; sau OTP customer vào `/customer`, `/customer/profile`, `/customer/accounts/:accountId`. BE QA `740ab5f` hiện trả permission code trong `AuthResponse.user.privileges` trái `PrivilegeCode` OpenAPI v1.1.0, nên browser chặn response sau OTP (INT-10). Không nới parser hoặc coi đây là bản demo đã nghiệm thu. Xem [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
 
 > FE-02-01 ngày18/11: đã có preview customer v2 riêng theo chốt user tại `/customer?customerPreview=v2`; mock fixture được seed cho preview và không chứng minh API thật. Xem chi tiết tại [[digitalbanking-docs/docs-frontend/evidence/FE-02-01/2026-11-18-b9ba604/run-02.md]].

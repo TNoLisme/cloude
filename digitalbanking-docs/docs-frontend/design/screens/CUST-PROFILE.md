@@ -70,3 +70,8 @@ Source tham chiếu đã được khôi phục tại digitalbanking-frontend. M�
 ### FE-02-01-V1-API ngày 24/11/2026
 
 Runtime v1 mở `/customer/profile`, gọi GET `/api/v1/customers/me`, tái dùng panel hồ sơ chỉ đọc cho fullName, phoneMasked/emailMasked nullable, status và createdAt. Không hiện PIN/action legacy. Loading/lỗi/retry độc lập với danh sách account. QA HTTP thật đạt response 200 và masking; browser sau OTP chờ INT-10 privileges. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
+
+
+### FE-BE-INT-10 & chốt UI M2 ngày 25/11/2026
+
+Sau sửa `INT-10`, Playwright browser E2E đã kiểm chứng `/customer/profile` (masked phone, reload khôi phục phiên `GET /api/v1/auth/session` + logout 204) kèm screenshot `m2-customer-profile.png`, và người phụ trách FE đã chốt UI M2 ngày 25/11/2026. [[digitalbanking-docs/docs-frontend/evidence/FE-BE-INT-10/2026-11-24-ce0d36e/run-01.md]].

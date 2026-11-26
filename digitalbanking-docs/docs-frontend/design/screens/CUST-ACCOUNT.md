@@ -72,3 +72,8 @@ Source tham chiếu đã được khôi phục tại digitalbanking-frontend. M�
 ### FE-02-01-V1-API ngày 24/11/2026
 
 Runtime v1 mở `/customer/accounts/:accountId` từ danh sách hoặc direct URL, gọi `getAccount`. `V1CustomerDashboard` hiện số dư, số tài khoản mask, currency, status, ngày mở, asOf và **mã khách hàng** từ `owner.customerId`; không dùng `owner.fullName` của preview v2 vì v1.1.0 không có field đó. 403/404 hiện lỗi an toàn và nút quay lại, không render detail cũ. QA HTTP thật đã kiểm 200/403/404; browser còn chờ INT-10 privileges. [[digitalbanking-docs/docs-frontend/evidence/FE-02-01-V1-API/2026-11-24-eb4e2e7/run-01.md]].
+
+
+### FE-BE-INT-10 & chốt UI M2 ngày 25/11/2026
+
+Sau sửa `INT-10`, Playwright browser E2E đã kiểm chứng luồng từ trang chủ vào `/customer/accounts/:accountId` (`Mã khách hàng`, số tài khoản mask, trạng thái) kèm screenshot `m2-customer-detail.png`, và người phụ trách FE đã chốt UI M2 ngày 25/11/2026. [[digitalbanking-docs/docs-frontend/evidence/FE-BE-INT-10/2026-11-24-ce0d36e/run-01.md]].

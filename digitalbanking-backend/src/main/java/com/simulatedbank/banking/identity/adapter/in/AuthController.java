@@ -135,7 +135,7 @@ public class AuthController {
         }
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new AuthResponse(
                 new AuthResponse.UserSummary(Long.toString(view.userId()), view.userType(),
-                        view.username(), List.copyOf(view.roles()), List.copyOf(view.privileges()),
+                        view.username(), List.copyOf(view.roles()), AuthHttpSupport.publicV1Privileges(view.privileges()),
                         view.customerId()),
                 new AuthResponse.SessionInfo(view.idleExpiresAt(), view.absoluteExpiresAt(),
                         view.rawCsrfToken(), false),

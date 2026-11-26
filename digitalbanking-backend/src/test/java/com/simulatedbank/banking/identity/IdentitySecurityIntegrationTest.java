@@ -489,6 +489,8 @@ class IdentitySecurityIntegrationTest {
             assertThat(result.body().path("user").path("userId").asLong()).isEqualTo(userId);
             assertThat(result.body().path("user").path("userType").asText()).isEqualTo("CUSTOMER");
             assertThat(result.body().path("user").path("roles").toString()).contains("CUSTOMER");
+            assertThat(result.body().path("user").path("privileges").isArray()).isTrue();
+            assertThat(result.body().path("user").path("privileges").isEmpty()).isTrue();
             assertThat(result.body().path("user").path("customerId").isNull()).isTrue();
         }
         assertThat(plain.body().path("user").path("displayName").asText()).isEqualTo("id04a1");
